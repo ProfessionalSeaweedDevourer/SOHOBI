@@ -91,18 +91,6 @@
 
 ## 팀원별 작업 폴더 규칙
 
-### 폴더 구조
-
-```
-SOHOBI/
-├── <성>/
-│   └── Code_<이니셜>/
-│       ├── requirements.txt  ← 필수: Python 3.12 기준, 버전 고정
-│       └── ...
-```
-
-예: `CHOI/Code_CJY/`, `KIM/Code_KAB/`
-
 ### requirements.txt 작성 원칙
 
 - Python 3.12 기준으로 검증
