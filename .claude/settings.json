@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python3 -c \"import json; nb=json.load\\(open\\(''''/Users/eric.j.park/Documents/GitHub/SOHOBI/CHANG/graph/graph.ipynb''''\\)\\); [print\\(c[''''source'''']\\) for c in nb[''''cells''''] if c[''''cell_type'''']==''''code'''']\")"
-    ]
-  }
-}
