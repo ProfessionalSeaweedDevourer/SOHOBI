@@ -2,8 +2,9 @@ import random
 import math
 from semantic_kernel.functions import kernel_function
 
+
 class FinanceSimulationSkill:
-    def _calculate_salary(self, salary: float, hours: float = None) -> float:
+    def _calculate_salary(self, salary: float, hours: float | None = None) -> float:
         if hours is None:
             return salary
         else:
@@ -15,15 +16,15 @@ class FinanceSimulationSkill:
     )
     def monte_carlo_simulation(
         self,
-        revenue: list,
+        revenue: list[float],
         cost: float,
         salary: float,
-        hours: float = None,
+        hours: float | None = None,
         rent: float = 0,
         admin: float = 0,
         fee: float = 0,
-        tax_rate: float = 0.2
-    ) -> dict:
+        tax_rate: float = 0.2,
+    ) -> dict[str, float]:
         iterations = 10000
         results = []
 
@@ -56,8 +57,7 @@ class FinanceSimulationSkill:
         name="investment_recovery",
         description="초기 투자비용 회수 가능성 평가"
     )
-    def investment_recovery(self, initial_investment: float, avg_profit: float) -> dict:
+    def investment_recovery(self, initial_investment: float, avg_profit: float) -> dict[str, object]:
         if avg_profit <= 0:
             return {"recoverable": False, "months": None}
-        months = initial_investment / avg_profit
-        return {"recoverable": True, "months": math.ceil(months)}
+        return {"recoverable": True, "months": math.ceil(initial_investment / avg_profit)}
