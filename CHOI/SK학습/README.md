@@ -13,7 +13,7 @@ SK학습/
 ├── fnb_sk_step06_agent_pipeline.ipynb  # 에이전트 간 데이터 교류 파이프라인
 ├── fnb_sk_step07_orchestrator.ipynb    # 오케스트레이터 + 사용자 입력 테스트
 ├── seoul_commercial_mcp_server_sse.py  # 서울시 상권분석 MCP 서버 (SSE)
-├── law_mcp_server.py                   # 국가법령정보 MCP 서버
+├── law_mcp_server.py                   # 국가법령정보 MCP 서버 (실존하지않는 가상의 임시서버로 학습용이었음)
 ├── .env                                # API 키 설정 (Azure OpenAI, 서울시 API)
 └── test/                               # 실제 테스트 실행 폴더 (아래 참고)
 ```
