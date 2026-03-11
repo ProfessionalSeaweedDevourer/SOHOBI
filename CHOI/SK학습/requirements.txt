@@ -1,0 +1,23 @@
+# ── 직접 의존성 ───────────────────────────────────────────────
+# Python 3.12 기준으로 검증됨
+
+# MCP 서버 (FastMCP + SSE 트랜스포트)
+# seoul_commercial_mcp_server_sse.py 주석 기준: mcp 1.26
+mcp==1.26.0
+starlette==0.46.2
+uvicorn[standard]==0.34.2
+
+# AI 오케스트레이션 (Azure OpenAI 커넥터 포함)
+semantic-kernel==1.40.0
+
+# 환경 변수
+python-dotenv==1.2.2
+
+# Jupyter 노트북 실행
+jupyterlab==4.4.1
+
+# ── 핵심 전이 의존성 (버전 고정) ────────────────────────────
+# semantic-kernel이 내부적으로 사용하며, API 변경이 잦아 명시적으로 고정
+openai==2.26.0
+azure-identity==1.25.2
+aiohttp==3.13.3

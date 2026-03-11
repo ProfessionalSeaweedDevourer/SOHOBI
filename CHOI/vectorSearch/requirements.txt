@@ -1,0 +1,17 @@
+# ── 직접 의존성 ───────────────────────────────────────────────
+# Python 3.12 기준으로 검증됨
+
+# Azure AI Search (벡터 인덱스 업로드/검색)
+# p02_vectorSearchUp&Del.py, p03_vectorSearch.py
+azure-search-documents==11.6.0
+
+# Azure OpenAI (임베딩 생성)
+openai==2.26.0
+
+# AI 오케스트레이션 — p04_vectorSearchSK.py (SK 플러그인 연동)
+semantic-kernel==1.40.0
+
+# ── 핵심 전이 의존성 (버전 고정) ────────────────────────────
+azure-core==1.33.0
+azure-identity==1.25.2
+aiohttp==3.13.3
