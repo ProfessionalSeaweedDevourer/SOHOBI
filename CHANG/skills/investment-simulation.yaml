@@ -4,6 +4,12 @@ description: |
   창업 가능성을 Monte Carlo Simulation으로 평가하는 워크플로우.
 
 stages:
+  - id: initialize_defaults
+    type: plugin
+    skill: FinanceSimulationSkill
+    function: load_defaults
+    output: json_variables
+
   - id: input_to_json
     type: llm
     prompt: |
@@ -25,6 +31,15 @@ stages:
       - initial_investment: 초기 투자비용 (원 단위)
 
       출력은 JSON 형식으로만 하세요.
+    output: new_variables
+
+  - id: merge_variables
+    type: plugin
+    skill: FinanceSimulationSkill
+    function: merge_json
+    input:
+      previous: "{{json_variables}}"
+      current: "{{new_variables}}"
     output: json_variables
 
   - id: run_simulation
@@ -45,15 +60,7 @@ stages:
       - 숫자는 원화 단위로 표현하세요.
       - 위험 요인과 기회 요인을 함께 언급하세요.
       - 경영자가 이해하기 쉽게 자연어로 작성하세요.
+
+      추가 안내: 입력하지 않은 고정비(예: 임대료, 인건비 등)를 알려주시면
+      더 정밀한 시뮬레이션 결과를 제공할 수 있습니다.
     output: final_explanation
-
-  - id: explain_recovery
-    type: llm
-    prompt: |
-      초기 투자비용 회수 결과:
-      - 회수 가능 여부: {{recovery_result.recoverable}}
-      - 예상 소요 기간: {{recovery_result.months}}개월
-
-      위 결과를 바탕으로 투자 회수 가능성을 짧게 자연어로 설명하세요.
-      예: "투자 회수까지 약 n개월이 소요됩니다." 또는 "n년 n개월 뒤에 투자금을 상환할 수 있습니다."
-    output: recovery_explanation
