@@ -1,0 +1,33 @@
+# ══════════════════════════════════════════════════════════════
+# SOHOBI 통합 semantic kernel — 의존성
+# Python 3.12
+# ══════════════════════════════════════════════════════════════
+
+# AI 오케스트레이션
+semantic-kernel==1.40.0
+openai==2.26.0
+
+# API 서버
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+pydantic==2.11.5
+
+# Azure
+azure-identity==1.25.2
+azure-search-documents==11.6.0   # CHOI — 법령 벡터 검색
+azure-core==1.33.0
+
+# PDF 생성 (NAM)
+reportlab==4.2.5
+pypdf==5.4.0
+pdfkit==1.0.0
+jinja2==3.1.6
+
+# 재무 시각화 (CHANG)
+matplotlib==3.10.1
+numpy==2.2.3
+
+# 유틸리티
+python-dotenv==1.2.2
+requests==2.32.3
+aiohttp==3.13.3
