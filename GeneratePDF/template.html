@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>식품 영업 신고서</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Malgun Gothic', '맑은 고딕', 'NanumGothic', '나눔고딕', sans-serif;
+  font-size: 9pt;
+  background: #bbb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 24px;
+}
+
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  background: #fff;
+  padding: 11mm 13mm 10mm 13mm;
+}
+
+table { width: 100%; border-collapse: collapse; }
+td, th {
+  border: 1px solid #000;
+  vertical-align: middle;
+  line-height: 1.45;
+}
+.p  { padding: 1px 4px; }
+.pp { padding: 2px 5px; }
+.g  { background: #f2f2f2; }
+.b  { font-weight: 700; }
+.c  { text-align: center; }
+.vt { vertical-align: top; }
+
+.law-line  { font-size: 8.5pt; margin-bottom: 2px; }
+.form-title {
+  text-align: center;
+  font-size: 19pt;
+  font-weight: 800;
+  letter-spacing: 10px;
+  margin: 3px 0 4px;
+}
+.notice-top {
+  font-size: 8pt;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.vlabel {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-weight: 700;
+  font-size: 9pt;
+  letter-spacing: 3px;
+  text-align: center;
+  background: #f2f2f2;
+  white-space: nowrap;
+  padding: 4px 2px;
+}
+
+.biz-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  font-size: 8.5pt;
+}
+.biz-cell { padding: 1px 4px; }
+
+.water-wrap { font-size: 8.5pt; line-height: 1.7; padding: 2px 5px; }
+
+.law-stmt { text-align: center; font-size: 9pt; margin: 5px 0 3px; }
+
+.consent-box {
+  border: 1px solid #000;
+  border-top: 2px solid #000;
+  padding: 4px 7px;
+  font-size: 8.5pt;
+  line-height: 1.65;
+}
+.consent-title { text-align: center; font-size: 9.5pt; font-weight: 700; margin-bottom: 2px; }
+.consent-sign  { text-align: center; font-size: 9pt; margin-top: 3px; }
+
+.info-box { border: 1px solid #000; margin-top: 3px; font-size: 8pt; line-height: 1.6; }
+.info-title { text-align: center; font-size: 9.5pt; font-weight: 700; border-bottom: 1px solid #000; padding: 1px 0; letter-spacing: 3px; }
+.info-body { padding: 3px 6px; }
+.info-body p { text-indent: -1.2em; padding-left: 1.2em; }
+
+.paper-spec { text-align: right; font-size: 7.5pt; margin-top: 3px; }
+
+/* PAGE 2 */
+.p2 { font-size: 8pt; line-height: 1.65; }
+.p2-vlabel {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  background: #f2f2f2;
+  font-weight: 700;
+  font-size: 9pt;
+  letter-spacing: 2px;
+  text-align: center;
+  vertical-align: middle;
+  padding: 6px 3px;
+  width: 20px;
+  border: 1px solid #000;
+}
+.proc-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 9.5pt;
+  letter-spacing: 4px;
+  border: 1px solid #000;
+  border-bottom: none;
+  padding: 3px;
+  margin-top: 5px;
+}
+.proc-arrow { border: none !important; font-size: 11pt; text-align: center; padding: 0 1px !important; }
+
+@media print {
+  body { background: none; padding: 0; }
+  .page { box-shadow: none; page-break-after: always; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+  PAGE 1 — 앞쪽
+  Jinja2 변수: owner_name, owner_ssn, owner_address, owner_phone,
+               store_name, store_phone, area_size, area_outside,
+               store_address, water_type, shared_kitchen(bool),
+               shared_kitchen2(bool), shared_kitchen2_info,
+               business_type, submit_year, submit_month, submit_day
+============================================================ -->
+<div class="page">
+
+  <div class="law-line">■ 식품위생법 시행규칙 [별지 제37호서식] &lt;개정 2024. 7. 3.&gt;</div>
+  <div class="form-title">식품 영업 신고서</div>
+  <div class="notice-top">
+    <span>※ 뒤쪽의 구비서류와 신고안내, 유의사항을 읽고 작성하시기 바라며, [&nbsp;&nbsp;]에는 해당되는 곳에 √ 표를 합니다.</span>
+    <span>(앞쪽)</span>
+  </div>
+
+  <!-- 접수번호 -->
+  <table style="border-bottom:none;">
+    <colgroup>
+      <col style="width:11%"><col style="width:24%"><col style="width:9%">
+      <col style="width:19%"><col style="width:8%"><col style="width:16%">
+      <col style="width:9%"><col>
+    </colgroup>
+    <tr style="height:20px;">
+      <td class="g b c p">접수번호</td><td class="p"></td>
+      <td class="g b c p">접수일</td><td class="p"></td>
+      <td class="g b c p">발급일</td><td class="p"></td>
+      <td class="g b c p">처리기간</td><td class="b c p">즉시</td>
+    </tr>
+  </table>
+
+  <!-- 신고인 -->
+  <table style="border-top:none; border-bottom:none;">
+    <colgroup>
+      <col style="width:18px">
+      <col style="width:30%"><col style="width:25%"><col style="width:20%"><col>
+    </colgroup>
+    <tr>
+      <td class="vlabel" rowspan="2">신고인</td>
+      <td class="g b p">성명(법인은 법인 명칭 및 대표자의 성명)</td>
+      <td class="p">{{ owner_name }}</td>
+      <td class="g b p">주민(법인)등록번호</td>
+      <td class="p">{{ owner_ssn }}</td>
+    </tr>
+    <tr>
+      <td class="g b p">주소(법인은 주된 사무소의 소재지)</td>
+      <td class="p">{{ owner_address }}</td>
+      <td class="g b p">전화번호</td>
+      <td class="p">{{ owner_phone }}</td>
+    </tr>
+  </table>
+
+  <!-- 신고사항 -->
+  <table style="border-top:2px solid #000; border-bottom:none;">
+    <colgroup>
+      <col style="width:18px"><col style="width:14%"><col>
+    </colgroup>
+
+    <!-- 명칭/전화 -->
+    <tr>
+      <td class="vlabel" rowspan="9">신고사항</td>
+      <td class="g b p">명칭(상호)</td>
+      <td style="padding:0;">
+        <table style="border:none;">
+          <colgroup><col style="width:54%"><col style="width:18%"><col></colgroup>
+          <tr>
+            <td style="border:none; border-right:1px solid #000;" class="p">{{ store_name }}</td>
+            <td style="border:none; border-right:1px solid #000;" class="g b p">전화번호</td>
+            <td style="border:none;" class="p">{{ store_phone }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- 영업의 종류 -->
+    <tr>
+      <td class="g b p" style="vertical-align:middle;">영업의<br>종류</td>
+      <td style="padding:0;">
+        <div class="biz-grid">
+          <div class="biz-cell">[ {% if business_type == '즉석판매제조·가공업' %}√{% else %}&nbsp;{% endif %} ]즉석판매제조ㆍ가공업</div>
+          <div class="biz-cell">[ {% if business_type == '집단급식소 식품판매업' %}√{% else %}&nbsp;{% endif %} ]집단급식소 식품판매업</div>
+          <div class="biz-cell">[ {% if business_type == '일반음식점영업' %}√{% else %}&nbsp;{% endif %} ]일반음식점영업</div>
+          <div class="biz-cell">[ {% if business_type == '식품운반업' %}√{% else %}&nbsp;{% endif %} ]식품운반업</div>
+          <div class="biz-cell">[ {% if business_type == '기타식품판매업' %}√{% else %}&nbsp;{% endif %} ]기타식품판매업</div>
+          <div class="biz-cell">[ {% if business_type == '위탁급식영업' %}√{% else %}&nbsp;{% endif %} ]위탁급식영업</div>
+          <div class="biz-cell">[ {% if business_type == '식품소분업' %}√{% else %}&nbsp;{% endif %} ]식품소분업</div>
+          <div class="biz-cell">[ {% if business_type == '식품냉동·냉장업' %}√{% else %}&nbsp;{% endif %} ]식품냉동ㆍ냉장업</div>
+          <div class="biz-cell">[ {% if business_type == '제과점영업' %}√{% else %}&nbsp;{% endif %} ]제과점영업</div>
+          <div class="biz-cell">[ {% if business_type == '식용얼음판매업' %}√{% else %}&nbsp;{% endif %} ]식용얼음판매업</div>
+          <div class="biz-cell">[ {% if business_type == '용기·포장지제조업' %}√{% else %}&nbsp;{% endif %} ]용기ㆍ포장지제조업</div>
+          <div class="biz-cell"></div>
+          <div class="biz-cell">[ {% if business_type == '식품자동판매기영업' %}√{% else %}&nbsp;{% endif %} ]식품자동판매기영업</div>
+          <div class="biz-cell">[ {% if business_type == '옹기류제조업' %}√{% else %}&nbsp;{% endif %} ]옹기류제조업</div>
+          <div class="biz-cell"></div>
+          <div class="biz-cell">[ {% if business_type == '유통전문판매업' %}√{% else %}&nbsp;{% endif %} ]유통전문판매업</div>
+          <div class="biz-cell">[ {% if business_type == '휴게음식점영업' %}√{% else %}&nbsp;{% endif %} ]휴게음식점영업</div>
+          <div class="biz-cell"></div>
+        </div>
+      </td>
+    </tr>
+
+    <!-- 면적 -->
+    <tr>
+      <td class="g b p">영업장의 면적:</td>
+      <td class="p" style="font-size:8.5pt;">건물 내부 장소 [&nbsp;&nbsp;{{ area_size }}&nbsp;&nbsp;㎡] &nbsp;&nbsp;&nbsp;건물 외부 장소 [&nbsp;&nbsp;{{ area_outside }}&nbsp;&nbsp;㎡]</td>
+    </tr>
+
+    <!-- 소재지 -->
+    <tr>
+      <td class="g b p">영업장의 소재지:</td>
+      <td class="pp vt" style="font-size:8.5pt;">
+        {{ store_address }}<br><br>
+        <span style="font-size:7.8pt; line-height:1.5;">※ 건물 외부 장소의 면적은 「식품위생법 시행령」 제21조제8호가목의 휴게음식점영업, 같은 호 나목의 일반음식점영업 또는 같은 호 바목의 제과점영업을 하려는 자가 해당 외부 장소에서 음식류 등을 제공하는 경우만 적습니다.</span><br>
+        <span style="font-size:7.8pt; line-height:1.5;">※ 음식판매자동차를 사용하여 휴게음식점영업 또는 제과점영업을 하려는 경우에는 그 영업장 면적을 해당 음식판매자동차의 자동차등록번호와 함께 건물 내부 장소에 적고, 해당 영업소의 소재지를 적습니다.</span>
+      </td>
+    </tr>
+
+    <!-- 식품용수 -->
+    <tr>
+      <td class="g b p">식품용수의 종류</td>
+      <td style="padding:0;">
+        <div class="water-wrap">
+          [ {% if water_type == '수돗물' %}√{% else %}&nbsp;{% endif %} ] 수돗물 &nbsp;&nbsp;
+          [ {% if water_type == '먹는샘물' %}√{% else %}&nbsp;{% endif %} ] 먹는샘물 &nbsp;&nbsp;
+          [ {% if water_type == '먹는염지하수' %}√{% else %}&nbsp;{% endif %} ] 먹는염지하수<br>
+          &nbsp;[ {% if water_type == '지하수' %}√{% else %}&nbsp;{% endif %} ] 지하수(먹는샘물 및 먹는염지하수는 제외합니다)<br>
+          &nbsp;[ {% if water_type == '먹는해양심층수' %}√{% else %}&nbsp;{% endif %} ] 먹는해양심층수 &nbsp;&nbsp;
+          [ {% if water_type == '그 밖의 먹는물' %}√{% else %}&nbsp;{% endif %} ] 그 밖의 먹는물<br>
+          <span style="font-size:7.8pt;">* 식품용수를 2개 이상 사용하는 경우에는 중복 표기가 가능합니다.</span>
+        </div>
+      </td>
+    </tr>
+
+    <!-- 공유주방 -->
+    <tr>
+      <td class="g b p">공유주방의 사용 여부</td>
+      <td class="p" style="font-size:8.5pt;">
+        [ {% if shared_kitchen %}√{% else %}&nbsp;{% endif %} ] 해당 &nbsp;&nbsp;&nbsp;&nbsp;
+        [ {% if not shared_kitchen %}√{% else %}&nbsp;{% endif %} ] 미해당
+      </td>
+    </tr>
+
+    <!-- 공동조리장 -->
+    <tr>
+      <td class="g b p">공동조리장 이용 여부</td>
+      <td class="p" style="font-size:8.5pt;">
+        [ {% if shared_kitchen2 %}√{% else %}&nbsp;{% endif %} ] 해당 &nbsp;&nbsp;&nbsp;&nbsp;
+        [ {% if not shared_kitchen2 %}√{% else %}&nbsp;{% endif %} ] 미해당<br>
+        공동조리장을 함께 이용하는 영업장의 업소명, 영업의 종류 및 소재지: {{ shared_kitchen2_info }}
+      </td>
+    </tr>
+  </table>
+
+  <!-- 법령문구 & 서명 -->
+  <div class="law-stmt">
+    「식품위생법」 제37조제4항 및 같은 법 시행규칙 제42조제1항에 따라 위와 같이 영업을 신고합니다.
+  </div>
+  <table style="border:none; margin-bottom:1px;">
+    <tr>
+      <td style="border:none; width:28%;"></td>
+      <td style="border:none; text-align:center; font-size:9pt; width:30%;">
+        {{ submit_year }}&nbsp;년&nbsp;&nbsp;{{ submit_month }}&nbsp;월&nbsp;&nbsp;{{ submit_day }}&nbsp;일
+      </td>
+      <td style="border:none; text-align:right; font-size:9pt;">
+        신고인&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; (서명 또는 인)
+      </td>
+    </tr>
+  </table>
+  <div style="text-align:right; font-size:11pt; font-weight:800; letter-spacing:1px; margin-bottom:4px;">
+    특별자치시장·특별자치도지사·시장·군수·구청장 <span style="font-weight:400; font-size:10pt;">귀하</span>
+  </div>
+
+  <!-- 동의서 -->
+  <div class="consent-box">
+    <div class="consent-title">행정정보 공동이용 동의서</div>
+    본인은 이 건 업무처리와 관련하여 담당 공무원이 「전자정부법」 제36조제1항에 따른 행정정보의 공동이용을 통하여 담당 공무원 확인사항을 확인하는 것에 동의합니다. * 동의하지 아니하는 경우에는 신청인이 직접 관련 서류를 제출하여야 합니다.
+    <div class="consent-sign">신고인(대표자)&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; (서명 또는 인)</div>
+  </div>
+
+  <!-- 신고 안내 -->
+  <div class="info-box">
+    <div class="info-title">신 고 안 내</div>
+    <div class="info-body">
+      &lt;특별자치시장ㆍ특별자치도지사ㆍ시장ㆍ군수ㆍ구청장에게 신고를 하여야 하는 업종&gt;<br>
+      1. 즉석판매제조ㆍ가공업 &nbsp;2. 식품운반업 &nbsp;3. 식품소분업 &nbsp;4. 식용얼음판매업 &nbsp;5. 식품자동판매기영업 &nbsp;6. 유통전문판매업 &nbsp;7. 집단급식소 식품판매업 &nbsp;8. 기타식품판매업 &nbsp;9. 식품냉동ㆍ냉장업 &nbsp;10. 용기ㆍ포장류제조업(자신의 제품을 포장하기 위하여 용기ㆍ포장류를 제조하는 경우는 제외) &nbsp;11. 옹기류제조업 &nbsp;12. 휴게음식점영업 &nbsp;13. 일반음식점영업 &nbsp;14. 위탁급식영업 &nbsp;15. 제과점영업
+    </div>
+  </div>
+
+  <!-- 유의사항 -->
+  <div class="info-box">
+    <div class="info-title">유 의 사 항</div>
+    <div class="info-body">
+      <p>1. 신고한 영업을 폐업하는 때에도 신고를 하여야 합니다.</p>
+      <p>2. 신고를 하여야 하는 업종을 신고를 하지 아니하고 영업을 하는 경우에는 「식품위생법」 제97조제1호에 따라 3년 이하의 징역 또는 3천만원 이하의 벌금을 부과하게 됩니다.</p>
+      <p>3. 영업신고를 하려는 자는 「식품위생법 시행규칙」 제40조에서 정한 사항 외에 해당 영업신고와 관련된 다음 법령에 위반되거나 저촉되는지 여부를 검토하여야 합니다.<br>
+      &nbsp;– 「국토의 계획 및 이용에 관한 법률」, 「하수도법」, 「농지법」, 「학교보건법」, 「옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률」, 「하천법」, 「한강수계 상수원수질개선 및 주민지원 등에 관한 법률」, 「물환경보전법」, 「소음ㆍ진동관리법」, 「관광진흥법」, 「학원의 설립ㆍ운영 및 과외교습에 관한 법률」, 「청소년 보호법」, 「근로기준법」, 「산업집적활성화 및 공장설립에 관한 법률」, 「주차장법」, 「지방세법」 등 그 밖의 관련 법령</p>
+      <p>4. 「식품위생법 시행규칙」별표 14 제8호가목2)라)에 따라 공동조리장을 사용하는 경우에는 공동으로 사용하는 조리장의 면적을 포함하여 신고하여야 합니다.</p>
+    </div>
+  </div>
+
+  <div class="paper-spec">210mm×297mm[백상지 80g/㎡(재활용품)]</div>
+
+</div><!-- /page1 -->
+
+
+<!-- ============================================================
+  PAGE 2 — 뒤쪽
+============================================================ -->
+<div class="page p2">
+
+  <div style="text-align:right; font-size:8.5pt; margin-bottom:3px;">(뒤쪽)</div>
+  <div style="border-top:2px solid #000;"></div>
+
+  <!-- 제출서류 + 수수료 -->
+  <table>
+    <colgroup>
+      <col style="width:20px"><col><col style="width:52px"><col style="width:75px">
+    </colgroup>
+    <tr>
+      <td class="p2-vlabel" style="letter-spacing:1px; writing-mode:vertical-rl; text-align:center;">제&nbsp;출&nbsp;서&nbsp;류</td>
+      <td class="pp vt" style="font-size:8pt; line-height:1.6;">
+        1. 교육이수증 1부(「식품위생법」 제41조제2항에 따라 미리 교육을 받은 경우만 해당합니다)<br>
+        2. 제조ㆍ가공하려는 식품의 유형 및 제조방법 설명서 1부(「식품위생법 시행령」 제21조제2호의 영업만 해당합니다)<br>
+        3. 시설사용계약서 1부(식품운반업을 하려는 경우로서 차고 또는 세차장을 임대할 경우만 해당합니다)<br>
+        4. 「먹는물관리법」에 따른 먹는물 수질검사기관이 발행한 수질검사(시험)성적서 1부(수돗물이 아닌 지하수 등을 먹는 물 또는 식품등의 제조과정이나 식품의 조리ㆍ세척 등에 사용하는 경우만 해당합니다)<br>
+        5. 유선 또는 도선사업 면허증 또는 신고필증 1부(수상구조물로 된 유선장 또는 도선장에 「식품위생법 시행령」 제21조제8호가목의 휴게음식점영업, 같은 호 나목의 일반음식점영업 및 같은 호 바목의 제과점영업을 하려는 경우만 해당합니다)<br>
+        6. 식품자동판매기의 종류 및 설치장소가 적힌 서류 1부(2대 이상의 식품자동판매기를 설치하고 일련관리번호를 부여하여 일괄 신고를 하는 경우만 해당합니다)<br>
+        7. 수상레저사업 등록증 1부(수상구조물로 된 수상레저사업장에서 「식품위생법 시행령」 제21조제8호가목의 휴게음식점영업 및 같은 호 바목의 제과점영업을 하려는 경우만 해당합니다)<br>
+        8. 「국유재산법 시행규칙」 제14조제3항에 따른 국유재산 사용허가서 1부(국유철도의 정거장시설 또는 군사시설에서 「식품위생법 시행령」 제21조제2호의 즉석판매제조ㆍ가공업의 영업, 같은 조 제5호의 식품소분ㆍ판매업의 영업, 같은 조 제8호가목의 휴게음식점영업, 같은 호 나목의 일반음식점영업 또는 같은 호 바목의 제과점영업을 하려는 경우만 해당합니다)<br>
+        9. 해당 도시철도사업자와 체결한 도시철도시설 사용계약에 관한 서류 1부(도시철도의 정거장시설에서 「식품위생법 시행령」 제21조제2호의 즉석판매제조ㆍ가공업의 영업, 같은 조 제5호의 식품소분ㆍ판매업의 영업, 같은 조 제8호가목의 휴게음식점영업, 같은 호 나목의 일반음식점영업 또는 같은 호 바목의 제과점영업을 하려는 경우만 해당합니다)<br>
+        10. 예비군식당 운영계약에 관한 서류 1부(군사시설에서 「식품위생법 시행령」 제21조제8호나목의 일반음식점영업을 하려는 경우만 해당합니다)<br>
+        11. 영업장과 연접하는 외부 장소를 영업장으로 사용하려는 경우에는 해당 외부 장소에 대해 정당한 사용 권한이 있음을 증명하는 서류(「식품위생법 시행령」 제21조제8호가목의 휴게음식점영업, 같은 호 나목의 일반음식점영업 또는 같은 호 바목의 제과점영업을 하려는 자가 해당 외부 장소에서 음식류 등을 제공하는 경우만 해당합니다)<br>
+        12. 해당 영업장에서 영업을 할 수 있음을 증명하는 「식품위생법 시행규칙」 별표 15의2에 따른 서류 1부[음식판매자동차(「자동차관리법 시행규칙」 별표 1 제1호ㆍ제2호 및 비고 제1호가목에 따른 이동용 음식판매 용도인 소형ㆍ경형화물자동차 또는 같은 표 제2호에 따른 이동용 음식판매 용도인 특수작업형 특수자동차)를 사용하여 「식품위생법 시행령」 제21조제8호가목의 휴게음식점영업 또는 같은 호 바목의 제과점영업을 하려는 경우만 해당합니다]<br>
+        13. 「어린이놀이시설 안전관리법」 제12조제1항 및 같은 법 시행령 제7조제4항에 따른 어린이놀이시설 설치검사합격증 또는 「어린이놀이시설 안전관리법」 제12조제2항 및 같은 법 시행령 제8조제5항에 따른 어린이놀이시설 정기시설검사합격증(「식품위생법 시행령」 제21조제8호가목, 나목, 마목 또는 바목의 영업을 하려는 경우로서 해당 영업장에 어린이놀이시설을 설치하는 경우만 해당합니다)<br>
+        14. 공유주방 소재지, 면적 등이 기재된 공유주방 사용계약에 관한 서류(「식품위생법 시행령」제21조제9호의 공유주방 운영업자의 공유주방을 사용할 경우만 해당합니다)<br>
+        15. 「마리나항만의 조성 및 관리 등에 관한 법률 시행규칙」 제22조제5항에 따른 마리나선박 대여업 등록증(「마리나항만의 조성 및 관리 등에 관한 법률」에 따른 마리나선박에서 영 제21조제8호가목, 나목 또는 바목에 따른 영업을 하려는 경우만 해당합니다)
+      </td>
+      <td class="g b c" style="font-size:8.5pt; vertical-align:middle; padding:4px 3px;">수수료</td>
+      <td class="c" style="font-size:8.5pt; vertical-align:middle; line-height:1.7; padding:4px 3px;">
+        28,000원<br><br>(수입인지<br>또는 수입증<br>지)
+      </td>
+    </tr>
+  </table>
+
+  <!-- 담당 공무원 확인사항 -->
+  <table style="border-top:none;">
+    <colgroup>
+      <col style="width:20px"><col><col style="width:52px"><col style="width:75px">
+    </colgroup>
+    <tr>
+      <td class="p2-vlabel" style="font-size:8.5pt; letter-spacing:0.5px; writing-mode:vertical-rl; text-align:center;">담당공무원확인사항</td>
+      <td class="pp vt" style="font-size:8pt; line-height:1.6;">
+        1. 토지이용계획확인서(「식품위생법 시행규칙」 제42조제1항제10호에 따른 국유재산 사용허가서를 제출한 경우에는 제외합니다)<br>
+        2. 건축물대장 또는 「건축법」 제22조제3항제2호에 따른 건축물의 임시사용 승인서(「식품위생법 시행규칙」 제42조제1항제10호에 따른 국유재산 사용허가서를 제출한 경우에는 제외합니다)<br>
+        3. 액화석유가스 사용시설완성검사증명서(「식품위생법 시행령」 제21조제8호가목의 휴게음식점영업, 같은 호 나목의 일반음식점영업 및 같은 호 바목의 제과점영업을 하려는 사람 중 「액화석유가스의 안전관리 및 사업법」 제44조제2항에 따라 액화석유가스 사용시설의 완성검사를 받아야 하는 사람의 경우만 해당합니다)<br>
+        4. 자동차등록증(음식판매자동차를 사용하여 「식품위생법 시행령」 제21조제8호가목의 휴게음식점영업 또는 같은 호 바목의 제과점영업을 하려는 경우만 해당합니다)<br>
+        5. 사업자등록증(음식판매자동차를 사용하여 「고등교육법」 제2조에 따른 학교에서 해당 학교의 경영자가 「식품위생법 시행령」 제21조제8호가목의 휴게음식점영업 또는 같은 호 바목의 제과점영업을 하려는 경우만 해당합니다)<br>
+        6. 건강진단결과서(제49조에 따른 건강진단대상자의 경우만 해당합니다)<br>
+        7. 「다중이용업소의 안전관리에 관한 특별법」 제9조제5항에 따라 소방본부장 또는 소방서장이 발급하는 안전시설등 완비증명서(「다중이용업소의 안전관리에 관한 특별법 시행령」 제2조제1호가목에 따른 영업을 하려는 경우만 해당합니다)
+      </td>
+      <td colspan="2" style="border:1px solid #000; vertical-align:top;"></td>
+    </tr>
+  </table>
+
+  <!-- 처리절차 -->
+  <div class="proc-title">처 리 절 차</div>
+  <table style="border:1px solid #000; border-top:1px solid #000;">
+    <colgroup>
+      <col style="width:13%"><col style="width:4%"><col style="width:11%"><col style="width:4%">
+      <col style="width:11%"><col style="width:4%"><col style="width:11%"><col style="width:4%">
+      <col style="width:14%"><col style="width:4%"><col>
+    </colgroup>
+    <tr>
+      <td class="b c" style="padding:5px 2px; font-size:8.5pt;">신고서 작성</td>
+      <td class="proc-arrow">➡</td>
+      <td class="b c" style="padding:5px 2px; font-size:8.5pt;">접&nbsp;&nbsp;수</td>
+      <td class="proc-arrow">➡</td>
+      <td class="b c" style="padding:5px 2px; font-size:8.5pt;">검&nbsp;&nbsp;토</td>
+      <td class="proc-arrow">➡</td>
+      <td class="b c" style="padding:5px 2px; font-size:8.5pt;">결&nbsp;&nbsp;재</td>
+      <td class="proc-arrow">➡</td>
+      <td class="b c" style="padding:5px 2px; font-size:8.5pt;">신고증 발급</td>
+      <td class="proc-arrow">➡</td>
+      <td class="b c" style="padding:4px 2px; font-size:8pt;">필요시 시설조사<br>(15일 이내)</td>
+    </tr>
+    <tr>
+      <td class="c" style="padding:4px 2px; font-size:8.5pt;">신고인</td>
+      <td class="proc-arrow"></td>
+      <td colspan="9" class="c" style="padding:4px 2px; font-size:8.5pt;">처리기관 : 특별자치시ㆍ특별자치도ㆍ시ㆍ군ㆍ구(식품영업신고 담당부서)</td>
+    </tr>
+  </table>
+
+</div><!-- /page2 -->
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 창업 행정 비서</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+        .typing-indicator span {
+            animation: blink 1.4s infinite both;
+            height: 6px; width: 6px; background: #64748b; border-radius: 50%; display: inline-block; margin: 0 2px;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+    </style>
+</head>
+<body class="bg-white text-gray-800 font-sans h-screen flex overflow-hidden">
+
+    <div class="hidden md:flex flex-col w-64 bg-gray-50 border-r border-gray-200 h-full p-4">
+        <div class="flex items-center gap-3 mb-8 px-2">
+            <div class="w-8 h-8 bg-black text-white rounded flex items-center justify-center">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+            <span class="font-bold text-lg tracking-tight">BizAgent AI</span>
+        </div>
+        
+        <div class="text-xs font-semibold text-gray-400 mb-3 px-2 uppercase tracking-wider">서비스 안내</div>
+        <button onclick="location.reload()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 bg-gray-100 text-sm font-medium transition-colors">
+            <i class="fa-regular fa-message mr-2"></i> 새로운 신고서 작성
+        </button>
+        
+        <div class="mt-auto">
+            <div class="px-3 py-2 text-xs text-gray-500">로컬 MVP 구동 중</div>
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col h-full relative">
+        <div class="md:hidden flex items-center justify-center p-4 border-b border-gray-200 font-bold text-lg">BizAgent AI</div>
+
+        <div id="chat-container" class="flex-1 overflow-y-auto pb-32">
+            <div class="border-b border-gray-100 bg-gray-50/50">
+                <div class="max-w-3xl mx-auto flex gap-4 p-6">
+                    <div class="w-8 h-8 rounded bg-green-600 text-white flex-shrink-0 flex items-center justify-center">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="flex-1 pt-1 leading-relaxed text-gray-700">
+                        안녕하세요 사장님! 떡볶이집, 카페 등 창업을 준비 중이신가요?<br>
+                        원하시는 업종과 함께 <b>"영업신고서 만들어줘"</b>라고 말씀해 주시면, 관공서 제출용 문서를 자동 완성해 드립니다.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent pt-6 pb-6 px-4">
+            <div class="max-w-3xl mx-auto relative">
+                <form id="chat-form" class="relative flex items-end shadow-[0_0_15px_rgba(0,0,0,0.1)] rounded-xl bg-white border border-gray-200 focus-within:ring-1 focus-within:ring-gray-300 transition-all">
+                    <textarea id="user-input" rows="1" class="w-full max-h-32 py-4 pl-4 pr-12 bg-transparent border-none focus:ring-0 resize-none outline-none leading-relaxed" placeholder="메시지를 입력하세요..." required></textarea>
+                    <button type="submit" class="absolute right-3 bottom-3 w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center hover:bg-gray-800 transition-colors">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        function appendMessage(sender, text, pdfUrl = null) {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = sender === 'bot' ? 'border-b border-gray-100 bg-gray-50/50' : 'border-b border-gray-100 bg-white';
+            
+            const avatarHtml = sender === 'user'
+                ? `<div class="w-8 h-8 rounded bg-gray-800 text-white flex-shrink-0 flex items-center justify-center"><i class="fa-solid fa-user"></i></div>`
+                : `<div class="w-8 h-8 rounded bg-green-600 text-white flex-shrink-0 flex items-center justify-center"><i class="fa-solid fa-robot"></i></div>`;
+
+            let contentHTML = `<div class="max-w-3xl mx-auto flex gap-4 p-6">${avatarHtml}<div class="flex-1 pt-1 leading-relaxed text-gray-700 whitespace-pre-wrap">${text}`;
+
+            if (pdfUrl) {
+                contentHTML += `
+                    <div class="mt-4 p-4 border border-gray-200 rounded-lg bg-white flex items-center justify-between shadow-sm max-w-sm">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="text-red-500 text-2xl"><i class="fa-solid fa-file-pdf"></i></div>
+                            <div class="truncate font-medium text-sm">영업신고서_완성본.pdf</div>
+                        </div>
+                        <a href="${pdfUrl}" target="_blank" class="flex-shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded text-sm font-medium transition-colors">
+                            다운로드 <i class="fa-solid fa-download ml-1"></i>
+                        </a>
+                    </div>`;
+            }
+
+            contentHTML += `</div></div>`;
+            rowDiv.innerHTML = contentHTML;
+            chatContainer.appendChild(rowDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showLoading() {
+            const rowDiv = document.createElement('div');
+            rowDiv.id = 'loading-indicator';
+            rowDiv.className = 'border-b border-gray-100 bg-gray-50/50';
+            rowDiv.innerHTML = `
+                <div class="max-w-3xl mx-auto flex gap-4 p-6">
+                    <div class="w-8 h-8 rounded bg-green-600 text-white flex-shrink-0 flex items-center justify-center"><i class="fa-solid fa-robot"></i></div>
+                    <div class="flex-1 pt-2 typing-indicator"><span></span><span></span><span></span></div>
+                </div>`;
+            chatContainer.appendChild(rowDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideLoading() {
+            const indicator = document.getElementById('loading-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            appendMessage('user', message);
+            userInput.value = '';
+            userInput.style.height = 'auto';
+            showLoading();
+
+            try {
+                // 파이썬 서버로 데이터 쏘기
+                const response = await fetch('api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+
+                if (!response.ok) throw new Error('서버 에러');
+                
+                const data = await response.json();
+                hideLoading();
+                appendMessage('bot', data.reply, data.pdf_url);
+
+            } catch (error) {
+                console.error(error);
+                hideLoading();
+                appendMessage('bot', '⚠️ 백엔드 서버(FastAPI)가 연결되지 않았습니다. 터미널에서 서버가 켜져 있는지 확인해주세요.');
+            }
+        });
+    </script>
+</body>
+</html>
