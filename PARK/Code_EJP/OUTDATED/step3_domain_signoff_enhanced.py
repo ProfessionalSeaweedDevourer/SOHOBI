@@ -16,7 +16,7 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion, AzureChat
 
 load_dotenv()
 
-PROMPTS_DIR = Path(__file__).parent / "prompts"
+PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
 REQUIRED_CODES = {
     "admin":   {"C1", "C2", "C3", "C4", "C5", "A1", "A2", "A3", "A4", "A5"},

@@ -1,5 +1,11 @@
 import asyncio
 import json
+import sys
+from pathlib import Path
+
+# OUTDATED/ 하위에서 실행 시 부모(Code_EJP/)를 경로에 추가
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
 from semantic_kernel.contents import ChatHistory
 from kernel_setup import get_kernel

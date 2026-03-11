@@ -4,11 +4,14 @@ import re
 import sys
 from pathlib import Path
 
+# OUTDATED/ 하위에서 실행 시 부모(Code_EJP/)를 경로에 추가
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
 from kernel_setup import get_kernel
 
-PROMPTS_DIR = Path(__file__).parent / "prompts"
+PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
 REQUIRED_CODES = {
     "admin":   {"C1", "C2", "C3", "C4", "C5", "A1", "A2", "A3", "A4", "A5"},
@@ -124,10 +127,11 @@ def validate_verdict(verdict: dict, domain: str) -> None:
 
 
 async def main():
-    domain = sys.argv[1] if len(sys.argv) > 1 else "admin"
+    import sys as _sys
+    domain = _sys.argv[1] if len(_sys.argv) > 1 else "admin"
     if domain not in REQUIRED_CODES:
         print(f"지원 도메인: {list(REQUIRED_CODES.keys())}")
-        sys.exit(1)
+        _sys.exit(1)
 
     verdict = await run_signoff(domain, MOCK_DRAFTS[domain])
     print(f"\n[{domain}] 판정 결과:")
