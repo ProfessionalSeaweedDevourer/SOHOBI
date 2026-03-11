@@ -2,8 +2,9 @@ import random
 import math
 from semantic_kernel.functions import kernel_function
 
+
 class FinanceSimulationSkill:
-    def _calculate_salary(self, salary: float, hours: float = None) -> float:
+    def _calculate_salary(self, salary: float, hours: float | None = None) -> float:
         if hours is None:
             return salary
         else:
@@ -15,15 +16,15 @@ class FinanceSimulationSkill:
     )
     def monte_carlo_simulation(
         self,
-        revenue: list,
+        revenue: list[float],
         cost: float,
         salary: float,
-        hours: float = None,
+        hours: float | None = None,
         rent: float = 0,
         admin: float = 0,
         fee: float = 0,
-        tax_rate: float = 0.2
-    ) -> dict:
+        tax_rate: float = 0.2,
+    ) -> dict[str, float]:
         iterations = 10000
         results = []
 
@@ -56,8 +57,38 @@ class FinanceSimulationSkill:
         name="investment_recovery",
         description="초기 투자비용 회수 가능성 평가"
     )
-    def investment_recovery(self, initial_investment: float, avg_profit: float) -> dict:
+    def investment_recovery(self, initial_investment: float, avg_profit: float) -> dict[str, object]:
         if avg_profit <= 0:
             return {"recoverable": False, "months": None}
-        months = initial_investment / avg_profit
-        return {"recoverable": True, "months": math.ceil(months)}
+        return {"recoverable": True, "months": math.ceil(initial_investment / avg_profit)}
+
+
+    # 누적 정보 반영을 위한 JSON 상태 관리용 함수 2종 추가
+    def load_defaults(self) -> dict:
+        """
+        모든 변수에 평균치 또는 None 기본값을 부여한 초기 JSON 반환
+        """
+        return {
+            "revenue": 5000000,          # 기본 평균 매출 (예: 500만원)
+            "cost": 2000000,             # 기본 평균 원가 (예: 200만원)
+            "salary": 2500000,           # 기본 평균 급여 (예: 250만원)
+            "hours": None,               # 시급일 경우만 사용
+            "rent": 1000000,             # 기본 평균 임대료 (예: 100만원)
+            "admin": 500000,             # 기본 평균 관리비 (예: 50만원)
+            "fee": 300000,               # 기본 평균 수수료 (예: 30만원)
+            "initial_investment": 10000000  # 기본 초기 투자비용 (예: 1000만원)
+        }
+    # 해당 값을 DB 등을 불러오는 형태로 업데이트 예상
+
+    def merge_json(self, previous: dict, current: dict) -> dict:
+        """
+        기존 JSON(previous)에 새 입력(current)을 병합.
+        current에 값이 있으면 덮어쓰고, 없으면 previous 유지.
+        """
+        merged = previous.copy()
+        for key, value in current.items():
+            if value is not None:
+                merged[key] = value
+        return merged
+
+
