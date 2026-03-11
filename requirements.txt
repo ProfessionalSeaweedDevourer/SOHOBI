@@ -1,0 +1,47 @@
+# ══════════════════════════════════════════════════════════════
+# SOHOBI 통합 의존성 목록
+# Python 3.12 기준
+#
+# 용도: 통합 semantic kernel 개발 시 단일 환경 구성 참조용
+#       개별 작업은 각 폴더의 requirements.txt 사용
+#
+# 설치: pip install -r requirements.txt
+# ══════════════════════════════════════════════════════════════
+
+# ── Azure ─────────────────────────────────────────────────────
+azure-functions==1.21.3         # NAM  — Azure Functions 런타임
+azure-identity==1.25.2          # PARK, CHOI — Azure 인증
+azure-search-documents==11.6.0  # CHOI — 벡터 검색 인덱스
+azure-core==1.33.0              # CHOI — azure-search-documents 전이 의존성
+
+# ── API 서버 ──────────────────────────────────────────────────
+fastapi==0.115.12               # PARK, NAM
+uvicorn[standard]==0.34.2       # PARK, CHOI, NAM
+pydantic==2.11.5                # PARK, NAM
+starlette==0.46.2               # CHOI — MCP SSE 서버
+
+# ── AI 오케스트레이션 ──────────────────────────────────────────
+semantic-kernel==1.40.0         # PARK, CHOI, CHANG, NAM
+openai==2.26.0                  # 전 팀원 공통
+
+# ── MCP ───────────────────────────────────────────────────────
+mcp==1.26.0                     # CHOI — FastMCP + SSE 트랜스포트
+
+# ── PDF 생성 ──────────────────────────────────────────────────
+reportlab==4.2.5                # NAM — 행정 서류 PDF
+pypdf==5.4.0                    # NAM
+pdfkit==1.0.0                   # NAM
+jinja2==3.1.6                   # NAM — HTML 템플릿 렌더링
+
+# ── 데이터 / 시각화 ────────────────────────────────────────────
+matplotlib==3.10.1              # CHANG — 몬테카를로 시뮬레이션 그래프
+numpy==2.2.3                    # CHANG
+pyyaml==6.0.2                   # CHANG — YAML 워크플로우 로드
+
+# ── 유틸리티 ──────────────────────────────────────────────────
+requests==2.32.3                # NAM — HTTP 클라이언트
+python-dotenv==1.2.2            # 전 팀원 공통
+aiohttp==3.13.3                 # 전 팀원 공통 — SK 전이 의존성
+
+# ── Jupyter ───────────────────────────────────────────────────
+jupyterlab==4.4.1               # CHOI — 노트북 실행
