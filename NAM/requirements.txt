@@ -1,11 +1,30 @@
-# Uncomment to enable Azure Monitor OpenTelemetry
-# Ref: aka.ms/functions-azure-monitor-python
-# azure-monitor-opentelemetry
+# ── 직접 의존성 ───────────────────────────────────────────────
+# Python 3.12 기준으로 검증됨
 
-azure-functions
-fastapi
-uvicorn
-semantic-kernel
-requests
-reportlab
-pypdf
+# Azure Functions 런타임
+azure-functions==1.21.3
+
+# API 서버
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+pydantic==2.11.5
+
+# AI 오케스트레이션 (Azure OpenAI 커넥터 포함)
+semantic-kernel==1.40.0
+
+# PDF 생성 (영업신고서 등 행정 서류)
+reportlab==4.2.5
+pypdf==5.4.0
+pdfkit==1.0.0
+jinja2==3.1.6
+
+# HTTP 클라이언트
+requests==2.32.3
+
+# 환경 변수
+python-dotenv==1.2.2
+
+# ── 핵심 전이 의존성 (버전 고정) ────────────────────────────
+openai==2.26.0
+azure-identity==1.25.2
+aiohttp==3.13.3
