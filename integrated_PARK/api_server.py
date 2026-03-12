@@ -4,6 +4,7 @@
 - POST /api/v1/query         — Q&A: 질문 → 도메인 라우팅 → 에이전트 → Sign-off
 - POST /api/v1/signoff       — draft 단독 Sign-off 검증
 - POST /api/v1/doc/chat      — 문서 생성: 대화형 정보 수집 → 식품 영업 신고서 PDF (NAM)
+- GET  /api/v1/logs          — JSONL 로그 조회 (프론트엔드 로그 뷰어용)
 """
 
 import os
@@ -20,6 +21,8 @@ import orchestrator
 from signoff.signoff_agent import run_signoff
 from kernel_setup import get_kernel
 from logger import log_query
+from log_formatter import load_entries_json
+from logger import _format_rejection_history
 
 load_dotenv()
 
@@ -96,12 +99,15 @@ async def query(req: QueryRequest):
         )
 
         return {
-            "request_id":  result["request_id"],
-            "status":      result["status"],
-            "domain":      domain,
-            "draft":       result["draft"],
-            "retry_count": result["retry_count"],
-            "message":     result["message"],
+            "request_id":       result["request_id"],
+            "status":           result["status"],
+            "domain":           domain,
+            "draft":            result["draft"],
+            "retry_count":      result["retry_count"],
+            "message":          result["message"],
+            "rejection_history": _format_rejection_history(
+                result.get("rejection_history", [])
+            ),
         }
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -181,6 +187,18 @@ async def doc_chat(req: DocChatRequest):
             pdf_url = f"/files/{match.group(0)}"
 
         return {"reply": reply, "pdf_url": pdf_url}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/api/v1/logs")
+async def get_logs(type: str = "queries", limit: int = 50):
+    """JSONL 로그 파일을 파싱해 JSON 배열로 반환 (프론트엔드 로그 뷰어용)."""
+    if type not in ("queries", "rejections"):
+        return JSONResponse(status_code=400, content={"error": "type은 queries 또는 rejections 중 하나여야 합니다."})
+    try:
+        entries = load_entries_json(log_type=type, limit=limit)
+        return {"type": type, "count": len(entries), "entries": entries}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 

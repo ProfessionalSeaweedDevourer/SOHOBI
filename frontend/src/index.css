@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+  min-height: 100vh;
+}
+
+/* 마크다운 응답 스타일 */
+.prose-response p { margin-bottom: 0.75rem; line-height: 1.7; }
+.prose-response ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.prose-response ol { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.prose-response li { margin-bottom: 0.25rem; }
+.prose-response strong { font-weight: 600; }
+.prose-response h1, .prose-response h2, .prose-response h3 {
+  font-weight: 700; margin: 1rem 0 0.5rem;
+}
