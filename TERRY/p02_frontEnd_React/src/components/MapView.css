@@ -1,0 +1,124 @@
+/* ===== 지도 컨테이너 ===== */
+
+.map-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* ===== 상단 컨트롤 ===== */
+
+.map-controls {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 300;
+  display: flex;
+  gap: 8px;
+}
+
+.map-btn {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.map-btn:hover {
+  background: #f3f3f3;
+}
+
+/* ===== 요약 카드 ===== */
+
+.summary-card {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+
+  width: 320px;
+
+  background: white;
+  border-radius: 16px;
+
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+
+  overflow: hidden;
+}
+
+.summary-header {
+  padding: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.summary-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.summary-sub {
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* ===== 카테고리 태그 ===== */
+
+.category-tag {
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+/* ===== 텍스트 ===== */
+
+.small-text {
+  font-size: 10px;
+  color: #bbb;
+}
+
+.meta-text {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+}
+
+/* ===== 팝업 ===== */
+
+.popup-card {
+  background: white;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  width: 260px;
+}
+
+.popup-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.popup-desc {
+  font-size: 13px;
+  color: #444;
+  line-height: 1.4;
+}
+
+/* ===== 좌표 표시 ===== */
+
+.coord-bar {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}

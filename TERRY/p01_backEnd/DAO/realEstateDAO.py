@@ -1,4 +1,4 @@
-# 위치: march03_1_backend/realEstateDAO.py
+# 위치: p01_backEnd/DAO/realEstateDAO.py
 # 실거래가 · 유동인구 · 관광 · 상권 · 공시지가 외부 API 호출 로직
 # Controller에서 import해서 사용
 

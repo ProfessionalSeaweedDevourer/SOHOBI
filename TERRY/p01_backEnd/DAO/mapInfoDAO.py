@@ -1,4 +1,4 @@
-# 위치: march03_1_backend/DAO/mapInfoDAO.py
+# 위치: p01_backEnd/DAO/mapInfoDAO.py
 import math
 from fable.oracleDBConnect import OracleDBConnect
 

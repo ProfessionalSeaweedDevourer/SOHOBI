@@ -1,4 +1,4 @@
-# 위치: march03_1_backend/realEstateController.py
+# 위치: p01_backEnd/realEstateController.py
 # FastAPI 라우터 - 비즈니스 로직은 DAO/realEstateDAO.py 에 위임
 # python -m uvicorn realEstateController:app --host=0.0.0.0 --port=8682 --reload
 
