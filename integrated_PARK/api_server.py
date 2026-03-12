@@ -7,6 +7,7 @@
 """
 
 import os
+import time
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,7 @@ import domain_router
 import orchestrator
 from signoff.signoff_agent import run_signoff
 from kernel_setup import get_kernel
+from logger import log_query
 
 load_dotenv()
 
@@ -68,6 +70,7 @@ async def health():
 @app.post("/api/v1/query")
 async def query(req: QueryRequest):
     """Q&A 플로우: 질문 → 도메인 분류 → 강화된 에이전트 → Sign-off → 최종 응답"""
+    t0 = time.monotonic()
     try:
         if req.domain in ("admin", "finance", "legal"):
             domain = req.domain
@@ -80,6 +83,18 @@ async def query(req: QueryRequest):
             question=req.question,
             max_retries=req.max_retries,
         )
+
+        log_query(
+            request_id       = result["request_id"],
+            question         = req.question,
+            domain           = domain,
+            status           = result["status"],
+            retry_count      = result["retry_count"],
+            rejection_history= result.get("rejection_history", []),
+            draft            = result["draft"],
+            latency_ms       = (time.monotonic() - t0) * 1000,
+        )
+
         return {
             "request_id":  result["request_id"],
             "status":      result["status"],

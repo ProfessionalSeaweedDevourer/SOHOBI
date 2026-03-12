@@ -56,13 +56,15 @@ _EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다.
 - 평균 월 순이익: {avg_profit:,}원
 - 표준편차: {std_profit:,}원
 - 90% 신뢰구간: {p5:,}원 ~ {p95:,}원  (하위 5% ~ 상위 95%)
-- 손실 발생 확률: {loss_prob:.1%}
+- 손실 발생 관측 여부: {loss_prob}
 
 위 결과를 바탕으로 사업 가능성을 설명하세요.
 - 응답 첫 단락에 위의 가정 조건(월매출, 원가, 급여 등)을 명시하세요.
 - 신뢰구간과 표준편차를 언급하여 예측의 불확실성을 구체적으로 설명하세요.
 - 위험 요인과 기회 요인을 함께 언급하세요.
 - 낙관·기본·비관 시나리오와 리스크 경고를 포함하세요.
+- 손실 발생 확률이 낮더라도 실제 사업에서는 시뮬레이션 범위 밖의 리스크(예: 경기 침체, 예상 외 비용 급증)가 존재함을 반드시 언급하세요.
+- **주의**: "손실 발생 확률 0%" 또는 이와 동일한 의미의 표현을 그대로 쓰지 마세요. 대신 "시뮬레이션 가정 범위 내에서는 손실이 관측되지 않았으나, 외부 충격에는 취약할 수 있습니다" 형식으로 서술하세요.
 - 투자 권유가 아닌 정보 제공임을 명시하세요.
 - 경영자가 이해하기 쉬운 자연어로 작성하세요.
 
@@ -97,7 +99,7 @@ class FinanceAgent:
         service: AzureChatCompletion = self._kernel.get_service("sign_off")
         history = ChatHistory()
         history.add_user_message(prompt)
-        settings = OpenAIChatPromptExecutionSettings(temperature=0.3)
+        settings = OpenAIChatPromptExecutionSettings(temperature=0.3, max_tokens=2000)
         result = await service.get_chat_message_content(history, settings=settings)
         return str(result)
 
@@ -143,13 +145,25 @@ class FinanceAgent:
         assumption_lines.append(f"- 세율: {variables.get('tax_rate', 0.2):.0%}")
         assumptions = "\n".join(assumption_lines)
 
+        # 손실확률: 0%이면 수치 자체를 제거하고 서술형으로만 전달
+        # (sign-off C5·F5는 "0%" 수치 자체를 리스크 부정 표현으로 판정함)
+        raw_loss = sim_result["loss_probability"]
+        if raw_loss == 0.0:
+            loss_prob_str = (
+                "이번 시뮬레이션 가정 범위(매출·원가 ±10%) 내에서는 손실 케이스가 관측되지 않았음. "
+                "단, 경기 침체·임대료 급등·수요 급감 등 시뮬레이션 가정 밖의 충격이 발생하면 "
+                "실제 손실로 이어질 수 있으며, 이 결과는 미래 수익을 보장하지 않음."
+            )
+        else:
+            loss_prob_str = f"10,000회 중 {raw_loss:.1%}에서 손실 발생"
+
         explain_prompt = _EXPLAIN_PROMPT.format(
             assumptions=assumptions,
             avg_profit=sim_result["average_net_profit"],
             std_profit=sim_result["std_profit"],
             p5=sim_result["p5_net_profit"],
             p95=sim_result["p95_net_profit"],
-            loss_prob=sim_result["loss_probability"],
+            loss_prob=loss_prob_str,
             question=question,
         )
         if retry_prompt:
