@@ -5,11 +5,12 @@
 """
 
 import json
+import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-_LOGS_DIR = Path(__file__).parent / "logs"
+_LOGS_DIR = Path(os.environ.get("LOGS_DIR", Path(__file__).parent / "logs"))
 _QUERIES_LOG   = _LOGS_DIR / "queries.jsonl"
 _REJECTIONS_LOG = _LOGS_DIR / "rejections.jsonl"
 
