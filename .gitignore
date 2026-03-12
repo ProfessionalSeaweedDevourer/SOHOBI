@@ -22,3 +22,6 @@ __pycache__/
 
 # uv lockfile (팀원 간 충돌 방지 — 필요 시 제거)
 uv.lock
+
+# 로그 파일 (구조 파일인 .gitkeep은 유지)
+integrated_PARK/logs/*.jsonl
