@@ -1,0 +1,40 @@
+1) Git 사용자 설정 (처음 한 번만)
+ⓐ 사용자 등록
+git config --global user.name "<gitHub_ID명>"
+git config --global user.email "<gitHub_이메일명>"
+ex) 
+git config --global user.name "TerryBlackhoodWoo"
+git config --global user.email "leftdeadman@gmail.com"
+
+ⓑ 설정 확인
+git config --global user.name
+git config --global user.email
+
+2) 작업 후 업로드 과정 (매번 반복)
+
+ⓐ 최신 코드 먼저 받기 (중요 ⭐)
+git pull origin main
+
+ⓑ (merge 메시지 화면 나오면)
+Merge branch 'main' ...
+-Vim 편집기 종료
+    Esc
+    :wq
+    Enter
+
+
+ⓒ 변경 파일 등록
+git add TERRY
+※ git add .(전체 변경시)
+
+ⓓ 상태 확인
+git status
+
+ⓔ 커밋 메시지 작성
+git commit -m "메모"
+ex) 
+git commit -m "지도 FrontEnd업로드"
+
+
+ⓔ GitHub 업로드
+git push origin main
