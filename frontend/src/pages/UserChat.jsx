@@ -10,6 +10,7 @@ export default function UserChat() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const bottomRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -30,8 +31,10 @@ export default function UserChat() {
           retryCount: result.retry_count,
         },
       ]);
+      inputRef.current?.clear(); // 성공 시에만 입력창 초기화
     } catch (e) {
       setError(e.message);
+      // 오류 시 입력창 유지 — 사용자가 질문을 수정해 재시도 가능
     } finally {
       setLoading(false);
     }
@@ -107,7 +110,7 @@ export default function UserChat() {
 
       {/* 입력창 */}
       <footer className="sticky bottom-0 bg-slate-50 border-t border-slate-100 px-4 py-3 max-w-3xl mx-auto w-full">
-        <ChatInput onSubmit={handleSubmit} loading={loading} />
+        <ChatInput ref={inputRef} onSubmit={handleSubmit} loading={loading} />
       </footer>
     </div>
   );

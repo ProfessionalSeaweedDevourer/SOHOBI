@@ -1,11 +1,17 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 
 /**
  * @param {{ onSubmit: (q: string) => void, loading: boolean, placeholder?: string }} props
+ * @param ref — 부모에서 ref.current.clear() 를 호출해 성공 시 입력창을 비울 수 있음
  */
-export default function ChatInput({ onSubmit, loading, placeholder }) {
+const ChatInput = forwardRef(function ChatInput({ onSubmit, loading, placeholder }, ref) {
   const [value, setValue] = useState("");
   const textareaRef = useRef(null);
+
+  // 부모가 호출할 수 있는 clear() 메서드 노출
+  useImperativeHandle(ref, () => ({
+    clear() { setValue(""); },
+  }));
 
   // 높이 자동 조절
   useEffect(() => {
@@ -26,7 +32,7 @@ export default function ChatInput({ onSubmit, loading, placeholder }) {
     const trimmed = value.trim();
     if (!trimmed || loading) return;
     onSubmit(trimmed);
-    setValue("");
+    // 입력창은 부모가 성공 후 clear()를 호출할 때 비워짐 (오류 시 보존)
   }
 
   return (
@@ -55,4 +61,6 @@ export default function ChatInput({ onSubmit, loading, placeholder }) {
       </button>
     </div>
   );
-}
+});
+
+export default ChatInput;
