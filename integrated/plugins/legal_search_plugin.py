@@ -24,17 +24,19 @@ class LegalSearchPlugin:
         self._embedding_deployment = os.getenv(
             "AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-small"
         )
-        self._ai_client = AzureOpenAI(
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            api_version=os.getenv("AZURE_EMBEDDING_API_VERSION", "2024-02-01"),
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
-        )
+        openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+        openai_key = os.getenv("AZURE_OPENAI_API_KEY", "")
         search_key = os.getenv("AZURE_SEARCH_KEY", "")
         search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT", "")
         index_name = os.getenv("AZURE_SEARCH_INDEX", "legal-index")
 
-        self._available = bool(search_key and search_endpoint)
+        self._available = bool(search_key and search_endpoint and openai_endpoint and openai_key)
         if self._available:
+            self._ai_client = AzureOpenAI(
+                api_key=openai_key,
+                api_version=os.getenv("AZURE_EMBEDDING_API_VERSION", "2024-02-01"),
+                azure_endpoint=openai_endpoint,
+            )
             self._search_client = SearchClient(
                 endpoint=search_endpoint,
                 index_name=index_name,
