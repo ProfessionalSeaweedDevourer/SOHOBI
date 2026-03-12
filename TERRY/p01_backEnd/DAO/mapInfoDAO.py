@@ -149,7 +149,7 @@ class MapInfoDAO:
                 OracleDBConnect.closeConCur(con, cur)
         return {"grand_total": total, "by_table": results}
 
-    # ── 5. CSV 배치 MERGE (중복 → UPDATE, 신규 → INSERT) ──────────
+    # ── 5. CSV 배치 MERGE  ─────────────────────────────────────────
     def insertBatch(self, records: list, table_name: str):
         con, cur = OracleDBConnect.makeConCur(DB_INFO)
         try:

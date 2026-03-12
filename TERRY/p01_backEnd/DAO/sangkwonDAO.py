@@ -30,7 +30,7 @@ class SangkwonDAO:
     def _db_con(self):
         from fable.oracleDBConnect import OracleDBConnect
 
-        return OracleDBConnect.getConCur(DB_INFO)
+        return OracleDBConnect.makeConCur(DB_INFO)
 
     # ════════════════════════════════════════════════════════════
     # 1. 서버 시작 시 DB → DataFrame 로드

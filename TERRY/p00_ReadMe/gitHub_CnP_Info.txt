@@ -33,7 +33,7 @@ git status
 ⓔ 커밋 메시지 작성
 git commit -m "메모"
 ex) 
-git commit -m "지도 FrontEnd업로드"
+git commit -m "지도 DB스크립트업로드"
 
 
 ⓔ GitHub 업로드
