@@ -1,4 +1,4 @@
-# 위치: march03_1_backend/DAO/sangkwonDAO.py
+# 위치: p01_backEnd/DAO/sangkwonDAO.py
 #
 # ── 전략 ────────────────────────────────────────────────────────
 #  매출 (SANGKWON_SALES 테이블):

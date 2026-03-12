@@ -15,14 +15,22 @@ git config --global user.email
 ⓐ 최신 코드 먼저 받기 (중요 ⭐)
 git pull origin main
 
-ⓑ 변경 파일 등록
+ⓑ (merge 메시지 화면 나오면)
+Merge branch 'main' ...
+-Vim 편집기 종료
+    Esc
+    :wq
+    Enter
+
+
+ⓒ 변경 파일 등록
 git add TERRY
 ※ git add .(전체 변경시)
 
-ⓒ 상태 확인
+ⓓ 상태 확인
 git status
 
-ⓓ 커밋 메시지 작성
+ⓔ 커밋 메시지 작성
 git commit -m "메모"
 ex) 
 git commit -m "지도 BackEnd업로드"

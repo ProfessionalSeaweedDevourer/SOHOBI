@@ -1,4 +1,4 @@
-# 위치: march03_1_backend/mapController.py
+# 위치: p01_backEnd/mapController.py
 # python -m uvicorn mapController:app --host=0.0.0.0 --port=8681 --reload
 
 import csv
