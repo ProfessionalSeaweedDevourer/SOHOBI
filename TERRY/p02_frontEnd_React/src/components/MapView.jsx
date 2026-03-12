@@ -7,6 +7,7 @@ import VectorSource from "ol/source/Vector";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
 import Feature from "ol/Feature";
+import GeoJSON from "ol/format/GeoJSON";
 import Point from "ol/geom/Point";
 import {
    Style,
@@ -19,6 +20,20 @@ import Layerpanel from "./Layerpanel";
 import CategoryPanel from "./CategoryPanel";
 import { CATEGORIES } from "../constants/categories";
 import "./MapView.css";
+
+// ── 행정동 폴리곤 스타일 (컴포넌트 밖 → 매 렌더마다 재생성 방지) ──
+const DONG_STYLE_DEFAULT = new Style({
+   fill: new Fill({ color: "rgba(59,130,246,0.06)" }),
+   stroke: new Stroke({ color: "rgba(59,130,246,0.45)", width: 1 }),
+});
+const DONG_STYLE_HOVER = new Style({
+   fill: new Fill({ color: "rgba(59,130,246,0.22)" }),
+   stroke: new Stroke({ color: "#1d4ed8", width: 2.5 }),
+});
+const DONG_STYLE_SELECTED = new Style({
+   fill: new Fill({ color: "rgba(16,185,129,0.22)" }),
+   stroke: new Stroke({ color: "#059669", width: 3 }),
+});
 
 const FASTAPI_URL = "http://localhost:8681";
 const REALESTATE_URL = "http://localhost:8682";
@@ -227,7 +242,8 @@ export default function MapView() {
    const dongLayerRef = useRef(null); // VectorLayer (폴리곤)
    const dongModeRef = useRef("none");
    const [dongLoading, setDongLoading] = useState(false);
-   const [dongPanel, setDongPanel] = useState(null); // 클릭 핸들러에서 ref로 읽기용
+   const [dongPanel, setDongPanel] = useState(null);
+   const [dongTooltip, setDongTooltip] = useState(null); // { x, y, dongNm, guNm, sales, loading }
    useEffect(() => {
       dongModeRef.current = dongMode;
    }, [dongMode]);
@@ -329,37 +345,168 @@ export default function MapView() {
       const map = mapInstance.current;
       if (!map) return;
 
-      // 호버 디바운스 타이머
-      let hoverTimer = null;
-
       const moveHandler = (e) => {
          const [lng, lat] = toLonLat(e.coordinate);
          setCoords({ lat: lat.toFixed(6), lng: lng.toFixed(6) });
 
-         // 행정동 모드일 때 호버 하이라이트
+         // 행정동 모드 + WFS VectorLayer 로드된 경우에만 호버 처리
          if (dongModeRef.current === "none") return;
-         if (hoverTimer) clearTimeout(hoverTimer);
-         hoverTimer = setTimeout(async () => {
-            const dongNm = await getDongNameAtCoord(e.coordinate);
-            if (!dongNm || dongNm === dongHoverNameRef.current) return;
-            dongHoverNameRef.current = dongNm;
-            // 커서 변경으로 클릭 가능 표시
+         const bLayer = dongBoundaryLayerRef.current;
+         if (!bLayer?.getSource?.()?.getFeatures) return;
+
+         // forEachFeatureAtPixel: 즉각 응답 (API 호출 없음)
+         const feat = map.forEachFeatureAtPixel(e.pixel, (f) => f, {
+            layerFilter: (l) => l === bLayer,
+            hitTolerance: 4,
+         });
+
+         // 같은 폴리곤 내 이동 → 툴팁 위치만 갱신
+         if (feat === dongHoverFeatRef.current) {
+            if (feat)
+               setDongTooltip((prev) =>
+                  prev ? { ...prev, x: e.pixel[0], y: e.pixel[1] } : prev,
+               );
+            return;
+         }
+
+         // 이전 호버 해제
+         if (dongHoverFeatRef.current) {
+            dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+         }
+
+         if (feat) {
+            feat.setStyle(DONG_STYLE_HOVER);
+            dongHoverFeatRef.current = feat;
             map.getTargetElement().style.cursor = "pointer";
-            // 호버 라벨 (별도 오버레이 대신 콘솔 + 커서)
-            console.log(`[동 호버] ${dongNm}`);
-         }, 120);
+
+            const p = feat.getProperties();
+            const dongNm = p.emd_kor_nm || p.adm_nm || p.emd_nm || p.name || "";
+            const guNm = p.sig_kor_nm || p.sig_nm || "";
+            if (guNm) currentGuNmRef.current = guNm;
+
+            if (dongNm !== dongHoverNameRef.current) {
+               dongHoverNameRef.current = dongNm;
+               setDongTooltip({
+                  x: e.pixel[0],
+                  y: e.pixel[1],
+                  dongNm,
+                  guNm,
+                  sales: null,
+                  loading: true,
+               });
+               // 250ms 디바운스 후 매출 미리보기 fetch
+               clearTimeout(moveHandler._t);
+               moveHandler._t = setTimeout(async () => {
+                  if (dongModeRef.current === "none") return;
+                  try {
+                     const r = await fetch(
+                        `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(dongNm)}&gu=${encodeURIComponent(guNm)}`,
+                     );
+                     const j = await r.json();
+                     setDongTooltip((prev) =>
+                        prev?.dongNm === dongNm
+                           ? { ...prev, sales: j.data || null, loading: false }
+                           : prev,
+                     );
+                  } catch {
+                     setDongTooltip((prev) =>
+                        prev?.dongNm === dongNm
+                           ? { ...prev, loading: false }
+                           : prev,
+                     );
+                  }
+               }, 250);
+            } else {
+               setDongTooltip((prev) =>
+                  prev ? { ...prev, x: e.pixel[0], y: e.pixel[1] } : prev,
+               );
+            }
+         } else {
+            // 폴리곤 밖
+            if (dongHoverFeatRef.current) {
+               dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+               dongHoverFeatRef.current = null;
+            }
+            dongHoverNameRef.current = "";
+            map.getTargetElement().style.cursor = "";
+            setDongTooltip(null);
+            clearTimeout(moveHandler._t);
+         }
       };
 
       const clickHandler = async (e) => {
          // ── 행정동 WMS 클릭 (GetFeatureInfo로 동명 파악 → 패널) ──
          if (dongModeRef.current !== "none") {
-            const dongNm = await getDongNameAtCoord(e.coordinate);
-            if (dongNm) {
-               console.log(
-                  `[동 클릭] ${dongNm} / 모드: ${dongModeRef.current}`,
-               );
-               loadDongPanel(dongNm, dongModeRef.current);
-               return;
+            const bLayer = dongBoundaryLayerRef.current;
+            const feat = bLayer?.getSource?.()?.getFeatures
+               ? map.forEachFeatureAtPixel(e.pixel, (f) => f, {
+                    layerFilter: (l) => l === bLayer,
+                    hitTolerance: 6,
+                 })
+               : null;
+
+            if (feat) {
+               const p = feat.getProperties();
+               const _dongNm =
+                  p.emd_kor_nm || p.adm_nm || p.emd_nm || p.name || "";
+               const _guNm =
+                  p.sig_kor_nm || p.sig_nm || currentGuNmRef.current || "";
+               if (_dongNm) {
+                  if (_guNm) currentGuNmRef.current = _guNm;
+                  // 선택 스타일
+                  if (dongHoverFeatRef.current)
+                     dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+                  feat.setStyle(DONG_STYLE_SELECTED);
+                  dongHoverFeatRef.current = feat;
+                  setDongTooltip(null);
+
+                  const _mode = dongModeRef.current;
+                  console.log(
+                     `[동 클릭] ${_dongNm} (${_guNm}) / 모드: ${_mode}`,
+                  );
+                  setDongLoading(true);
+                  setDongPanel(null);
+                  try {
+                     if (_mode === "sales") {
+                        const _rr = await fetch(
+                           `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_dongNm)}&gu=${encodeURIComponent(_guNm)}`,
+                        );
+                        const _jj = await _rr.json();
+                        if (_jj.data)
+                           setDongPanel({
+                              mode: _mode,
+                              dongNm: _dongNm,
+                              guNm: _guNm,
+                              apiData: _jj.data,
+                           });
+                        else
+                           setDongPanel({
+                              mode: _mode,
+                              dongNm: _dongNm,
+                              guNm: _guNm,
+                              apiData: null,
+                              empty: true,
+                           });
+                     } else if (_mode === "realestate") {
+                        const _rr = await fetch(
+                           `${REALESTATE_URL}/realestate/analysis?sigungu=${encodeURIComponent(_guNm)}&dong=${encodeURIComponent(_dongNm)}`,
+                        );
+                        const _jj = await _rr.json();
+                        if (_jj)
+                           setDongPanel({
+                              mode: _mode,
+                              dongNm: _dongNm,
+                              guNm: _guNm,
+                              apiData: _jj,
+                           });
+                     }
+                  } catch (_e) {
+                     console.error("[동 클릭 패널]", _e);
+                  } finally {
+                     setDongLoading(false);
+                  }
+                  return;
+               }
             }
          }
 
@@ -496,6 +643,8 @@ export default function MapView() {
       return () => {
          map.un("pointermove", moveHandler);
          map.un("click", clickHandler);
+         clearTimeout(moveHandler._t);
+         if (map.getTargetElement()) map.getTargetElement().style.cursor = "";
       };
    }, [mapInstance.current, drawMarkers]); // eslint-disable-line
 
@@ -524,109 +673,81 @@ export default function MapView() {
    };
 
    // ── 행정동 경계 WMS + 호버/클릭 인터랙션 ────────────────────
-   const dongBoundaryLayerRef = useRef(null);
-   const dongHoverNameRef = useRef(""); // 현재 호버 중인 동명
+   const dongBoundaryLayerRef = useRef(null); // WFS VectorLayer
+   const dongHoverFeatRef = useRef(null); // 현재 호버 Feature
+   const dongHoverNameRef = useRef(""); // 현재 호버 동명
 
-   const ensureDongBoundaryLayer = useCallback(() => {
+   // ── WFS로 서울 행정동 폴리곤 로드 (최초 1회) ─────────────────
+   const ensureDongBoundaryLayer = useCallback(async () => {
       const map = mapInstance.current;
       if (!map || dongBoundaryLayerRef.current) return;
-      const layer = new TileLayer({
-         source: new TileWMS({
-            url: `/wms/req/wms?KEY=${VWORLD_KEY}&DOMAIN=localhost`,
-            params: {
-               SERVICE: "WMS",
-               VERSION: "1.3.0",
-               REQUEST: "GetMap",
-               LAYERS: "lt_c_ademd_info",
-               FORMAT: "image/png",
-               TRANSPARENT: "TRUE",
-               CRS: "EPSG:3857",
-            },
-            crossOrigin: "anonymous",
-            transition: 0,
-         }),
-         opacity: 0.7,
-         zIndex: 48,
-      });
-      layer.set("name", "dong_boundary_bg");
-      map.addLayer(layer);
-      dongBoundaryLayerRef.current = layer;
-      console.log("[동 경계] WMS 레이어 추가 (lt_c_ademd_info)");
-   }, [mapInstance]);
 
-   // ── 행정동 WMS GetFeatureInfo 호출 → 동명 반환 ────────────────
-   const getDongNameAtCoord = useCallback(
-      async (coordinate) => {
-         const map = mapInstance.current;
-         if (!map || !dongBoundaryLayerRef.current) return null;
-         try {
-            const source = dongBoundaryLayerRef.current.getSource();
-            const res = map.getView().getResolution();
-            const url = source.getFeatureInfoUrl(coordinate, res, "EPSG:3857", {
-               INFO_FORMAT: "application/json",
-               FEATURE_COUNT: 1,
-            });
-            if (!url) return null;
-            const r = await fetch(url);
-            const txt = await r.text();
-            if (!txt || txt.startsWith("<")) return null;
-            const data = JSON.parse(txt);
-            const props = data.features?.[0]?.properties;
-            // lt_c_ademd_info 필드: emd_kor_nm(행정동명), sig_kor_nm(구명)
-            const dongNm =
-               props?.emd_kor_nm ||
-               props?.adm_nm ||
-               props?.emd_nm ||
-               props?.name ||
-               null;
-            const guNm =
-               props?.sig_kor_nm || props?.sig_nm || props?.gu_nm || "";
-            if (guNm) currentGuNmRef.current = guNm;
-            return dongNm;
-         } catch {
-            return null;
-         }
-      },
-      [mapInstance],
-   );
+      // ── 백엔드 프록시 경유 (VWorld WFS 직접 호출 시 CORS 차단) ──
+      const WFS_URL = `${REALESTATE_URL}/realestate/wfs-dong?sig_cd=11`;
 
-   // ── 동 데이터 패널 로드 (클릭 시) ──────────────────────────────
-   const loadDongPanel = useCallback(async (dongNm, mode) => {
-      if (!dongNm || mode === "none") return;
-      const guNm = currentGuNmRef.current;
-      setDongLoading(true);
-      setDongPanel(null);
+      console.log("[동 WFS] 서울 행정동 폴리곤 로드 시작...");
       try {
-         if (mode === "sales") {
-            const r = await fetch(
-               `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(dongNm)}&gu=${encodeURIComponent(guNm)}`,
-            );
-            const j = await r.json();
-            if (j.data) setDongPanel({ mode, dongNm, guNm, apiData: j.data });
-         } else if (mode === "realestate") {
-            const r = await fetch(
-               `${REALESTATE_URL}/realestate/analysis?sigungu=${encodeURIComponent(guNm)}&dong=${encodeURIComponent(dongNm)}`,
-            );
-            const j = await r.json();
-            if (j) setDongPanel({ mode, dongNm, guNm, apiData: j });
-         }
-      } catch (err) {
-         console.error("[동 패널 오류]", err);
-      } finally {
-         setDongLoading(false);
-      }
-   }, []);
+         const res = await fetch(WFS_URL);
+         const json = await res.json();
+         const features = new GeoJSON().readFeatures(json, {
+            dataProjection: "EPSG:3857",
+            featureProjection: "EPSG:3857",
+         });
+         console.log(`[동 WFS] ${features.length}개 폴리곤 로드 완료`);
+         features.forEach((f) => f.setStyle(DONG_STYLE_DEFAULT));
 
-   // ── drawDongLayer: 뱃지 없이 경계만 표시 ──────────────────────
+         const src = new VectorSource({ features });
+         const layer = new VectorLayer({ source: src, zIndex: 48 });
+         layer.set("name", "dong_boundary_bg");
+         map.addLayer(layer);
+         dongBoundaryLayerRef.current = layer;
+      } catch (err) {
+         console.error("[동 WFS] 로드 실패, WMS fallback:", err);
+         // WFS 실패 시 WMS TileLayer fallback
+         const fallback = new TileLayer({
+            source: new TileWMS({
+               url: `/wms/req/wms?KEY=${VWORLD_KEY}&DOMAIN=localhost`,
+               params: {
+                  SERVICE: "WMS",
+                  VERSION: "1.3.0",
+                  REQUEST: "GetMap",
+                  LAYERS: "lt_c_ademd_info",
+                  FORMAT: "image/png",
+                  TRANSPARENT: "TRUE",
+                  CRS: "EPSG:3857",
+               },
+               crossOrigin: "anonymous",
+               transition: 0,
+            }),
+            opacity: 0.6,
+            zIndex: 48,
+         });
+         fallback.set("name", "dong_boundary_bg");
+         map.addLayer(fallback);
+         dongBoundaryLayerRef.current = fallback;
+      }
+   }, []); // mapInstance는 ref - deps 불필요
+
+   // ── drawDongLayer: WFS 레이어 표시 + 모드 변경 시 스타일 리셋 ──
    const drawDongLayer = useCallback(
       async (mode) => {
          if (mode === "none") {
+            const layer = dongBoundaryLayerRef.current;
+            if (layer?.getSource?.()) {
+               layer
+                  .getSource()
+                  .getFeatures()
+                  .forEach((f) => f.setStyle(DONG_STYLE_DEFAULT));
+            }
+            dongHoverFeatRef.current = null;
+            dongHoverNameRef.current = "";
             setDongPanel(null);
+            setDongTooltip(null);
             return;
          }
-         ensureDongBoundaryLayer();
+         await ensureDongBoundaryLayer();
       },
-      [mapInstance, ensureDongBoundaryLayer],
+      [ensureDongBoundaryLayer],
    );
 
    // 모드 전환 핸들러
@@ -662,16 +783,7 @@ export default function MapView() {
    const cat = popup ? getCatStyle(popup.상권업종대분류명) : null;
 
    return (
-      <div
-         style={{
-            position: "relative",
-            width: "100%",
-            height: "100vh",
-            overflow: "hidden",
-            display: "flex",
-            fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif",
-         }}
-      >
+      <div className="mv-root">
          {/* 왼쪽 카테고리 사이드바 */}
          <CategoryPanel
             visibleCats={visibleCats}
@@ -682,84 +794,24 @@ export default function MapView() {
             catCounts={catCounts}
          />
 
-         <div ref={mapRef} style={{ flex: 1, height: "100%", minWidth: 0 }} />
+         <div ref={mapRef} className="mv-map" />
 
          {/* 상단 컨트롤 바 */}
-         <div
-            style={{
-               position: "absolute",
-               top: 14,
-               left: "50%",
-               transform: "translateX(-50%)",
-               zIndex: 200,
-               display: "flex",
-               alignItems: "center",
-               gap: 8,
-               background: "#fff",
-               border: "1px solid #e5e7eb",
-               borderRadius: 12,
-               padding: "6px 10px",
-               boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-            }}
-         >
+         <div className="mv-ctrl-bar">
             <button
-               style={{
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "5px 14px",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.18s",
-                  background: clickMode ? "#2563EB" : "#e5e7eb",
-                  color: clickMode ? "#fff" : "#555",
-               }}
+               className={`mv-ctrl-btn ${clickMode ? "mv-ctrl-btn--on" : "mv-ctrl-btn--off"}`}
                onClick={() => setClickMode((v) => !v)}
             >
                {clickMode ? "📍 반경분석 ON" : "📍 반경분석 OFF"}
             </button>
             {nearbyCount !== null && (
-               <span
-                  style={{
-                     background: "#eff6ff",
-                     border: "1px solid #bfdbfe",
-                     borderRadius: 8,
-                     padding: "5px 12px",
-                     fontSize: 12,
-                     color: "#2563eb",
-                     fontWeight: 600,
-                  }}
-               >
+               <span className="mv-ctrl-badge">
                   반경 500m · {nearbyCount}건
                </span>
             )}
-            {loading && (
-               <span
-                  style={{
-                     background: "#fff",
-                     border: "1px solid #ddd",
-                     borderRadius: 8,
-                     padding: "5px 12px",
-                     fontSize: 12,
-                     color: "#999",
-                  }}
-               >
-                  DB 조회 중...
-               </span>
-            )}
+            {loading && <span className="mv-ctrl-loading">DB 조회 중...</span>}
             {nearbyCount !== null && (
-               <button
-                  style={{
-                     background: "#fff",
-                     border: "1px solid #ddd",
-                     borderRadius: 8,
-                     padding: "5px 12px",
-                     fontSize: 12,
-                     color: "#666",
-                     cursor: "pointer",
-                  }}
-                  onClick={clearAll}
-               >
+               <button className="mv-ctrl-clear" onClick={clearAll}>
                   ✕ 초기화
                </button>
             )}
@@ -767,27 +819,13 @@ export default function MapView() {
 
          {/* 레이어 패널 */}
          <button
-            style={{
-               position: "absolute",
-               top: 14,
-               right: 14,
-               zIndex: 200,
-               background: "#fff",
-               border: "1px solid #e5e7eb",
-               borderRadius: 10,
-               padding: "8px 12px",
-               fontSize: 18,
-               cursor: "pointer",
-               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            }}
+            className="mv-layer-btn"
             onClick={() => setShowPanel((p) => !p)}
          >
             🗂️
          </button>
          {showPanel && mapInstance.current && (
-            <div
-               style={{ position: "absolute", top: 58, right: 14, zIndex: 200 }}
-            >
+            <div className="mv-layer-panel-wrap">
                <Layerpanel
                   map={mapInstance.current}
                   vworldKey={VWORLD_KEY}
@@ -801,20 +839,7 @@ export default function MapView() {
             (() => {
                const meta = LAYER_META[wmsPopup.type] || LAYER_META.cadastral;
                return (
-                  <div
-                     style={{
-                        position: "absolute",
-                        bottom: 50,
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        zIndex: 300,
-                        width: 320,
-                        background: "#fff",
-                        borderRadius: 16,
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-                        overflow: "hidden",
-                     }}
-                  >
+                  <div className="mv-wms-popup">
                      <div style={{ height: 4, background: meta.color }} />
                      <div style={{ padding: "12px 16px 16px" }}>
                         <div
@@ -1574,6 +1599,75 @@ export default function MapView() {
             })}
          </div>
 
+         {/* ── 행정동 호버 툴팁 ── */}
+         {dongTooltip && dongModeRef.current !== "none" && (
+            <div
+               style={{
+                  position: "absolute",
+                  left: dongTooltip.x + 14,
+                  top: dongTooltip.y - 10,
+                  zIndex: 500,
+                  pointerEvents: "none",
+                  background: "#fff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 10,
+                  padding: "8px 12px",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.13)",
+                  minWidth: 140,
+                  maxWidth: 200,
+               }}
+            >
+               <div
+                  style={{
+                     fontSize: 13,
+                     fontWeight: 700,
+                     color: "#111",
+                     marginBottom: 2,
+                  }}
+               >
+                  {dongTooltip.dongNm}
+               </div>
+               <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>
+                  {dongTooltip.guNm}
+               </div>
+               {dongModeRef.current === "sales" &&
+                  (dongTooltip.loading ? (
+                     <div style={{ fontSize: 11, color: "#aaa" }}>
+                        매출 조회 중...
+                     </div>
+                  ) : dongTooltip.sales ? (
+                     <>
+                        <div
+                           style={{
+                              fontSize: 11,
+                              color: "#059669",
+                              fontWeight: 700,
+                           }}
+                        >
+                           💰{" "}
+                           {dongTooltip.sales.sales
+                              ? `${(dongTooltip.sales.sales / 1e8).toFixed(1)}억`
+                              : "-"}
+                        </div>
+                        <div style={{ fontSize: 10, color: "#888" }}>
+                           점포{" "}
+                           {dongTooltip.sales.selng_co?.toLocaleString() || "-"}
+                           개
+                        </div>
+                     </>
+                  ) : (
+                     <div style={{ fontSize: 11, color: "#ccc" }}>
+                        데이터 없음
+                     </div>
+                  ))}
+               {dongModeRef.current === "realestate" && (
+                  <div style={{ fontSize: 11, color: "#2563eb" }}>
+                     클릭하여 조회 →
+                  </div>
+               )}
+            </div>
+         )}
+
          {/* ── 동 클릭 → 오른쪽 슬라이드 패널 ── */}
          {dongPanel &&
             (() => {
@@ -1583,74 +1677,35 @@ export default function MapView() {
                const panelBg = isRE ? "#eff6ff" : "#f0fdf4";
 
                return (
-                  <div
-                     style={{
-                        position: "absolute",
-                        top: 0,
-                        right: 0,
-                        width: 300,
-                        height: "100%",
-                        background: "#fff",
-                        boxShadow: "-4px 0 20px rgba(0,0,0,0.15)",
-                        zIndex: 350,
-                        display: "flex",
-                        flexDirection: "column",
-                        overflow: "hidden",
-                     }}
-                  >
+                  <div className="mv-dong-panel">
                      {/* 헤더 */}
                      <div
-                        style={{
-                           background: panelColor,
-                           padding: "16px 16px 14px",
-                           color: "#fff",
-                        }}
+                        className="mv-dong-panel__header"
+                        style={{ background: panelColor }}
                      >
-                        <div
-                           style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "flex-start",
-                           }}
-                        >
+                        <div className="mv-dong-panel__header-row">
                            <div>
-                              <div
-                                 style={{
-                                    fontSize: 11,
-                                    opacity: 0.8,
-                                    marginBottom: 2,
-                                 }}
-                              >
+                              <div className="mv-dong-panel__gu">
                                  {dongPanel.admNm}
                               </div>
-                              <div style={{ fontSize: 18, fontWeight: 800 }}>
+                              <div className="mv-dong-panel__name">
                                  {dongPanel.dongNm}
                               </div>
                            </div>
                            <button
                               onClick={() => setDongPanel(null)}
-                              style={{
-                                 background: "rgba(255,255,255,0.2)",
-                                 border: "none",
-                                 borderRadius: 8,
-                                 padding: "4px 10px",
-                                 color: "#fff",
-                                 cursor: "pointer",
-                                 fontSize: 14,
-                              }}
+                              className="mv-dong-panel__close"
                            >
                               ✕
                            </button>
                         </div>
-                        <div
-                           style={{ marginTop: 8, fontSize: 11, opacity: 0.85 }}
-                        >
+                        <div className="mv-dong-panel__mode-label">
                            {isRE ? "🏢 실거래가 분석" : "📊 상권 매출 분석"}
                         </div>
                      </div>
 
                      {/* 바디 */}
-                     <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+                     <div className="mv-dong-panel__body">
                         {!d ? (
                            <div
                               style={{
@@ -1663,161 +1718,238 @@ export default function MapView() {
                               데이터 없음
                            </div>
                         ) : isRE ? (
-                           /* ── 실거래가 패널 (price-overlay 기반) ── */
+                           /* ── 실거래가 패널 ── */
+                           /* API 응답: { 상업용:{건수,평균가,최저가,최고가,목록}, 오피스텔:{건수,평균보증금,목록}, 조회범위, 분석기간 } */
                            <div
                               style={{
                                  display: "flex",
                                  flexDirection: "column",
-                                 gap: 12,
+                                 gap: 10,
                               }}
                            >
+                              {/* 조회 범위 / 분석 기간 */}
                               <div
                                  style={{
-                                    background: panelBg,
-                                    borderRadius: 12,
-                                    padding: 14,
+                                    fontSize: 11,
+                                    color: "#888",
+                                    lineHeight: 1.6,
                                  }}
                               >
-                                 <div
-                                    style={{
-                                       fontSize: 10,
-                                       color: "#888",
-                                       marginBottom: 4,
-                                    }}
-                                 >
-                                    평균 거래금액
-                                 </div>
-                                 <div
-                                    style={{
-                                       fontSize: 22,
-                                       fontWeight: 800,
-                                       color: panelColor,
-                                    }}
-                                 >
-                                    {d?.avg_str || "-"}
-                                 </div>
-                                 <div
-                                    style={{
-                                       fontSize: 11,
-                                       color: "#64748b",
-                                       marginTop: 2,
-                                    }}
-                                 >
-                                    거래건수 {d?.count?.toLocaleString() || "-"}
-                                    건
-                                 </div>
+                                 📍 {d?.조회범위 || d?.sigungu || "-"}
+                                 <br />
+                                 🗓 {d?.분석기간 || "-"}
                               </div>
-                              <button
-                                 style={{
-                                    padding: "10px",
-                                    background: panelColor,
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                 }}
-                                 onClick={async () => {
-                                    const res = await fetch(
-                                       `${REALESTATE_URL}/realestate/analysis?sigungu=${encodeURIComponent(dongPanel.guNm)}&dong=${encodeURIComponent(dongPanel.dongNm)}`,
-                                    );
-                                    const json = await res.json();
-                                    setDongPanel((prev) => ({
-                                       ...prev,
-                                       analysisData: json,
-                                    }));
-                                 }}
-                              >
-                                 📋 상세 실거래가 조회
-                              </button>
-                              {dongPanel.analysisData &&
-                                 (() => {
-                                    const a = dongPanel.analysisData;
-                                    return (
-                                       <div>
-                                          {["상업용", "오피스텔"].map(
-                                             (type) => {
-                                                const t = a[type];
-                                                if (!t || t.거래건수 === 0)
-                                                   return null;
-                                                return (
-                                                   <div
-                                                      key={type}
-                                                      style={{
-                                                         background: "#f8fafc",
-                                                         borderRadius: 12,
-                                                         padding: 14,
-                                                         marginBottom: 8,
-                                                      }}
-                                                   >
-                                                      <div
-                                                         style={{
-                                                            fontSize: 11,
-                                                            fontWeight: 700,
-                                                            color: "#475569",
-                                                            marginBottom: 8,
-                                                         }}
-                                                      >
-                                                         {type === "상업용"
-                                                            ? "🏪 상업용"
-                                                            : "🏠 오피스텔"}
-                                                      </div>
-                                                      <div
-                                                         style={{
-                                                            display: "grid",
-                                                            gridTemplateColumns:
-                                                               "1fr 1fr",
-                                                            gap: 6,
-                                                         }}
-                                                      >
-                                                         {[
-                                                            [
-                                                               "건수",
-                                                               `${t.거래건수}건`,
-                                                            ],
-                                                            ["평균", t.평균가],
-                                                            ["최저", t.최저가],
-                                                            ["최고", t.최고가],
-                                                         ].map(([k, v]) => (
-                                                            <div key={k}>
-                                                               <div
-                                                                  style={{
-                                                                     fontSize: 10,
-                                                                     color: "#888",
-                                                                  }}
-                                                               >
-                                                                  {k}
-                                                               </div>
-                                                               <div
-                                                                  style={{
-                                                                     fontSize: 12,
-                                                                     fontWeight: 700,
-                                                                  }}
-                                                               >
-                                                                  {v || "-"}
-                                                               </div>
-                                                            </div>
-                                                         ))}
-                                                      </div>
-                                                   </div>
-                                                );
-                                             },
-                                          )}
-                                          {a.분석기간 && (
+
+                              {/* 상업용 매매 */}
+                              {d?.상업용 && d.상업용.건수 > 0 && (
+                                 <div
+                                    style={{
+                                       background: "#eff6ff",
+                                       borderRadius: 12,
+                                       padding: 14,
+                                    }}
+                                 >
+                                    <div
+                                       style={{
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          color: "#2563eb",
+                                          marginBottom: 8,
+                                       }}
+                                    >
+                                       🏪 상업용 매매
+                                    </div>
+                                    <div
+                                       style={{
+                                          display: "grid",
+                                          gridTemplateColumns: "1fr 1fr",
+                                          gap: 6,
+                                       }}
+                                    >
+                                       {[
+                                          ["건수", `${d.상업용.건수}건`],
+                                          ["평균가", d.상업용.평균가],
+                                          ["최저가", d.상업용.최저가],
+                                          ["최고가", d.상업용.최고가],
+                                       ].map(([k, v]) => (
+                                          <div key={k}>
                                              <div
                                                 style={{
                                                    fontSize: 10,
-                                                   color: "#bbb",
-                                                   textAlign: "right",
+                                                   color: "#888",
                                                 }}
                                              >
-                                                {a.분析기간}
+                                                {k}
                                              </div>
-                                          )}
+                                             <div
+                                                style={{
+                                                   fontSize: 12,
+                                                   fontWeight: 700,
+                                                   color: "#1e40af",
+                                                }}
+                                             >
+                                                {v || "-"}
+                                             </div>
+                                          </div>
+                                       ))}
+                                    </div>
+                                    {/* 최근 거래 목록 */}
+                                    {d.상업용.목록?.length > 0 && (
+                                       <div
+                                          style={{
+                                             marginTop: 10,
+                                             borderTop: "1px solid #dbeafe",
+                                             paddingTop: 8,
+                                          }}
+                                       >
+                                          <div
+                                             style={{
+                                                fontSize: 10,
+                                                color: "#888",
+                                                marginBottom: 4,
+                                             }}
+                                          >
+                                             최근 거래
+                                          </div>
+                                          {d.상업용.목록
+                                             .slice(0, 3)
+                                             .map((item, i) => (
+                                                <div
+                                                   key={i}
+                                                   style={{
+                                                      fontSize: 11,
+                                                      color: "#334155",
+                                                      marginBottom: 3,
+                                                      lineHeight: 1.4,
+                                                   }}
+                                                >
+                                                   {item.년}-
+                                                   {String(item.월).padStart(
+                                                      2,
+                                                      "0",
+                                                   )}{" "}
+                                                   &nbsp;
+                                                   <span
+                                                      style={{
+                                                         fontWeight: 700,
+                                                         color: "#2563eb",
+                                                      }}
+                                                   >
+                                                      {item.거래금액}만원
+                                                   </span>
+                                                   {item.법정동 && (
+                                                      <span
+                                                         style={{
+                                                            color: "#888",
+                                                         }}
+                                                      >
+                                                         {" "}
+                                                         · {item.법정동}
+                                                      </span>
+                                                   )}
+                                                </div>
+                                             ))}
                                        </div>
-                                    );
-                                 })()}
+                                    )}
+                                 </div>
+                              )}
+                              {d?.상업용?.건수 === 0 && (
+                                 <div
+                                    style={{
+                                       background: "#f1f5f9",
+                                       borderRadius: 12,
+                                       padding: 14,
+                                       fontSize: 12,
+                                       color: "#94a3b8",
+                                       textAlign: "center",
+                                    }}
+                                 >
+                                    🏪 상업용 거래 데이터 없음
+                                 </div>
+                              )}
+
+                              {/* 오피스텔 전월세 */}
+                              {d?.오피스텔 && d.오피스텔.건수 > 0 && (
+                                 <div
+                                    style={{
+                                       background: "#f0fdf4",
+                                       borderRadius: 12,
+                                       padding: 14,
+                                    }}
+                                 >
+                                    <div
+                                       style={{
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          color: "#059669",
+                                          marginBottom: 8,
+                                       }}
+                                    >
+                                       🏠 오피스텔 전월세
+                                    </div>
+                                    <div
+                                       style={{
+                                          display: "grid",
+                                          gridTemplateColumns: "1fr 1fr",
+                                          gap: 6,
+                                       }}
+                                    >
+                                       <div>
+                                          <div
+                                             style={{
+                                                fontSize: 10,
+                                                color: "#888",
+                                             }}
+                                          >
+                                             건수
+                                          </div>
+                                          <div
+                                             style={{
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                                color: "#065f46",
+                                             }}
+                                          >
+                                             {d.오피스텔.건수}건
+                                          </div>
+                                       </div>
+                                       <div>
+                                          <div
+                                             style={{
+                                                fontSize: 10,
+                                                color: "#888",
+                                             }}
+                                          >
+                                             평균보증금
+                                          </div>
+                                          <div
+                                             style={{
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                                color: "#065f46",
+                                             }}
+                                          >
+                                             {d.오피스텔.평균보증금 || "-"}
+                                          </div>
+                                       </div>
+                                    </div>
+                                 </div>
+                              )}
+
+                              {/* 데이터 없음 */}
+                              {(!d?.상업용 || d.상업용.건수 === 0) &&
+                                 (!d?.오피스텔 || d.오피스텔.건수 === 0) && (
+                                    <div
+                                       style={{
+                                          color: "#bbb",
+                                          fontSize: 13,
+                                          textAlign: "center",
+                                          marginTop: 20,
+                                       }}
+                                    >
+                                       해당 지역 실거래 데이터 없음
+                                    </div>
+                                 )}
                            </div>
                         ) : (
                            /* ── 매출 패널 ── */
@@ -2102,22 +2234,7 @@ export default function MapView() {
             })()}
 
          {/* 좌표 바 */}
-         <div
-            style={{
-               position: "absolute",
-               bottom: 14,
-               left: "50%",
-               transform: "translateX(-50%)",
-               background: "rgba(255,255,255,0.92)",
-               border: "1px solid #e5e7eb",
-               borderRadius: 8,
-               padding: "5px 16px",
-               fontSize: 12,
-               color: "#666",
-               fontFamily: "'JetBrains Mono',monospace",
-               zIndex: 100,
-            }}
-         >
+         <div className="coord-bar">
             📍 위도: {coords.lat} | 경도: {coords.lng}
          </div>
       </div>

@@ -23,46 +23,15 @@ dao = RealEstateDAO()
 skDAO = SangkwonDAO()
 
 
-# ── APScheduler: 분기 1회 매출 자동 갱신 ─────────────────────────
-try:
-    from apscheduler.schedulers.asyncio import AsyncIOScheduler
-    from apscheduler.triggers.cron import CronTrigger
-
-    _scheduler = AsyncIOScheduler()
-    # 분기 1회: 매출 수집 (1/4/7/10월 1일 03:00)
-    _scheduler.add_job(
-        lambda: asyncio.create_task(skDAO.collect_all(force=True)),
-        CronTrigger(month="1,4,7,10", day=1, hour=3, minute=0),
-        id="sangkwon_quarterly",
-        replace_existing=True,
-    )
-    # 15분마다: 유동인구 수집 → DB upsert
-    from apscheduler.triggers.interval import IntervalTrigger
-
-    _scheduler.add_job(
-        lambda: asyncio.create_task(skDAO.collectPopulation(SEOUL_PLACES)),
-        IntervalTrigger(minutes=15),
-        id="flpop_15min",
-        replace_existing=True,
-    )
-    _HAS_SCHEDULER = True
-    logger.info("[Scheduler] 분기 매출 + 15분 유동인구 스케줄 등록")
-except ImportError:
-    _HAS_SCHEDULER = False
-    logger.warning("[Scheduler] apscheduler 미설치 → pip install apscheduler")
+# ── APScheduler: 미구현(유동인구/collect_all) ─ 추후 활성화 ─────
+_HAS_SCHEDULER = False  # TODO: sangkwonDAO.collect_all/collectPopulation 구현 후 활성화
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ── 시작 ──
-    logger.info("[Startup] SangkwonDAO 초기화...")
-    skDAO.load()  # SANGKWON_SALES → V_SANGKWON_LATEST → DataFrame 로드
-    if _HAS_SCHEDULER:
-        _scheduler.start()
+    logger.info("[Startup] SangkwonDAO 로드...")
+    skDAO.load()  # V_SANGKWON_LATEST → DataFrame 캐시
     yield
-    # ── 종료 ──
-    if _HAS_SCHEDULER:
-        _scheduler.shutdown(wait=False)
 
 
 app = FastAPI(lifespan=lifespan)
@@ -108,19 +77,9 @@ async def getAnalysis(
     return await dao.fetchAnalysis(sigungu, dong, jibun)
 
 
-@app.get("/realestate/price-overlay")
-async def getPriceOverlay(
-    level: str = Query(..., description="sigungu | dong"),
-    sigungu: Optional[str] = Query(
-        None, description="시군구명 (level=dong 일 때 필수)"
-    ),
-    months_back: int = Query(6, description="조회 개월 수"),
-):
-    return await dao.fetchPriceOverlay(level, sigungu, months_back)
-
-
-# ── 2. 서울 실시간 유동인구 ─────────────────────────────────────────
-
+# ── 2. 서울 실시간 유동인구 (TODO: sangkwonDAO 구현 후 활성화) ──────
+# getPopulation / getPopulationByGu / getPopulationBulk 미구현
+# places-list는 참조용으로 유지
 
 @app.get("/realestate/places-list")
 async def getPlacesList():
@@ -131,71 +90,8 @@ async def getPlacesList():
     }
 
 
-@app.get("/realestate/population")
-async def getPopulation(
-    place_code: str = Query(..., description="장소코드 (예: POI001)"),
-):
-    """15분 TTL 캐시 → 서울 실시간 도시데이터 API"""
-    data = await skDAO.getPopulation(place_code)
-    place = SEOUL_PLACES.get(place_code, {})
-    return {**place, **data}
-
-
-@app.get("/realestate/population-by-gu")
-async def getPopulationByGu(
-    gu: str = Query(..., description="구명 (예: 강남구)"),
-):
-    """구 내 POI 유동인구 (캐시 활용)"""
-    results = await skDAO.getPopulationByGu(gu, SEOUL_PLACES)
-    return {"gu": gu, "count": len(results), "data": results}
-
-
-@app.get("/realestate/nearby-population")
-async def getNearbyPopulation(
-    lat: float = Query(...),
-    lng: float = Query(...),
-    radius_km: float = Query(1.0),
-):
-    """반경 내 POI 유동인구 (캐시 활용)"""
-    nearby = dao.getNearbyPlaces(lat, lng, radius_km)
-    codes = [p["code"] for p in nearby[:5]]
-    pops = await skDAO.getPopulationBulk(codes)
-    return {
-        "count": len(codes),
-        "data": [{**nearby[i], **pops[i]} for i in range(len(codes))],
-    }
-
-
-# ── 3. 한국관광공사 관광정보 ────────────────────────────────────────
-
-
-@app.get("/realestate/tour-nearby")
-async def getTourNearby(
-    mapX: float = Query(..., description="경도 (예: 126.9780)"),
-    mapY: float = Query(..., description="위도 (예: 37.5665)"),
-    radius: int = Query(1000, description="반경(m)"),
-    contentTypeId: Optional[str] = Query(None, description="관광타입 ID"),
-):
-    return await dao.fetchTourNearby(mapX, mapY, radius, contentTypeId)
-
-
-@app.get("/realestate/tour-db")
-async def getTourFromDB(
-    mapX: float = Query(..., description="경도"),
-    mapY: float = Query(..., description="위도"),
-    radius: int = Query(1000, description="반경(m)"),
-    contentTypeId: Optional[str] = Query(None, description="관광타입"),
-    limit: int = Query(50, description="최대 건수"),
-):
-    return await dao.fetchTourFromDB(mapX, mapY, radius, contentTypeId, limit)
-
-
-@app.get("/realestate/tour-photos")
-async def getTourPhotos(
-    keyword: str = Query(..., description="검색 키워드 (관광지명)"),
-    numOfRows: int = Query(5, description="사진 수"),
-):
-    return await dao.fetchTourPhotos(keyword, numOfRows)
+# ── 3. 한국관광공사 관광정보 (TODO: 프론트 구현 후 활성화) ──────────
+# tour-nearby / tour-db / tour-photos 엔드포인트 보류
 
 
 # ── 4. 서울 골목상권 분석 ────────────────────────────────────────────
@@ -294,3 +190,58 @@ async def getSangkwonQuarters():
 async def getSangkwonStatus():
     """캐시 상태 확인"""
     return skDAO.getStatus()
+
+
+# ── 7. VWorld WFS 프록시 (CORS 우회) ────────────────────────────────
+# VWorld WFS는 브라우저에서 직접 호출 시 CORS 차단 → 백엔드에서 중계
+
+import httpx as _httpx
+from fastapi import Response as _Response
+from fastapi.responses import JSONResponse as _JSONResponse
+
+VWORLD_KEY_LOCAL = "BE3AF33A-202E-3D5F-A8AD-63D9EE291ABF"  # realEstateDAO에서 가져온 키
+
+
+@app.get("/realestate/wfs-dong")
+async def getWfsDong(
+    sig_cd: str = Query("11", description="시도코드 (서울=11, 기본값)"),
+):
+    """
+    VWorld WFS lt_c_ademd_info (행정동 경계 폴리곤) 프록시
+    - sig_cd LIKE '11%' → 서울 전체 행정동 폴리곤
+    - GeoJSON(EPSG:3857) 반환
+    """
+    # VWorld WFS: URL에 KEY/DOMAIN을 쿼리스트링으로 포함해야 인증됨
+    # CQL_FILTER는 URL 인코딩 없이 직접 전달
+    url = (
+        f"https://api.vworld.kr/req/wfs"
+        f"?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature"
+        f"&TYPENAME=lt_c_ademd_info"
+        f"&SRSNAME=EPSG:3857"
+        f"&CQL_FILTER=sig_cd+LIKE+%27{sig_cd}%25%27"
+        f"&outputFormat=application%2Fjson"
+        f"&KEY={VWORLD_KEY_LOCAL}"
+        f"&DOMAIN=localhost"
+    )
+    logger.info(f"[WFS proxy] → {url[:120]}...")
+    try:
+        async with _httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+            r = await client.get(url)
+            logger.info(f"[WFS proxy] status={r.status_code}, ct={r.headers.get('content-type','')}, len={len(r.content)}")
+            body_preview = r.text[:500]
+            if r.status_code != 200:
+                logger.error(f"[WFS proxy] VWorld error body: {body_preview}")
+                return _JSONResponse(status_code=502,
+                    content={"error": f"VWorld HTTP {r.status_code}", "body": body_preview})
+            if r.text.strip().startswith("<"):
+                logger.error(f"[WFS proxy] VWorld returned XML: {body_preview}")
+                return _JSONResponse(status_code=502,
+                    content={"error": "VWorld returned XML (인증오류 또는 파라미터 오류)", "body": body_preview})
+            return _Response(
+                content=r.content,
+                media_type="application/json",
+                headers={"Cache-Control": "public, max-age=86400"},
+            )
+    except Exception as e:
+        logger.error(f"[WFS proxy] exception: {e}")
+        return _JSONResponse(status_code=500, content={"error": str(e)})
