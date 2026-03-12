@@ -17,10 +17,12 @@ from typing import Optional
 
 from DAO.realEstateDAO import RealEstateDAO, SEOUL_PLACES, SEOUL_GU_GROUPS
 from DAO.sangkwonDAO import SangkwonDAO
+from DAO.dongMappingDAO import DongMappingDAO
 
 logger = logging.getLogger(__name__)
 dao = RealEstateDAO()
 skDAO = SangkwonDAO()
+dmDAO = DongMappingDAO()
 
 
 # ── APScheduler: 미구현(유동인구/collect_all) ─ 추후 활성화 ─────
@@ -31,6 +33,8 @@ _HAS_SCHEDULER = False  # TODO: sangkwonDAO.collect_all/collectPopulation 구현
 async def lifespan(app: FastAPI):
     logger.info("[Startup] SangkwonDAO 로드...")
     skDAO.load()  # V_SANGKWON_LATEST → DataFrame 캐시
+    logger.info("[Startup] DongMappingDAO 로드...")
+    dmDAO.load(skDAO._df)  # 법정동↔행정동 매핑 + 행정동명 dict
     yield
 
 
@@ -237,10 +241,15 @@ async def getWfsDong(
                 logger.error(f"[WFS proxy] VWorld returned XML: {body_preview}")
                 return _JSONResponse(status_code=502,
                     content={"error": "VWorld returned XML (인증오류 또는 파라미터 오류)", "body": body_preview})
+            # 행정동코드(adm_cd) 주입 - 매출 데이터 매핑용
+            import json as _json
+            gj = r.json()
+            gj = dmDAO.enrich_geojson(gj)
+            enriched = _json.dumps(gj, ensure_ascii=False).encode("utf-8")
             return _Response(
-                content=r.content,
+                content=enriched,
                 media_type="application/json",
-                headers={"Cache-Control": "public, max-age=86400"},
+                headers={"Cache-Control": "no-cache"},  # enrich 후엔 캐시 끔
             )
     except Exception as e:
         logger.error(f"[WFS proxy] exception: {e}")

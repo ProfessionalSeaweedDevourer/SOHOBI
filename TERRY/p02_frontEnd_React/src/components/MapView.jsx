@@ -399,8 +399,10 @@ export default function MapView() {
                moveHandler._t = setTimeout(async () => {
                   if (dongModeRef.current === "none") return;
                   try {
+                     const _fp = feat.getProperties();
+                     const _tipNm = _fp.adm_nm || dongNm;
                      const r = await fetch(
-                        `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(dongNm)}&gu=${encodeURIComponent(guNm)}`,
+                        `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_tipNm)}&gu=${encodeURIComponent(guNm)}`,
                      );
                      const j = await r.json();
                      setDongTooltip((prev) =>
@@ -447,13 +449,20 @@ export default function MapView() {
 
             if (feat) {
                const p = feat.getProperties();
+               // adm_nm: 백엔드 enrich로 주입된 행정동명 (매출 DB 키)
+               // emd_kor_nm: WFS 원본 법정동명 (fallback)
+               const _admNm = p.adm_nm || ""; // 행정동명 (DB 매칭용)
+               const _admCd = p.adm_cd || ""; // 행정동코드
                const _dongNm =
-                  p.emd_kor_nm || p.adm_nm || p.emd_nm || p.name || "";
+                  _admNm || p.emd_kor_nm || p.emd_nm || p.name || "";
                const _guNm =
-                  p.sig_kor_nm || p.sig_nm || currentGuNmRef.current || "";
+                  p.gu_nm ||
+                  p.sig_kor_nm ||
+                  p.sig_nm ||
+                  currentGuNmRef.current ||
+                  "";
                if (_dongNm) {
                   if (_guNm) currentGuNmRef.current = _guNm;
-                  // 선택 스타일
                   if (dongHoverFeatRef.current)
                      dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
                   feat.setStyle(DONG_STYLE_SELECTED);
@@ -462,12 +471,13 @@ export default function MapView() {
 
                   const _mode = dongModeRef.current;
                   console.log(
-                     `[동 클릭] ${_dongNm} (${_guNm}) / 모드: ${_mode}`,
+                     `[동 클릭] 법정동=${p.emd_kor_nm} → 행정동=${_admNm}(${_admCd}) / 구=${_guNm} / 모드=${_mode}`,
                   );
                   setDongLoading(true);
                   setDongPanel(null);
                   try {
                      if (_mode === "sales") {
+                        // 행정동명으로 매출 조회 (adm_nm이 없으면 법정동명 fallback)
                         const _rr = await fetch(
                            `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_dongNm)}&gu=${encodeURIComponent(_guNm)}`,
                         );
@@ -477,6 +487,7 @@ export default function MapView() {
                               mode: _mode,
                               dongNm: _dongNm,
                               guNm: _guNm,
+                              admCd: _admCd,
                               apiData: _jj.data,
                            });
                         else
@@ -1719,7 +1730,7 @@ export default function MapView() {
                            </div>
                         ) : isRE ? (
                            /* ── 실거래가 패널 ── */
-                           /* API 응답: { 상업용:{건수,평균가,최저가,최고가,목록}, 오피스텔:{건수,평균보증금,목록}, 조회범위, 분석기간 } */
+                           /* API 응답: { has_data, 상업용:{건수,평균가,...}, 오피스텔:{건수,...}, 조회범위, 분석기간 } */
                            <div
                               style={{
                                  display: "flex",
@@ -1727,18 +1738,12 @@ export default function MapView() {
                                  gap: 10,
                               }}
                            >
-                              {/* 조회 범위 / 분석 기간 */}
-                              <div
-                                 style={{
-                                    fontSize: 11,
-                                    color: "#888",
-                                    lineHeight: 1.6,
-                                 }}
-                              >
-                                 📍 {d?.조회범위 || d?.sigungu || "-"}
-                                 <br />
-                                 🗓 {d?.분석기간 || "-"}
-                              </div>
+                              {/* 분석 기간 - 데이터 있을 때만 */}
+                              {d?.분석기간 && (
+                                 <div style={{ fontSize: 11, color: "#888" }}>
+                                    🗓 {d.분석기간} (3년)
+                                 </div>
+                              )}
 
                               {/* 상업용 매매 */}
                               {d?.상업용 && d.상업용.건수 > 0 && (
@@ -1937,19 +1942,18 @@ export default function MapView() {
                               )}
 
                               {/* 데이터 없음 */}
-                              {(!d?.상업용 || d.상업용.건수 === 0) &&
-                                 (!d?.오피스텔 || d.오피스텔.건수 === 0) && (
-                                    <div
-                                       style={{
-                                          color: "#bbb",
-                                          fontSize: 13,
-                                          textAlign: "center",
-                                          marginTop: 20,
-                                       }}
-                                    >
-                                       해당 지역 실거래 데이터 없음
-                                    </div>
-                                 )}
+                              {d?.has_data === false && (
+                                 <div
+                                    style={{
+                                       color: "#bbb",
+                                       fontSize: 13,
+                                       textAlign: "center",
+                                       marginTop: 20,
+                                    }}
+                                 >
+                                    최근 3년 실거래 데이터 없음
+                                 </div>
+                              )}
                            </div>
                         ) : (
                            /* ── 매출 패널 ── */

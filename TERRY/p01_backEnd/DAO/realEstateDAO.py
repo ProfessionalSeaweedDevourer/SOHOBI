@@ -294,7 +294,7 @@ async def fetchAnalysis(
     - 동 단위 우선, 0건이면 시군구 fallback
     - 상업용 매매 + 오피스텔 전월세
     """
-    months = get_recent_months(12)
+    months = get_recent_months(36)  # 3년치 조회
 
     commercial_data, officetel_data = [], []
     for ym in months:
@@ -390,12 +390,17 @@ async def fetchAnalysis(
     else:
         period = f"{months[-1]}~{months[0]}"
 
+    comm_stats  = calc_stats(commercial_data, "거래금액")
+    offi_stats  = {"건수": len(officetel_data), "평균보증금": avg_dep, "목록": officetel_data[:10]}
+    has_data    = comm_stats["건수"] > 0 or offi_stats["건수"] > 0
+
     return {
-        "sigungu":  used_scope,
-        "조회범위": used_scope,
-        "분석기간": period,
-        "상업용":   calc_stats(commercial_data, "거래금액"),
-        "오피스텔": {"건수": len(officetel_data), "평균보증금": avg_dep, "목록": officetel_data[:10]},
+        "sigungu":  used_scope if has_data else None,
+        "조회범위": used_scope if has_data else None,
+        "분석기간": period     if has_data else None,
+        "has_data": has_data,
+        "상업용":   comm_stats,
+        "오피스텔": offi_stats,
     }
 
 
