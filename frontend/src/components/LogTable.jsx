@@ -17,7 +17,10 @@ const ITEM_LABELS = {
 function fmtTs(ts) {
   if (!ts) return "-";
   try {
-    return new Date(ts + "Z").toLocaleString("ko-KR", {
+    // 마이크로초(소수점 6자리) → 밀리초(3자리)로 정규화 후 파싱
+    // (JS Date는 소수점 3자리까지만 지원, 이미 timezone 포함이므로 "Z" 불필요)
+    const normalized = ts.replace(/(\.\d{3})\d+/, "$1");
+    return new Date(normalized).toLocaleString("ko-KR", {
       month: "2-digit", day: "2-digit",
       hour: "2-digit", minute: "2-digit", second: "2-digit",
     });
