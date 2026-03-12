@@ -52,7 +52,17 @@ class FinanceSimulationPlugin:
 
         avg = sum(results) / iterations
         loss_prob = sum(1 for r in results if r < 0) / iterations
-        return {"average_net_profit": round(avg), "loss_probability": round(loss_prob, 4)}
+        sorted_results = sorted(results)
+        std = math.sqrt(sum((r - avg) ** 2 for r in results) / iterations)
+        p5  = sorted_results[int(iterations * 0.05)]
+        p95 = sorted_results[int(iterations * 0.95)]
+        return {
+            "average_net_profit": round(avg),
+            "loss_probability":   round(loss_prob, 4),
+            "std_profit":         round(std),
+            "p5_net_profit":      round(p5),
+            "p95_net_profit":     round(p95),
+        }
 
     @kernel_function(
         name="investment_recovery",

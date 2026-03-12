@@ -47,12 +47,20 @@ _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 질문을 했습니다:
 
 출력은 JSON 형식으로만 하세요."""
 
-_EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다:
+_EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다.
+
+[시뮬레이션 가정 조건]
+{assumptions}
+
+[시뮬레이션 결과 — 10,000회 몬테카를로]
 - 평균 월 순이익: {avg_profit:,}원
+- 표준편차: {std_profit:,}원
+- 90% 신뢰구간: {p5:,}원 ~ {p95:,}원  (하위 5% ~ 상위 95%)
 - 손실 발생 확률: {loss_prob:.1%}
 
-이 결과를 바탕으로 사업 가능성을 설명하세요.
-- 숫자는 원화 단위로 표현하세요.
+위 결과를 바탕으로 사업 가능성을 설명하세요.
+- 응답 첫 단락에 위의 가정 조건(월매출, 원가, 급여 등)을 명시하세요.
+- 신뢰구간과 표준편차를 언급하여 예측의 불확실성을 구체적으로 설명하세요.
 - 위험 요인과 기회 요인을 함께 언급하세요.
 - 낙관·기본·비관 시나리오와 리스크 경고를 포함하세요.
 - 투자 권유가 아닌 정보 제공임을 명시하세요.
@@ -121,8 +129,26 @@ class FinanceAgent:
             )
 
         # ── 3단계: 설명 draft 생성 ──────────────────────────
+        # 가정 조건 문자열 구성
+        rev = variables.get("revenue", [])
+        rev_str = f"{rev[0]:,}원" if len(rev) == 1 else f"{min(rev):,}~{max(rev):,}원 (복수 시나리오)"
+        assumption_lines = [
+            f"- 월매출: {rev_str} (±10% 정규분포 가정)",
+            f"- 원가: {variables.get('cost', 0):,}원 (±10% 정규분포 가정)",
+            f"- 급여: {variables.get('salary', 0):,}원",
+        ]
+        if variables.get("rent"): assumption_lines.append(f"- 임대료: {variables['rent']:,}원")
+        if variables.get("admin"): assumption_lines.append(f"- 관리비: {variables['admin']:,}원")
+        if variables.get("fee"):   assumption_lines.append(f"- 수수료: {variables['fee']:,}원")
+        assumption_lines.append(f"- 세율: {variables.get('tax_rate', 0.2):.0%}")
+        assumptions = "\n".join(assumption_lines)
+
         explain_prompt = _EXPLAIN_PROMPT.format(
+            assumptions=assumptions,
             avg_profit=sim_result["average_net_profit"],
+            std_profit=sim_result["std_profit"],
+            p5=sim_result["p5_net_profit"],
+            p95=sim_result["p95_net_profit"],
             loss_prob=sim_result["loss_probability"],
             question=question,
         )
