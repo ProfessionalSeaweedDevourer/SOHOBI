@@ -99,7 +99,7 @@ class FinanceAgent:
         service: AzureChatCompletion = self._kernel.get_service("sign_off")
         history = ChatHistory()
         history.add_user_message(prompt)
-        settings = OpenAIChatPromptExecutionSettings(temperature=0.3, max_tokens=2000)
+        settings = OpenAIChatPromptExecutionSettings(temperature=0.3, max_tokens=3000)
         result = await service.get_chat_message_content(history, settings=settings)
         return str(result)
 
