@@ -167,10 +167,21 @@ class SangkwonDAO(BaseDAO):
         return df.iloc[0].to_dict()
 
     def getSalesByCode(self, adstrd_cd: str) -> dict:
-        """행정동 코드로 단건 조회"""
+        """행정동 코드로 단건 조회 (8자리 또는 10자리, float형 모두 대응)"""
         if self._df is None or self._df.empty:
             return None
-        df = self._df[self._df["행정동_코드"].astype(str) == str(adstrd_cd)]
+        adstrd_cd = str(adstrd_cd).strip()
+        # Oracle NUMBER → float → '1115051000.0' 형태 정리
+        db_codes = self._df["행정동_코드"].apply(
+            lambda x: str(int(float(x))) if str(x).endswith('.0') else str(x)
+        )
+        df = self._df[db_codes == adstrd_cd]
+        if df.empty and len(adstrd_cd) == 8:
+            df = self._df[db_codes.str[:8] == adstrd_cd]
+        if df.empty and len(adstrd_cd) == 10:
+            df = self._df[db_codes == adstrd_cd[:8]]
+        sample = db_codes.unique()[:5].tolist()
+        logger.info(f"[SangkwonDAO] getSalesByCode: adstrd_cd={adstrd_cd} → {'있음' if not df.empty else '없음'} / DB코드샘플={sample}")
         if df.empty:
             return None
         return df.iloc[0].to_dict()
