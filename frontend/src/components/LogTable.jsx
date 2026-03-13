@@ -14,11 +14,25 @@ const ITEM_LABELS = {
   A1: "지역 정보", A2: "업종 정보", A3: "수치 근거", A4: "기간 명시", A5: "출처 안내",
 };
 
+const GRADE_STYLE = {
+  A: "bg-green-100 text-green-700",
+  B: "bg-amber-100 text-amber-700",
+  C: "bg-red-100 text-red-600",
+};
+const GRADE_LABEL = {
+  A: "A",
+  B: "B",
+  C: "C",
+};
+
+function resolveGrade(entry) {
+  if (entry.grade && GRADE_LABEL[entry.grade]) return entry.grade;
+  return entry.status === "approved" ? "A" : "C";
+}
+
 function fmtTs(ts) {
   if (!ts) return "-";
   try {
-    // 마이크로초(소수점 6자리) → 밀리초(3자리)로 정규화 후 파싱
-    // (JS Date는 소수점 3자리까지만 지원, 이미 timezone 포함이므로 "Z" 불필요)
     const normalized = ts.replace(/(\.\d{3})\d+/, "$1");
     return new Date(normalized).toLocaleString("ko-KR", {
       month: "2-digit", day: "2-digit",
@@ -47,7 +61,7 @@ export default function LogTable({ entries, loading }) {
       {/* 목록 */}
       <div className="w-full lg:w-1/2 overflow-y-auto flex flex-col gap-1.5 pr-1">
         {entries.map((entry, i) => {
-          const isApproved = entry.status === "approved";
+          const grade = resolveGrade(entry);
           const isSelected = selected === i;
           return (
             <button
@@ -61,8 +75,8 @@ export default function LogTable({ entries, loading }) {
               `}
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs px-1.5 py-0.5 rounded font-mono ${isApproved ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                  {isApproved ? "✅" : "❌"}
+                <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${GRADE_STYLE[grade] || "bg-slate-100 text-slate-600"}`}>
+                  {GRADE_LABEL[grade] || grade}
                 </span>
                 <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${DOMAIN_COLOR[entry.domain] || "bg-slate-100 text-slate-600"}`}>
                   {DOMAIN_KR[entry.domain] || entry.domain}
@@ -71,7 +85,7 @@ export default function LogTable({ entries, loading }) {
                 <span className="ml-auto text-slate-400">{(entry.latency_ms || 0).toFixed(0)}ms</span>
               </div>
               <div className="text-slate-700 truncate">{entry.question}</div>
-              {(entry.retry_count > 0) && (
+              {entry.retry_count > 0 && (
                 <div className="text-slate-400 mt-0.5">재시도 {entry.retry_count}회</div>
               )}
             </button>
@@ -111,13 +125,15 @@ export default function LogTable({ entries, loading }) {
 function EntryDetail({ entry }) {
   const rejHist = entry.rejection_history || [];
   const [openIdx, setOpenIdx] = useState(null);
+  const grade = resolveGrade(entry);
 
   return (
     <div className="p-4 text-xs space-y-4">
       {/* 메타 */}
       <div className="flex flex-wrap gap-2 items-center">
-        <span className={`px-2 py-0.5 rounded-full font-semibold ${entry.status === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-          {entry.status}
+        <span className={`px-2 py-0.5 rounded-full font-semibold ${GRADE_STYLE[grade] || "bg-slate-100 text-slate-500"}`}>
+          {grade === "A" ? "A 통과" : grade === "B" ? "B 경고" : "C 반려"}
+          {entry.status === "escalated" && " (에스컬레이션)"}
         </span>
         <span className={`px-2 py-0.5 rounded-full ${DOMAIN_COLOR[entry.domain] || "bg-slate-100 text-slate-500"}`}>
           {DOMAIN_KR[entry.domain] || entry.domain}
@@ -126,6 +142,13 @@ function EntryDetail({ entry }) {
         <span className="text-slate-400">{(entry.latency_ms || 0).toFixed(0)}ms</span>
         <span className="text-slate-400">재시도 {entry.retry_count}회</span>
       </div>
+
+      {/* confidence_note */}
+      {entry.confidence_note && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-700">
+          <span className="font-semibold">주의: </span>{entry.confidence_note}
+        </div>
+      )}
 
       {/* 질문 */}
       <div>
@@ -149,6 +172,9 @@ function EntryDetail({ entry }) {
                     {(a.passed || []).map((c) => (
                       <span key={c} className="bg-green-100 text-green-700 px-1 rounded font-mono">{c}</span>
                     ))}
+                    {(a.warnings || []).map((w) => (
+                      <span key={w.code} className="bg-amber-100 text-amber-700 px-1 rounded font-mono">{w.code}</span>
+                    ))}
                     {(a.issues || []).map((iss) => (
                       <span key={iss.code} className="bg-red-100 text-red-600 px-1 rounded font-mono">{iss.code}</span>
                     ))}
@@ -157,9 +183,17 @@ function EntryDetail({ entry }) {
                 </button>
                 {openIdx === i && (
                   <div className="px-3 py-2 space-y-2">
+                    {(a.warnings || []).map((w) => (
+                      <div key={w.code} className="bg-amber-50 rounded px-2 py-1.5">
+                        <span className="font-semibold text-amber-700">{w.code} {ITEM_LABELS[w.code] ? `— ${ITEM_LABELS[w.code]}` : ""}</span>
+                        <span className="text-amber-500 ml-1">(경고)</span>
+                        <div className="text-slate-600 mt-0.5">{w.reason}</div>
+                      </div>
+                    ))}
                     {(a.issues || []).map((iss) => (
                       <div key={iss.code} className="bg-red-50 rounded px-2 py-1.5">
                         <span className="font-semibold text-red-700">{iss.code} {ITEM_LABELS[iss.code] ? `— ${ITEM_LABELS[iss.code]}` : ""}</span>
+                        <span className="text-red-400 ml-1">(반려)</span>
                         <div className="text-slate-600 mt-0.5">{iss.reason}</div>
                       </div>
                     ))}

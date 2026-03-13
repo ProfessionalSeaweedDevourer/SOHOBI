@@ -8,6 +8,11 @@ const TABS = [
   { key: "rejections", label: "거부 이력" },
 ];
 
+function resolveGrade(entry) {
+  if (entry.grade && ["A", "B", "C"].includes(entry.grade)) return entry.grade;
+  return entry.status === "approved" ? "A" : "C";
+}
+
 export default function LogViewer() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("queries");
@@ -34,10 +39,11 @@ export default function LogViewer() {
     load(tab);
   }, [tab]);
 
-  // 통계
+  // 등급별 통계
   const total = entries.length;
-  const approved = entries.filter((e) => e.status === "approved").length;
-  const escalated = total - approved;
+  const gradeA = entries.filter((e) => resolveGrade(e) === "A").length;
+  const gradeB = entries.filter((e) => resolveGrade(e) === "B").length;
+  const gradeC = entries.filter((e) => resolveGrade(e) === "C").length;
   const avgLatency =
     total > 0
       ? Math.round(entries.reduce((s, e) => s + (e.latency_ms || 0), 0) / total)
@@ -70,12 +76,17 @@ export default function LogViewer() {
       {total > 0 && (
         <div className="bg-white border-b border-slate-100 px-4 py-2 flex gap-6 text-xs text-slate-600 overflow-x-auto">
           <span>전체 <strong className="text-slate-800">{total}</strong>건</span>
-          <span>
-            ✅ approved <strong className="text-green-700">{approved}</strong>
-            {total > 0 && <span className="text-slate-400"> ({Math.round((approved / total) * 100)}%)</span>}
+          <span className="text-green-700">
+            A 통과 <strong>{gradeA}</strong>
+            <span className="text-slate-400"> ({Math.round((gradeA / total) * 100)}%)</span>
           </span>
-          <span>
-            ❌ escalated <strong className="text-red-600">{escalated}</strong>
+          <span className="text-amber-700">
+            B 경고 <strong>{gradeB}</strong>
+            {gradeB > 0 && <span className="text-slate-400"> ({Math.round((gradeB / total) * 100)}%)</span>}
+          </span>
+          <span className="text-red-600">
+            C 반려 <strong>{gradeC}</strong>
+            {gradeC > 0 && <span className="text-slate-400"> ({Math.round((gradeC / total) * 100)}%)</span>}
           </span>
           <span>평균 응답 <strong className="text-slate-800">{avgLatency.toLocaleString()}ms</strong></span>
         </div>
