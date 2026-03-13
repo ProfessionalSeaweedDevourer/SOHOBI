@@ -166,22 +166,30 @@ class SeoulRtmsDAO(BaseDAO):
     # ── 3. 파싱 ─────────────────────────────────────────────────
 
     def _parse_rows(self, rows: list) -> dict:
-        """XML rows → 분석 결과 dict"""
+        """
+        XML rows → 분석 결과 dict
+        tbLnOpendataRtmsV API 특성:
+          - RTMS_TPCD 없음 → 전부 매매 데이터
+          - 계약일 필드: CTRT_DAY (CNTRT_YMD 아님)
+          - STDG_CD: 5자리 (CGG_CD 5자리 + STDG_CD 5자리 = 10자리 → [:8] = emd_cd)
+        """
         매매, 전세, 월세 = [], [], []
 
         for r in rows:
             def g(tag): return (r.findtext(tag) or '').strip()
 
-            tpcd     = g('RTMS_TPCD')
-            law_cd   = g('STDG_CD')
-            emd_cd   = law_cd[:8] if law_cd else ''
+            tpcd      = g('RTMS_TPCD')          # 있으면 사용, 없으면 아래에서 매매 처리
+            cgg_cd    = g('CGG_CD')              # 5자리 구코드
+            stdg_cd   = g('STDG_CD')             # 5자리 법정동코드
+            emd_cd    = (cgg_cd + stdg_cd)[:8]   # 8자리 emd_cd
             thing_amt = g('THING_AMT').replace(',', '')
             rent_gtn  = g('RENT_GTN').replace(',', '')
             rent_fe   = g('RENT_FE').replace(',', '')
-            cntrt_ymd = g('CNTRT_YMD')
+            # API마다 날짜 필드명 다름: CTRT_DAY 우선, 없으면 CNTRT_YMD
+            ctrt_day  = g('CTRT_DAY') or g('CNTRT_YMD')
 
             base = {
-                "법정동코드": law_cd,
+                "법정동코드": stdg_cd,
                 "emd_cd":    emd_cd,
                 "법정동":    g('STDG_NM'),
                 "구":        g('CGG_NM'),
@@ -190,27 +198,21 @@ class SeoulRtmsDAO(BaseDAO):
                 "면적":      g('ARCH_AREA'),
                 "층":        g('FLR'),
                 "건축년도":  g('ARCH_YR'),
-                "계약일":    cntrt_ymd,
-                "년":        cntrt_ymd[:4] if cntrt_ymd else '',
-                "월":        cntrt_ymd[4:6] if len(cntrt_ymd) >= 6 else '',
+                "계약일":    ctrt_day,
+                "년":        ctrt_day[:4] if ctrt_day else '',
+                "월":        ctrt_day[4:6] if len(ctrt_day) >= 6 else '',
             }
 
-            if tpcd == '1' and thing_amt:
-                매매.append({**base, "거래금액": thing_amt, "거래금액만원": self._to_int(thing_amt)})
-            elif tpcd == '2' and rent_gtn:
+            if tpcd == '2' and rent_gtn:
                 전세.append({**base, "보증금": rent_gtn, "보증금만원": self._to_int(rent_gtn)})
             elif tpcd == '3':
                 월세.append({**base, "보증금": rent_gtn, "월세": rent_fe,
                              "보증금만원": self._to_int(rent_gtn), "월세만원": self._to_int(rent_fe)})
+            elif thing_amt:
+                # TPCD==1 이거나 TPCD 없는 경우 모두 매매 처리
+                매매.append({**base, "거래금액": thing_amt, "거래금액만원": self._to_int(thing_amt)})
 
         logger.info(f"[SeoulRtms] _parse_rows: 입력={len(rows)}건 → 매매={len(매매)} 전세={len(전세)} 월세={len(월세)}")
-        if rows and len(매매)+len(전세)+len(월세) == 0:
-            # 분류 실패 원인 확인
-            for r in rows[:3]:
-                tpcd     = (r.findtext('RTMS_TPCD') or '').strip()
-                thing    = (r.findtext('THING_AMT') or '').strip()
-                rent_gtn = (r.findtext('RENT_GTN')  or '').strip()
-                logger.info(f"  샘플: TPCD='{tpcd}' THING_AMT='{thing}' RENT_GTN='{rent_gtn}'")
 
         return {
             "has_data": len(매매) + len(전세) + len(월세) > 0,
