@@ -9,12 +9,14 @@
 
 import os
 import time
+from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+from semantic_kernel.contents import ChatHistory
 
 import domain_router
 import orchestrator
@@ -26,7 +28,7 @@ from logger import _format_rejection_history
 
 load_dotenv()
 
-app = FastAPI(title="SOHOBI Integrated API", version="1.0.0")
+app = FastAPI(title="SOHOBI Integrated API", version="1.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -40,6 +42,12 @@ app.add_middleware(
 
 class QueryRequest(BaseModel):
     question: str
+    session_id: str | None = Field(default=None, description="생략 시 서버가 새 UUID를 발급한다")
+    founder_context: str | None = Field(
+        default=None,
+        description="창업자 상황 요약 (예: '서울 마포구, 자본금 1000만 원, 테이크아웃 카페'). "
+                    "동일 세션에서는 최초 한 번만 전달하면 이후 요청에 자동 적용된다.",
+    )
     domain: str | None = Field(default=None, description="없으면 domain_router로 자동 분류")
     max_retries: int = Field(default=3, ge=0, le=10)
 
@@ -54,8 +62,11 @@ class DocChatRequest(BaseModel):
     session_id: str = Field(default="default")
 
 
-# ── 문서 생성 세션 (메모리 내 간이 관리) ─────────────────────
-_doc_sessions: dict = {}
+# ── 세션 스토어 ────────────────────────────────────────────────
+# _query_sessions: Q&A 플로우의 창업자 프로필 + 대화 이력 (인메모리)
+# _doc_sessions:   문서 생성 플로우 (기존)
+_query_sessions: dict = {}  # session_id → {"profile": str, "history": ChatHistory}
+_doc_sessions:   dict = {}
 
 
 # ── 엔드포인트 ────────────────────────────────────────────────
@@ -64,7 +75,7 @@ _doc_sessions: dict = {}
 async def health():
     return {
         "status": "ok",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "domains": ["admin", "finance", "legal"],
         "plugins": ["SeoulCommercial", "FinanceSim", "LegalSearch", "BusinessDoc"],
     }
@@ -72,39 +83,63 @@ async def health():
 
 @app.post("/api/v1/query")
 async def query(req: QueryRequest):
-    """Q&A 플로우: 질문 → 도메인 분류 → 강화된 에이전트 → Sign-off → 최종 응답"""
+    """Q&A 플로우: 질문 → 도메인 분류 → 에이전트(창업자 컨텍스트 주입) → Sign-off → 최종 응답"""
     t0 = time.monotonic()
     try:
+        # ── 세션 복원 또는 신규 생성 ──────────────────────────
+        sid = req.session_id or str(uuid4())
+        session = _query_sessions.setdefault(sid, {"profile": "", "history": ChatHistory()})
+
+        # 새 창업자 컨텍스트가 전달되면 세션 프로필 갱신
+        if req.founder_context:
+            session["profile"] = req.founder_context
+
+        # ── 도메인 분류 ───────────────────────────────────────
         if req.domain in ("admin", "finance", "legal"):
             domain = req.domain
         else:
             classification = await domain_router.classify(req.question)
             domain = classification["domain"]
 
+        # ── 오케스트레이터 실행 ───────────────────────────────
         result = await orchestrator.run(
             domain=domain,
             question=req.question,
+            profile=session["profile"],
+            session_id=sid,
             max_retries=req.max_retries,
         )
 
+        # 세션 대화 이력 누적 (프론트엔드 표시 또는 향후 활용)
+        session["history"].add_user_message(req.question)
+        session["history"].add_assistant_message(result["draft"])
+
+        # ── 로깅 ─────────────────────────────────────────────
         log_query(
-            request_id       = result["request_id"],
-            question         = req.question,
-            domain           = domain,
-            status           = result["status"],
-            retry_count      = result["retry_count"],
-            rejection_history= result.get("rejection_history", []),
-            draft            = result["draft"],
-            latency_ms       = (time.monotonic() - t0) * 1000,
+            request_id        = result["request_id"],
+            session_id        = sid,
+            question          = req.question,
+            domain            = domain,
+            status            = result["status"],
+            grade             = result.get("grade", ""),
+            retry_count       = result["retry_count"],
+            rejection_history = result.get("rejection_history", []),
+            draft             = result["draft"],
+            latency_ms        = (time.monotonic() - t0) * 1000,
         )
 
         return {
-            "request_id":       result["request_id"],
-            "status":           result["status"],
-            "domain":           domain,
-            "draft":            result["draft"],
-            "retry_count":      result["retry_count"],
-            "message":          result["message"],
+            "session_id":        sid,
+            "request_id":        result["request_id"],
+            "status":            result["status"],
+            "domain":            domain,
+            "grade":             result.get("grade", ""),
+            "confidence_note":   result.get("confidence_note", ""),
+            "draft":             result["draft"],
+            "retry_count":       result["retry_count"],
+            "agent_ms":          result.get("agent_ms", 0),
+            "signoff_ms":        result.get("signoff_ms", 0),
+            "message":           result["message"],
             "rejection_history": _format_rejection_history(
                 result.get("rejection_history", [])
             ),
@@ -136,7 +171,6 @@ async def doc_chat(req: DocChatRequest):
     from semantic_kernel import Kernel
     from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
     from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-    from semantic_kernel.contents import ChatHistory
     from plugins.food_business_plugin import FoodBusinessPlugin
     import re
 
