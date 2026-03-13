@@ -399,8 +399,10 @@ export default function MapView() {
                moveHandler._t = setTimeout(async () => {
                   if (dongModeRef.current === "none") return;
                   try {
+                     const _fp = feat.getProperties();
+                     const _tipNm = _fp.adm_nm || dongNm;
                      const r = await fetch(
-                        `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(dongNm)}&gu=${encodeURIComponent(guNm)}`,
+                        `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_tipNm)}&gu=${encodeURIComponent(guNm)}`,
                      );
                      const j = await r.json();
                      setDongTooltip((prev) =>
@@ -447,13 +449,20 @@ export default function MapView() {
 
             if (feat) {
                const p = feat.getProperties();
+               // adm_nm: 백엔드 enrich로 주입된 행정동명 (매출 DB 키)
+               // emd_kor_nm: WFS 원본 법정동명 (fallback)
+               const _admNm = p.adm_nm || ""; // 행정동명 (DB 매칭용)
+               const _admCd = p.adm_cd || ""; // 행정동코드
                const _dongNm =
-                  p.emd_kor_nm || p.adm_nm || p.emd_nm || p.name || "";
+                  _admNm || p.emd_kor_nm || p.emd_nm || p.name || "";
                const _guNm =
-                  p.sig_kor_nm || p.sig_nm || currentGuNmRef.current || "";
+                  p.gu_nm ||
+                  p.sig_kor_nm ||
+                  p.sig_nm ||
+                  currentGuNmRef.current ||
+                  "";
                if (_dongNm) {
                   if (_guNm) currentGuNmRef.current = _guNm;
-                  // 선택 스타일
                   if (dongHoverFeatRef.current)
                      dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
                   feat.setStyle(DONG_STYLE_SELECTED);
@@ -462,12 +471,13 @@ export default function MapView() {
 
                   const _mode = dongModeRef.current;
                   console.log(
-                     `[동 클릭] ${_dongNm} (${_guNm}) / 모드: ${_mode}`,
+                     `[동 클릭] 법정동=${p.emd_kor_nm} → 행정동=${_admNm}(${_admCd}) / 구=${_guNm} / 모드=${_mode}`,
                   );
                   setDongLoading(true);
                   setDongPanel(null);
                   try {
                      if (_mode === "sales") {
+                        // 행정동명으로 매출 조회 (adm_nm이 없으면 법정동명 fallback)
                         const _rr = await fetch(
                            `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_dongNm)}&gu=${encodeURIComponent(_guNm)}`,
                         );
@@ -477,6 +487,7 @@ export default function MapView() {
                               mode: _mode,
                               dongNm: _dongNm,
                               guNm: _guNm,
+                              admCd: _admCd,
                               apiData: _jj.data,
                            });
                         else
@@ -488,15 +499,26 @@ export default function MapView() {
                               empty: true,
                            });
                      } else if (_mode === "realestate") {
-                        const _rr = await fetch(
-                           `${REALESTATE_URL}/realestate/analysis?sigungu=${encodeURIComponent(_guNm)}&dong=${encodeURIComponent(_dongNm)}`,
+                        // law_cd: WFS feature에서 직접 (STDG_CD = 법정동코드 10자리)
+                        // adm_cd: 행정동코드 (행정동 기준 합산용)
+                        const _lawCd =
+                           p.LAW_CD ||
+                           p.law_cd ||
+                           (p.emd_cd ? p.emd_cd + "00" : "");
+                        const _url = _admCd
+                           ? `${REALESTATE_URL}/realestate/seoul-rtms-adm?adm_cd=${encodeURIComponent(_admCd)}&gu_nm=${encodeURIComponent(_guNm)}`
+                           : `${REALESTATE_URL}/realestate/seoul-rtms?law_cd=${encodeURIComponent(_lawCd)}&gu_nm=${encodeURIComponent(_guNm)}`;
+                        console.log(
+                           `[실거래] adm_cd=${_admCd}, law_cd=${_lawCd}, url=${_url}`,
                         );
+                        const _rr = await fetch(_url);
                         const _jj = await _rr.json();
                         if (_jj)
                            setDongPanel({
                               mode: _mode,
                               dongNm: _dongNm,
                               guNm: _guNm,
+                              admCd: _admCd,
                               apiData: _jj,
                            });
                      }
@@ -1718,8 +1740,9 @@ export default function MapView() {
                               데이터 없음
                            </div>
                         ) : isRE ? (
-                           /* ── 실거래가 패널 ── */
-                           /* API 응답: { 상업용:{건수,평균가,최저가,최고가,목록}, 오피스텔:{건수,평균보증금,목록}, 조회범위, 분석기간 } */
+                           /* ── 실거래가 패널 (서울시 열린데이터, 법정동 기준) ── */
+                           /* API: /seoul-rtms-adm (행정동코드) or /seoul-rtms (법정동코드) */
+                           /* 응답: { has_data, 매매:{건수,평균가,최저가,최고가,목록}, 전세:{...}, 월세:{건수,목록} } */
                            <div
                               style={{
                                  display: "flex",
@@ -1727,21 +1750,8 @@ export default function MapView() {
                                  gap: 10,
                               }}
                            >
-                              {/* 조회 범위 / 분석 기간 */}
-                              <div
-                                 style={{
-                                    fontSize: 11,
-                                    color: "#888",
-                                    lineHeight: 1.6,
-                                 }}
-                              >
-                                 📍 {d?.조회범위 || d?.sigungu || "-"}
-                                 <br />
-                                 🗓 {d?.분석기간 || "-"}
-                              </div>
-
-                              {/* 상업용 매매 */}
-                              {d?.상업용 && d.상업용.건수 > 0 && (
+                              {/* 매매 */}
+                              {d?.매매?.건수 > 0 && (
                                  <div
                                     style={{
                                        background: "#eff6ff",
@@ -1757,7 +1767,7 @@ export default function MapView() {
                                           marginBottom: 8,
                                        }}
                                     >
-                                       🏪 상업용 매매
+                                       🏢 매매
                                     </div>
                                     <div
                                        style={{
@@ -1767,10 +1777,10 @@ export default function MapView() {
                                        }}
                                     >
                                        {[
-                                          ["건수", `${d.상업용.건수}건`],
-                                          ["평균가", d.상업용.평균가],
-                                          ["최저가", d.상업용.최저가],
-                                          ["최고가", d.상업용.최고가],
+                                          ["건수", `${d.매매.건수}건`],
+                                          ["평균", d.매매.평균가],
+                                          ["최저", d.매매.최저가],
+                                          ["최고", d.매매.최고가],
                                        ].map(([k, v]) => (
                                           <div key={k}>
                                              <div
@@ -1793,83 +1803,56 @@ export default function MapView() {
                                           </div>
                                        ))}
                                     </div>
-                                    {/* 최근 거래 목록 */}
-                                    {d.상업용.목록?.length > 0 && (
+                                    {d.매매.목록?.slice(0, 3).map((item, i) => (
                                        <div
+                                          key={i}
                                           style={{
-                                             marginTop: 10,
-                                             borderTop: "1px solid #dbeafe",
-                                             paddingTop: 8,
+                                             fontSize: 11,
+                                             color: "#475569",
+                                             marginTop: 6,
+                                             lineHeight: 1.5,
+                                             borderTop:
+                                                i === 0
+                                                   ? "1px solid #dbeafe"
+                                                   : "none",
+                                             paddingTop: i === 0 ? 6 : 0,
                                           }}
                                        >
-                                          <div
+                                          <span style={{ color: "#94a3b8" }}>
+                                             {item.계약일?.slice(0, 6)}
+                                          </span>{" "}
+                                          <span
                                              style={{
-                                                fontSize: 10,
-                                                color: "#888",
-                                                marginBottom: 4,
+                                                fontWeight: 700,
+                                                color: "#2563eb",
                                              }}
                                           >
-                                             최근 거래
-                                          </div>
-                                          {d.상업용.목록
-                                             .slice(0, 3)
-                                             .map((item, i) => (
-                                                <div
-                                                   key={i}
-                                                   style={{
-                                                      fontSize: 11,
-                                                      color: "#334155",
-                                                      marginBottom: 3,
-                                                      lineHeight: 1.4,
-                                                   }}
-                                                >
-                                                   {item.년}-
-                                                   {String(item.월).padStart(
-                                                      2,
-                                                      "0",
-                                                   )}{" "}
-                                                   &nbsp;
-                                                   <span
-                                                      style={{
-                                                         fontWeight: 700,
-                                                         color: "#2563eb",
-                                                      }}
-                                                   >
-                                                      {item.거래금액}만원
-                                                   </span>
-                                                   {item.법정동 && (
-                                                      <span
-                                                         style={{
-                                                            color: "#888",
-                                                         }}
-                                                      >
-                                                         {" "}
-                                                         · {item.법정동}
-                                                      </span>
-                                                   )}
-                                                </div>
-                                             ))}
+                                             {item.거래금액}만원
+                                          </span>
+                                          {item.건물명 && (
+                                             <span style={{ color: "#94a3b8" }}>
+                                                {" "}
+                                                · {item.건물명}
+                                             </span>
+                                          )}
+                                          {item.용도 && (
+                                             <span
+                                                style={{
+                                                   color: "#94a3b8",
+                                                   fontSize: 10,
+                                                }}
+                                             >
+                                                {" "}
+                                                ({item.용도})
+                                             </span>
+                                          )}
                                        </div>
-                                    )}
-                                 </div>
-                              )}
-                              {d?.상업용?.건수 === 0 && (
-                                 <div
-                                    style={{
-                                       background: "#f1f5f9",
-                                       borderRadius: 12,
-                                       padding: 14,
-                                       fontSize: 12,
-                                       color: "#94a3b8",
-                                       textAlign: "center",
-                                    }}
-                                 >
-                                    🏪 상업용 거래 데이터 없음
+                                    ))}
                                  </div>
                               )}
 
-                              {/* 오피스텔 전월세 */}
-                              {d?.오피스텔 && d.오피스텔.건수 > 0 && (
+                              {/* 전세 */}
+                              {d?.전세?.건수 > 0 && (
                                  <div
                                     style={{
                                        background: "#f0fdf4",
@@ -1885,7 +1868,7 @@ export default function MapView() {
                                           marginBottom: 8,
                                        }}
                                     >
-                                       🏠 오피스텔 전월세
+                                       🔑 전세
                                     </div>
                                     <div
                                        style={{
@@ -1894,62 +1877,79 @@ export default function MapView() {
                                           gap: 6,
                                        }}
                                     >
-                                       <div>
-                                          <div
-                                             style={{
-                                                fontSize: 10,
-                                                color: "#888",
-                                             }}
-                                          >
-                                             건수
+                                       {[
+                                          ["건수", `${d.전세.건수}건`],
+                                          ["평균", d.전세.평균가],
+                                          ["최저", d.전세.최저가],
+                                          ["최고", d.전세.최고가],
+                                       ].map(([k, v]) => (
+                                          <div key={k}>
+                                             <div
+                                                style={{
+                                                   fontSize: 10,
+                                                   color: "#888",
+                                                }}
+                                             >
+                                                {k}
+                                             </div>
+                                             <div
+                                                style={{
+                                                   fontSize: 12,
+                                                   fontWeight: 700,
+                                                   color: "#065f46",
+                                                }}
+                                             >
+                                                {v || "-"}
+                                             </div>
                                           </div>
-                                          <div
-                                             style={{
-                                                fontSize: 12,
-                                                fontWeight: 700,
-                                                color: "#065f46",
-                                             }}
-                                          >
-                                             {d.오피스텔.건수}건
-                                          </div>
-                                       </div>
-                                       <div>
-                                          <div
-                                             style={{
-                                                fontSize: 10,
-                                                color: "#888",
-                                             }}
-                                          >
-                                             평균보증금
-                                          </div>
-                                          <div
-                                             style={{
-                                                fontSize: 12,
-                                                fontWeight: 700,
-                                                color: "#065f46",
-                                             }}
-                                          >
-                                             {d.오피스텔.평균보증금 || "-"}
-                                          </div>
-                                       </div>
+                                       ))}
+                                    </div>
+                                 </div>
+                              )}
+
+                              {/* 월세 */}
+                              {d?.월세?.건수 > 0 && (
+                                 <div
+                                    style={{
+                                       background: "#fefce8",
+                                       borderRadius: 12,
+                                       padding: 14,
+                                    }}
+                                 >
+                                    <div
+                                       style={{
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          color: "#a16207",
+                                          marginBottom: 4,
+                                       }}
+                                    >
+                                       💰 월세
+                                    </div>
+                                    <div
+                                       style={{
+                                          fontSize: 12,
+                                          color: "#854d0e",
+                                       }}
+                                    >
+                                       {d.월세.건수}건
                                     </div>
                                  </div>
                               )}
 
                               {/* 데이터 없음 */}
-                              {(!d?.상업용 || d.상업용.건수 === 0) &&
-                                 (!d?.오피스텔 || d.오피스텔.건수 === 0) && (
-                                    <div
-                                       style={{
-                                          color: "#bbb",
-                                          fontSize: 13,
-                                          textAlign: "center",
-                                          marginTop: 20,
-                                       }}
-                                    >
-                                       해당 지역 실거래 데이터 없음
-                                    </div>
-                                 )}
+                              {d?.has_data === false && (
+                                 <div
+                                    style={{
+                                       color: "#bbb",
+                                       fontSize: 13,
+                                       textAlign: "center",
+                                       marginTop: 20,
+                                    }}
+                                 >
+                                    최근 3년 실거래 데이터 없음
+                                 </div>
+                              )}
                            </div>
                         ) : (
                            /* ── 매출 패널 ── */

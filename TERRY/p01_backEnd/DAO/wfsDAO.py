@@ -1,0 +1,41 @@
+# 위치: p01_backEnd/DAO/wfsDAO.py
+import logging
+import httpx
+
+logger = logging.getLogger(__name__)
+
+VWORLD_KEY = "BE3AF33A-202E-3D5F-A8AD-63D9EE291ABF"
+
+
+class WfsDAO:
+    """VWorld WFS 프록시 (CORS 우회)"""
+
+    def __init__(self, dong_mapping_dao):
+        self._dm = dong_mapping_dao  # DongMappingDAO 주입
+
+    async def get_dong(self, sig_cd: str = "11") -> dict:
+        """
+        lt_c_ademd_info (행정동 경계 폴리곤) 조회
+        sig_cd=11 → 서울 전체 행정동 폴리곤 GeoJSON 반환
+        """
+        url = (
+            f"https://api.vworld.kr/req/wfs"
+            f"?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature"
+            f"&TYPENAME=lt_c_ademd_info"
+            f"&SRSNAME=EPSG:3857"
+            f"&CQL_FILTER=sig_cd+LIKE+%27{sig_cd}%25%27"
+            f"&outputFormat=application%2Fjson"
+            f"&KEY={VWORLD_KEY}"
+            f"&DOMAIN=localhost"
+        )
+        logger.info(f"[WfsDAO] → {url[:120]}...")
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+            r = await client.get(url)
+
+        if r.status_code != 200:
+            raise RuntimeError(f"VWorld HTTP {r.status_code}: {r.text[:300]}")
+        if r.text.strip().startswith("<"):
+            raise RuntimeError(f"VWorld XML 응답 (인증오류): {r.text[:300]}")
+
+        gj = r.json()
+        return self._dm.enrich_geojson(gj)
