@@ -477,10 +477,14 @@ export default function MapView() {
                   setDongPanel(null);
                   try {
                      if (_mode === "sales") {
-                        // 행정동명으로 매출 조회 (adm_nm이 없으면 법정동명 fallback)
-                        const _rr = await fetch(
-                           `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_dongNm)}&gu=${encodeURIComponent(_guNm)}`,
+                        // adm_cd 있으면 코드로 조회 (이름 불일치 방지), 없으면 이름으로
+                        const _salesUrl = _admCd
+                           ? `${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(_admCd)}`
+                           : `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_dongNm)}&gu=${encodeURIComponent(_guNm)}`;
+                        console.log(
+                           `[매출] adm_cd=${_admCd}, dongNm=${_dongNm}, url=${_salesUrl}`,
                         );
+                        const _rr = await fetch(_salesUrl);
                         const _jj = await _rr.json();
                         if (_jj.data)
                            setDongPanel({
@@ -499,17 +503,14 @@ export default function MapView() {
                               empty: true,
                            });
                      } else if (_mode === "realestate") {
-                        // law_cd: WFS feature에서 직접 (STDG_CD = 법정동코드 10자리)
+                        // emd_cd(8자리): 코드 직접 매칭 - 이름 불일치 문제 없음
                         // adm_cd: 행정동코드 (행정동 기준 합산용)
-                        const _lawCd =
-                           p.LAW_CD ||
-                           p.law_cd ||
-                           (p.emd_cd ? p.emd_cd + "00" : "");
+                        const _emdCd = (p.emd_cd || "").trim();
                         const _url = _admCd
                            ? `${REALESTATE_URL}/realestate/seoul-rtms-adm?adm_cd=${encodeURIComponent(_admCd)}&gu_nm=${encodeURIComponent(_guNm)}`
-                           : `${REALESTATE_URL}/realestate/seoul-rtms?law_cd=${encodeURIComponent(_lawCd)}&gu_nm=${encodeURIComponent(_guNm)}`;
+                           : `${REALESTATE_URL}/realestate/seoul-rtms?emd_cd=${encodeURIComponent(_emdCd)}`;
                         console.log(
-                           `[실거래] adm_cd=${_admCd}, law_cd=${_lawCd}, url=${_url}`,
+                           `[실거래] adm_cd=${_admCd}, emd_cd=${_emdCd}, url=${_url}`,
                         );
                         const _rr = await fetch(_url);
                         const _jj = await _rr.json();

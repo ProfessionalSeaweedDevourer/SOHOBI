@@ -18,6 +18,7 @@ from DAO.seoulRtmsDAO  import SeoulRtmsDAO
 from DAO.landValueDAO  import LandValueDAO
 from DAO.wfsDAO        import WfsDAO
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
 # ── DAO 인스턴스 ──────────────────────────────────────────────────────
@@ -54,13 +55,12 @@ app.add_middleware(
 
 @app.get("/realestate/seoul-rtms")
 async def getSeoulRtms(
-    law_cd:     str            = Query(..., description="법정동코드 10자리"),
-    gu_nm:      str            = Query(..., description="자치구명 (예: 강남구)"),
+    emd_cd:     str            = Query(..., description="WFS emd_cd 8자리 (예: 11110134)"),
     years_back: int            = Query(3,   description="최근 N년"),
     rtms_type:  Optional[str]  = Query(None, description="1=매매 2=전세 3=월세 None=전체"),
 ):
-    """법정동 기준 실거래 조회"""
-    return await rtmsDAO.fetch_by_law_cd(law_cd, gu_nm, years_back, rtms_type)
+    """emd_cd(8자리) 기준 실거래 조회 - 코드 직접 매칭"""
+    return await rtmsDAO.fetch_by_emd_cd(emd_cd, years_back, rtms_type)
 
 
 @app.get("/realestate/seoul-rtms-adm")
@@ -75,7 +75,7 @@ async def getSeoulRtmsAdm(
         return {"has_data": False, "message": f"행정동코드 {adm_cd} 매핑 없음"}
 
     results = await asyncio.gather(*[
-        rtmsDAO.fetch_by_law_cd(r["law_cd"], r["gu_nm"], years_back)
+        rtmsDAO.fetch_by_dong(r["gu_nm"], r["law_nm"], years_back)
         for r in law_list
     ])
 
@@ -101,10 +101,20 @@ async def getSeoulRtmsAdm(
 
 @app.get("/realestate/sangkwon")
 async def getSangkwon(
-    dong: str = Query(..., description="행정동명 (예: 공덕동)"),
-    gu:   str = Query("",  description="자치구명 (중복동명 구분용)"),
+    adm_cd: str = Query("",  description="행정동코드 8자리 (우선)"),
+    dong:   str = Query("",  description="행정동명 (adm_cd 없을 때)"),
+    gu:     str = Query("",  description="자치구명 (중복동명 구분용)"),
 ):
-    row = skDAO.getSalesByDong(dong, gu)
+    # adm_cd 있으면 코드 기반 조회 (이름 불일치 문제 없음)
+    if adm_cd:
+        logger.info(f"[sangkwon] 코드 조회: adm_cd='{adm_cd}'")
+        row = skDAO.getSalesByCode(adm_cd)
+    else:
+        logger.info(f"[sangkwon] 이름 조회: dong='{dong}' gu='{gu}' / DF loaded={skDAO._loaded} rows={len(skDAO._df) if skDAO._df is not None else 0}")
+        row = skDAO.getSalesByDong(dong, gu)
+        if not row and skDAO._df is not None and not skDAO._df.empty:
+            sample = skDAO._df["행정동_코드_명"].dropna().unique()[:10].tolist()
+            logger.info(f"[sangkwon] 매칭실패 - DF 행정동명 샘플: {sample}")
     if not row:
         return {"data": None, "message": "데이터 없음"}
     return {"data": _format_sangkwon_row(row)}
