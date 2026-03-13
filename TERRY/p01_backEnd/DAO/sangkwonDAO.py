@@ -16,21 +16,16 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-DB_INFO = "fable/1@//195.168.9.168:1521/xe"
 
 
-class SangkwonDAO:
+from baseDAO import BaseDAO
+
+class SangkwonDAO(BaseDAO):
 
     def __init__(self):
         self._df: pd.DataFrame = None  # V_SANGKWON_LATEST 전체 캐시
         self._loaded = False
         logger.info("[SangkwonDAO] 초기화")
-
-    # ── DB 연결 ──────────────────────────────────────────────────
-    def _db_con(self):
-        from fable.oracleDBConnect import OracleDBConnect
-
-        return OracleDBConnect.makeConCur(DB_INFO)
 
     # ════════════════════════════════════════════════════════════
     # 1. 서버 시작 시 DB → DataFrame 로드
@@ -68,9 +63,7 @@ class SangkwonDAO:
                 self._loaded = True
                 logger.info(f"[SangkwonDAO] DB 로드 완료: {len(self._df)}개 행정동")
             finally:
-                from fable.oracleDBConnect import OracleDBConnect
-
-                OracleDBConnect.closeConCur(con, cur)
+                self._close(con, cur)
         except Exception as e:
             logger.error(f"[SangkwonDAO] DB 로드 실패: {e}")
             self._df = pd.DataFrame()
@@ -219,9 +212,7 @@ class SangkwonDAO:
                 rows = cur.fetchall()
                 return [dict(zip(cols, r)) for r in rows]
             finally:
-                from fable.oracleDBConnect import OracleDBConnect
-
-                OracleDBConnect.closeConCur(con, cur)
+                self._close(con, cur)
         except Exception as e:
             logger.error(f"[SangkwonDAO] 업종별 조회 실패: {e}")
             return []
@@ -229,16 +220,10 @@ class SangkwonDAO:
     def getQuarters(self) -> list:
         """DB에 있는 분기 목록 조회"""
         try:
-            con, cur = self._db_con()
-            try:
-                cur.execute(
-                    "SELECT DISTINCT 기준_년분기_코드 FROM SANGKWON_SALES ORDER BY 기준_년분기_코드"
-                )
-                return [r[0] for r in cur.fetchall()]
-            finally:
-                from fable.oracleDBConnect import OracleDBConnect
-
-                OracleDBConnect.closeConCur(con, cur)
+            rows = self._query(
+                "SELECT DISTINCT 기준_년분기_코드 FROM SANGKWON_SALES ORDER BY 기준_년분기_코드"
+            )
+            return [r[0] for r in rows]
         except Exception as e:
             logger.error(f"[SangkwonDAO] 분기목록 조회 실패: {e}")
             return []
