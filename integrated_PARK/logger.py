@@ -28,9 +28,11 @@ def _append(path: Path, record: dict) -> None:
 def log_query(
     *,
     request_id: str,
+    session_id: str = "",
     question: str,
     domain: str,
     status: str,
+    grade: str = "",
     retry_count: int,
     rejection_history: list[dict],
     draft: str,
@@ -40,10 +42,12 @@ def log_query(
 
     record = {
         "ts":               _now_iso(),
+        "session_id":       session_id,
         "request_id":       request_id,
         "question":         question,
         "domain":           domain,
         "status":           status,
+        "grade":            grade,
         "retry_count":      retry_count,
         "latency_ms":       round(latency_ms),
         "rejection_history": _format_rejection_history(rejection_history),
@@ -65,7 +69,15 @@ def _format_rejection_history(history: list[dict]) -> list[dict]:
         formatted.append({
             "attempt":      attempt,
             "approved":     verdict.get("approved"),
+            "grade":        verdict.get("grade", ""),
             "passed":       verdict.get("passed", []),
+            "warnings": [
+                {
+                    "code":   w.get("code"),
+                    "reason": w.get("reason"),
+                }
+                for w in verdict.get("warnings", [])
+            ],
             "issues": [
                 {
                     "code":   issue.get("code"),

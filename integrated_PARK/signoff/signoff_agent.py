@@ -33,6 +33,19 @@ def _build_history(domain: str, draft: str) -> ChatHistory:
     return history
 
 
+def _derive_grade(verdict: dict) -> str:
+    """issues/warnings 배열에서 grade를 결정한다.
+    C: issues 1개 이상 (blocking)
+    B: issues 없음, warnings 1개 이상 (non-blocking)
+    A: 둘 다 없음
+    """
+    if verdict.get("issues"):
+        return "C"
+    if verdict.get("warnings"):
+        return "B"
+    return "A"
+
+
 async def run_signoff(kernel, domain: str, draft: str, max_retries: int = 2) -> dict:
     required_codes = REQUIRED_CODES[domain]
     chat_service = kernel.get_service("sign_off")
@@ -48,40 +61,67 @@ async def run_signoff(kernel, domain: str, draft: str, max_retries: int = 2) -> 
         )
         verdict = json.loads(str(result))
 
-        passed_set = set(verdict.get("passed", []))
-        issues_set = {i["code"] for i in verdict.get("issues", [])}
-        missing = required_codes - (passed_set | issues_set)
+        passed_set   = set(verdict.get("passed", []))
+        issues_set   = {i["code"] for i in verdict.get("issues", [])}
+        warnings_set = {w["code"] for w in verdict.get("warnings", [])}
+        missing = required_codes - (passed_set | issues_set | warnings_set)
 
         if not missing:
+            # grade와 approved를 확정적으로 설정한다 (LLM 출력 신뢰도 보정)
+            verdict["approved"] = len(issues_set) == 0
+            if "grade" not in verdict:
+                verdict["grade"] = _derive_grade(verdict)
             return verdict
 
         if attempt < max_retries:
             missing_list = ", ".join(sorted(missing))
             history.add_assistant_message(str(result))
             history.add_user_message(
-                f"다음 항목이 passed 또는 issues에 누락되어 있습니다: {missing_list}\n"
+                f"다음 항목이 passed, warnings, issues 중 어디에도 누락되어 있습니다: {missing_list}\n"
                 f"이 항목들을 포함하여 전체 평가를 다시 JSON 형식으로 출력하십시오."
             )
 
+    # 최대 재시도 후에도 커버리지 미달 시 가용 verdict 반환
+    verdict["approved"] = len({i["code"] for i in verdict.get("issues", [])}) == 0
+    if "grade" not in verdict:
+        verdict["grade"] = _derive_grade(verdict)
     return verdict
 
 
 def validate_verdict(verdict: dict, domain: str) -> None:
     required_codes = REQUIRED_CODES[domain]
-    passed_set = set(verdict.get("passed", []))
-    issues_set = {i["code"] for i in verdict.get("issues", [])}
+    passed_set   = set(verdict.get("passed", []))
+    issues_set   = {i["code"] for i in verdict.get("issues", [])}
+    warnings_set = {w["code"] for w in verdict.get("warnings", [])}
 
-    missing = required_codes - (passed_set | issues_set)
+    # 모든 항목이 passed | issues | warnings 중 하나에 포함되어야 한다
+    missing = required_codes - (passed_set | issues_set | warnings_set)
     assert not missing, f"누락된 평가 항목: {missing}"
 
-    overlap = passed_set & issues_set
-    assert not overlap, f"passed와 issues에 동시에 분류된 항목: {overlap}"
+    # 배열 간 중복 금지
+    overlap_pi = passed_set & issues_set
+    assert not overlap_pi, f"passed와 issues에 동시에 분류된 항목: {overlap_pi}"
+    overlap_pw = passed_set & warnings_set
+    assert not overlap_pw, f"passed와 warnings에 동시에 분류된 항목: {overlap_pw}"
+    overlap_iw = issues_set & warnings_set
+    assert not overlap_iw, f"issues와 warnings에 동시에 분류된 항목: {overlap_iw}"
 
+    # issues 존재 ↔ approved=false (불변 조건)
+    if issues_set:
+        assert not verdict["approved"], "issues가 존재하는데 approved=true로 설정됨"
+    if not issues_set:
+        assert verdict["approved"], "issues가 없는데 approved=false로 설정됨"
+
+    # approved=false인 경우 retry_prompt 필수
     if not verdict["approved"]:
         assert verdict.get("retry_prompt"), "approved=false인데 retry_prompt가 비어 있음"
 
-    if issues_set:
-        assert not verdict["approved"], "issues가 존재하는데 approved=true로 설정됨"
-
-    if not issues_set:
-        assert verdict["approved"], "issues가 없는데 approved=false로 설정됨"
+    # grade 일관성 검사
+    grade = verdict.get("grade")
+    if grade:
+        if issues_set:
+            assert grade == "C", f"issues가 있는데 grade={grade}"
+        elif warnings_set:
+            assert grade == "B", f"warnings만 있는데 grade={grade}"
+        else:
+            assert grade == "A", f"issues/warnings 없는데 grade={grade}"
