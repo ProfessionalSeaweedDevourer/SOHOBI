@@ -45,7 +45,6 @@ _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 질문을 했습니다:
 - rent: 임대료 (원 단위, 없으면 0)
 - admin: 관리비 (원 단위, 없으면 0)
 - fee: 수수료 (원 단위, 없으면 0)
-- tax_rate: 세율 (기본값 0.2)
 - initial_investment: 초기 투자비용 (원 단위, 언급 없으면 생략)
 
 출력은 JSON 형식으로만 하세요."""
@@ -145,7 +144,7 @@ class FinanceAgent:
         if base:
             return base
         # 베이스도 추출값도 없을 때 최소 기본값
-        return {"revenue": [5_000_000], "cost": 2_000_000, "salary": 2_000_000, "tax_rate": 0.2}
+        return {"revenue": [5_000_000], "cost": 2_000_000, "salary": 2_000_000}
 
     @kernel_function(name="generate_draft", description="재무 시뮬레이션 기반 draft 생성")
     async def generate_draft(self, question: str, retry_prompt: str = "", profile: str = "", session_vars: dict | None = None) -> str:
@@ -153,7 +152,7 @@ class FinanceAgent:
         variables = await self._extract_params(question, profile=profile, session_vars=session_vars)
 
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
-        sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee", "tax_rate"]
+        sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]
         sim_input = {k: variables[k] for k in sim_keys if k in variables}
         sim_result = self._sim.monte_carlo_simulation(**sim_input)
 
@@ -182,7 +181,6 @@ class FinanceAgent:
         if variables.get("rent"): assumption_lines.append(f"- 임대료: {variables['rent']:,}원")
         if variables.get("admin"): assumption_lines.append(f"- 관리비: {variables['admin']:,}원")
         if variables.get("fee"):   assumption_lines.append(f"- 수수료: {variables['fee']:,}원")
-        assumption_lines.append(f"- 세율: {variables.get('tax_rate', 0.2):.0%}")
         assumptions = "\n".join(assumption_lines)
 
         # 손실확률: 핵심 지표로 명시.
