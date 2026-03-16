@@ -119,21 +119,37 @@ class FinanceAgent:
                 f"AI 응답 생성 중 오류가 발생했습니다: {e}"
             ) from e
 
-    async def _extract_params(self, question: str, profile: str = "") -> dict:
-        """자연어 질문 → 시뮬레이션 파라미터 JSON 추출."""
+    async def _extract_params(self, question: str, profile: str = "", session_vars: dict | None = None) -> dict:
+        """자연어 질문 → 시뮬레이션 파라미터 JSON 추출.
+
+        session_vars(이전 대화에서 추출된 재무 변수)를 베이스로 사용하고,
+        현재 질문에서 추출한 값으로 덮어쓴다 (질문 우선).
+        """
         context = (_PROFILE_CONTEXT.format(profile=profile) if profile else "")
         raw = await self._call_llm(context + _PARAM_EXTRACT_PROMPT.format(user_input=question))
         clean = re.sub(r"^```json\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
         try:
-            return json.loads(clean)
+            from_question = json.loads(clean)
         except json.JSONDecodeError:
-            # 파싱 실패 시 최소한의 기본값 반환
-            return {"revenue": [5_000_000], "cost": 2_000_000, "salary": 2_000_000, "tax_rate": 0.2}
+            from_question = {}
+
+        # 베이스: session_vars → 현재 질문 추출값으로 덮어쓰기
+        base: dict = {}
+        if session_vars:
+            # revenue가 session_vars에 int로 저장되어 있으면 리스트로 변환
+            for k, v in session_vars.items():
+                base[k] = [v] if k == "revenue" and isinstance(v, int) else v
+        base.update(from_question)
+
+        if base:
+            return base
+        # 베이스도 추출값도 없을 때 최소 기본값
+        return {"revenue": [5_000_000], "cost": 2_000_000, "salary": 2_000_000, "tax_rate": 0.2}
 
     @kernel_function(name="generate_draft", description="재무 시뮬레이션 기반 draft 생성")
-    async def generate_draft(self, question: str, retry_prompt: str = "", profile: str = "") -> str:
+    async def generate_draft(self, question: str, retry_prompt: str = "", profile: str = "", session_vars: dict | None = None) -> str:
         # ── 1단계: 파라미터 추출 ─────────────────────────────
-        variables = await self._extract_params(question, profile=profile)
+        variables = await self._extract_params(question, profile=profile, session_vars=session_vars)
 
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee", "tax_rate"]
