@@ -90,6 +90,8 @@ class FinanceSimulationPlugin:
         }
     # 카페-평균치 기준 기본값, 해당 값을 DB 등을 불러오는 형태로 추후 업데이트 상정 중
 
+    
+
     def merge_json(self, previous: dict, current: dict) -> dict:
         """
         기존 JSON(previous)에 새 입력(current)을 병합.
