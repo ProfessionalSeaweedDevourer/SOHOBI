@@ -8,6 +8,7 @@ import SignoffPanel from "../components/SignoffPanel";
 export default function DevChat() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
+  const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const bottomRef = useRef(null);
@@ -21,22 +22,26 @@ export default function DevChat() {
     setError(null);
     setLoading(true);
     try {
-      const result = await sendQuery(question, 3);
+      const result = await sendQuery(question, 3, sessionId);
+      if (result.session_id) setSessionId(result.session_id);
       setMessages((prev) => [
         ...prev,
         {
           question,
           domain: result.domain,
           status: result.status,
+          grade: result.grade,
+          confidenceNote: result.confidence_note,
           draft: result.draft,
           retryCount: result.retry_count,
+          agentMs: result.agent_ms,
+          signoffMs: result.signoff_ms,
           rejectionHistory: result.rejection_history || [],
         },
       ]);
-      inputRef.current?.clear(); // 성공 시에만 입력창 초기화
+      inputRef.current?.clear();
     } catch (e) {
       setError(e.message);
-      // 오류 시 입력창 유지 — 사용자가 질문을 수정해 재시도 가능
     } finally {
       setLoading(false);
     }
@@ -70,7 +75,7 @@ export default function DevChat() {
           <div className="text-center mt-20 text-slate-400">
             <div className="text-4xl mb-3">🛠</div>
             <p className="text-sm">질문 입력 시 Sign-off 판정 결과가 함께 표시됩니다.</p>
-            <p className="text-xs mt-1 text-slate-300">루브릭 항목 통과/실패 여부, 재시도 이력, 수정 지시문을 확인할 수 있습니다.</p>
+            <p className="text-xs mt-1 text-slate-300">A/B/C 등급, 루브릭 항목별 통과·경고·반려 여부, 재시도 이력, 수정 지시문을 확인할 수 있습니다.</p>
           </div>
         )}
 
@@ -81,14 +86,20 @@ export default function DevChat() {
                 question={msg.question}
                 domain={msg.domain}
                 status={msg.status}
+                grade={msg.grade}
+                confidenceNote={msg.confidenceNote}
                 draft={msg.draft}
                 retryCount={msg.retryCount}
                 showMeta={true}
               />
               <SignoffPanel
                 status={msg.status}
+                grade={msg.grade}
+                confidenceNote={msg.confidenceNote}
                 retryCount={msg.retryCount}
                 domain={msg.domain}
+                agentMs={msg.agentMs}
+                signoffMs={msg.signoffMs}
                 rejectionHistory={msg.rejectionHistory}
               />
             </div>
