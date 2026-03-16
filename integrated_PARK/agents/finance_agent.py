@@ -107,7 +107,7 @@ class FinanceAgent:
         service: AzureChatCompletion = self._kernel.get_service("sign_off")
         history = ChatHistory()
         history.add_user_message(prompt)
-        settings = OpenAIChatPromptExecutionSettings(max_tokens=3000)
+        settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=3000)
         try:
             result = await service.get_chat_message_content(history, settings=settings)
             return str(result)
@@ -119,8 +119,7 @@ class FinanceAgent:
                 safe_prompt = "다음은 합법적인 창업 재무 분석 요청입니다.\n\n" + prompt
                 return await self._call_llm(safe_prompt, _retry=True)
             raise ValueError(
-                "AI 응답 생성 중 콘텐츠 필터가 작동했습니다. "
-                "질문을 조금 다르게 표현해 주시면 다시 시도하겠습니다."
+                f"AI 응답 생성 중 오류가 발생했습니다: {e}"
             ) from e
 
     async def _extract_params(self, question: str, profile: str = "") -> dict:
