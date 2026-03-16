@@ -17,11 +17,12 @@
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-LOGS_DIR = Path(__file__).parent / "logs"
+LOGS_DIR = Path(os.environ.get("LOGS_DIR", Path(__file__).parent / "logs"))
 
 DOMAIN_KR = {"finance": "재무", "admin": "행정", "legal": "법무"}
 STATUS_ICON = {"approved": "✅", "escalated": "❌"}
@@ -135,6 +136,44 @@ def _fmt_summary(entries: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _fmt_error_entry(entry: dict, index: int) -> str:
+    sep = "─" * 60
+    ts = _fmt_ts(entry.get("ts", ""))
+    domain = entry.get("domain", "unknown")
+    domain_kr = DOMAIN_KR.get(domain, domain)
+    latency = entry.get("latency_ms", 0)
+    question = entry.get("question", "")
+    error = entry.get("error", "")
+    lines = [
+        sep,
+        f"[{index}] {ts}  |  {domain_kr}({domain})  |  {latency:.0f}ms",
+        f"Q: {question[:120]}{'...' if len(question) > 120 else ''}",
+        f"오류: {error}",
+    ]
+    return "\n".join(lines)
+
+
+def _fmt_error_summary(entries: list[dict]) -> str:
+    total = len(entries)
+    domain_counts: dict[str, int] = {}
+    for e in entries:
+        d = e.get("domain", "unknown")
+        domain_counts[d] = domain_counts.get(d, 0) + 1
+    lines = [
+        "=" * 60,
+        "SOHOBI 응답 오류 로그 요약",
+        f"생성 시각: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "=" * 60,
+        f"전체 오류: {total}건",
+        "",
+        "도메인별 오류 수:",
+    ]
+    for domain, count in sorted(domain_counts.items()):
+        kr = DOMAIN_KR.get(domain, domain)
+        lines.append(f"  {kr}({domain}): {count}건")
+    return "\n".join(lines)
+
+
 def format_logs(log_type: str = "queries", limit: int = 0) -> str:
     """로그를 포맷팅된 문자열로 반환. API 엔드포인트에서도 재사용."""
     path = LOGS_DIR / f"{log_type}.jsonl"
@@ -143,11 +182,17 @@ def format_logs(log_type: str = "queries", limit: int = 0) -> str:
     if not entries:
         return f"로그 파일이 없거나 비어 있습니다: {path}"
 
-    # 최신순 정렬
     entries.sort(key=lambda e: e.get("ts", ""), reverse=True)
 
     if limit > 0:
         entries = entries[:limit]
+
+    if log_type == "errors":
+        output_parts = [_fmt_error_summary(entries), "\n\n상세 내역\n"]
+        for i, entry in enumerate(entries, start=1):
+            output_parts.append(_fmt_error_entry(entry, i))
+        output_parts.append("─" * 60)
+        return "\n".join(output_parts)
 
     output_parts = [_fmt_summary(entries)]
     output_parts.append("\n\n상세 내역\n")
@@ -173,7 +218,7 @@ def main():
     parser = argparse.ArgumentParser(description="SOHOBI 로그 포매터")
     parser.add_argument(
         "--type",
-        choices=["queries", "rejections"],
+        choices=["queries", "rejections", "errors"],
         default="queries",
         help="로그 파일 종류 (기본값: queries)",
     )
