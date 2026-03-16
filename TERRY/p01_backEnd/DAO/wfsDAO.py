@@ -30,30 +30,18 @@ class WfsDAO:
             f"&DOMAIN=localhost"
         )
 
-        all_features = []
-        page = 0
-        page_size = 1000
+        # VWorld WFS는 1000개 페이징 미지원 → count=1000 단일 요청
+        url = BASE_URL + "&count=1000"
+        logger.info(f"[WfsDAO] 요청: {url[:120]}...")
 
         async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
-            while True:
-                start = page * page_size + 1
-                url   = BASE_URL + f"&startIndex={start}&count={page_size}"
-                logger.info(f"[WfsDAO] 페이지 {page+1} (startIndex={start})")
-                r = await client.get(url)
+            r = await client.get(url)
 
-                if r.status_code != 200:
-                    raise RuntimeError(f"VWorld HTTP {r.status_code}: {r.text[:300]}")
-                if r.text.strip().startswith("<"):
-                    raise RuntimeError(f"VWorld XML 응답 (인증오류): {r.text[:300]}")
+        if r.status_code != 200:
+            raise RuntimeError(f"VWorld HTTP {r.status_code}: {r.text[:300]}")
+        if r.text.strip().startswith("<"):
+            raise RuntimeError(f"VWorld XML 응답 (인증오류): {r.text[:300]}")
 
-                gj       = r.json()
-                features = gj.get("features", [])
-                all_features.extend(features)
-                logger.info(f"[WfsDAO] 페이지 {page+1}: {len(features)}개 (누적 {len(all_features)}개)")
-
-                if len(features) < page_size:
-                    break
-                page += 1
-
-        gj["features"] = all_features
+        gj = r.json()
+        logger.info(f"[WfsDAO] features: {len(gj.get('features', []))}개")
         return self._dm.enrich_geojson(gj)
