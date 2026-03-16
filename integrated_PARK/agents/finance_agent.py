@@ -56,22 +56,23 @@ _EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다.
 {assumptions}
 
 [시뮬레이션 결과 — 10,000회 몬테카를로]
+★ 손실 발생 확률: {loss_prob}  ← 핵심 지표
 - 평균 월 순이익: {avg_profit:,}원
-- 표준편차: {std_profit:,}원
-- 90% 신뢰구간: {p5:,}원 ~ {p95:,}원  (하위 5% ~ 상위 95%)
-- 손실 발생 관측 여부: {loss_prob}
+- 수익 분포 (하위 5% ~ 상위 95%): {p5:,}원 ~ {p95:,}원
 
 위 결과를 바탕으로 아래 질문에 대한 창업 재무 분석 응답을 작성하십시오.
 
 질문: {question}
 
 작성 기준:
+- 손실 발생 확률을 수치(%)로 응답의 첫 단락 또는 주요 강조 위치에 명시하십시오.
+  손실 케이스가 관측되지 않은 경우에도 '관측되지 않았습니다'로 명확히 서술하십시오.
 - 첫 단락에 위의 가정 조건(월매출, 원가, 급여 등)을 명시하십시오.
-- 신뢰구간과 표준편차를 언급하여 예측의 불확실성을 구체적으로 설명하십시오.
+- 평균 순이익은 참고 수치로 제시하되, 손실 확률이 핵심 메시지임을 유지하십시오.
+- 수익 분포(하위 5%·상위 95% 구간)를 보조 정보로 제공하십시오.
 - 위험 요인과 기회 요인을 함께 언급하십시오.
 - 낙관·기본·비관 시나리오와 리스크 경고를 포함하십시오.
-- 손실 발생 확률이 낮더라도 실제 사업에서는 시뮬레이션 범위 밖의 리스크(예: 경기 침체, 예상 외 비용 급증)가 존재함을 언급하십시오.
-- "손실 발생 확률 0%"라는 표현 대신 "시뮬레이션 가정 범위 내에서는 손실이 관측되지 않았으나, 외부 충격에는 취약할 수 있습니다" 형식으로 서술하십시오.
+- 시뮬레이션 범위 밖의 리스크(예: 경기 침체, 예상 외 비용 급증)가 존재함을 언급하십시오.
 - 투자 권유가 아닌 정보 제공임을 명시하십시오.
 - 경영자가 이해하기 쉬운 자연어로 작성하십시오."""
 
@@ -119,21 +120,37 @@ class FinanceAgent:
                 f"AI 응답 생성 중 오류가 발생했습니다: {e}"
             ) from e
 
-    async def _extract_params(self, question: str, profile: str = "") -> dict:
-        """자연어 질문 → 시뮬레이션 파라미터 JSON 추출."""
+    async def _extract_params(self, question: str, profile: str = "", session_vars: dict | None = None) -> dict:
+        """자연어 질문 → 시뮬레이션 파라미터 JSON 추출.
+
+        session_vars(이전 대화에서 추출된 재무 변수)를 베이스로 사용하고,
+        현재 질문에서 추출한 값으로 덮어쓴다 (질문 우선).
+        """
         context = (_PROFILE_CONTEXT.format(profile=profile) if profile else "")
         raw = await self._call_llm(context + _PARAM_EXTRACT_PROMPT.format(user_input=question))
         clean = re.sub(r"^```json\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
         try:
-            return json.loads(clean)
+            from_question = json.loads(clean)
         except json.JSONDecodeError:
-            # 파싱 실패 시 최소한의 기본값 반환
-            return {"revenue": [5_000_000], "cost": 2_000_000, "salary": 2_000_000, "tax_rate": 0.2}
+            from_question = {}
+
+        # 베이스: session_vars → 현재 질문 추출값으로 덮어쓰기
+        base: dict = {}
+        if session_vars:
+            # revenue가 session_vars에 int로 저장되어 있으면 리스트로 변환
+            for k, v in session_vars.items():
+                base[k] = [v] if k == "revenue" and isinstance(v, int) else v
+        base.update(from_question)
+
+        if base:
+            return base
+        # 베이스도 추출값도 없을 때 최소 기본값
+        return {"revenue": [5_000_000], "cost": 2_000_000, "salary": 2_000_000, "tax_rate": 0.2}
 
     @kernel_function(name="generate_draft", description="재무 시뮬레이션 기반 draft 생성")
-    async def generate_draft(self, question: str, retry_prompt: str = "", profile: str = "") -> str:
+    async def generate_draft(self, question: str, retry_prompt: str = "", profile: str = "", session_vars: dict | None = None) -> str:
         # ── 1단계: 파라미터 추출 ─────────────────────────────
-        variables = await self._extract_params(question, profile=profile)
+        variables = await self._extract_params(question, profile=profile, session_vars=session_vars)
 
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee", "tax_rate"]
@@ -148,12 +165,18 @@ class FinanceAgent:
             )
 
         # ── 3단계: 설명 draft 생성 ──────────────────────────
-        # 가정 조건 문자열 구성
+        # 가정 조건 문자열 구성 — 단일 입력 vs. 복수 데이터(실제 분포) 분기
         rev = variables.get("revenue", [])
-        rev_str = f"{rev[0]:,}원" if len(rev) == 1 else f"{min(rev):,}~{max(rev):,}원 (복수 시나리오)"
+        is_multi = len(rev) > 1
+        if is_multi:
+            rev_line = f"- 월매출: 실제 매장 {len(rev)}개 데이터 기반 (범위: {min(rev):,}~{max(rev):,}원)"
+        else:
+            rev_str = f"{rev[0]:,}원" if rev else "0원"
+            rev_line = f"- 월매출: {rev_str}"
+        cost_line = f"- 원가: {variables.get('cost', 0):,}원"
         assumption_lines = [
-            f"- 월매출: {rev_str} (±10% 정규분포 가정)",
-            f"- 원가: {variables.get('cost', 0):,}원 (±10% 정규분포 가정)",
+            rev_line,
+            cost_line,
             f"- 급여: {variables.get('salary', 0):,}원",
         ]
         if variables.get("rent"): assumption_lines.append(f"- 임대료: {variables['rent']:,}원")
@@ -162,22 +185,22 @@ class FinanceAgent:
         assumption_lines.append(f"- 세율: {variables.get('tax_rate', 0.2):.0%}")
         assumptions = "\n".join(assumption_lines)
 
-        # 손실확률: 0%이면 수치 자체를 제거하고 서술형으로만 전달
-        # (sign-off C5·F5는 "0%" 수치 자체를 리스크 부정 표현으로 판정함)
+        # 손실확률: 핵심 지표로 명시.
+        # 0%이면 서술형으로 표현 (수치 "0%"가 리스크 부정으로 오해되는 것을 방지)
         raw_loss = sim_result["loss_probability"]
         if raw_loss == 0.0:
+            range_desc = f"실제 매장 {len(rev)}개 데이터" if is_multi else "매출·원가 ±10%"
             loss_prob_str = (
-                "이번 시뮬레이션 가정 범위(매출·원가 ±10%) 내에서는 손실 케이스가 관측되지 않았음. "
-                "단, 경기 침체·임대료 급등·수요 급감 등 시뮬레이션 가정 밖의 충격이 발생하면 "
+                f"이번 시뮬레이션({range_desc}) 범위 내에서는 손실 케이스가 관측되지 않았음. "
+                "단, 경기 침체·임대료 급등·수요 급감 등 시뮬레이션 범위 밖의 충격이 발생하면 "
                 "실제 손실로 이어질 수 있으며, 이 결과는 미래 수익을 보장하지 않음."
             )
         else:
-            loss_prob_str = f"10,000회 중 {raw_loss:.1%}에서 손실 발생"
+            loss_prob_str = f"{raw_loss:.1%} (10,000회 시뮬레이션 기준)"
 
         explain_prompt = _EXPLAIN_PROMPT.format(
             assumptions=assumptions,
             avg_profit=sim_result["average_net_profit"],
-            std_profit=sim_result["std_profit"],
             p5=sim_result["p5_net_profit"],
             p95=sim_result["p95_net_profit"],
             loss_prob=loss_prob_str,
