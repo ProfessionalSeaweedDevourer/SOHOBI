@@ -1,4 +1,4 @@
-// 위치: src/components/CategoryPanel.jsx
+// 위치: src/components/panel/CategoryPanel.jsx
 import { useState } from "react";
 import { CATEGORIES } from "../../constants/categories";
 

@@ -1,4 +1,4 @@
-// components/DongTooltip.jsx
+// 위치: src/components/controls/DongTooltip.jsx
 
 // ── 메인 컴포넌트: 행정동 호버 시 툴팁 ──────────────────────
 export default function DongTooltip({ tooltip, mode }) {

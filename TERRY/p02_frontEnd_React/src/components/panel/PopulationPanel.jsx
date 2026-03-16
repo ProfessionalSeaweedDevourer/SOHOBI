@@ -1,3 +1,5 @@
+// 위치: src/components/panel/PopulationPanel.jsx
+
 /**
  * PopulationPanel.jsx  –  서울 실시간 유동인구 패널
  *

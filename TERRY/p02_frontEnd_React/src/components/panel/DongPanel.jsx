@@ -1,4 +1,4 @@
-// components/DongPanel.jsx
+// 위치: src/components/panel/DongPanel.jsx
 
 
 // ── 금액 포맷 헬퍼 ─────────────────────────────────────────────

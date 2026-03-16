@@ -1,4 +1,4 @@
-// components/MapControls.jsx
+// 위치: src/components/controls/MapControls.jsx
 
 
 // ── 메인 컴포넌트: 상단 컨트롤 바 + 동 모드 버튼 ────────────

@@ -1,3 +1,5 @@
+// 위치: src/components/panel/Layerpanel.jsx
+
 import { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
