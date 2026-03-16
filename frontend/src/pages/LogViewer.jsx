@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchLogs } from "../api";
 import LogTable from "../components/LogTable";
+import ErrorTable from "../components/ErrorTable";
 
 const TABS = [
   { key: "queries", label: "전체 요청" },
   { key: "rejections", label: "거부 이력" },
+  { key: "errors", label: "응답 오류" },
 ];
 
 function resolveGrade(entry) {
@@ -39,7 +41,9 @@ export default function LogViewer() {
     load(tab);
   }, [tab]);
 
-  // 등급별 통계
+  const isErrorTab = tab === "errors";
+
+  // 등급별 통계 (오류 탭에서는 미사용)
   const total = entries.length;
   const gradeA = entries.filter((e) => resolveGrade(e) === "A").length;
   const gradeB = entries.filter((e) => resolveGrade(e) === "B").length;
@@ -76,19 +80,25 @@ export default function LogViewer() {
       {total > 0 && (
         <div className="bg-white border-b border-slate-100 px-4 py-2 flex gap-6 text-xs text-slate-600 overflow-x-auto">
           <span>전체 <strong className="text-slate-800">{total}</strong>건</span>
-          <span className="text-green-700">
-            A 통과 <strong>{gradeA}</strong>
-            <span className="text-slate-400"> ({Math.round((gradeA / total) * 100)}%)</span>
-          </span>
-          <span className="text-amber-700">
-            B 경고 <strong>{gradeB}</strong>
-            {gradeB > 0 && <span className="text-slate-400"> ({Math.round((gradeB / total) * 100)}%)</span>}
-          </span>
-          <span className="text-red-600">
-            C 반려 <strong>{gradeC}</strong>
-            {gradeC > 0 && <span className="text-slate-400"> ({Math.round((gradeC / total) * 100)}%)</span>}
-          </span>
-          <span>평균 응답 <strong className="text-slate-800">{avgLatency.toLocaleString()}ms</strong></span>
+          {isErrorTab ? (
+            <span className="text-red-600">오류 <strong>{total}</strong>건</span>
+          ) : (
+            <>
+              <span className="text-green-700">
+                A 통과 <strong>{gradeA}</strong>
+                <span className="text-slate-400"> ({Math.round((gradeA / total) * 100)}%)</span>
+              </span>
+              <span className="text-amber-700">
+                B 경고 <strong>{gradeB}</strong>
+                {gradeB > 0 && <span className="text-slate-400"> ({Math.round((gradeB / total) * 100)}%)</span>}
+              </span>
+              <span className="text-red-600">
+                C 반려 <strong>{gradeC}</strong>
+                {gradeC > 0 && <span className="text-slate-400"> ({Math.round((gradeC / total) * 100)}%)</span>}
+              </span>
+              <span>평균 응답 <strong className="text-slate-800">{avgLatency.toLocaleString()}ms</strong></span>
+            </>
+          )}
         </div>
       )}
 
@@ -120,7 +130,9 @@ export default function LogViewer() {
           </div>
         ) : (
           <div className="h-[calc(100vh-180px)]">
-            <LogTable entries={entries} loading={loading} />
+            {isErrorTab
+              ? <ErrorTable entries={entries} loading={loading} />
+              : <LogTable entries={entries} loading={loading} />}
           </div>
         )}
       </main>
