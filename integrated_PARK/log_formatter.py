@@ -160,7 +160,7 @@ def format_logs(log_type: str = "queries", limit: int = 0) -> str:
 
 
 def load_entries_json(log_type: str = "queries", limit: int = 50) -> list[dict]:
-    """API 엔드포인트용 — 파싱된 엔트리 리스트 반환."""
+    """API 엔드포인트용 — 파싱된 엔트리 리스트 반환. log_type: queries | rejections | errors"""
     path = LOGS_DIR / f"{log_type}.jsonl"
     entries = _load_jsonl(path)
     entries.sort(key=lambda e: e.get("ts", ""), reverse=True)
