@@ -2,7 +2,7 @@
 import math
 import logging
 import pandas as pd
-from baseDAO import BaseDAO
+from .baseDAO import BaseDAO
 
 logger = logging.getLogger(__name__)
 

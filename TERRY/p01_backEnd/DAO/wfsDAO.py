@@ -11,14 +11,15 @@ class WfsDAO:
     """VWorld WFS 프록시 (CORS 우회)"""
 
     def __init__(self, dong_mapping_dao):
-        self._dm = dong_mapping_dao  # DongMappingDAO 주입
+        self._dm = dong_mapping_dao
 
     async def get_dong(self, sig_cd: str = "11") -> dict:
         """
-        lt_c_ademd_info (행정동 경계 폴리곤) 조회
-        sig_cd=11 → 서울 전체 행정동 폴리곤 GeoJSON 반환
+        lt_c_ademd_info (읍면동 경계) 조회 + enrich
+        - 1000개 제한 → 페이징으로 전체 수집
+        - enrich: emd_cd → adm_cd, gu_nm 주입
         """
-        url = (
+        BASE_URL = (
             f"https://api.vworld.kr/req/wfs"
             f"?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature"
             f"&TYPENAME=lt_c_ademd_info"
@@ -28,14 +29,31 @@ class WfsDAO:
             f"&KEY={VWORLD_KEY}"
             f"&DOMAIN=localhost"
         )
-        logger.info(f"[WfsDAO] → {url[:120]}...")
+
+        all_features = []
+        page = 0
+        page_size = 1000
+
         async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
-            r = await client.get(url)
+            while True:
+                start = page * page_size + 1
+                url   = BASE_URL + f"&startIndex={start}&count={page_size}"
+                logger.info(f"[WfsDAO] 페이지 {page+1} (startIndex={start})")
+                r = await client.get(url)
 
-        if r.status_code != 200:
-            raise RuntimeError(f"VWorld HTTP {r.status_code}: {r.text[:300]}")
-        if r.text.strip().startswith("<"):
-            raise RuntimeError(f"VWorld XML 응답 (인증오류): {r.text[:300]}")
+                if r.status_code != 200:
+                    raise RuntimeError(f"VWorld HTTP {r.status_code}: {r.text[:300]}")
+                if r.text.strip().startswith("<"):
+                    raise RuntimeError(f"VWorld XML 응답 (인증오류): {r.text[:300]}")
 
-        gj = r.json()
+                gj       = r.json()
+                features = gj.get("features", [])
+                all_features.extend(features)
+                logger.info(f"[WfsDAO] 페이지 {page+1}: {len(features)}개 (누적 {len(all_features)}개)")
+
+                if len(features) < page_size:
+                    break
+                page += 1
+
+        gj["features"] = all_features
         return self._dm.enrich_geojson(gj)

@@ -17,8 +17,8 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+from .baseDAO import BaseDAO
 
-from baseDAO import BaseDAO
 
 class SangkwonDAO(BaseDAO):
 
@@ -38,19 +38,19 @@ class SangkwonDAO(BaseDAO):
         """
         sql = """
             SELECT
-                행정동_코드,
-                행정동_코드_명,
-                기준_년분기_코드,
-                TOT_SALES_AMT,
-                TOT_SELNG_CO,
-                ML_SALES_AMT,
-                FML_SALES_AMT,
-                MDWK_SALES_AMT,
-                WKEND_SALES_AMT,
-                AGE20_AMT,
-                AGE30_AMT,
-                AGE40_AMT,
-                AGE50_AMT
+                adm_cd,
+                adm_nm,
+                base_yr_qtr_cd,
+                tot_sales_amt,
+                tot_selng_co,
+                ml_sales_amt,
+                fml_sales_amt,
+                mdwk_sales_amt,
+                wkend_sales_amt,
+                age20_amt,
+                age30_amt,
+                age40_amt,
+                age50_amt
             FROM V_SANGKWON_LATEST
         """
         try:
@@ -113,9 +113,7 @@ class SangkwonDAO(BaseDAO):
         if not code_prefix:
             return []
 
-        df_gu = self._df[
-            self._df["행정동_코드"].astype(str).str.startswith(code_prefix)
-        ]
+        df_gu = self._df[self._df["adm_cd"].astype(str).str.startswith(code_prefix)]
         return df_gu.to_dict("records")
 
     def getSalesByDong(self, dong: str, gu: str = "") -> dict:
@@ -127,7 +125,7 @@ class SangkwonDAO(BaseDAO):
         if self._df is None or self._df.empty:
             return None
 
-        df = self._df[self._df["행정동_코드_명"] == dong]
+        df = self._df[self._df["adm_nm"] == dong]
 
         # 구로 추가 필터
         if gu and len(df) > 1:
@@ -160,7 +158,7 @@ class SangkwonDAO(BaseDAO):
             }
             prefix = GU_CODE.get(gu)
             if prefix:
-                df = df[df["행정동_코드"].astype(str).str.startswith(prefix)]
+                df = df[df["adm_cd"].astype(str).str.startswith(prefix)]
 
         if df.empty:
             return None
@@ -172,8 +170,8 @@ class SangkwonDAO(BaseDAO):
             return None
         adstrd_cd = str(adstrd_cd).strip()
         # Oracle NUMBER → float → '1115051000.0' 형태 정리
-        db_codes = self._df["행정동_코드"].apply(
-            lambda x: str(int(float(x))) if str(x).endswith('.0') else str(x)
+        db_codes = self._df["adm_cd"].apply(
+            lambda x: str(int(float(x))) if str(x).endswith(".0") else str(x)
         )
         df = self._df[db_codes == adstrd_cd]
         if df.empty and len(adstrd_cd) == 8:
@@ -181,7 +179,9 @@ class SangkwonDAO(BaseDAO):
         if df.empty and len(adstrd_cd) == 10:
             df = self._df[db_codes == adstrd_cd[:8]]
         sample = db_codes.unique()[:5].tolist()
-        logger.info(f"[SangkwonDAO] getSalesByCode: adstrd_cd={adstrd_cd} → {'있음' if not df.empty else '없음'} / DB코드샘플={sample}")
+        logger.info(
+            f"[SangkwonDAO] getSalesByCode: adstrd_cd={adstrd_cd} → {'있음' if not df.empty else '없음'} / DB코드샘플={sample}"
+        )
         if df.empty:
             return None
         return df.iloc[0].to_dict()
@@ -193,24 +193,24 @@ class SangkwonDAO(BaseDAO):
         """
         sql = """
             SELECT
-                서비스_업종_코드,
-                서비스_업종_코드_명,
-                당월_매출_금액,
-                당월_매출_건수,
-                남성_매출_금액,
-                여성_매출_금액,
-                주중_매출_금액,
-                주말_매출_금액,
-                연령대_20_매출_금액,
-                연령대_30_매출_금액,
-                연령대_40_매출_금액,
-                연령대_50_매출_금액
+                svc_induty_cd,
+                svc_induty_nm,
+                tot_sales_amt,
+                tot_selng_co,
+                ml_sales_amt,
+                fml_sales_amt,
+                mdwk_sales_amt,
+                wkend_sales_amt,
+                age20_amt,
+                age30_amt,
+                age40_amt,
+                age50_amt
             FROM SANGKWON_SALES
-            WHERE 행정동_코드 = :cd
-              AND 기준_년분기_코드 = (SELECT MAX(기준_년분기_코드) FROM SANGKWON_SALES)
+            WHERE adm_cd = :cd
+              AND base_yr_qtr_cd = (SELECT MAX(base_yr_qtr_cd) FROM SANGKWON_SALES)
         """
         if induty_cd:
-            sql += " AND 서비스_업종_코드 = :ind"
+            sql += " AND svc_induty_cd = :ind"
 
         try:
             con, cur = self._db_con()
@@ -232,7 +232,7 @@ class SangkwonDAO(BaseDAO):
         """DB에 있는 분기 목록 조회"""
         try:
             rows = self._query(
-                "SELECT DISTINCT 기준_년분기_코드 FROM SANGKWON_SALES ORDER BY 기준_년분기_코드"
+                "SELECT DISTINCT base_yr_qtr_cd FROM SANGKWON_SALES ORDER BY base_yr_qtr_cd"
             )
             return [r[0] for r in rows]
         except Exception as e:
@@ -243,7 +243,7 @@ class SangkwonDAO(BaseDAO):
         cnt = len(self._df) if self._df is not None else 0
         quarter = ""
         if self._df is not None and not self._df.empty:
-            quarter = str(self._df["기준_년분기_코드"].max())
+            quarter = str(self._df["base_yr_qtr_cd"].max())
         return {
             "loaded": self._loaded,
             "dong_count": cnt,

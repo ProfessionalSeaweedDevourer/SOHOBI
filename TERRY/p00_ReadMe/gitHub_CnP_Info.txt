@@ -34,7 +34,7 @@ git status
 ⓔ 커밋 메시지 작성
 git commit -m "메모"
 ex) 
-git commit -m "백엔드 컨트롤러 ip변경"
+git commit -m "ReadMe 업데이트"
 
 
 ⓔ GitHub 업로드

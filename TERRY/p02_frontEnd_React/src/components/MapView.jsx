@@ -376,7 +376,7 @@ export default function MapView() {
 
             const p = feat.getProperties();
             const dongNm = p.emd_kor_nm || p.adm_nm || p.emd_nm || p.name || "";
-            const guNm   = p.sig_kor_nm || p.sig_nm || "";
+            const guNm   = p.sig_kor_nm || p.sig_nm || p.sgg_nm || "";
             if (guNm) currentGuNmRef.current = guNm;
 
             if (dongNm !== dongHoverNameRef.current) {
@@ -432,12 +432,16 @@ export default function MapView() {
 
             if (feat) {
                const p = feat.getProperties();
-               // adm_nm: 백엔드 enrich로 주입된 행정동명 (매출 DB 키)
-               // emd_kor_nm: WFS 원본 법정동명 (fallback)
-               const _admNm  = p.adm_nm  || "";   // 행정동명 (DB 매칭용)
-               const _admCd  = p.adm_cd  || "";   // 행정동코드
-               const _dongNm = _admNm || p.emd_kor_nm || p.emd_nm || p.name || "";
-               const _guNm   = p.gu_nm || p.sig_kor_nm || p.sig_nm || currentGuNmRef.current || "";
+               // lt_c_ademd_info 레이어 필드:
+               //   emd_cd     : 읍면동코드 8자리 → 실거래 adm_cd로 사용
+               //   emd_kor_nm : 행정동명 → 매출 getSalesByDong 키
+               //   full_nm    : "서울특별시 종로구 청운동" → [1]=구이름
+               //   gu_nm      : wfsDAO에서 주입한 구이름
+               const _emdCd  = (p.emd_cd     || "").trim();
+               const _dongNm = p.emd_kor_nm  || p.emd_nm || "";
+               const _guNm   = p.gu_nm || p.sig_kor_nm || currentGuNmRef.current || "";
+               const _admCd  = _emdCd;   // 실거래용 (adm_cd = emd_cd 동일 사용)
+               const _admNm  = _dongNm;
                if (_dongNm) {
                   if (_guNm) currentGuNmRef.current = _guNm;
                   if (dongHoverFeatRef.current) dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
@@ -446,28 +450,25 @@ export default function MapView() {
                   setDongTooltip(null);
 
                   const _mode = dongModeRef.current;
-                  console.log(`[동 클릭] 법정동=${p.emd_kor_nm} → 행정동=${_admNm}(${_admCd}) / 구=${_guNm} / 모드=${_mode}`);
+                  console.log(`[동 클릭] 행정동=${_admNm}(${_admCd}) emd_cd=${_emdCd} 구=${_guNm} 모드=${_mode}`);
                   setDongLoading(true);
                   setDongPanel(null);
                   try {
                      if (_mode === "sales") {
-                        // 매출 = 행정동코드(adm_cd) 기준
-                        const _emdCd = (p.emd_cd || "").trim();
-                        if (!_admCd) {
-                           console.warn(`[매출] adm_cd 없음(미매핑동) emd_cd=${_emdCd}`);
-                           setDongPanel({ mode: _mode, dongNm: _dongNm, guNm: _guNm, apiData: null, empty: true });
-                        } else {
-                           console.log(`[매출] adm_cd=${_admCd}`);
-                           const _rr = await fetch(`${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(_admCd)}`);
-                           const _jj = await _rr.json();
-                           if (_jj.data) setDongPanel({ mode: _mode, dongNm: _dongNm, guNm: _guNm, admCd: _admCd, apiData: _jj.data });
-                           else setDongPanel({ mode: _mode, dongNm: _dongNm, guNm: _guNm, apiData: null, empty: true });
-                        }
+                        // 매출: adm_cd(enrich 주입) 우선, 없으면 동이름
+                        const _salesUrl = _admCd
+                           ? `${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(_admCd)}`
+                           : `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_dongNm)}&gu=${encodeURIComponent(_guNm)}`;
+                        console.log(`[매출] adm_cd=${_admCd} dong=${_dongNm} url=${_salesUrl}`);
+                        const _rr = await fetch(_salesUrl);
+                        const _jj = await _rr.json();
+                        if (_jj.data) setDongPanel({ mode: _mode, dongNm: _dongNm, guNm: _guNm, admCd: _admCd, apiData: _jj.data });
+                        else setDongPanel({ mode: _mode, dongNm: _dongNm, guNm: _guNm, apiData: null, empty: true });
                      } else if (_mode === "realestate") {
-                        // 실거래 = 법정동코드(emd_cd) 기준 - 항상 emd_cd로 조회
-                        const _emdCd = (p.emd_cd || "").trim();
-                        console.log(`[실거래] emd_cd=${_emdCd}`);
-                        const _rr = await fetch(`${REALESTATE_URL}/realestate/seoul-rtms?emd_cd=${encodeURIComponent(_emdCd)}`);
+                        // 실거래: adm_cd → LAW_ADM_MAP → emd_cd → API
+                        console.log(`[실거래] adm_cd=${_admCd} emd_cd=${_emdCd}`);
+                        const _rtmsId = _admCd || _emdCd;
+                        const _rr = await fetch(`${REALESTATE_URL}/realestate/seoul-rtms?adm_cd=${encodeURIComponent(_rtmsId)}`);
                         const _jj = await _rr.json();
                         if (_jj) setDongPanel({ mode: _mode, dongNm: _dongNm, guNm: _guNm, admCd: _admCd, apiData: _jj });
                      }
