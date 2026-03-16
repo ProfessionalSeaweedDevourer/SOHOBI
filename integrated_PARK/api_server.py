@@ -25,6 +25,7 @@ from kernel_setup import get_kernel
 from logger import log_query, log_error
 from log_formatter import load_entries_json
 from logger import _format_rejection_history
+from variable_extractor import extract_financial_vars
 
 load_dotenv()
 
@@ -88,7 +89,7 @@ async def query(req: QueryRequest):
     try:
         # ── 세션 복원 또는 신규 생성 ──────────────────────────
         sid = req.session_id or str(uuid4())
-        session = _query_sessions.setdefault(sid, {"profile": "", "history": ChatHistory()})
+        session = _query_sessions.setdefault(sid, {"profile": "", "history": ChatHistory(), "extracted": {}})
 
         # 새 창업자 컨텍스트가 전달되면 세션 프로필 갱신
         if req.founder_context:
@@ -108,11 +109,18 @@ async def query(req: QueryRequest):
             profile=session["profile"],
             session_id=sid,
             max_retries=req.max_retries,
+            session_vars=session["extracted"] if session["extracted"] else None,
         )
 
         # 세션 대화 이력 누적 (프론트엔드 표시 또는 향후 활용)
         session["history"].add_user_message(req.question)
         session["history"].add_assistant_message(result["draft"])
+
+        # ── 재무 변수 추출 및 세션 누적 ──────────────────────
+        if result.get("status") == "approved" and result.get("draft"):
+            new_vars = await extract_financial_vars(result["draft"])
+            if new_vars:
+                session["extracted"].update(new_vars)
 
         # ── 로깅 ─────────────────────────────────────────────
         log_query(

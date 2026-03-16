@@ -30,6 +30,7 @@ async def run(
     profile: str = "",
     session_id: str = "",
     max_retries: int = 3,
+    session_vars: dict | None = None,
 ) -> dict:
     kernel = get_kernel()
     agent = AGENT_MAP[domain](kernel)
@@ -42,10 +43,12 @@ async def run(
     for attempt in range(1, max_retries + 2):
         # ── 에이전트 호출 (타이밍 측정) ─────────────────────
         t_agent = time.monotonic()
+        extra = {"session_vars": session_vars} if domain == "finance" and session_vars else {}
         draft = await agent.generate_draft(
             question=question,
             retry_prompt=retry_prompt,
             profile=profile,
+            **extra,
         )
         agent_ms = round((time.monotonic() - t_agent) * 1000)
 
