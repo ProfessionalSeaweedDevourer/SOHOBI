@@ -11,9 +11,9 @@ import os
 import time
 from uuid import uuid4
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from semantic_kernel.contents import ChatHistory
@@ -22,7 +22,7 @@ import domain_router
 import orchestrator
 from signoff.signoff_agent import run_signoff
 from kernel_setup import get_kernel
-from logger import log_query
+from logger import log_query, log_error
 from log_formatter import load_entries_json
 from logger import _format_rejection_history
 
@@ -145,6 +145,14 @@ async def query(req: QueryRequest):
             ),
         }
     except Exception as e:
+        log_error(
+            request_id=str(uuid4()),
+            session_id=req.session_id or "",
+            question=req.question,
+            domain=req.domain or "unknown",
+            error=str(e),
+            latency_ms=(time.monotonic() - t0) * 1000,
+        )
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
@@ -225,11 +233,35 @@ async def doc_chat(req: DocChatRequest):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+@app.get("/api/v1/logs/export")
+async def export_logs(
+    type: str = Query("queries", description="queries | rejections | errors"),
+    key: str = Query(..., description="EXPORT_SECRET 값"),
+):
+    """로그 JSONL 파일 전체를 원본 그대로 다운로드한다."""
+    secret = os.getenv("EXPORT_SECRET", "")
+    if not secret or key != secret:
+        return JSONResponse(status_code=403, content={"error": "인증 실패"})
+    if type not in ("queries", "rejections", "errors"):
+        return JSONResponse(status_code=400, content={"error": "type은 queries, rejections, errors 중 하나여야 합니다."})
+
+    from log_formatter import LOGS_DIR
+    path = LOGS_DIR / f"{type}.jsonl"
+    if not path.exists():
+        return JSONResponse(status_code=404, content={"error": f"{type}.jsonl 파일이 없습니다."})
+
+    return FileResponse(
+        path=str(path),
+        media_type="application/x-ndjson",
+        filename=f"{type}.jsonl",
+    )
+
+
 @app.get("/api/v1/logs")
 async def get_logs(type: str = "queries", limit: int = 50):
     """JSONL 로그 파일을 파싱해 JSON 배열로 반환 (프론트엔드 로그 뷰어용)."""
-    if type not in ("queries", "rejections"):
-        return JSONResponse(status_code=400, content={"error": "type은 queries 또는 rejections 중 하나여야 합니다."})
+    if type not in ("queries", "rejections", "errors"):
+        return JSONResponse(status_code=400, content={"error": "type은 queries, rejections, errors 중 하나여야 합니다."})
     try:
         entries = load_entries_json(log_type=type, limit=limit)
         return {"type": type, "count": len(entries), "entries": entries}

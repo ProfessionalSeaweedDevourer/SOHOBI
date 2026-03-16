@@ -25,3 +25,4 @@ uv.lock
 
 # 로그 파일 (구조 파일인 .gitkeep은 유지)
 integrated_PARK/logs/*.jsonl
+integrated_PARK/logs/remote/
