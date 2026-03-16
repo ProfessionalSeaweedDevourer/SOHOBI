@@ -57,7 +57,6 @@ _EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다.
 [시뮬레이션 결과 — 10,000회 몬테카를로]
 ★ 손실 발생 확률: {loss_prob}  ← 핵심 지표
 - 평균 월 순이익: {avg_profit:,}원
-- 수익 분포 (하위 5% ~ 상위 95%): {p5:,}원 ~ {p95:,}원
 
 위 결과를 바탕으로 아래 질문에 대한 창업 재무 분석 응답을 작성하십시오.
 
@@ -68,7 +67,6 @@ _EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다.
   손실 케이스가 관측되지 않은 경우에도 '관측되지 않았습니다'로 명확히 서술하십시오.
 - 첫 단락에 위의 가정 조건(월매출, 원가, 급여 등)을 명시하십시오.
 - 평균 순이익은 참고 수치로 제시하되, 손실 확률이 핵심 메시지임을 유지하십시오.
-- 수익 분포(하위 5%·상위 95% 구간)를 보조 정보로 제공하십시오.
 - 위험 요인과 기회 요인을 함께 언급하십시오.
 - 낙관·기본·비관 시나리오와 리스크 경고를 포함하십시오.
 - 시뮬레이션 범위 밖의 리스크(예: 경기 침체, 예상 외 비용 급증)가 존재함을 언급하십시오.
@@ -199,8 +197,6 @@ class FinanceAgent:
         explain_prompt = _EXPLAIN_PROMPT.format(
             assumptions=assumptions,
             avg_profit=sim_result["average_net_profit"],
-            p5=sim_result["p5_net_profit"],
-            p95=sim_result["p95_net_profit"],
             loss_prob=loss_prob_str,
             question=question,
         )
