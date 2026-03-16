@@ -1,6 +1,6 @@
 // 위치: src/components/CategoryPanel.jsx
 import { useState } from "react";
-import { CATEGORIES } from "../constants/categories";
+import { CATEGORIES } from "../../constants/categories";
 
 export default function CategoryPanel({
    visibleCats,

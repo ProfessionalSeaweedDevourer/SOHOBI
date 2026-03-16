@@ -1,0 +1,132 @@
+// components/StorePopup.jsx
+
+
+// ── 업종 색상 헬퍼 ─────────────────────────────────────────────
+function getCatStyle(category) {
+   const CAT_COLORS = {
+      음식: { color:"#FF6B6B", bg:"#FFF0F0" },
+      소매: { color:"#FF9800", bg:"#FFF8F0" },
+      생활서비스: { color:"#4ecdc4", bg:"#F0FAFA" },
+      부동산: { color:"#2196F3", bg:"#F0F4FF" },
+      숙박: { color:"#9C27B0", bg:"#F8F0FF" },
+      교육: { color:"#FFD700", bg:"#FFFDF0" },
+      의료: { color:"#E03131", bg:"#FFF0F0" },
+      스포츠: { color:"#2F9E44", bg:"#F0FFF4" },
+      "과학·기술": { color:"#1971C2", bg:"#F0F4FF" },
+      "수리·개인": { color:"#7B4F2E", bg:"#FFF8F0" },
+   };
+   if (!category) return { color:"#555", bg:"#F5F5F5" };
+   for (const [key, val] of Object.entries(CAT_COLORS)) {
+      if (category.includes(key)) return val;
+   }
+   return { color:"#555", bg:"#F5F5F5" };
+}
+
+
+// ── 메인 컴포넌트: 소상공인 마커 클릭 팝업 (카카오 연동) ───────
+export default function StorePopup({ popup, kakaoDetail, loadingDetail, onClose }) {
+   if (!popup) return null;
+   const cat = getCatStyle(popup.상권업종대분류명);
+
+   return (
+      <div style={{
+         position:"absolute", bottom:50, left:"50%", transform:"translateX(-50%)",
+         zIndex:300, width:320, background:"#fff",
+         borderRadius:16, boxShadow:"0 8px 32px rgba(0,0,0,0.18)", overflow:"hidden",
+      }}>
+         <div style={{ height:4, background:cat.color }} />
+         <div style={{ padding:"12px 16px 16px" }}>
+            {/* 헤더 */}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+               <div style={{
+                  borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:700,
+                  background:cat.bg, color:cat.color, border:`1px solid ${cat.color}`,
+               }}>
+                  {popup.상권업종대분류명}
+               </div>
+               <button
+                  onClick={onClose}
+                  style={{ background:"transparent", border:"none", color:"#bbb", cursor:"pointer", fontSize:16 }}
+               >
+                  ✕
+               </button>
+            </div>
+
+            <div style={{ fontSize:17, fontWeight:700, color:"#111", marginBottom:4 }}>{popup.상호명}</div>
+            {popup.상권업종소분류명 && (
+               <div style={{ fontSize:12, color:"#888", marginBottom:4 }}>
+                  {popup.상권업종중분류명} · {popup.상권업종소분류명}
+               </div>
+            )}
+            <div style={{ height:1, background:"#f0f0f0", margin:"10px 0" }} />
+
+            {/* DB 데이터 */}
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+               {popup.도로명주소 && (
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:7 }}>
+                     <span style={{ fontSize:13, flexShrink:0, marginTop:1 }}>📍</span>
+                     <span style={{ fontSize:13, color:"#444", lineHeight:1.4 }}>
+                        {popup.도로명주소}{popup.층정보 && ` ${popup.층정보}층`}{popup.호정보 && ` ${popup.호정보}호`}
+                     </span>
+                  </div>
+               )}
+               <div style={{ display:"flex", alignItems:"flex-start", gap:7 }}>
+                  <span style={{ fontSize:13, flexShrink:0, marginTop:1 }}>🏙️</span>
+                  <span style={{ fontSize:13, color:"#444", lineHeight:1.4 }}>
+                     {popup.시도명} {popup.시군구명} {popup.행정동명}
+                  </span>
+               </div>
+            </div>
+
+            {/* 카카오 상세 */}
+            {loadingDetail && (
+               <div style={{ marginTop:10, fontSize:12, color:"#999", textAlign:"center", padding:"8px 0" }}>
+                  📱 카카오맵 상세정보 조회 중...
+               </div>
+            )}
+            {!loadingDetail && kakaoDetail && (
+               <>
+                  <div style={{
+                     marginTop:10, padding:"10px 12px", background:"#fffde7",
+                     borderRadius:10, display:"flex", flexDirection:"column", gap:6,
+                  }}>
+                     <div style={{ fontSize:11, fontWeight:700, color:"#b8860b", marginBottom:2 }}>
+                        📱 카카오맵 추가정보
+                     </div>
+                     {kakaoDetail.phone && (
+                        <div style={{ display:"flex", alignItems:"flex-start", gap:7 }}>
+                           <span style={{ fontSize:13, flexShrink:0, marginTop:1 }}>📞</span>
+                           <a href={`tel:${kakaoDetail.phone}`} style={{ fontSize:13, color:"#2563eb", textDecoration:"none" }}>
+                              {kakaoDetail.phone}
+                           </a>
+                        </div>
+                     )}
+                     {kakaoDetail.category_name && (
+                        <div style={{ display:"flex", alignItems:"flex-start", gap:7 }}>
+                           <span style={{ fontSize:13, flexShrink:0, marginTop:1 }}>🏷️</span>
+                           <span style={{ fontSize:13, color:"#444", lineHeight:1.4 }}>{kakaoDetail.category_name}</span>
+                        </div>
+                     )}
+                  </div>
+                  <a
+                     href={kakaoDetail.place_url}
+                     target="_blank" rel="noreferrer"
+                     style={{
+                        marginTop:12, display:"flex", justifyContent:"center", alignItems:"center",
+                        background:"#fee500", borderRadius:10, padding:"9px",
+                        fontSize:13, fontWeight:700, color:"#111", textDecoration:"none",
+                     }}
+                  >
+                     카카오맵에서 보기 →
+                  </a>
+               </>
+            )}
+            {!loadingDetail && !kakaoDetail && (
+               <div style={{ marginTop:10, fontSize:11, color:"#bbb", textAlign:"center" }}>
+                  카카오맵 정보를 찾을 수 없습니다
+               </div>
+            )}
+         </div>
+      </div>
+   );
+}
