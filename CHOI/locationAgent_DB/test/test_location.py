@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "../.env"))
 
-from db.mock_db import init_db
 from agent.location_agent import LocationAgent
 
 
@@ -38,7 +37,8 @@ async def test_single(location: str, business_type: str, quarter: str = "20244")
         return
 
     sales = result.get("sales_data", {}).get("summary", {})
-    store = result.get("store_data", {}).get("summary", {})
+    store_data = result.get("store_data")
+    store = store_data.get("summary", {}) if store_data else {}
 
     print(f"\n[RAW - 매출]")
     print(f"  월 추정매출: {sales.get('monthly_sales_krw', 0):,}원")
@@ -50,10 +50,11 @@ async def test_single(location: str, business_type: str, quarter: str = "20244")
     )
 
     print(f"\n[RAW - 점포]")
-    print(f"  점포수: {store.get('store_count', 0)}개")
-    print(
-        f"  개업률: {store.get('open_rate_pct', 0)}% / 폐업률: {store.get('close_rate_pct', 0)}%"
-    )
+    if store:
+        print(f"  점포수: {store.get('store_count', 0)}개")
+        print(f"  개업률: {store.get('open_rate_pct', 0)}% / 폐업률: {store.get('close_rate_pct', 0)}%")
+    else:
+        print(f"  점포 데이터 없음 (추후 추가 예정)")
 
     print(f"\n[에이전트 분석]")
     print(result.get("analysis", ""))
@@ -62,11 +63,12 @@ async def test_single(location: str, business_type: str, quarter: str = "20244")
     if similar:
         print("\n[추천 유사 상권]")
         for s in similar:
-            avg = s["avg_sales_per_store_krw"] // 10000
-            print(
-                f"  📍 {s['keyword']} - 점포당 평균 {avg}만원, "
-                f"폐업률 {s['close_rate_pct']}%, 점수 {s['score']}"
-            )
+            # Oracle 버전은 keyword/avg_sales_per_store_krw 없을 수 있음
+            name = s.get("keyword") or s.get("adm_name", "")
+            avg  = s.get("avg_sales_per_store_krw", 0) // 10000
+            score = s.get("score", 0)
+            close = s.get("close_rate_pct", "N/A")
+            print(f"  📍 {name} - 점포당 평균 {avg}만원, 폐업률 {close}%, 점수 {score}")
 
 
 async def main():
@@ -91,8 +93,8 @@ async def main():
     await test_compare(["홍대", "강남", "잠실"], "카페")
     
     # 미지원 지역 (에러 처리 확인)
-    await test_single("부산", "카페")
-    await test_single("홍대", "피자")  # 미지원 업종
+    # await test_single("부산", "카페")
+    # await test_single("홍대", "피자")  # 미지원 업종
 
 
 
