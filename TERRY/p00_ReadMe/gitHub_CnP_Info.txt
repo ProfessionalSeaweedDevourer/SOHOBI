@@ -25,7 +25,7 @@ Merge branch 'main' ...
 
 
 ⓒ 변경 파일 등록
-git add p03_OracleDB_Script
+git add p02_frontEnd_React
 ※ git add .(전체 변경시)
 
 ⓓ 상태 확인
@@ -34,7 +34,7 @@ git status
 ⓔ 커밋 메시지 작성
 git commit -m "메모"
 ex) 
-git commit -m "ReadMe업데이트(263016)"
+git commit -m "프론트엔드(MapView.jsx) 기능 정리(263016)"
 
 
 ⓔ GitHub 업로드
