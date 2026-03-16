@@ -1,10 +1,11 @@
 import ReactMarkdown from "react-markdown";
 
-const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무" };
+const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석" };
 const DOMAIN_COLOR = {
   finance: "bg-emerald-100 text-emerald-700",
   admin: "bg-sky-100 text-sky-700",
   legal: "bg-amber-100 text-amber-700",
+  location: "bg-violet-100 text-violet-700",
 };
 
 const GRADE_STYLE = {

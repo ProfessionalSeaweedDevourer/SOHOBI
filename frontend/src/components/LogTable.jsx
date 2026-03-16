@@ -1,17 +1,19 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
-const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무" };
+const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석" };
 const DOMAIN_COLOR = {
   finance: "bg-emerald-100 text-emerald-700",
   admin: "bg-sky-100 text-sky-700",
   legal: "bg-amber-100 text-amber-700",
+  location: "bg-violet-100 text-violet-700",
 };
 const ITEM_LABELS = {
   C1: "질문 응답성", C2: "완결성", C3: "내부 일관성", C4: "톤 적절성", C5: "할루시네이션 징후",
   F1: "수치 제시", F2: "단위 표기", F3: "가정 전제", F4: "불확실성", F5: "리스크 경고",
   G1: "근거 출처", G2: "법령 인용", G3: "조문 번호", G4: "면책 고지",
   A1: "지역 정보", A2: "업종 정보", A3: "수치 근거", A4: "기간 명시", A5: "출처 안내",
+  S1: "수치 제시", S2: "데이터 기준", S3: "기회·리스크", S4: "지역·업종 명시", S5: "정보 제공 면책",
 };
 
 const GRADE_STYLE = {

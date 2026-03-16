@@ -54,7 +54,7 @@ class QueryRequest(BaseModel):
 
 
 class SignoffRequest(BaseModel):
-    domain: str = Field(description="admin | finance | legal")
+    domain: str = Field(description="admin | finance | legal | location")
     draft: str
 
 
@@ -77,7 +77,7 @@ async def health():
     return {
         "status": "ok",
         "version": "1.1.0",
-        "domains": ["admin", "finance", "legal"],
+        "domains": ["admin", "finance", "legal", "location"],
         "plugins": ["SeoulCommercial", "FinanceSim", "LegalSearch", "BusinessDoc"],
     }
 
@@ -96,7 +96,7 @@ async def query(req: QueryRequest):
             session["profile"] = req.founder_context
 
         # ── 도메인 분류 ───────────────────────────────────────
-        if req.domain in ("admin", "finance", "legal"):
+        if req.domain in ("admin", "finance", "legal", "location"):
             domain = req.domain
         else:
             classification = await domain_router.classify(req.question)
@@ -168,7 +168,7 @@ async def query(req: QueryRequest):
 async def signoff(req: SignoffRequest):
     """기존 draft를 Sign-off Agent에 단독으로 검증한다."""
     try:
-        if req.domain not in ("admin", "finance", "legal"):
+        if req.domain not in ("admin", "finance", "legal", "location"):
             return JSONResponse(status_code=400, content={"error": f"지원하지 않는 도메인: {req.domain}"})
         kernel = get_kernel()
         verdict = await run_signoff(kernel=kernel, domain=req.domain, draft=req.draft)

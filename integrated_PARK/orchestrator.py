@@ -15,17 +15,19 @@ from kernel_setup import get_kernel
 from agents.admin_agent import AdminAgent
 from agents.finance_agent import FinanceAgent
 from agents.legal_agent import LegalAgent
+from agents.location_agent import LocationAgent
 from signoff.signoff_agent import run_signoff
 
 AGENT_MAP = {
-    "admin":   AdminAgent,
-    "finance": FinanceAgent,
-    "legal":   LegalAgent,
+    "admin":    AdminAgent,
+    "finance":  FinanceAgent,
+    "legal":    LegalAgent,
+    "location": LocationAgent,
 }
 
 
 async def run(
-    domain: Literal["admin", "finance", "legal"],
+    domain: Literal["admin", "finance", "legal", "location"],
     question: str,
     profile: str = "",
     session_id: str = "",

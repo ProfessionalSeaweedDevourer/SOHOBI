@@ -26,3 +26,6 @@ uv.lock
 # 로그 파일 (구조 파일인 .gitkeep은 유지)
 integrated_PARK/logs/*.jsonl
 integrated_PARK/logs/remote/
+
+# 상권 DB (54 MB — GitHub 50 MB 제한 초과, Railway volume mount로 주입)
+integrated_PARK/db/commercial.db
