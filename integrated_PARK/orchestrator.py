@@ -41,6 +41,7 @@ async def run(
     rejection_history = []
     retry_prompt = ""
     draft = ""
+    prev_draft = None
 
     for attempt in range(1, max_retries + 2):
         # ── 에이전트 호출 (타이밍 측정) ─────────────────────
@@ -53,6 +54,11 @@ async def run(
             **extra,
         )
         agent_ms = round((time.monotonic() - t_agent) * 1000)
+
+        # 이전 attempt와 draft가 동일하면 재시도해도 개선 불가 → 조기 종료
+        if draft == prev_draft:
+            break
+        prev_draft = draft
 
         # ── Sign-off 호출 (타이밍 측정) ─────────────────────
         t_signoff = time.monotonic()

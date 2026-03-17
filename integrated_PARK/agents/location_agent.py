@@ -153,7 +153,10 @@ class LocationAgent:
         settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=2000)
         try:
             result = await service.get_chat_message_content(history, settings=settings)
-            return str(result)
+            text = str(result)
+            if not text or text == "None":
+                raise ValueError("LLM이 빈 응답을 반환했습니다.")
+            return text
         except Exception as e:
             err_str = str(e).lower()
             logger.error("LocationAgent LLM 호출 실패: %s", e)
@@ -360,7 +363,9 @@ class LocationAgent:
             draft = await self.analyze(locations[0], business_type, quarter)
 
         # retry_prompt 반영 (sign-off 재시도)
-        if retry_prompt:
+        # 데이터 부재·미지원 업종 응답은 재시도해도 달라지지 않으므로 건너뜀
+        _NO_DATA_PREFIXES = ("죄송합니다.", "'", "요청하신 지역")
+        if retry_prompt and not any(draft.startswith(p) for p in _NO_DATA_PREFIXES):
             retry_prefix = _RETRY_PREFIX.format(retry_prompt=retry_prompt)
             profile_ctx = _PROFILE_CONTEXT.format(profile=profile) if profile else ""
 
@@ -388,6 +393,10 @@ class LocationAgent:
                 )
                 instructions = _ANALYZE_INSTRUCTIONS.format(year=year, q=q)
 
-            draft = await self._call_llm(instructions, user_msg)
+            try:
+                draft = await self._call_llm(instructions, user_msg)
+            except ValueError:
+                # 빈 응답 등 retry LLM 실패 시 이전 draft 유지
+                logger.warning("LocationAgent retry LLM 실패 — 이전 draft 유지")
 
         return draft
