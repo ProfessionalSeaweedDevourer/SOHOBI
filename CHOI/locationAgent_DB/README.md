@@ -32,10 +32,10 @@ locationAgent_DB/
 [오케스트레이터]
     ↓ SK Plugin 직접 연결
 [LocationAgent]
-    ↓ cx_Oracle 조회
-[Oracle DB - SANGKWON_SALES 테이블]
+    ↓ oracledb 조회
+[Oracle DB - SANGKWON_SALES / SANGKWON_STORE 테이블]
     ↓
-행정동별 매출 분석 결과 반환
+행정동별 매출/점포 분석 결과 반환
 ```
 
 ---
@@ -57,9 +57,20 @@ locationAgent_DB/
 | ML_SALES_AMT / FML_SALES_AMT     | 남성/여성 매출               |
 | AGE10_AMT ~ AGE60_AMT            | 연령대별 매출                |
 
-### 점포수/개폐업률 테이블 (추후 추가 예정)
+### SANGKWON_STORE (점포 데이터)
 
-점포수, 개업률, 폐업률 데이터는 별도 테이블 추가 예정
+| 컬럼명                     | 설명                  |
+| -------------------------- | --------------------- |
+| BASE_YR_QTR_CD             | 기준 년분기 코드      |
+| ADM_CD                     | 행정동 코드           |
+| ADM_NM                     | 행정동 명             |
+| SVC_INDUTY_CD              | 서비스 업종 코드      |
+| SVC_INDUTY_NM              | 서비스 업종 명        |
+| STOR_CO                    | 점포 수               |
+| SIMILR_INDUTY_STOR_CO      | 유사 업종 점포 수     |
+| OPBIZ_RT / OPBIZ_STOR_CO   | 개업률 / 개업 점포 수 |
+| CLSBIZ_RT / CLSBIZ_STOR_CO | 폐업률 / 폐업 점포 수 |
+| FRC_STOR_CO                | 프랜차이즈 점포 수    |
 
 ---
 
@@ -69,16 +80,12 @@ locationAgent_DB/
 
 지역 + 업종 + 분기 입력 → 상권 분석 결과 반환
 
-**출력 항목 (현재):**
+**출력 항목:**
 
-- 전체 합산 요약 (월매출, 주중/주말 비율, 피크타임, 주요 고객층)
-- 행정동별 분리 분석 (매출 데이터 기반)
+- 전체 합산 요약 (월매출, 점포수, 점포당 평균매출, 주중/주말 비율, 피크타임, 주요 고객층)
+- 행정동별 분리 분석 (매출, 점포수, 개폐업률 포함)
 - 기회 요인 / 리스크 요인
-- 유사 상권 추천 TOP 3
-
-**점포 데이터 추가 후:**
-
-- 점포수, 점포당 평균매출, 개업률, 폐업률 자동 포함
+- 유사 상권 추천 TOP 3 (점포당 평균매출, 폐업률 기반 복합 점수)
 
 ### 2. 복수 지역 비교 (`compare`)
 
@@ -99,6 +106,19 @@ locationAgent_DB/
 from plugin.location_plugin import LocationPlugin
 kernel.add_plugin(LocationPlugin(), plugin_name="LocationAnalysis")
 ```
+
+---
+
+## 유사 상권 추천 알고리즘
+
+복합 점수 기반 TOP 3 추천:
+
+```
+점수 = 점포당 평균매출(0.4) + 폐업률 낮음(0.3) + 매출 규모(0.2) + 개업률 적정(0.1)
+```
+
+- 개업률 적정 기준: 3~5% 구간 최고점
+- 이상치 필터: 점포당 평균매출 상위 5% 제외, 점포수 2개 이하 제외
 
 ---
 
@@ -136,7 +156,7 @@ kernel.add_plugin(LocationPlugin(), plugin_name="LocationAnalysis")
 ## 데이터 출처
 
 - 매출: 서울시 상권분석서비스 추정매출-행정동 (VwsmAdstrdSelngQq)
-- 점포: 서울시 상권분석서비스 점포-행정동 (VwsmAdstrdStorW) ← 추가 예정
+- 점포: 서울시 상권분석서비스 점포-행정동 (VwsmAdstrdStorW)
 - 기준 분기: 2019년 1분기 ~ 2025년 3분기
 
 ---
@@ -175,11 +195,3 @@ ORACLE_USER=...
 ORACLE_PASSWORD=...
 ORACLE_DSN=host:port/service_name
 ```
-
----
-
-## 점포 데이터 추가 시 작업 순서
-
-1. Oracle DB에 점포 테이블 생성 및 CSV 적재 (DBA 담당)
-2. `repository.py`의 `get_store_count()` 메서드 구현
-3. 자동으로 분석 결과에 점포수/개폐업률 포함됨 (agent 코드 수정 불필요)
