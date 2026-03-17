@@ -262,7 +262,7 @@ class LocationAgent:
         )
         if similar:
             rows = "\n".join(
-                f"| {i+1} | {s['location']} | {s['monthly_sales_krw']:,}원 | "
+                f"| {i+1} | {s['trdar_name']} | {s['monthly_sales_krw']:,}원 | "
                 f"{s['store_count']}개 | {s['avg_sales_per_store_krw']:,}원 |"
                 for i, s in enumerate(similar)
             )
