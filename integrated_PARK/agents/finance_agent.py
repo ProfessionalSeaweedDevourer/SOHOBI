@@ -93,11 +93,17 @@ _PROFILE_CONTEXT = """[창업자 상황]
 
 
 class FinanceAgent:
-    def __init__(self, kernel: Kernel):
+    def __init__(self, kernel: Kernel, region: str = None, industry: str = None):
         self._kernel = kernel
         self._sim = FinanceSimulationPlugin()
         # 최초 초기화 시 기본값 로딩
+        # load_defaults() : 중간발표 전까지 오류를 대비해 남겨두며 최종적으로는 삭제 예정
         self._state = self._sim.load_defaults()
+        self._state = self._sim.load_initial(region, industry)
+        # load_initial(region, industry) : DB연동 및 상태변수(에이전트 간 연동 시 주고받는 변수)를 받는 버전의 함수입니다.(테스트중)
+        # 당장 오류없이 필요한 경우 주석처리 후 사용해주세요.
+        # region, industry의 경우 각각 지역과 업종이며, 둘 모두 입력하지 않을 시(=None) DB의 전체 평균을 가져옵니다.
+        # 해당 분류를 어떤 형태로 받아오는지 확인 및 논의 필요(지역코드인지 혹은 자연어 상태인지)
 
     async def _call_llm(self, prompt: str, _retry: bool = False) -> str:
         service: AzureChatCompletion = self._kernel.get_service("sign_off")
@@ -136,7 +142,7 @@ class FinanceAgent:
         variables = await self._extract_params(question, profile=profile)
 
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
-        sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee", "tax_rate"]
+        sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]
         sim_input = {k: variables[k] for k in sim_keys if k in variables}
         sim_result = self._sim.monte_carlo_simulation(**sim_input)
 
@@ -176,7 +182,6 @@ class FinanceAgent:
         explain_prompt = _EXPLAIN_PROMPT.format(
             assumptions=assumptions,
             avg_profit=sim_result["average_net_profit"],
-            p5=sim_result["p5_net_profit"],
             loss_prob=loss_prob_str,
             question=question,
         )

@@ -1,60 +1,45 @@
-def load_defaults() -> dict:
-    """
-    모든 변수에 평균치 또는 None 기본값을 부여한 초기 JSON 반환
-    """
-    return {
-        "revenue": 17000000,
-        "cost": 6120000,
-        "salary": 3400000,
-        "hours": None,
-        "rent": 2550000,
-        "admin": 510000,
-        "fee": 510000,
-        "initial_investment": None
-    }
-# 카페-평균치 기준 기본값, 해당 값을 DB 등을 불러오는 형태로 추후 업데이트 상정중
-
-
-
 from oracledb import connect
 from difflib import get_close_matches
 class DBWork:
     def __init__(self):
         # 세션 시작 시 업종 목록을 DB에서 한 번만 불러와 캐싱
         try:
-            con = connect("fable/1@//195.168.9.5:1521/xe")
+            con = connect("fable/1@//10.1.92.112:1521/xe")
             cur = con.cursor()
+
             cur.execute("SELECT DISTINCT SVC_INDUTY_NM FROM SANGKWON_SALES")
             rows = cur.fetchall()
             self.industry_list = [row[0] for row in rows]
+
+            cur.execute("SELECT DISTINCT ADM_NM FROM SANGKWON_SALES")
+            rows = cur.fetchall()
+            self.region_list = [row[0] for row in rows]
+
         finally:
             cur.close()
             con.close()
 
     def get_sales(self,region, industry):
         try:
-            con = connect("fable/1@//195.168.9.5:1521/xe")
+            con = connect("fable/1@//10.1.92.112:1521/xe")
             cur = con.cursor()
 
-            # 사직 > 사직동 등 걸리게
-            region = region + "%"
-            matches = get_close_matches(industry, self.industry_list, n=1, cutoff=0.0)
-            industry = matches[0] if matches else industry
+            matches_industry = get_close_matches(industry, self.industry_list, n=1, cutoff=0.0)
+            industry = matches_industry[0]
+            matches_region = get_close_matches(region, self.region_list, n=1, cutoff=0.0)
+            region = matches_region[0]
             # >> 추후 데이터에 따라 코드 사용 고려
-            sql = (
-                "SELECT TOT_SALES_AMT "
-                "FROM SANGKWON_SALES "
-                "WHERE ADM_NM LIKE '%s' "
-                "AND SVC_INDUTY_NM = '%s'"
-                % (region, industry)
-            )
 
-            cur.execute(sql)
+            sql = """
+                SELECT TOT_SALES_AMT
+                FROM SANGKWON_SALES
+                WHERE ADM_NM = :region
+                AND SVC_INDUTY_NM = :industry
+            """
 
-            sales_list = []
-            for (amt,) in cur:
-                sales_list.append(amt)
+            cur.execute(sql, {"region": region, "industry": industry})
 
+            sales_list = [amt for (amt,) in cur]
             return sales_list
 
         except Exception as e:
@@ -75,3 +60,5 @@ if __name__ == "__main__":
     result = dbw.get_sales("사직", "카페")
     print("검색 결과:", result)
 
+# 검색 결과: [301130046, 255637953, 227431883, 223551859, 176126286, 219825355, 171908319, 168178635, 272431538, 349692881, 256827441, 302105463, 288239621, 360002618, 242079213, 351627941, 290905228, 288516694, 189415725, 360682997, 301504600, 275036096, 210369798, 316022178, 195830394, 274107572, 252679561]
+# 의도대로의 출력 확인 완료.
