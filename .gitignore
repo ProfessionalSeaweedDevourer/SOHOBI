@@ -27,5 +27,4 @@ uv.lock
 integrated_PARK/logs/*.jsonl
 integrated_PARK/logs/remote/
 
-# 상권 DB (54 MB — GitHub 50 MB 제한 초과, Railway volume mount로 주입)
-integrated_PARK/db/commercial.db
+# 상권 DB — 2024년 4분기 단일 분기로 축소 (13 MB), Git 포함
