@@ -52,7 +52,9 @@ async def test_single(location: str, business_type: str, quarter: str = "20244")
     print(f"\n[RAW - 점포]")
     if store:
         print(f"  점포수: {store.get('store_count', 0)}개")
-        print(f"  개업률: {store.get('open_rate_pct', 0)}% / 폐업률: {store.get('close_rate_pct', 0)}%")
+        print(
+            f"  개업률: {store.get('open_rate_pct', 0)}% / 폐업률: {store.get('close_rate_pct', 0)}%"
+        )
     else:
         print(f"  점포 데이터 없음 (추후 추가 예정)")
 
@@ -65,7 +67,7 @@ async def test_single(location: str, business_type: str, quarter: str = "20244")
         for s in similar:
             # Oracle 버전은 keyword/avg_sales_per_store_krw 없을 수 있음
             name = s.get("keyword") or s.get("adm_name", "")
-            avg  = s.get("avg_sales_per_store_krw", 0) // 10000
+            avg = s.get("avg_sales_per_store_krw", 0) // 10000
             score = s.get("score", 0)
             close = s.get("close_rate_pct", "N/A")
             print(f"  📍 {name} - 점포당 평균 {avg}만원, 폐업률 {close}%, 점수 {score}")
@@ -91,11 +93,10 @@ async def main():
 
     # 비교 케이스
     await test_compare(["홍대", "강남", "잠실"], "카페")
-    
+
     # 미지원 지역 (에러 처리 확인)
     # await test_single("부산", "카페")
     # await test_single("홍대", "피자")  # 미지원 업종
-
 
 
 if __name__ == "__main__":
