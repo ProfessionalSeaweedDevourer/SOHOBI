@@ -1,10 +1,15 @@
 import asyncio
+import os
 from typing import Annotated
+from dotenv import load_dotenv
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion, AzureChatPromptExecutionSettings
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from p03_vectorSearch import perform_vector_search # 직접 만드신 p03_vectorSearch.py에서 가져오기
+
+# .env 로드
+load_dotenv()
 
 # 1. 법률/세무 지식 검색용 커스텀 플러그인 정의
 class LegalKnowledgePlugin:
@@ -30,26 +35,20 @@ class LegalKnowledgePlugin:
         return "\n\n".join(context)
 
 async def main():
-    # 2. 커널 초기화
     kernel = Kernel()
 
-    # 3. 채팅 서비스 추가
-    # 사용자가 제공한 전체 URL: https://student02-11-1604-resource.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini-2024-07-18.ft-d02f43fca9714ccca92d48d218362181/chat/completions?api-version=2024-05-01-preview
-    
-    # 1) Endpoint: 리소스 주소까지만 입력
-    ENDPOINT = "https://student02-11-1604-resource.cognitiveservices.azure.com/"
-    
-    # 2) Deployment Name: URL 중간의 deployments/ 뒤에 있는 문자열
-    DEPLOYMENT_NAME = "gpt-4o-mini-2024-07-18.ft-d02f43fca9714ccca92d48d218362181"
-    
-    # 3) API Key
-    API_KEY = "BQrdUVZyMVUpWd6Xtyvb7BAixaLikbxZlCzF5Zoj98f2pWYR6tJfJQQJ99CBACHYHv6XJ3w3AAAAACOGSqpw"
+    # --- 환경 변수에서 설정 정보 로드 ---
+    ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+    API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+    DEPLOYMENT_NAME = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME")
+    # API 버전을 명시적으로 .env에서 가져오되 없으면 기본값 사용
+    API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview")
 
     chat_service = AzureChatCompletion(
         deployment_name=DEPLOYMENT_NAME,
         endpoint=ENDPOINT,
         api_key=API_KEY,
-        api_version="2024-05-01-preview" # 제공해주신 URL의 쿼리 스트링 값과 일치시킴
+        api_version=API_VERSION
     )
     kernel.add_service(chat_service)
 
@@ -75,15 +74,11 @@ async def main():
             settings=settings
         )
 
-        print("\n[에이전트의 최종 답변]")
+        print("\n[에이전트 답변]:")
         print(result.content)
+
     except Exception as e:
-        import traceback
-        print("\n[서비스 호출 오류 상세]")
-        print(f"Error Type: {type(e).__name__}")
-        print(f"Error Message: {e}")
-        # 오류가 지속될 경우 아래 주석을 해제하여 상세 로그를 확인하세요.
-        # traceback.print_exc()
+        print("\n[오류 발생]: %s" % e)
 
 if __name__ == "__main__":
     asyncio.run(main())
