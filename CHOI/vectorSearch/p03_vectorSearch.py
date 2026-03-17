@@ -4,16 +4,20 @@ from openai import AzureOpenAI
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.models import VectorizedQuery
+from dotenv import load_dotenv
 
-# --- 설정 정보 (사용자 제공 값 적용) ---
-SEARCH_ENDPOINT = "https://choiasearchhh.search.windows.net"
-SEARCH_KEY = "5GFdDYE4Bh23nl7ryfuRLqqW7gI9bT32tPyV6uQx3DAzSeD1B2b5"
-INDEX_NAME = "legal-index"
+# .env 로드
+load_dotenv()
 
-AZURE_OPENAI_ENDPOINT = "https://student02-11-1604-resource.cognitiveservices.azure.com"
-AZURE_OPENAI_KEY = "BQrdUVZyMVUpWd6Xtyvb7BAixaLikbxZlCzF5Zoj98f2pWYR6tJfJQQJ99CBACHYHv6XJ3w3AAAAACOGSqpw"
-AZURE_OPENAI_EMBEDDING_DEPLOYMENT = "text-embedding-3-small"
-AZURE_API_VERSION = "2024-02-01"
+# --- 환경 변수에서 설정 정보 로드 ---
+SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
+SEARCH_KEY = os.getenv("AZURE_SEARCH_KEY")
+INDEX_NAME = os.getenv("AZURE_SEARCH_INDEX_NAME", "legal-index")
+
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT = os.getenv("AZURE_EMBEDDING_DEPLOYMENT")
+AZURE_API_VERSION = os.getenv("AZURE_EMBEDDING_API_VERSION", "2024-02-01")
 
 # --- 클라이언트 초기화 ---
 ai_client = AzureOpenAI(
@@ -68,7 +72,6 @@ if __name__ == "__main__":
     try:
         # 테스트: 실제 사용자가 물어볼 법한 질문
         user_query = "카페 창업하려는데 보건증 검사 항목이 뭐야?"
-        
         found_docs = perform_vector_search(user_query)
         
         if not found_docs:
