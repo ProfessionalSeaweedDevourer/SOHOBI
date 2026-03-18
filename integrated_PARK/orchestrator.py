@@ -15,21 +15,24 @@ from kernel_setup import get_kernel
 from agents.admin_agent import AdminAgent
 from agents.finance_agent import FinanceAgent
 from agents.legal_agent import LegalAgent
+from agents.location_agent import LocationAgent
 from signoff.signoff_agent import run_signoff
 
 AGENT_MAP = {
-    "admin":   AdminAgent,
-    "finance": FinanceAgent,
-    "legal":   LegalAgent,
+    "admin":    AdminAgent,
+    "finance":  FinanceAgent,
+    "legal":    LegalAgent,
+    "location": LocationAgent,
 }
 
 
 async def run(
-    domain: Literal["admin", "finance", "legal"],
+    domain: Literal["admin", "finance", "legal", "location"],
     question: str,
     profile: str = "",
     session_id: str = "",
     max_retries: int = 3,
+    session_vars: dict | None = None,
 ) -> dict:
     kernel = get_kernel()
     agent = AGENT_MAP[domain](kernel)
@@ -38,16 +41,24 @@ async def run(
     rejection_history = []
     retry_prompt = ""
     draft = ""
+    prev_draft = None
 
     for attempt in range(1, max_retries + 2):
         # ── 에이전트 호출 (타이밍 측정) ─────────────────────
         t_agent = time.monotonic()
+        extra = {"session_vars": session_vars} if domain == "finance" and session_vars else {}
         draft = await agent.generate_draft(
             question=question,
             retry_prompt=retry_prompt,
             profile=profile,
+            **extra,
         )
         agent_ms = round((time.monotonic() - t_agent) * 1000)
+
+        # 이전 attempt와 draft가 동일하면 재시도해도 개선 불가 → 조기 종료
+        if draft == prev_draft:
+            break
+        prev_draft = draft
 
         # ── Sign-off 호출 (타이밍 측정) ─────────────────────
         t_signoff = time.monotonic()

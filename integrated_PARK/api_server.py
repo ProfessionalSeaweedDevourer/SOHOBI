@@ -11,9 +11,9 @@ import os
 import time
 from uuid import uuid4
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from semantic_kernel.contents import ChatHistory
@@ -22,9 +22,10 @@ import domain_router
 import orchestrator
 from signoff.signoff_agent import run_signoff
 from kernel_setup import get_kernel
-from logger import log_query
+from logger import log_query, log_error
 from log_formatter import load_entries_json
 from logger import _format_rejection_history
+from variable_extractor import extract_financial_vars
 
 load_dotenv()
 
@@ -53,7 +54,7 @@ class QueryRequest(BaseModel):
 
 
 class SignoffRequest(BaseModel):
-    domain: str = Field(description="admin | finance | legal")
+    domain: str = Field(description="admin | finance | legal | location")
     draft: str
 
 
@@ -76,7 +77,7 @@ async def health():
     return {
         "status": "ok",
         "version": "1.1.0",
-        "domains": ["admin", "finance", "legal"],
+        "domains": ["admin", "finance", "legal", "location"],
         "plugins": ["SeoulCommercial", "FinanceSim", "LegalSearch", "BusinessDoc"],
     }
 
@@ -88,14 +89,14 @@ async def query(req: QueryRequest):
     try:
         # ── 세션 복원 또는 신규 생성 ──────────────────────────
         sid = req.session_id or str(uuid4())
-        session = _query_sessions.setdefault(sid, {"profile": "", "history": ChatHistory()})
+        session = _query_sessions.setdefault(sid, {"profile": "", "history": ChatHistory(), "extracted": {}})
 
         # 새 창업자 컨텍스트가 전달되면 세션 프로필 갱신
         if req.founder_context:
             session["profile"] = req.founder_context
 
         # ── 도메인 분류 ───────────────────────────────────────
-        if req.domain in ("admin", "finance", "legal"):
+        if req.domain in ("admin", "finance", "legal", "location"):
             domain = req.domain
         else:
             classification = await domain_router.classify(req.question)
@@ -108,11 +109,18 @@ async def query(req: QueryRequest):
             profile=session["profile"],
             session_id=sid,
             max_retries=req.max_retries,
+            session_vars=session["extracted"] if session["extracted"] else None,
         )
 
         # 세션 대화 이력 누적 (프론트엔드 표시 또는 향후 활용)
         session["history"].add_user_message(req.question)
         session["history"].add_assistant_message(result["draft"])
+
+        # ── 재무 변수 추출 및 세션 누적 ──────────────────────
+        if result.get("status") == "approved" and result.get("draft"):
+            new_vars = await extract_financial_vars(result["draft"])
+            if new_vars:
+                session["extracted"].update(new_vars)
 
         # ── 로깅 ─────────────────────────────────────────────
         log_query(
@@ -145,6 +153,14 @@ async def query(req: QueryRequest):
             ),
         }
     except Exception as e:
+        log_error(
+            request_id=str(uuid4()),
+            session_id=req.session_id or "",
+            question=req.question,
+            domain=req.domain or "unknown",
+            error=str(e),
+            latency_ms=(time.monotonic() - t0) * 1000,
+        )
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
@@ -152,7 +168,7 @@ async def query(req: QueryRequest):
 async def signoff(req: SignoffRequest):
     """기존 draft를 Sign-off Agent에 단독으로 검증한다."""
     try:
-        if req.domain not in ("admin", "finance", "legal"):
+        if req.domain not in ("admin", "finance", "legal", "location"):
             return JSONResponse(status_code=400, content={"error": f"지원하지 않는 도메인: {req.domain}"})
         kernel = get_kernel()
         verdict = await run_signoff(kernel=kernel, domain=req.domain, draft=req.draft)
@@ -225,11 +241,35 @@ async def doc_chat(req: DocChatRequest):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+@app.get("/api/v1/logs/export")
+async def export_logs(
+    type: str = Query("queries", description="queries | rejections | errors"),
+    key: str = Query(..., description="EXPORT_SECRET 값"),
+):
+    """로그 JSONL 파일 전체를 원본 그대로 다운로드한다."""
+    secret = os.getenv("EXPORT_SECRET", "")
+    if not secret or key != secret:
+        return JSONResponse(status_code=403, content={"error": "인증 실패"})
+    if type not in ("queries", "rejections", "errors"):
+        return JSONResponse(status_code=400, content={"error": "type은 queries, rejections, errors 중 하나여야 합니다."})
+
+    from log_formatter import LOGS_DIR
+    path = LOGS_DIR / f"{type}.jsonl"
+    if not path.exists():
+        return JSONResponse(status_code=404, content={"error": f"{type}.jsonl 파일이 없습니다."})
+
+    return FileResponse(
+        path=str(path),
+        media_type="application/x-ndjson",
+        filename=f"{type}.jsonl",
+    )
+
+
 @app.get("/api/v1/logs")
 async def get_logs(type: str = "queries", limit: int = 50):
     """JSONL 로그 파일을 파싱해 JSON 배열로 반환 (프론트엔드 로그 뷰어용)."""
-    if type not in ("queries", "rejections"):
-        return JSONResponse(status_code=400, content={"error": "type은 queries 또는 rejections 중 하나여야 합니다."})
+    if type not in ("queries", "rejections", "errors"):
+        return JSONResponse(status_code=400, content={"error": "type은 queries, rejections, errors 중 하나여야 합니다."})
     try:
         entries = load_entries_json(log_type=type, limit=limit)
         return {"type": type, "count": len(entries), "entries": entries}

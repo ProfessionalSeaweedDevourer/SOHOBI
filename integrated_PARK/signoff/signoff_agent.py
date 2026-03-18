@@ -13,9 +13,10 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettin
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
 REQUIRED_CODES = {
-    "admin":   {"C1", "C2", "C3", "C4", "C5", "A1", "A2", "A3", "A4", "A5"},
-    "finance": {"C1", "C2", "C3", "C4", "C5", "F1", "F2", "F3", "F4", "F5"},
-    "legal":   {"C1", "C2", "C3", "C4", "C5", "G1", "G2", "G3", "G4"},
+    "admin":    {"C1", "C2", "C3", "C4", "C5", "A1", "A2", "A3", "A4", "A5"},
+    "finance":  {"C1", "C2", "C3", "C4", "C5", "F1", "F2", "F3", "F4", "F5"},
+    "legal":    {"C1", "C2", "C3", "C4", "C5", "G1", "G2", "G3", "G4"},
+    "location": {"C1", "C2", "C3", "C4", "C5", "S1", "S2", "S3", "S4", "S5"},
 }
 
 
