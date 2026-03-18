@@ -17,8 +17,8 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-from .baseDAO import BaseDAO
 
+from .baseDAO import BaseDAO
 
 class SangkwonDAO(BaseDAO):
 
@@ -42,7 +42,6 @@ class SangkwonDAO(BaseDAO):
                 adm_nm,
                 base_yr_qtr_cd,
                 tot_sales_amt,
-                tot_selng_co,
                 ml_sales_amt,
                 fml_sales_amt,
                 mdwk_sales_amt,
@@ -113,7 +112,9 @@ class SangkwonDAO(BaseDAO):
         if not code_prefix:
             return []
 
-        df_gu = self._df[self._df["adm_cd"].astype(str).str.startswith(code_prefix)]
+        df_gu = self._df[
+            self._df["adm_cd"].astype(str).str.startswith(code_prefix)
+        ]
         return df_gu.to_dict("records")
 
     def getSalesByDong(self, dong: str, gu: str = "") -> dict:
@@ -171,7 +172,7 @@ class SangkwonDAO(BaseDAO):
         adstrd_cd = str(adstrd_cd).strip()
         # Oracle NUMBER → float → '1115051000.0' 형태 정리
         db_codes = self._df["adm_cd"].apply(
-            lambda x: str(int(float(x))) if str(x).endswith(".0") else str(x)
+            lambda x: str(int(float(x))) if str(x).endswith('.0') else str(x)
         )
         df = self._df[db_codes == adstrd_cd]
         if df.empty and len(adstrd_cd) == 8:
@@ -179,12 +180,94 @@ class SangkwonDAO(BaseDAO):
         if df.empty and len(adstrd_cd) == 10:
             df = self._df[db_codes == adstrd_cd[:8]]
         sample = db_codes.unique()[:5].tolist()
-        logger.info(
-            f"[SangkwonDAO] getSalesByCode: adstrd_cd={adstrd_cd} → {'있음' if not df.empty else '없음'} / DB코드샘플={sample}"
-        )
+        logger.info(f"[SangkwonDAO] getSalesByCode: adstrd_cd={adstrd_cd} → {'있음' if not df.empty else '없음'} / DB코드샘플={sample}")
         if df.empty:
             return None
         return df.iloc[0].to_dict()
+
+
+    def getSalesByCodeAndQuarter(self, adstrd_cd: str, quarter: str) -> dict:
+        """특정 분기 단건 조회 (DB 직접)"""
+        sql = """
+            SELECT
+                adm_cd, adm_nm, base_yr_qtr_cd,
+                SUM(tot_sales_amt)   AS tot_sales_amt,
+                SUM(tot_selng_co)    AS tot_selng_co,
+                SUM(ml_sales_amt)    AS ml_sales_amt,
+                SUM(fml_sales_amt)   AS fml_sales_amt,
+                SUM(mdwk_sales_amt)  AS mdwk_sales_amt,
+                SUM(wkend_sales_amt) AS wkend_sales_amt,
+                SUM(age20_amt)       AS age20_amt,
+                SUM(age30_amt)       AS age30_amt,
+                SUM(age40_amt)       AS age40_amt,
+                SUM(age50_amt)       AS age50_amt
+            FROM SANGKWON_SALES
+            WHERE adm_cd = :cd
+              AND base_yr_qtr_cd = :qtr
+            GROUP BY adm_cd, adm_nm, base_yr_qtr_cd
+        """
+        try:
+            con, cur = self._db_con()
+            try:
+                cur.execute(sql, {"cd": adstrd_cd, "qtr": quarter})
+                cols = [d[0].lower() for d in cur.description]
+                row  = cur.fetchone()
+                return dict(zip(cols, row)) if row else None
+            finally:
+                self._close(con, cur)
+        except Exception as e:
+            logger.error(f"[SangkwonDAO] 분기조회 실패: {e}")
+            return None
+
+    def getSalesAvgByCode(self, adstrd_cd: str) -> dict:
+        """전체 분기 평균 매출 (19~25년 DB 직접)"""
+        sql = """
+            SELECT
+                COUNT(DISTINCT base_yr_qtr_cd)  AS qtr_cnt,
+                SUM(tot_sales_amt)               AS tot_sales_sum,
+                SUM(tot_selng_co)                AS tot_selng_sum,
+                SUM(ml_sales_amt)                AS ml_sales_sum,
+                SUM(fml_sales_amt)               AS fml_sales_sum,
+                SUM(mdwk_sales_amt)              AS mdwk_sales_sum,
+                SUM(wkend_sales_amt)             AS wkend_sales_sum,
+                SUM(age20_amt)                   AS age20_sum,
+                SUM(age30_amt)                   AS age30_sum,
+                SUM(age40_amt)                   AS age40_sum,
+                SUM(age50_amt)                   AS age50_sum
+            FROM SANGKWON_SALES
+            WHERE adm_cd = :cd
+        """
+        try:
+            con, cur = self._db_con()
+            try:
+                cur.execute(sql, {"cd": adstrd_cd})
+                cols = [d[0].lower() for d in cur.description]
+                row  = cur.fetchone()
+                if not row:
+                    return None
+                d    = dict(zip(cols, row))
+                cnt  = d["qtr_cnt"] or 1
+                # 분기 수로 나눠서 평균
+                return {
+                    "adm_cd":         adstrd_cd,
+                    "quarter":        "avg",
+                    "qtr_cnt":        cnt,
+                    "tot_sales_amt":  round((d["tot_sales_sum"]  or 0) / cnt),
+                    "tot_selng_co":   round((d["tot_selng_sum"]  or 0) / cnt),
+                    "ml_sales_amt":   round((d["ml_sales_sum"]   or 0) / cnt),
+                    "fml_sales_amt":  round((d["fml_sales_sum"]  or 0) / cnt),
+                    "mdwk_sales_amt": round((d["mdwk_sales_sum"] or 0) / cnt),
+                    "wkend_sales_amt":round((d["wkend_sales_sum"]or 0) / cnt),
+                    "age20_amt":      round((d["age20_sum"]      or 0) / cnt),
+                    "age30_amt":      round((d["age30_sum"]      or 0) / cnt),
+                    "age40_amt":      round((d["age40_sum"]      or 0) / cnt),
+                    "age50_amt":      round((d["age50_sum"]      or 0) / cnt),
+                }
+            finally:
+                self._close(con, cur)
+        except Exception as e:
+            logger.error(f"[SangkwonDAO] 평균조회 실패: {e}")
+            return None
 
     def getSalesByInduty(self, adstrd_cd: str, induty_cd: str = "") -> list:
         """
@@ -196,7 +279,6 @@ class SangkwonDAO(BaseDAO):
                 svc_induty_cd,
                 svc_induty_nm,
                 tot_sales_amt,
-                tot_selng_co,
                 ml_sales_amt,
                 fml_sales_amt,
                 mdwk_sales_amt,
