@@ -1,0 +1,17 @@
+-- 행정동별 상권 점포수, 개폐업 테이블
+
+CREATE TABLE SANGKWON_STORE (
+    BASE_YR_QTR_CD        VARCHAR2(6)    NOT NULL,
+    ADM_CD                VARCHAR2(10)   NOT NULL,
+    ADM_NM                VARCHAR2(100),
+    SVC_INDUTY_CD         VARCHAR2(20)   NOT NULL,
+    SVC_INDUTY_NM         VARCHAR2(100),
+    STOR_CO               NUMBER(10,1),
+    SIMILR_INDUTY_STOR_CO NUMBER(10,1),
+    OPBIZ_RT              NUMBER(10,1),
+    OPBIZ_STOR_CO         NUMBER(10,1),
+    CLSBIZ_RT             NUMBER(10,1),
+    CLSBIZ_STOR_CO        NUMBER(10,1),
+    FRC_STOR_CO           NUMBER(10,1),
+    CONSTRAINT PK_SANGKWON_STORE PRIMARY KEY (BASE_YR_QTR_CD, ADM_CD, SVC_INDUTY_CD)
+);
