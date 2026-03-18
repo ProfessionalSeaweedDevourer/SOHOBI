@@ -6,7 +6,8 @@ import ResponseCard from "../components/ResponseCard";
 
 export default function UserChat() {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState([]); // [{question, domain, status, draft, retryCount}]
+  const [messages, setMessages] = useState([]);
+  const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const bottomRef = useRef(null);
@@ -20,21 +21,23 @@ export default function UserChat() {
     setError(null);
     setLoading(true);
     try {
-      const result = await sendQuery(question);
+      const result = await sendQuery(question, 3, sessionId);
+      if (result.session_id) setSessionId(result.session_id);
       setMessages((prev) => [
         ...prev,
         {
           question,
           domain: result.domain,
           status: result.status,
+          grade: result.grade,
+          confidenceNote: result.confidence_note,
           draft: result.draft,
           retryCount: result.retry_count,
         },
       ]);
-      inputRef.current?.clear(); // 성공 시에만 입력창 초기화
+      inputRef.current?.clear();
     } catch (e) {
       setError(e.message);
-      // 오류 시 입력창 유지 — 사용자가 질문을 수정해 재시도 가능
     } finally {
       setLoading(false);
     }
@@ -85,6 +88,8 @@ export default function UserChat() {
               question={msg.question}
               domain={msg.domain}
               status={msg.status}
+              grade={msg.grade}
+              confidenceNote={msg.confidenceNote}
               draft={msg.draft}
               retryCount={msg.retryCount}
               showMeta={false}

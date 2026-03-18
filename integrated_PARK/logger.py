@@ -11,8 +11,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _LOGS_DIR = Path(os.environ.get("LOGS_DIR", Path(__file__).parent / "logs"))
-_QUERIES_LOG   = _LOGS_DIR / "queries.jsonl"
+_QUERIES_LOG    = _LOGS_DIR / "queries.jsonl"
 _REJECTIONS_LOG = _LOGS_DIR / "rejections.jsonl"
+_ERRORS_LOG     = _LOGS_DIR / "errors.jsonl"
 
 
 def _now_iso() -> str:
@@ -58,6 +59,28 @@ def log_query(
     # 거부 이력이 하나라도 있으면 rejections.jsonl 에도 기록
     if rejection_history:
         _append(_REJECTIONS_LOG, record)
+
+
+def log_error(
+    *,
+    request_id: str = "",
+    session_id: str = "",
+    question: str,
+    domain: str = "unknown",
+    error: str,
+    latency_ms: float = 0,
+) -> None:
+    """응답 생성 실패(예외) 발생 시 errors.jsonl 에 기록한다."""
+    record = {
+        "ts":         _now_iso(),
+        "session_id": session_id,
+        "request_id": request_id,
+        "question":   question,
+        "domain":     domain,
+        "error":      error,
+        "latency_ms": round(latency_ms),
+    }
+    _append(_ERRORS_LOG, record)
 
 
 def _format_rejection_history(history: list[dict]) -> list[dict]:
