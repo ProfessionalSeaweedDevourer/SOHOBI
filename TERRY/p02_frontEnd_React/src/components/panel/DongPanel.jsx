@@ -1,4 +1,4 @@
-// 위치: src/components/panel/DongPanel.jsx
+// components/DongPanel.jsx
 
 
 // ── 금액 포맷 헬퍼 ─────────────────────────────────────────────
@@ -83,14 +83,20 @@ function RealEstatePanel({ d }) {
 
 
 // ── 매출 패널 ───────────────────────────────────────────────
-function SalesPanel({ d, panelColor, panelBg }) {
+function SalesPanel({ d, panelColor, panelBg, avg }) {
    return (
       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
          <div style={{ background:panelBg, borderRadius:12, padding:14 }}>
             <div style={{ fontSize:10, color:"#888", marginBottom:4 }}>총 매출</div>
-            <div style={{ fontSize:22, fontWeight:800, color:panelColor }}>{formatAmt(d.sales)}</div>
+            <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
+               <div style={{ fontSize:22, fontWeight:800, color:panelColor }}>{formatAmt(d.sales)}</div>
+               {avg?.sales && (
+                  <div style={{ fontSize:11, color: d.sales >= avg.sales ? "#059669" : "#dc2626", fontWeight:700 }}>
+                     {d.sales >= avg.sales ? "▲" : "▼"} 평균比 {Math.abs(Math.round((d.sales/avg.sales-1)*100))}%
+                  </div>
+               )}
+            </div>
             <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>
-               점포수 {d.selng_co?.toLocaleString() || "-"}개
                {d.quarter && ` · ${String(d.quarter).replace(/(\d{4})(\d)/, "$1년 $2분기")}`}
             </div>
          </div>
@@ -132,7 +138,7 @@ function SalesPanel({ d, panelColor, panelBg }) {
 
 
 // ── 메인 컴포넌트: 동 클릭 시 오른쪽 슬라이드 패널 ───────────
-export default function DongPanel({ dongPanel, onClose }) {
+export default function DongPanel({ dongPanel, onClose, quarters = [], selectedQuarter, onQuarterChange }) {
    if (!dongPanel) return null;
 
    const d          = dongPanel.apiData;
@@ -155,6 +161,24 @@ export default function DongPanel({ dongPanel, onClose }) {
             </div>
          </div>
 
+         {/* 분기 선택 드롭다운 - 매출 모드만 */}
+         {quarters.length > 0 && !isRE && (
+            <div style={{ padding:"8px 12px", background:"#f8fafc", borderBottom:"1px solid #e5e7eb", display:"flex", alignItems:"center", gap:8 }}>
+               <span style={{ fontSize:11, color:"#666", flexShrink:0 }}>📅 분기</span>
+               <select
+                  value={selectedQuarter || ""}
+                  onChange={(e) => onQuarterChange(e.target.value)}
+                  style={{ flex:1, fontSize:12, padding:"3px 6px", borderRadius:6, border:"1px solid #d1d5db", background:"#fff" }}
+               >
+                  {quarters.map(q => (
+                     <option key={q} value={q}>
+                        {String(q).replace(/(\d{4})(\d)/, "$1년 $2분기")}
+                     </option>
+                  ))}
+               </select>
+            </div>
+         )}
+
          <div className="mv-dong-panel__body">
             {!d ? (
                <div style={{ color:"#bbb", fontSize:13, textAlign:"center", marginTop:40 }}>
@@ -163,7 +187,7 @@ export default function DongPanel({ dongPanel, onClose }) {
             ) : isRE ? (
                <RealEstatePanel d={d} />
             ) : (
-               <SalesPanel d={d} panelColor={panelColor} panelBg={panelBg} />
+               <SalesPanel d={d} panelColor={panelColor} panelBg={panelBg} avg={dongPanel.avg} />
             )}
          </div>
       </div>

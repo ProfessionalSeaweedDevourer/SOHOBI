@@ -70,10 +70,38 @@ export default function MapView() {
    const [dongLoading,   setDongLoading]   = useState(false);
    const [dongPanel,     setDongPanel]     = useState(null);
    const [dongTooltip,   setDongTooltip]   = useState(null);
+   const [quarters,      setQuarters]      = useState([]);
+   const [selectedQtr,   setSelectedQtr]   = useState("");
    const dongModeRef    = useRef("none");
    const currentGuNmRef = useRef("");
 
    useEffect(() => { dongModeRef.current  = dongMode;  }, [dongMode]);
+
+   // ── 분기 변경 시 현재 패널 자동 재조회 ─────────────────────────────
+   useEffect(() => {
+      if (!selectedQtr || !dongPanel || dongPanel.mode !== "sales" || !dongPanel.admCd) return;
+      const qtrParam = `&quarter=${encodeURIComponent(selectedQtr)}`;
+      fetch(`${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(dongPanel.admCd)}${qtrParam}`)
+         .then(r => r.json())
+         .then(jj => {
+            if (jj.data) setDongPanel(prev => prev ? { ...prev, apiData:jj.data, avg:jj.avg } : prev);
+         })
+         .catch(() => {});
+   }, [selectedQtr]); // eslint-disable-line
+
+   // ── 분기 목록 초기 로드 ──────────────────────────────────────────
+   useEffect(() => {
+      fetch(`${REALESTATE_URL}/realestate/sangkwon-quarters`)
+         .then(r => r.json())
+         .then(d => {
+            if (d.quarters?.length) {
+               const sorted = [...d.quarters].sort((a,b) => b.localeCompare(a));
+               setQuarters(sorted);
+               setSelectedQtr(sorted[0]); // 최신 분기 기본 선택
+            }
+         })
+         .catch(() => {});
+   }, []); 
    useEffect(() => { clickModeRef.current = clickMode; }, [clickMode]);
 
    const allCatKeys  = new Set(CATEGORIES.map((c) => c.key));
@@ -85,6 +113,7 @@ export default function MapView() {
       dongBoundaryLayerRef, dongHoverFeatRef, dongHoverNameRef,
       ensureDongBoundaryLayer, resetDongLayer,
    } = useDongLayer(mapInstance);
+   const dongSelectedFeatRef = useRef(null); // 현재 선택(클릭)된 폴리곤
 
    const handleToggleCat = (key) =>
       setVisibleCats((prev) => { const n=new Set(prev); n.has(key)?n.delete(key):n.add(key); return n; });
@@ -103,7 +132,7 @@ export default function MapView() {
       const next = dongMode === mode ? "none" : mode;
       setDongMode(next);
       if (next === "none") {
-         resetDongLayer(); setDongPanel(null); setDongTooltip(null);
+         resetDongLayer(); setDongPanel(null); setDongTooltip(null); dongSelectedFeatRef.current = null;
       } else {
          await ensureDongBoundaryLayer();
       }
@@ -141,7 +170,9 @@ export default function MapView() {
             if (feat) setDongTooltip(prev => prev ? { ...prev, x:e.pixel[0], y:e.pixel[1] } : prev);
             return;
          }
-         if (dongHoverFeatRef.current) dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+         if (dongHoverFeatRef.current && dongHoverFeatRef.current !== dongSelectedFeatRef.current) {
+            dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+         }
 
          if (feat) {
             feat.setStyle(DONG_STYLE_HOVER);
@@ -165,7 +196,8 @@ export default function MapView() {
                         setDongTooltip(prev => prev?.dongNm===dongNm ? { ...prev, sales:null, loading:false } : prev);
                         return;
                      }
-                     const r = await fetch(`${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(_admCd)}`);
+                     const _qp = selectedQtr ? `&quarter=${encodeURIComponent(selectedQtr)}` : "";
+                     const r = await fetch(`${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(_admCd)}${_qp}`);
                      const j = await r.json();
                      setDongTooltip(prev =>
                         prev?.dongNm===dongNm ? { ...prev, sales:j.data||null, loading:false } : prev
@@ -176,10 +208,10 @@ export default function MapView() {
                setDongTooltip(prev => prev ? { ...prev, x:e.pixel[0], y:e.pixel[1] } : prev);
             }
          } else {
-            if (dongHoverFeatRef.current) {
+            if (dongHoverFeatRef.current && dongHoverFeatRef.current !== dongSelectedFeatRef.current) {
                dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
-               dongHoverFeatRef.current = null;
             }
+            dongHoverFeatRef.current = null;
             dongHoverNameRef.current = "";
             map.getTargetElement().style.cursor = "";
             setDongTooltip(null);
@@ -204,20 +236,29 @@ export default function MapView() {
 
                if (_dongNm) {
                   if (_guNm) currentGuNmRef.current = _guNm;
-                  if (dongHoverFeatRef.current) dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+                  // 이전 선택 해제
+                  if (dongSelectedFeatRef.current && dongSelectedFeatRef.current !== feat) {
+                     dongSelectedFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+                  }
+                  if (dongHoverFeatRef.current && dongHoverFeatRef.current !== feat) {
+                     dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+                  }
+                  // 새 선택 하이라이트 유지
                   feat.setStyle(DONG_STYLE_SELECTED);
+                  dongSelectedFeatRef.current = feat;
                   dongHoverFeatRef.current = feat;
                   setDongTooltip(null); setDongLoading(true); setDongPanel(null);
 
                   const _mode = dongModeRef.current;
                   try {
                      if (_mode === "sales") {
+                        const qtrParam = selectedQtr ? `&quarter=${encodeURIComponent(selectedQtr)}` : "";
                         const url = _admCd
-                           ? `${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(_admCd)}`
+                           ? `${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(_admCd)}${qtrParam}`
                            : `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_dongNm)}&gu=${encodeURIComponent(_guNm)}`;
                         const rr = await fetch(url);
                         const jj = await rr.json();
-                        if (jj.data) setDongPanel({ mode:_mode, dongNm:_dongNm, admNm:_admNm, guNm:_guNm, admCd:_admCd, apiData:jj.data });
+                        if (jj.data) setDongPanel({ mode:_mode, dongNm:_dongNm, admNm:_admNm, guNm:_guNm, admCd:_admCd, apiData:jj.data, avg:jj.avg });
                         else         setDongPanel({ mode:_mode, dongNm:_dongNm, admNm:_admNm, guNm:_guNm, apiData:null, empty:true });
                      } else if (_mode === "realestate") {
                         const rr = await fetch(`${REALESTATE_URL}/realestate/seoul-rtms?adm_cd=${encodeURIComponent(_admCd||_emdCd)}`);
@@ -314,7 +355,9 @@ export default function MapView() {
          <StorePopup popup={popup} kakaoDetail={kakaoDetail} loadingDetail={loadingDetail}
             onClose={() => { setPopup(null); setKakaoDetail(null); }} />
          <DongTooltip tooltip={dongTooltip} mode={dongMode} />
-         <DongPanel   dongPanel={dongPanel} onClose={() => setDongPanel(null)} />
+         <DongPanel   dongPanel={dongPanel} onClose={() => setDongPanel(null)}
+            quarters={quarters} selectedQuarter={selectedQtr}
+            onQuarterChange={(q) => setSelectedQtr(q)} />
          <div className="coord-bar">📍 위도: {coords.lat} | 경도: {coords.lng}</div>
       </div>
    );
