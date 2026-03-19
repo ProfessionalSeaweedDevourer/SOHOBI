@@ -14,7 +14,7 @@ const CAT_COLORS = {
    음식: "#FF6B6B", 소매: "#FF9800", 생활서비스: "#4ecdc4",
    부동산: "#2196F3", 숙박: "#9C27B0", 교육: "#FFD700",
    의료: "#E03131", 스포츠: "#2F9E44", "과학·기술": "#1971C2",
-   "수리·개인": "#7B4F2E",
+   "수리·개인": "#7B4F2E","시설관리": "#607D8B",
 };
 
 function makeMarkerStyle(category, selected = false) {

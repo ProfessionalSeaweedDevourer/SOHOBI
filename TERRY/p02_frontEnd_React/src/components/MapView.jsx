@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useMap } from "../hooks/useMap";
 import { toLonLat } from "ol/proj";
+import { getCenter as getExtentCenter } from "ol/extent";
 
 // ── UI 컴포넌트 ────────────────────────────────────────────────
 import Layerpanel    from "./panel/Layerpanel";
@@ -106,6 +107,7 @@ export default function MapView() {
 
    const allCatKeys  = new Set(CATEGORIES.map((c) => c.key));
    const [visibleCats, setVisibleCats] = useState(allCatKeys);
+   const visibleCatsRef = useRef(allCatKeys); // 클로저 캡처 방지용 ref
    const [catCounts,   setCatCounts]   = useState({});
 
    const { allStoresRef, drawCircle, drawMarkers, clearMarkers } = useMarkers(mapInstance, visibleCats);
@@ -113,12 +115,24 @@ export default function MapView() {
       dongBoundaryLayerRef, dongHoverFeatRef, dongHoverNameRef,
       ensureDongBoundaryLayer, resetDongLayer,
    } = useDongLayer(mapInstance);
-   const dongSelectedFeatRef = useRef(null); // 현재 선택(클릭)된 폴리곤
+   const dongSelectedFeatRef  = useRef(null);  // 현재 선택(클릭)된 폴리곤
+   const dongSearchFeatsRef   = useRef([]);    // 검색으로 하이라이트된 폴리곤 목록
 
    const handleToggleCat = (key) =>
-      setVisibleCats((prev) => { const n=new Set(prev); n.has(key)?n.delete(key):n.add(key); return n; });
-   const handleShowAll = () => setVisibleCats(new Set(CATEGORIES.map((c) => c.key)));
-   const handleHideAll = () => setVisibleCats(new Set());
+      setVisibleCats((prev) => {
+         const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key);
+         visibleCatsRef.current = n;
+         return n;
+      });
+   const handleShowAll = () => {
+      const all = new Set(CATEGORIES.map((c) => c.key));
+      visibleCatsRef.current = all;
+      setVisibleCats(all);
+   };
+   const handleHideAll = () => {
+      visibleCatsRef.current = new Set();
+      setVisibleCats(new Set());
+   };
 
    const clearAll = () => {
       clearMarkers();
@@ -127,12 +141,83 @@ export default function MapView() {
       setCatCounts({});
    };
 
+   // ── 구/동 검색 → 폴리곤 하이라이트 ────────────────────────────
+   const handleSearch = (query) => {
+      const bLayer = dongBoundaryLayerRef.current;
+      if (!bLayer?.getSource?.()?.getFeatures) {
+         // WFS 미로드 시 먼저 로드
+         ensureDongBoundaryLayer().then(() => handleSearch(query));
+         return;
+      }
+      const q = query.trim();
+      const features = bLayer.getSource().getFeatures();
+
+      // 이전 선택 초기화
+      features.forEach(f => f.setStyle(DONG_STYLE_DEFAULT));
+      dongSelectedFeatRef.current = null;
+      dongHoverFeatRef.current    = null;
+      dongHoverNameRef.current    = "";
+      setDongPanel(null);
+      setDongTooltip(null);
+
+      // 구이름 또는 동이름 매칭
+      const matched = features.filter(f => {
+         const p = f.getProperties();
+         const dongNm = p.emd_kor_nm || p.adm_nm || p.emd_nm || "";
+         const guNm   = p.gu_nm || "";
+         const fullNm = p.full_nm || "";
+         return dongNm.includes(q) || guNm.includes(q) || fullNm.includes(q);
+      });
+
+      if (!matched.length) return;
+
+      // 하이라이트 + ref 저장
+      matched.forEach(f => f.setStyle(DONG_STYLE_SELECTED));
+      dongSearchFeatsRef.current = matched;
+      if (matched.length === 1) dongSelectedFeatRef.current = matched[0];
+
+      // 첫 번째 매칭 폴리곤으로 지도 이동
+      const map = mapInstance.current;
+      if (!map) return;
+      const extent = matched[0].getGeometry().getExtent();
+      map.getView().fit(extent, { padding: [60, 60, 60, 60], duration: 600, maxZoom: 17 });
+
+      // ── 폴리곤 중심점 기반 반경 검색 자동 실행 ──────────────────
+      const centerCoord = getExtentCenter(extent);
+      const [lng, lat]  = toLonLat(centerCoord);
+      const zoom        = map.getView().getZoom() ?? 15;
+      const { radius, limit } = getRadiusAndLimit(zoom);
+
+      setLoading(true);
+      setNearbyCount(null);
+      setCatCounts({});
+      clearMarkers();
+
+      fetch(`${FASTAPI_URL}/map/nearby?lat=${lat}&lng=${lng}&radius=${radius}&limit=${limit}`)
+         .then(r => r.json())
+         .then(data => {
+            const stores = data.stores || [];
+            setNearbyCount(data.count);
+            allStoresRef.current = stores;
+            const counts = {};
+            stores.forEach((s) => {
+               const key = CATEGORIES.find((c) => s.상권업종대분류명?.includes(c.key))?.key || "기타";
+               counts[key] = (counts[key] || 0) + 1;
+            });
+            setCatCounts(counts);
+            drawCircle(lng, lat, radius);
+            drawMarkers(stores, visibleCatsRef.current);
+         })
+         .catch(() => {})
+         .finally(() => setLoading(false));
+   };
+
    // ── 동 모드 전환 핸들러 ─────────────────────────────────────────
    const handleDongMode = async (mode) => {
       const next = dongMode === mode ? "none" : mode;
       setDongMode(next);
       if (next === "none") {
-         resetDongLayer(); setDongPanel(null); setDongTooltip(null); dongSelectedFeatRef.current = null;
+         resetDongLayer(); setDongPanel(null); setDongTooltip(null); dongSelectedFeatRef.current = null; dongSearchFeatsRef.current = [];
       } else {
          await ensureDongBoundaryLayer();
       }
@@ -170,7 +255,9 @@ export default function MapView() {
             if (feat) setDongTooltip(prev => prev ? { ...prev, x:e.pixel[0], y:e.pixel[1] } : prev);
             return;
          }
-         if (dongHoverFeatRef.current && dongHoverFeatRef.current !== dongSelectedFeatRef.current) {
+         if (dongHoverFeatRef.current
+            && dongHoverFeatRef.current !== dongSelectedFeatRef.current
+            && !dongSearchFeatsRef.current.includes(dongHoverFeatRef.current)) {
             dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
          }
 
@@ -208,7 +295,9 @@ export default function MapView() {
                setDongTooltip(prev => prev ? { ...prev, x:e.pixel[0], y:e.pixel[1] } : prev);
             }
          } else {
-            if (dongHoverFeatRef.current && dongHoverFeatRef.current !== dongSelectedFeatRef.current) {
+            if (dongHoverFeatRef.current
+               && dongHoverFeatRef.current !== dongSelectedFeatRef.current
+               && !dongSearchFeatsRef.current.includes(dongHoverFeatRef.current)) {
                dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
             }
             dongHoverFeatRef.current = null;
@@ -236,10 +325,15 @@ export default function MapView() {
 
                if (_dongNm) {
                   if (_guNm) currentGuNmRef.current = _guNm;
-                  // 이전 선택 해제
+                  // 이전 선택 해제 (클릭 선택)
                   if (dongSelectedFeatRef.current && dongSelectedFeatRef.current !== feat) {
                      dongSelectedFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
                   }
+                  // 검색 하이라이트 해제
+                  dongSearchFeatsRef.current.forEach(f => {
+                     if (f !== feat) f.setStyle(DONG_STYLE_DEFAULT);
+                  });
+                  dongSearchFeatsRef.current = [];
                   if (dongHoverFeatRef.current && dongHoverFeatRef.current !== feat) {
                      dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
                   }
@@ -310,7 +404,7 @@ export default function MapView() {
             });
             setCatCounts(counts);
             drawCircle(lng, lat, radius);
-            drawMarkers(stores, visibleCats);
+            drawMarkers(stores, visibleCatsRef.current); // ref로 최신값 보장
          } catch (err) { console.error("DB 조회 오류:", err); }
          finally { setLoading(false); }
       };
@@ -333,6 +427,7 @@ export default function MapView() {
             visibleCats={visibleCats} onToggle={handleToggleCat}
             onShowAll={handleShowAll} onHideAll={handleHideAll}
             totalCount={nearbyCount} catCounts={catCounts}
+            onSearch={handleSearch}
          />
          <div ref={mapRef} className="mv-map" />
          <MapControls

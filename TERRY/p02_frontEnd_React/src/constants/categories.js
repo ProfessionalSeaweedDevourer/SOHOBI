@@ -10,4 +10,5 @@ export const CATEGORIES = [
    { key: "스포츠", icon: "⚽", color: "#2F9E44", bg: "#F0FFF4" },
    { key: "과학·기술", icon: "💻", color: "#1971C2", bg: "#F0F4FF" },
    { key: "수리·개인", icon: "✂️", color: "#7B4F2E", bg: "#FFF8F0" },
+   { key: "시설관리", label: "🏢 시설관리·임대", color: "#607D8B" },
 ];

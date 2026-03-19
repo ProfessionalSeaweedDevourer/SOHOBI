@@ -1,12 +1,13 @@
 # 위치: p01_backEnd/mapController.py
 # 실행: uvicorn mapController:app --host=0.0.0.0 --port=8681 --reload
 
-# ── 표준 라이브러리 ──────────────────────────────────────────────
 import csv, os, sys, httpx, asyncio, logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
-# ── FastAPI 프레임워크 ────────────────────────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(BASE_DIR, "DAO"))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from DAO.mapInfoDAO import MapInfoDAO, SIDO_BOUNDS, _get_df
@@ -17,8 +18,7 @@ from DAO.mapInfoDAO import MapInfoDAO, SIDO_BOUNDS, _get_df
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-# ── DAO 임포트 ───────────────────────────────────────────────────
-mDAO = MapInfoDAO() # 소상공인 상권정보— CSV → DB 적재, 반경 내 업소 조회
+mDAO = MapInfoDAO()
 
 # ── 시도명 → 테이블명 ───────────────────────────────────────────
 SIDO_TABLE_MAP = {k.replace("소상공인_", ""): k for k in SIDO_BOUNDS}
@@ -56,15 +56,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://10.1.92.100:5173",
-        "http://192.168.56.1:5173",
-        "http://192.168.36.1:5173",
+        "http://192.168.9.4:5173",
+        "http://195.168.9.5:5173",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
+CSV_DIR = os.path.join(BASE_DIR, "csv")
 VWORLD_KEY = os.getenv("VWORLD_API_KEY", "BE3AF33A-202E-3D5F-A8AD-63D9EE291ABF")
 KAKAO_REST_KEY = os.getenv("KAKAO_REST_KEY", "")
 
@@ -106,6 +105,38 @@ def getNearbyStores(
         return {"error": str(e), "count": 0, "stores": []}
 
 
+
+@app.get("/map/nearby-bbox")
+def getNearbyInBbox(
+    min_lng: float, min_lat: float,
+    max_lng: float, max_lat: float,
+    limit: int = 1000,
+):
+    """
+    폴리곤 bbox(EPSG:4326) 내 소상공인 조회
+    프론트: feature.getGeometry().getExtent() → toLonLat 변환 후 전달
+    """
+    try:
+        import math
+        center_lat = (min_lat + max_lat) / 2
+        center_lng = (min_lng + max_lng) / 2
+        lat_r = (max_lat - min_lat) / 2 * 111320
+        lng_r = (max_lng - min_lng) / 2 * 111320 * math.cos(math.radians(center_lat))
+        radius = max(lat_r, lng_r)
+        result = mDAO.getNearbyStores(center_lat, center_lng, radius, limit)
+        # bbox 안에 있는 것만 필터링
+        filtered = [
+            s for s in result
+            if s.get("경도") and s.get("위도")
+            and min_lng <= float(s["경도"]) <= max_lng
+            and min_lat <= float(s["위도"]) <= max_lat
+        ]
+        logger.info(f"[nearby-bbox] 반경={radius:.0f}m 전체={len(result)} bbox필터={len(filtered)}")
+        return {"count": len(filtered), "stores": filtered}
+    except Exception as e:
+        logger.error(f"[nearby-bbox] {e}")
+        return {"error": str(e), "count": 0, "stores": []}
+
 @app.get("/map/categories")
 def getCategories():
     try:
@@ -122,6 +153,86 @@ async def getDongDensity(sido: str, sigg: str, dong: str):
         return {"error": str(e), "total": 0, "level": 0, "cat_counts": {}}
 
 
+# ════════════════════════════════════════════════════════════════
+# 2. CSV 적재
+# ════════════════════════════════════════════════════════════════
+
+def _open_csv(filepath):
+    for enc in ["utf-8-sig", "cp949", "euc-kr"]:
+        try:
+            f = open(filepath, encoding=enc)
+            f.read(512); f.seek(0)
+            return f, enc
+        except Exception:
+            try: f.close()
+            except: pass
+    return open(filepath, encoding="cp949", errors="ignore"), "cp949(fallback)"
+
+
+@app.get("/map/csv-list")
+def getCsvList():
+    if not os.path.exists(CSV_DIR):
+        return {"error": f"csv 폴더 없음: {CSV_DIR}", "files": []}
+    files = sorted(f for f in os.listdir(CSV_DIR) if f.endswith(".csv"))
+    return {
+        "count": len(files),
+        "files": [{"filename": f, "target_table": SIDO_TABLE_MAP.get(
+            next((k for k in SIDO_TABLE_MAP if k in f), ""), "❌ 매핑 없음"
+        )} for f in files],
+    }
+
+
+@app.get("/map/load-csv")
+def loadCSV(filename: str):
+    filepath = os.path.join(CSV_DIR, filename)
+    if not os.path.exists(filepath):
+        return {"error": f"파일 없음: {filepath}"}
+    table_name = next((v for k, v in SIDO_TABLE_MAP.items() if k in filename), None)
+    if not table_name:
+        return {"error": f"시도 매핑 실패: {filename}"}
+
+    total, skip, batch = 0, 0, []
+    BATCH = 2000
+    try:
+        f, enc = _open_csv(filepath)
+        with f:
+            reader = csv.reader(f)
+            next(reader)  # 헤더 skip
+            for row in reader:
+                if len(row) < 39:
+                    skip += 1; continue
+                try:
+                    record = (
+                        *[row[i].strip() for i in range(37)],
+                        float(row[37]) if row[37].strip() else None,
+                        float(row[38]) if row[38].strip() else None,
+                    )
+                    batch.append(record)
+                    if len(batch) >= BATCH:
+                        mDAO.insertBatch(batch, table_name)
+                        total += len(batch); batch = []
+                except (ValueError, IndexError):
+                    skip += 1
+        if batch:
+            mDAO.insertBatch(batch, table_name)
+            total += len(batch)
+        return {"message": "완료", "file": filename, "table": table_name,
+                "encoding": enc, "inserted": total, "skipped": skip}
+    except Exception as e:
+        return {"error": str(e), "file": filename}
+
+
+@app.get("/map/load-all-csv")
+def loadAllCSV():
+    if not os.path.exists(CSV_DIR):
+        return {"error": f"csv 폴더 없음: {CSV_DIR}"}
+    files = sorted(f for f in os.listdir(CSV_DIR) if f.endswith(".csv"))
+    results = [loadCSV(f) for f in files]
+    return {
+        "message": f"전체 완료: {sum(r.get('inserted',0) for r in results)}건",
+        "files_processed": len(files),
+        "results": results,
+    }
 
 
 # ════════════════════════════════════════════════════════════════

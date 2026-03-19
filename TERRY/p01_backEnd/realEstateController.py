@@ -15,14 +15,15 @@ from DAO.seoulRtmsDAO   import SeoulRtmsDAO
 from DAO.landValueDAO   import LandValueDAO
 from DAO.wfsDAO         import WfsDAO
 
+# ── 서버 로그 설정 ───────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-skDAO   = SangkwonDAO()     # 골목상권 매출 조회
-dmDAO   = DongMappingDAO()  # 법정동↔행정동 코드 매핑
-rtmsDAO = SeoulRtmsDAO()    # 서울시 부동산 실거래가
-lvDAO   = LandValueDAO()    # 개별공시지가 조회 — VWorld API 호출
-wfsDAO  = WfsDAO(dmDAO)     # VWorld WFS 프록시
+skDAO   = SangkwonDAO()
+dmDAO   = DongMappingDAO()
+rtmsDAO = SeoulRtmsDAO()
+lvDAO   = LandValueDAO()
+wfsDAO  = WfsDAO(dmDAO)
 
 
 @asynccontextmanager
@@ -37,9 +38,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://10.1.92.100:5173",
-        "http://192.168.56.1:5173",
-        "http://192.168.36.1:5173",
+        "http://192.168.9.4:5173",
+        "http://195.168.9.5:5173",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
