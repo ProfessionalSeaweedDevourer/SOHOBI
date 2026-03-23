@@ -11,7 +11,7 @@ import time
 import uuid
 from typing import Literal
 
-from kernel_setup import get_kernel
+from kernel_setup import get_kernel, get_signoff_client
 from agents.admin_agent import AdminAgent
 from agents.finance_agent import FinanceAgent
 from agents.legal_agent import LegalAgent
@@ -35,6 +35,7 @@ async def run(
     session_vars: dict | None = None,
 ) -> dict:
     kernel = get_kernel()
+    signoff_client = get_signoff_client()
     agent = AGENT_MAP[domain](kernel)
 
     request_id = str(uuid.uuid4())[:8]
@@ -62,7 +63,7 @@ async def run(
 
         # ── Sign-off 호출 (타이밍 측정) ─────────────────────
         t_signoff = time.monotonic()
-        verdict = await run_signoff(kernel=kernel, domain=domain, draft=draft)
+        verdict = await run_signoff(client=signoff_client, domain=domain, draft=draft)
         signoff_ms = round((time.monotonic() - t_signoff) * 1000)
 
         # issues 없이 approved=false → 모델 논리 오류, 강제 통과
