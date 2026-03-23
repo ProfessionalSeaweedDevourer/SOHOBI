@@ -4,11 +4,11 @@ Sign-off Agent: 하위 에이전트 draft의 품질을 판정한다.
 """
 
 import json
+import os
 import re
 from pathlib import Path
 
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
+import openai
 
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
@@ -20,18 +20,16 @@ REQUIRED_CODES = {
 }
 
 
-def _build_history(domain: str, draft: str) -> ChatHistory:
+def _build_messages(domain: str, draft: str) -> list[dict]:
     prompt_file = PROMPTS_DIR / f"signoff_{domain}" / "evaluate" / "skprompt.txt"
     raw = prompt_file.read_text(encoding="utf-8").replace("{{$draft}}", draft)
 
-    history = ChatHistory()
+    messages = []
     for m in re.finditer(r'<message role="(\w+)">(.*?)</message>', raw, re.DOTALL):
         role, content = m.group(1), m.group(2).strip()
-        if role == "system":
-            history.add_system_message(content)
-        elif role == "user":
-            history.add_user_message(content)
-    return history
+        if role in ("system", "user"):
+            messages.append({"role": role, "content": content})
+    return messages
 
 
 def _derive_grade(verdict: dict) -> str:
@@ -47,20 +45,19 @@ def _derive_grade(verdict: dict) -> str:
     return "A"
 
 
-async def run_signoff(kernel, domain: str, draft: str, max_retries: int = 2) -> dict:
+async def run_signoff(client: openai.AsyncAzureOpenAI, domain: str, draft: str, max_retries: int = 2) -> dict:
     required_codes = REQUIRED_CODES[domain]
-    chat_service = kernel.get_service("sign_off")
-    settings = AzureChatPromptExecutionSettings(
-        response_format={"type": "json_object"}
-    )
-    history = _build_history(domain, draft)
+    deployment = os.getenv("AZURE_SIGNOFF_DEPLOYMENT")
+    messages = _build_messages(domain, draft)
 
     for attempt in range(max_retries + 1):
-        result = await chat_service.get_chat_message_content(
-            chat_history=history,
-            settings=settings,
+        response = await client.responses.create(
+            model=deployment,
+            input=messages,
+            text={"format": {"type": "json_object"}},
         )
-        verdict = json.loads(str(result))
+        result_text = response.output_text
+        verdict = json.loads(result_text)
 
         passed_set   = set(verdict.get("passed", []))
         issues_set   = {i["code"] for i in verdict.get("issues", [])}
@@ -76,11 +73,11 @@ async def run_signoff(kernel, domain: str, draft: str, max_retries: int = 2) -> 
 
         if attempt < max_retries:
             missing_list = ", ".join(sorted(missing))
-            history.add_assistant_message(str(result))
-            history.add_user_message(
+            messages.append({"role": "assistant", "content": result_text})
+            messages.append({"role": "user", "content":
                 f"다음 항목이 passed, warnings, issues 중 어디에도 누락되어 있습니다: {missing_list}\n"
                 f"이 항목들을 포함하여 전체 평가를 다시 JSON 형식으로 출력하십시오."
-            )
+            })
 
     # 최대 재시도 후에도 커버리지 미달 시 가용 verdict 반환
     verdict["approved"] = len({i["code"] for i in verdict.get("issues", [])}) == 0

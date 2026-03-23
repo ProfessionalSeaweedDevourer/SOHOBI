@@ -30,19 +30,43 @@ PASS_COLOR = "✓"
 FAIL_COLOR = "✗"
 
 
+def _parse_jsonl_text(text: str) -> list[dict]:
+    entries = []
+    for line in text.splitlines():
+        line = line.strip()
+        if line:
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return entries
+
+
 def _load_jsonl(path: Path) -> list[dict]:
+    """로컬 파일 또는 Blob Storage에서 JSONL을 읽는다."""
+    account = os.environ.get("BLOB_LOGS_ACCOUNT", "")
+    if account:
+        try:
+            from azure.identity import DefaultAzureCredential
+            from azure.storage.blob import BlobServiceClient
+            from azure.core.exceptions import ResourceNotFoundError
+
+            container = os.environ.get("BLOB_LOGS_CONTAINER", "sohobi-logs")
+            service = BlobServiceClient(
+                account_url=f"https://{account}.blob.core.windows.net",
+                credential=DefaultAzureCredential(),
+            )
+            blob_client = service.get_blob_client(container=container, blob=path.name)
+            text = blob_client.download_blob().readall().decode("utf-8")
+            return _parse_jsonl_text(text)
+        except Exception:
+            return []
+
+    # 로컬 폴백
     if not path.exists():
         return []
-    entries = []
     with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                try:
-                    entries.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
-    return entries
+        return _parse_jsonl_text(f.read())
 
 
 def _fmt_ts(ts_str: str) -> str:

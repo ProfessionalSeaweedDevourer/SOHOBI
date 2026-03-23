@@ -1,50 +1,72 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { sendQuery } from "../api";
+import { streamQuery } from "../api";
 import ChatInput from "../components/ChatInput";
 import ResponseCard from "../components/ResponseCard";
 import SignoffPanel from "../components/SignoffPanel";
+import ProgressPanel from "../components/ProgressPanel";
 
 export default function DevChat() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [activeEvents, setActiveEvents] = useState([]); // 스트리밍 중인 이벤트 목록
   const [error, setError] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [messages, activeEvents, loading]);
 
   async function handleSubmit(question) {
     setError(null);
     setLoading(true);
+    setActiveEvents([]);
+
+    let finalResult = null;
+    let resolvedSessionId = sessionId;
+
     try {
-      const result = await sendQuery(question, 3, sessionId);
-      if (result.session_id) setSessionId(result.session_id);
-      setMessages((prev) => [
+      await streamQuery(question, 3, sessionId, (eventName, data) => {
+        setActiveEvents(prev => [...prev, { event: eventName, ...data }]);
+
+        if (eventName === "domain_classified" && data.session_id) {
+          resolvedSessionId = data.session_id;
+          setSessionId(data.session_id);
+        }
+        if (eventName === "complete") {
+          finalResult = data;
+        }
+      });
+    } catch (e) {
+      setError(e.message);
+      setLoading(false);
+      return;
+    }
+
+    if (finalResult) {
+      setMessages(prev => [
         ...prev,
         {
           question,
-          domain: result.domain,
-          status: result.status,
-          grade: result.grade,
-          confidenceNote: result.confidence_note,
-          draft: result.draft,
-          retryCount: result.retry_count,
-          agentMs: result.agent_ms,
-          signoffMs: result.signoff_ms,
-          rejectionHistory: result.rejection_history || [],
+          domain:           finalResult.domain,
+          status:           finalResult.status,
+          grade:            finalResult.grade,
+          confidenceNote:   finalResult.confidence_note,
+          draft:            finalResult.draft,
+          retryCount:       finalResult.retry_count,
+          agentMs:          finalResult.agent_ms,
+          signoffMs:        finalResult.signoff_ms,
+          rejectionHistory: finalResult.rejection_history || [],
         },
       ]);
-      inputRef.current?.clear();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
     }
+
+    setActiveEvents([]);
+    setLoading(false);
+    inputRef.current?.clear();
   }
 
   return (
@@ -74,8 +96,8 @@ export default function DevChat() {
         {messages.length === 0 && !loading && (
           <div className="text-center mt-20 text-slate-400">
             <div className="text-4xl mb-3">🛠</div>
-            <p className="text-sm">질문 입력 시 Sign-off 판정 결과가 함께 표시됩니다.</p>
-            <p className="text-xs mt-1 text-slate-300">A/B/C 등급, 루브릭 항목별 통과·경고·반려 여부, 재시도 이력, 수정 지시문을 확인할 수 있습니다.</p>
+            <p className="text-sm">질문 입력 시 실시간 진행 상황과 Sign-off 판정 결과가 표시됩니다.</p>
+            <p className="text-xs mt-1 text-slate-300">에이전트 단계, A/B/C 등급, 반려 이유, 수정 지시문을 실시간으로 확인할 수 있습니다.</p>
           </div>
         )}
 
@@ -105,10 +127,17 @@ export default function DevChat() {
             </div>
           ))}
 
+          {/* 스트리밍 진행 중 */}
           {loading && (
-            <div className="self-start flex items-center gap-2 text-slate-400 text-sm px-2">
-              <span className="animate-spin text-base">⏳</span>
-              에이전트 실행 중… (수 초에서 수십 초 소요)
+            <div className="border border-slate-200 rounded-xl bg-white px-4 py-3">
+              <div className="text-xs text-slate-400 mb-2 font-medium">처리 중</div>
+              <ProgressPanel events={activeEvents} detailed={true} />
+              {activeEvents.length === 0 && (
+                <div className="flex items-center gap-2 text-slate-400 text-xs">
+                  <span className="inline-block w-3 h-3 border-2 border-slate-200 border-t-blue-400 rounded-full animate-spin" />
+                  도메인 분류 중…
+                </div>
+              )}
             </div>
           )}
 
