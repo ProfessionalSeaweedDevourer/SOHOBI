@@ -1,0 +1,255 @@
+<style>
+  body { background: #07120e; margin: 0; padding: 20px; font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; }
+  #diagram { background: #07120e; }
+  #diagram svg .cluster-label span { font-size: 16px !important; font-weight: bold; }
+  #diagram svg .cluster-label foreignObject { overflow: visible; }
+
+  #toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+  #toolbar button {
+    background: #0a2018; color: #50d090; border: 1px solid #208050;
+    padding: 7px 18px; border-radius: 6px; font-size: 14px;
+    font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; cursor: pointer;
+  }
+  #toolbar button:hover { background: #0d3020; }
+  .page-title { color: #60e0a0; font-size: 17px; font-weight: bold; margin-left: 10px; }
+  .page-sub   { color: #305840; font-size: 13px; margin-left: 6px; }
+
+  #legend { margin-top: 24px; border-top: 1px solid #1a3828; padding-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+  .lcard {
+    display: flex; align-items: center; gap: 10px;
+    background: #0a1c14; border: 1px solid #20604030; border-radius: 8px; padding: 9px 13px; min-width: 240px;
+  }
+  .licon { flex-shrink: 0; width: 32px; height: 32px; }
+  .ltext strong { display: block; color: #60d090; font-size: 12px; }
+  .ltext span   { color: #40785a; font-size: 11px; }
+
+  .mapping-box {
+    flex-basis: 100%; background: #080f0a; border: 1px solid #1a5030;
+    border-radius: 6px; padding: 10px 15px; color: #408060; font-size: 12px; line-height: 1.7;
+  }
+  .mapping-box b { color: #70d0a0; }
+  .mapping-box code { color: #90e070; background: #0a1810; padding: 1px 5px; border-radius: 3px; }
+
+  .tech-row {
+    flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 8px 0 4px 0;
+  }
+  .tech-badge {
+    background: #0a1810; border: 1px solid #204830; border-radius: 4px;
+    padding: 3px 9px; color: #508060; font-size: 11px;
+  }
+  .tech-sep { color: #305040; font-size: 12px; font-weight: bold; margin-right: 4px; }
+</style>
+
+<div id="toolbar">
+  <button id="btn-svg">SVG 내보내기</button>
+  <button id="btn-png">PNG 내보내기</button>
+  <span class="page-title">🗺️ TERRY</span>
+  <span class="page-sub">인터랙티브 상권·부동산 분석 맵 · 시스템 아키텍처</span>
+</div>
+<div id="diagram"></div>
+
+<div id="legend">
+
+  <!-- 기술 스택 배지 -->
+  <div class="tech-row">
+    <span class="tech-sep">Frontend</span>
+    <span class="tech-badge">React 19</span>
+    <span class="tech-badge">Vite 7</span>
+    <span class="tech-badge">OpenLayers 10</span>
+    <span class="tech-badge">Turf.js 7</span>
+    <span class="tech-badge">Axios</span>
+    <span style="width:12px"></span>
+    <span class="tech-sep">Backend</span>
+    <span class="tech-badge">FastAPI</span>
+    <span class="tech-badge">Uvicorn</span>
+    <span class="tech-badge">pandas</span>
+    <span class="tech-badge">httpx</span>
+    <span class="tech-badge">oracledb</span>
+    <span style="width:12px"></span>
+    <span class="tech-sep">DB</span>
+    <span class="tech-badge">Oracle 11g+ (xe)</span>
+  </div>
+
+  <!-- 외부 서비스 카드 -->
+  <div class="lcard">
+    <svg class="licon" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="5" fill="#1a1200"/>
+      <circle cx="16" cy="14" r="6" fill="none" stroke="#ffdd00" stroke-width="1.5"/>
+      <path d="M16 20 L16 27" stroke="#ffdd00" stroke-width="1.5"/>
+      <circle cx="16" cy="14" r="2" fill="#ffdd00" opacity="0.8"/>
+    </svg>
+    <div class="ltext">
+      <strong>Kakao Maps API</strong>
+      <span>SDK: 지도 렌더링 · 클러스터링 · 로드뷰<br/>REST: 지오코딩 · 키워드 장소 검색 · 좌표→지역명</span>
+    </div>
+  </div>
+
+  <div class="lcard">
+    <svg class="licon" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="5" fill="#001018"/>
+      <rect x="5" y="5" width="22" height="22" rx="2" fill="none" stroke="#50c0ff" stroke-width="1.5"/>
+      <path d="M5 16 L27 16 M16 5 L16 27" stroke="#50c0ff" stroke-width="1" opacity="0.5"/>
+      <circle cx="16" cy="16" r="4" fill="none" stroke="#50c0ff" stroke-width="1.5"/>
+    </svg>
+    <div class="ltext">
+      <strong>VWorld API · 국토정보원</strong>
+      <span>WMS: 지적도 · 용도지역 · 관광지 · 전통시장<br/>WFS: 행정경계 GeoJSON · LURIS: 공시지가(PNU)</span>
+    </div>
+  </div>
+
+  <div class="lcard">
+    <svg class="licon" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="5" fill="#0a0a18"/>
+      <rect x="6" y="8" width="20" height="16" rx="2" fill="none" stroke="#8080ff" stroke-width="1.5"/>
+      <line x1="6" y1="13" x2="26" y2="13" stroke="#8080ff" stroke-width="1" opacity="0.6"/>
+      <circle cx="10" cy="10.5" r="1" fill="#8080ff"/>
+      <circle cx="14" cy="10.5" r="1" fill="#8080ff"/>
+    </svg>
+    <div class="ltext">
+      <strong>Seoul Open Data API · 개방데이터광장</strong>
+      <span>tbLnOpendataRtmsV · 부동산 실거래가<br/>최근 3년 매매/전세/월세 거래 이력</span>
+    </div>
+  </div>
+
+  <!-- V_LAW_TO_ADM 설명 -->
+  <div class="mapping-box">
+    <b>⚠️ 핵심 데이터 변환 포인트 — V_LAW_TO_ADM (Oracle VIEW)</b><br/>
+    VWorld WFS는 <b>법정동 코드(emd_cd)</b>를 반환하지만, Oracle의 매출 테이블 <code>SANGKWON_SALES</code>는
+    <b>행정동 코드(adm_cd)</b> 기준으로 집계됩니다. 법정동과 행정동은 1:N 관계이므로,
+    <code>DongMappingDAO</code>가 시작 시 <code>V_LAW_TO_ADM</code> 뷰를 로드하여
+    <b>Confidence Score</b>로 최적 매핑을 선택한 뒤 WFS GeoJSON 피처에 <code>adm_cd</code>를 주입합니다.
+    이 변환 없이는 지도 클릭 → 매출 데이터 연결이 불가합니다.
+  </div>
+
+</div>
+
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
+  themeVariables: {
+    darkMode: true, fontSize: '12px',
+    fontFamily: '"Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
+    primaryColor:        '#0a2018',
+    primaryTextColor:    '#60d090',
+    primaryBorderColor:  '#208050',
+    secondaryColor:      '#071410',
+    secondaryTextColor:  '#50c080',
+    secondaryBorderColor:'#186040',
+    tertiaryColor:       '#050e08',
+    tertiaryTextColor:   '#40b070',
+    tertiaryBorderColor: '#105030',
+    lineColor:           '#285840',
+    textColor:           '#a0c8b0',
+    edgeLabelBackground: '#07120e',
+    clusterBkg:          '#07120e',
+    clusterBorder:       '#1a4030',
+  },
+  flowchart: { curve: 'basis', padding: 20, nodeSpacing: 38, rankSpacing: 78 },
+});
+
+const diagram = `flowchart LR
+  classDef browser  fill:#0a1800,color:#90ff60,stroke:#40c010,stroke-width:2px
+  classDef fe_node  fill:#1a1200,color:#ffc060,stroke:#c09000,stroke-width:1px
+  classDef proxy    fill:#0c1a0c,color:#70d060,stroke:#307830,stroke-width:1px
+  classDef be_node  fill:#071820,color:#50d8d8,stroke:#208888,stroke-width:1.5px
+  classDef oracle   fill:#1a0a08,color:#ff9060,stroke:#b04030,stroke-width:2px
+  classDef mapping  fill:#120808,color:#ff7060,stroke:#a03020,stroke-width:1.5px,stroke-dasharray:3 2
+  classDef kakao    fill:#1a1200,color:#ffdd40,stroke:#c09a00,stroke-width:1.5px
+  classDef vworld   fill:#001018,color:#50c0ff,stroke:#1878c0,stroke-width:1.5px
+  classDef seoulapi fill:#080818,color:#8888ff,stroke:#3838b0,stroke-width:1px
+
+  BROWSER(["<b>👤 Browser</b><br/><span style='font-size:10px'>사용자</span>"]):::browser
+
+  subgraph FRONTEND["⚛️ Frontend · React 19 + Vite (port 5173)"]
+    direction TB
+    MAPVIEW["<b>MapView.jsx</b><br/><span style='font-size:10px'>OpenLayers 10 · Turf.js<br/>반경 분석 · WMS 레이어 토글<br/>행정동 클릭 → 매출/실거래 패널</span>"]:::fe_node
+    PANELS["<b>사이드 패널</b><br/><span style='font-size:10px'>CategoryPanel · LayerPanel<br/>PopulationPanel · RoadviewPanel</span>"]:::fe_node
+    VPROXY["<b>Vite Dev Proxy</b><br/><span style='font-size:10px'>/map/*        → 8681<br/>/realestate/* → 8682<br/>/kakao/*      → Kakao REST<br/>/wms/*        → VWorld WMS</span>"]:::proxy
+  end
+
+  subgraph BACKEND["🐍 FastAPI 백엔드"]
+    direction TB
+    MAP_C["<b>mapController.py</b><br/><span style='font-size:10px'>port 8681<br/>/map/nearby (Haversine)<br/>/map/dong-density<br/>/map/land-use<br/>/map/dong-centroids<br/>시작 시 pandas 메모리 캐시</span>"]:::be_node
+    RE_C["<b>realEstateController.py</b><br/><span style='font-size:10px'>port 8682<br/>/realestate/sangkwon<br/>/realestate/seoul-rtms<br/>/realestate/wfs-dong<br/>/realestate/land-value</span>"]:::be_node
+  end
+
+  subgraph DB["🗄️ Oracle DB · 195.168.9.168:1521/xe"]
+    direction TB
+    SME["<b>소상공인_서울 · 경기 · 인천 · ...</b><br/><span style='font-size:10px'>~100만 행 · 경위도 인덱스<br/>pandas DataFrame 프리로드<br/>상호명 · 업종 · 좌표</span>"]:::oracle
+    SALES["<b>SANGKWON_SALES</b><br/><span style='font-size:10px'>V_SANGKWON_LATEST (VIEW)<br/>행정동별 매출 · 점포수<br/>성별 · 연령대 · 요일 분포</span>"]:::oracle
+    LAW2ADM["<b>V_LAW_TO_ADM</b><br/><span style='font-size:10px'>법정동 코드 ↔ 행정동 코드<br/>Confidence Score 기반 매핑<br/>WFS → Sales 연결 핵심</span>"]:::mapping
+  end
+
+  subgraph EXTAPI["외부 API 서비스"]
+    direction TB
+    KAKAO["<b>🟡 Kakao Maps API</b><br/><span style='font-size:10px'>SDK: 지도 · 클러스터 · 로드뷰<br/>REST: 지오코딩 · 장소 검색<br/>좌표 → 지역명 변환</span>"]:::kakao
+    VWORLD["<b>🔵 VWorld API (국토정보원)</b><br/><span style='font-size:10px'>WMS: 지적도 · 용도지역 · 관광지<br/>WFS: 행정경계 GeoJSON<br/>LURIS: 공시지가 (PNU 기반)</span>"]:::vworld
+    SEOUL_A["<b>🟣 Seoul Open Data API</b><br/><span style='font-size:10px'>부동산 실거래가<br/>매매 · 전세 · 월세<br/>최근 3년 이력</span>"]:::seoulapi
+  end
+
+  %% ── Browser → Frontend ──
+  BROWSER --> MAPVIEW & PANELS
+  BROWSER -->|"<span style='font-size:10px'>SDK 직접 로드</span>"| KAKAO
+
+  %% ── Frontend 내부 ──
+  MAPVIEW & PANELS --> VPROXY
+
+  %% ── Vite Proxy → Backends ──
+  VPROXY --> MAP_C & RE_C
+
+  %% ── Vite Proxy → External (proxied) ──
+  VPROXY -->|"<span style='font-size:10px'>REST 프록시</span>"| KAKAO
+  VPROXY -->|"<span style='font-size:10px'>WMS 타일 프록시</span>"| VWORLD
+
+  %% ── mapController → DB + External ──
+  MAP_C --> SME
+  MAP_C -->|"<span style='font-size:10px'>httpx 비동기</span>"| VWORLD
+  MAP_C -->|"<span style='font-size:10px'>httpx 비동기</span>"| KAKAO
+
+  %% ── realEstateController → DB + External ──
+  RE_C --> SALES & LAW2ADM
+  RE_C -->|"<span style='font-size:10px'>httpx 비동기</span>"| SEOUL_A
+  RE_C -->|"<span style='font-size:10px'>httpx 비동기</span>"| VWORLD
+`;
+
+const { svg } = await mermaid.render('arch-svg', diagram);
+document.getElementById('diagram').innerHTML = svg;
+const el = document.querySelector('#diagram svg');
+if (el) { el.style.width = '100%'; el.style.maxWidth = '100%'; el.style.background = '#07120e'; }
+
+function getExportSvgString() {
+  const orig = document.querySelector('#diagram svg');
+  const clone = orig.cloneNode(true);
+  const { width, height } = orig.getBoundingClientRect();
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '100%'); bg.setAttribute('height', '100%'); bg.setAttribute('fill', '#07120e');
+  clone.insertBefore(bg, clone.firstChild);
+  const styleText = [...document.styleSheets].flatMap(s => { try { return [...s.cssRules].map(r => r.cssText); } catch { return []; } }).join('\n');
+  const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+  styleEl.textContent = styleText; clone.insertBefore(styleEl, clone.firstChild);
+  if (!clone.getAttribute('viewBox')) clone.setAttribute('viewBox', `0 0 ${Math.ceil(width)} ${Math.ceil(height)}`);
+  clone.setAttribute('width', Math.ceil(width)); clone.setAttribute('height', Math.ceil(height));
+  return new XMLSerializer().serializeToString(clone);
+}
+document.getElementById('btn-svg').addEventListener('click', () => {
+  const blob = new Blob([getExportSvgString()], { type: 'image/svg+xml;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sohobi_terry_architecture.svg'; a.click();
+});
+document.getElementById('btn-png').addEventListener('click', () => {
+  const svgStr = getExportSvgString();
+  const { width, height } = document.querySelector('#diagram svg').getBoundingClientRect();
+  const scale = 2; const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(width) * scale; canvas.height = Math.ceil(height) * scale;
+    const ctx = canvas.getContext('2d'); ctx.scale(scale, scale); ctx.drawImage(img, 0, 0);
+    canvas.toBlob(blob => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sohobi_terry_architecture.png'; a.click(); }, 'image/png');
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+});
+</script>

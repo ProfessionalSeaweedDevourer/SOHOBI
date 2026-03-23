@@ -72,7 +72,6 @@ class LegalAgent:
         history.add_user_message(question)
 
         settings = OpenAIChatPromptExecutionSettings(
-            temperature=0.3,
             function_choice_behavior=FunctionChoiceBehavior.Auto(),
         )
         response = await service.get_chat_message_content(
