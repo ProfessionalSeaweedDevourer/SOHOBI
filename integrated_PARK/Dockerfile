@@ -1,5 +1,5 @@
 # ── 빌드 스테이지 ─────────────────────────────────────────────
-FROM python:3.12-slim AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 
 # ── 런타임 스테이지 ───────────────────────────────────────────
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
