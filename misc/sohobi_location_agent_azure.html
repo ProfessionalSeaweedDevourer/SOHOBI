@@ -1,0 +1,175 @@
+<style>
+  body { background: #07101e; margin: 0; padding: 20px; font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; }
+  #diagram { background: #07101e; }
+  #diagram svg .cluster-label span { font-size: 16px !important; font-weight: bold; }
+  #diagram svg .cluster-label foreignObject { overflow: visible; }
+
+  #toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+  #toolbar button {
+    background: #0a1e38; color: #4db2ff; border: 1px solid #0078D4;
+    padding: 7px 18px; border-radius: 6px; font-size: 14px;
+    font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; cursor: pointer;
+  }
+  #toolbar button:hover { background: #0d2a50; }
+  .page-title { color: #60d8ff; font-size: 17px; font-weight: bold; margin-left: 10px; }
+  .page-sub   { color: #405870; font-size: 13px; margin-left: 6px; }
+
+  #legend { margin-top: 24px; border-top: 1px solid #103040; padding-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+  .lcard {
+    display: flex; align-items: center; gap: 10px;
+    background: #0a1828; border: 1px solid #0078D430; border-radius: 8px; padding: 9px 13px;
+  }
+  .licon { flex-shrink: 0; width: 32px; height: 32px; }
+  .ltext strong { display: block; color: #60aaff; font-size: 12px; }
+  .ltext span   { color: #5080a0; font-size: 11px; }
+  .lnote {
+    flex-basis: 100%; background: #081018; border: 1px solid #304860;
+    border-radius: 6px; padding: 9px 14px; color: #5090b0; font-size: 12px; line-height: 1.6;
+  }
+  .lnote b { color: #60d8ff; }
+  .db-box {
+    background: #080e10; border: 1px solid #205060; border-radius: 6px;
+    padding: 9px 14px; color: #4080a0; font-size: 12px; line-height: 1.6;
+  }
+  .db-box b { color: #50b8d8; }
+</style>
+
+<div id="toolbar">
+  <button id="btn-svg">SVG 내보내기</button>
+  <button id="btn-png">PNG 내보내기</button>
+  <span class="page-title">📍 LocationAgent</span>
+  <span class="page-sub">Azure 연동 구조 · location_agent.py</span>
+</div>
+<div id="diagram"></div>
+
+<div id="legend">
+  <div class="lcard">
+    <svg class="licon" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="5" fill="#00183a"/>
+      <path d="M16 5 L27 10.5 L27 21.5 L16 27 L5 21.5 L5 10.5 Z" fill="none" stroke="#00d2ff" stroke-width="1.5"/>
+      <circle cx="16" cy="16" r="3.5" fill="#00d2ff" opacity="0.85"/>
+    </svg>
+    <div class="ltext">
+      <strong>Azure OpenAI · Chat Completion</strong>
+      <span>gpt-4o 계열 · 상권 분석 텍스트 생성<br/>파라미터 추출 + 분석 보고서 생성</span>
+    </div>
+  </div>
+  <div class="db-box">
+    <b>commercial.db — 로컬 SQLite (비-Azure):</b>
+    서울시 상권 매출 · 점포수 데이터를 로컬 SQLite DB로 보관합니다.
+    Railway 배포 환경에서는 볼륨 마운트 경로(<code style='color:#60b0c8'>COMMERCIAL_DB_PATH</code>)로 접근.
+    현재 2024 Q4 단일 분기 수록 (13 MB). LLM 호출 없이 SQL 쿼리로만 데이터 조회.
+  </div>
+  <div class="lnote">
+    <b>LocationPlugin (SK Kernel 래퍼):</b>
+    LocationAgent의 분석 메서드를 Semantic Kernel 함수로 노출합니다.
+    <b>FunctionChoiceBehavior.Auto()</b>를 통해 오케스트레이터가 단일 분석 / 다중 비교 모드를
+    자동 선택합니다. 유사 상권 추천 테이블은 commercial.db 데이터 기반으로 생성됩니다.
+  </div>
+</div>
+
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
+  themeVariables: {
+    darkMode: true, fontSize: '12px',
+    fontFamily: '"Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
+    primaryColor: '#0d2040', primaryTextColor: '#60aaff', primaryBorderColor: '#0078D4',
+    lineColor: '#305878', textColor: '#b0ccdf',
+    edgeLabelBackground: '#07101e', clusterBkg: '#07101e', clusterBorder: '#1a4060',
+  },
+  flowchart: { curve: 'basis', padding: 20, nodeSpacing: 40, rankSpacing: 80 },
+});
+
+const diagram = `flowchart LR
+  classDef client fill:#0d2008,color:#90e050,stroke:#40a010,stroke-width:2px
+  classDef api    fill:#181400,color:#ffd060,stroke:#a08000,stroke-width:1px
+  classDef infra  fill:#081018,color:#5090b0,stroke:#204060,stroke-width:1px
+  classDef kernel fill:#1a1000,color:#ffb060,stroke:#c07000,stroke-width:2px
+  classDef agent  fill:#001e28,color:#60d8ff,stroke:#2090b8,stroke-width:2.5px
+  classDef plugin fill:#180a28,color:#c080ff,stroke:#7030c0,stroke-width:1.5px
+  classDef aoai   fill:#001828,color:#00d2ff,stroke:#009ab8,stroke-width:2px
+  classDef db     fill:#081014,color:#4090b0,stroke:#205060,stroke-width:1.5px,stroke-dasharray:3 2
+  classDef log    fill:#080814,color:#6878a0,stroke:#303858,stroke-width:1px
+
+  CLIENT(["<b>👤 Client</b><br/><span style='font-size:10px'>HTTP / REST</span>"]):::client
+
+  subgraph API["🖥️ api_server.py"]
+    direction TB
+    Q_EP["POST /api/v1/query<br/><span style='font-size:10px'>세션 · 프로파일 관리</span>"]:::api
+    LOG["logger.py<br/><span style='font-size:10px'>queries / rejections / errors</span>"]:::log
+  end
+
+  subgraph INFRA["공통 오케스트레이션 인프라"]
+    direction TB
+    DR{"domain_router.py<br/><span style='font-size:10px'>→ location 분류</span>"}:::infra
+    OR["orchestrator.py<br/><span style='font-size:10px'>Draft-Retry Loop</span>"]:::infra
+    SO["signoff_agent.py<br/><span style='font-size:10px'>루브릭 평가 A / B / C</span>"]:::infra
+    KN["🔧 kernel_setup.py<br/><span style='font-size:10px'>Semantic Kernel<br/>AzureChatCompletion</span>"]:::kernel
+  end
+
+  LOCATION["<b style='font-size:15px'>📍 LocationAgent</b><br/><span style='font-size:11px'>location_agent.py<br/>단일 분석 / 다중 비교 모드<br/>유사 상권 추천표 포함</span>"]:::agent
+
+  subgraph PLG["플러그인"]
+    direction TB
+    LOCPLG["LocationPlugin<br/><span style='font-size:10px'>SK Kernel 래퍼<br/>FunctionChoiceBehavior.Auto</span>"]:::plugin
+    COMMDB[("<b>commercial.db</b><br/><span style='font-size:10px'>SQLite · Railway 볼륨<br/>상권 매출 · 점포 2024 Q4</span>")]:::db
+  end
+
+  subgraph AZURE["☁️ Azure Environment"]
+    CHAT["<b>⚡ Azure OpenAI</b><br/><b>Chat Completion</b><br/><span style='font-size:10px'>gpt-4o 계열 배포<br/>파라미터 추출 + 분석 보고서</span>"]:::aoai
+  end
+
+  CLIENT --> Q_EP
+  Q_EP --> LOG
+  Q_EP --> DR
+  DR --> OR
+  OR --> LOCATION
+  OR --> SO
+  SO -->|"<span style='font-size:10px'>거부 + retry_prompt</span>"| OR
+  LOCATION --> LOCPLG
+  LOCATION --> COMMDB
+  LOCATION & SO --> KN
+  KN --> CHAT
+`;
+
+const { svg } = await mermaid.render('arch-svg', diagram);
+document.getElementById('diagram').innerHTML = svg;
+const el = document.querySelector('#diagram svg');
+if (el) { el.style.width = '100%'; el.style.maxWidth = '100%'; el.style.background = '#07101e'; }
+
+function getExportSvgString() {
+  const orig = document.querySelector('#diagram svg');
+  const clone = orig.cloneNode(true);
+  const { width, height } = orig.getBoundingClientRect();
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '100%'); bg.setAttribute('height', '100%'); bg.setAttribute('fill', '#07101e');
+  clone.insertBefore(bg, clone.firstChild);
+  const styleText = [...document.styleSheets].flatMap(s => { try { return [...s.cssRules].map(r => r.cssText); } catch { return []; } }).join('\n');
+  const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+  styleEl.textContent = styleText; clone.insertBefore(styleEl, clone.firstChild);
+  if (!clone.getAttribute('viewBox')) clone.setAttribute('viewBox', `0 0 ${Math.ceil(width)} ${Math.ceil(height)}`);
+  clone.setAttribute('width', Math.ceil(width)); clone.setAttribute('height', Math.ceil(height));
+  return new XMLSerializer().serializeToString(clone);
+}
+document.getElementById('btn-svg').addEventListener('click', () => {
+  const blob = new Blob([getExportSvgString()], { type: 'image/svg+xml;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sohobi_location_agent_azure.svg'; a.click();
+});
+document.getElementById('btn-png').addEventListener('click', () => {
+  const svgStr = getExportSvgString();
+  const { width, height } = document.querySelector('#diagram svg').getBoundingClientRect();
+  const scale = 2; const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(width) * scale; canvas.height = Math.ceil(height) * scale;
+    const ctx = canvas.getContext('2d'); ctx.scale(scale, scale); ctx.drawImage(img, 0, 0);
+    canvas.toBlob(blob => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sohobi_location_agent_azure.png'; a.click(); }, 'image/png');
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+});
+</script>

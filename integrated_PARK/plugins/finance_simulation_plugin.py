@@ -57,13 +57,13 @@ class FinanceSimulationPlugin:
             for _ in range(iterations):
                 sim_rev = random.gauss(revenue[0], revenue[0] * 0.1)
                 sim_cost = random.gauss(cost, cost * 0.1)
-                net = (sim_rev - sim_cost - salary_cost - rent - admin - fee)
+                net = sim_rev - sim_cost - salary_cost - rent - admin - fee
                 results.append(net)
         else:
             for _ in range(iterations):
                 sim_rev = random.choice(revenue)* random.gauss(1.0, 0.1)
                 sim_cost = random.gauss(cost, cost * 0.1)
-                net = (sim_rev - sim_cost - salary_cost - rent - admin - fee)
+                net = sim_rev - sim_cost - salary_cost - rent - admin - fee
                 results.append(net)
 
         avg = sum(results) / iterations
