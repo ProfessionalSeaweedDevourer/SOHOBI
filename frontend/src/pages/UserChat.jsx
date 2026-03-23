@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { sendQuery } from "../api";
+import { streamQuery } from "../api";
 import ChatInput from "../components/ChatInput";
 import ResponseCard from "../components/ResponseCard";
+import ProgressPanel from "../components/ProgressPanel";
 
 export default function UserChat() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [activeEvents, setActiveEvents] = useState([]);
   const [error, setError] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -20,27 +22,44 @@ export default function UserChat() {
   async function handleSubmit(question) {
     setError(null);
     setLoading(true);
+    setActiveEvents([]);
+
+    let finalResult = null;
+
     try {
-      const result = await sendQuery(question, 3, sessionId);
-      if (result.session_id) setSessionId(result.session_id);
-      setMessages((prev) => [
+      await streamQuery(question, 3, sessionId, (eventName, data) => {
+        setActiveEvents(prev => [...prev, { event: eventName, ...data }]);
+        if (eventName === "domain_classified" && data.session_id) {
+          setSessionId(data.session_id);
+        }
+        if (eventName === "complete") {
+          finalResult = data;
+        }
+      });
+    } catch (e) {
+      setError(e.message);
+      setLoading(false);
+      return;
+    }
+
+    if (finalResult) {
+      setMessages(prev => [
         ...prev,
         {
           question,
-          domain: result.domain,
-          status: result.status,
-          grade: result.grade,
-          confidenceNote: result.confidence_note,
-          draft: result.draft,
-          retryCount: result.retry_count,
+          domain:         finalResult.domain,
+          status:         finalResult.status,
+          grade:          finalResult.grade,
+          confidenceNote: finalResult.confidence_note,
+          draft:          finalResult.draft,
+          retryCount:     finalResult.retry_count,
         },
       ]);
-      inputRef.current?.clear();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
     }
+
+    setActiveEvents([]);
+    setLoading(false);
+    inputRef.current?.clear();
   }
 
   return (
@@ -97,9 +116,14 @@ export default function UserChat() {
           ))}
 
           {loading && (
-            <div className="self-start flex items-center gap-2 text-slate-400 text-sm px-2">
-              <span className="animate-spin text-base">⏳</span>
-              분석 중…
+            <div className="self-start bg-white border border-slate-100 rounded-xl px-4 py-3 text-sm w-full max-w-md">
+              <ProgressPanel events={activeEvents} detailed={false} />
+              {activeEvents.length === 0 && (
+                <div className="flex items-center gap-2 text-slate-400 text-xs">
+                  <span className="inline-block w-3 h-3 border-2 border-slate-200 border-t-blue-400 rounded-full animate-spin" />
+                  분석 준비 중…
+                </div>
+              )}
             </div>
           )}
 

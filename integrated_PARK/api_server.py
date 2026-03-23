@@ -7,13 +7,14 @@
 - GET  /api/v1/logs          — JSONL 로그 조회 (프론트엔드 로그 뷰어용)
 """
 
+import json
 import os
 import time
 from uuid import uuid4
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from semantic_kernel.contents import ChatHistory
@@ -21,7 +22,7 @@ from semantic_kernel.contents import ChatHistory
 import domain_router
 import orchestrator
 from signoff.signoff_agent import run_signoff
-from kernel_setup import get_kernel
+from kernel_setup import get_kernel, get_signoff_client
 from logger import log_query, log_error
 from log_formatter import load_entries_json
 from logger import _format_rejection_history
@@ -164,14 +165,98 @@ async def query(req: QueryRequest):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+@app.post("/api/v1/stream")
+async def stream_query(req: QueryRequest):
+    """Q&A 플로우: SSE로 실시간 진행 상황 전달.
+    각 단계(에이전트 시작/완료, Sign-off 판정, 최종 결과)를 이벤트로 스트리밍한다.
+    """
+    sid = req.session_id or str(uuid4())
+    session = _query_sessions.setdefault(sid, {"profile": "", "history": ChatHistory(), "extracted": {}})
+    if req.founder_context:
+        session["profile"] = req.founder_context
+
+    async def generate():
+        t0 = time.monotonic()
+        try:
+            # ── 도메인 분류 ───────────────────────────────────
+            if req.domain in ("admin", "finance", "legal", "location"):
+                domain = req.domain
+            else:
+                classification = await domain_router.classify(req.question)
+                domain = classification["domain"]
+
+            yield f"event: domain_classified\ndata: {json.dumps({'domain': domain, 'session_id': sid})}\n\n"
+
+            # ── 오케스트레이터 스트리밍 ───────────────────────
+            final_result = None
+            async for ev in orchestrator.run_stream(
+                domain=domain,
+                question=req.question,
+                profile=session["profile"],
+                session_id=sid,
+                max_retries=req.max_retries,
+                session_vars=session["extracted"] if session["extracted"] else None,
+            ):
+                event_name = ev.get("event", "message")
+
+                if event_name == "complete":
+                    # 세션 업데이트 및 로깅
+                    session["history"].add_user_message(req.question)
+                    session["history"].add_assistant_message(ev["draft"])
+
+                    if ev.get("status") == "approved" and ev.get("draft"):
+                        new_vars = await extract_financial_vars(ev["draft"])
+                        if new_vars:
+                            session["extracted"].update(new_vars)
+
+                    # rejection_history 포맷 변환 후 complete 이벤트에 포함
+                    ev["rejection_history"] = _format_rejection_history(
+                        ev.get("rejection_history", [])
+                    )
+                    ev["domain"] = domain
+
+                    log_query(
+                        request_id        = ev["request_id"],
+                        session_id        = sid,
+                        question          = req.question,
+                        domain            = domain,
+                        status            = ev["status"],
+                        grade             = ev.get("grade", ""),
+                        retry_count       = ev["retry_count"],
+                        rejection_history = ev.get("rejection_history", []),
+                        draft             = ev["draft"],
+                        latency_ms        = (time.monotonic() - t0) * 1000,
+                    )
+                    final_result = ev
+
+                yield f"event: {event_name}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n"
+
+        except Exception as e:
+            log_error(
+                request_id=str(uuid4()),
+                session_id=sid,
+                question=req.question,
+                domain=req.domain or "unknown",
+                error=str(e),
+                latency_ms=(time.monotonic() - t0) * 1000,
+            )
+            yield f"event: error\ndata: {json.dumps({'message': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @app.post("/api/v1/signoff")
 async def signoff(req: SignoffRequest):
     """기존 draft를 Sign-off Agent에 단독으로 검증한다."""
     try:
         if req.domain not in ("admin", "finance", "legal", "location"):
             return JSONResponse(status_code=400, content={"error": f"지원하지 않는 도메인: {req.domain}"})
-        kernel = get_kernel()
-        verdict = await run_signoff(kernel=kernel, domain=req.domain, draft=req.draft)
+        client = get_signoff_client()
+        verdict = await run_signoff(client=client, domain=req.domain, draft=req.draft)
         return verdict
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
