@@ -16,6 +16,7 @@ pydantic==2.11.5
 azure-identity==1.25.2
 azure-search-documents==11.6.0   # CHOI — 법령 벡터 검색
 azure-core==1.33.0
+azure-cosmos==4.9.0              # 세션 Stateless 저장소
 
 # PDF 생성 (NAM)
 reportlab==4.2.5
