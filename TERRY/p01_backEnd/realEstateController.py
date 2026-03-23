@@ -9,27 +9,30 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
-from DAO.sangkwonDAO    import SangkwonDAO
-from DAO.dongMappingDAO import DongMappingDAO
-from DAO.seoulRtmsDAO   import SeoulRtmsDAO
-from DAO.landValueDAO   import LandValueDAO
-from DAO.wfsDAO         import WfsDAO
+from DAO.sangkwonDAO      import SangkwonDAO
+from DAO.dongMappingDAO   import DongMappingDAO
+from DAO.seoulRtmsDAO     import SeoulRtmsDAO
+from DAO.landValueDAO     import LandValueDAO
+from DAO.wfsDAO           import WfsDAO          # WFS 엔드포인트 하위호환용 유지
+from DAO.sangkwonStoreDAO import SangkwonStoreDAO
 
 # ── 서버 로그 설정 ───────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-skDAO   = SangkwonDAO()
-dmDAO   = DongMappingDAO()
-rtmsDAO = SeoulRtmsDAO()
-lvDAO   = LandValueDAO()
-wfsDAO  = WfsDAO(dmDAO)
+skDAO    = SangkwonDAO()
+dmDAO    = DongMappingDAO()
+rtmsDAO  = SeoulRtmsDAO()
+lvDAO    = LandValueDAO()
+wfsDAO   = WfsDAO(dmDAO)   # WFS 엔드포인트 하위호환용
+storeDAO = SangkwonStoreDAO()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    skDAO.load()   # V_SANGKWON_LATEST → DataFrame
-    dmDAO.load()   # V_LAW_TO_ADM     → emd_cd dict
+    skDAO.load()   # SANGKWON_SALES → DataFrame 캐시
+    dmDAO.load()   # LAW_ADM_MAP    → emd_cd dict 캐시
+    # wfsDAO 프리로드 제거 (프론트에서 public/seoul_adm_dong.geojson 직접 로드)
     yield
 
 
@@ -114,6 +117,32 @@ async def getSangkwon(
         "avg":  _format_sangkwon_row(avg) if avg else None,
     }
 
+
+
+@app.get("/realestate/sangkwon-svc")
+async def getSangkwonBySvc(
+    adm_cd:  str = Query(..., description="행정동코드"),
+    quarter: str = Query("", description="분기코드 (비우면 최신)"),
+):
+    """SVC_CD(대분류) 기준 업종별 매출 합산"""
+    logger.info(f"[sangkwon-svc] adm_cd={adm_cd} quarter={quarter or '최신'}")
+    rows = skDAO.getSalesBySvcCd(adm_cd, quarter)
+    return {"adm_cd": adm_cd, "count": len(rows), "data": rows}
+
+
+@app.get("/realestate/sangkwon-store")
+async def getSangkwonStore(
+    adm_cd:  str = Query(..., description="행정동코드"),
+    quarter: str = Query("", description="분기코드 (비우면 최신)"),
+    svc_cd:  str = Query("", description="업종 대분류 코드 (비우면 전체)"),
+):
+    """SVC_CD 기준 점포수/개폐업률 조회"""
+    logger.info(f"[sangkwon-store] adm_cd={adm_cd} quarter={quarter or '최신'} svc_cd={svc_cd or '전체'}")
+    if svc_cd:
+        rows = storeDAO.getStoreByInduty(adm_cd, svc_cd, quarter)
+    else:
+        rows = storeDAO.getStoreBySvcCd(adm_cd, quarter)
+    return {"adm_cd": adm_cd, "count": len(rows), "data": rows}
 
 @app.get("/realestate/sangkwon-gu")
 async def getSangkwonByGu(

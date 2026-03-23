@@ -310,6 +310,53 @@ class SangkwonDAO(BaseDAO):
             logger.error(f"[SangkwonDAO] 업종별 조회 실패: {e}")
             return []
 
+
+    def getSalesBySvcCd(self, adstrd_cd: str, quarter: str = "") -> list:
+        """
+        행정동 SVC_CD(대분류) 기준 매출 합산
+        - SVC_INDUTY_MAP JOIN → SVC_CD 그룹핑
+        - quarter 없으면 최신 분기
+        """
+        qtr_cond = "= :qtr" if quarter else "= (SELECT MAX(base_yr_qtr_cd) FROM SANGKWON_SALES)"
+        sql = f"""
+            SELECT
+                m.svc_cd,
+                m.svc_nm,
+                SUM(s.tot_sales_amt)  AS tot_sales_amt,
+                SUM(s.ml_sales_amt)   AS ml_sales_amt,
+                SUM(s.fml_sales_amt)  AS fml_sales_amt,
+                SUM(s.mdwk_sales_amt) AS mdwk_sales_amt,
+                SUM(s.wkend_sales_amt)AS wkend_sales_amt,
+                SUM(s.age20_amt)      AS age20_amt,
+                SUM(s.age30_amt)      AS age30_amt,
+                SUM(s.age40_amt)      AS age40_amt,
+                SUM(s.age50_amt)      AS age50_amt,
+                COUNT(DISTINCT s.svc_induty_cd) AS induty_cnt
+            FROM SANGKWON_SALES s
+            JOIN SVC_INDUTY_MAP m ON s.svc_induty_cd = m.svc_induty_cd
+            WHERE s.adm_cd = :cd
+              AND s.base_yr_qtr_cd {qtr_cond}
+            GROUP BY m.svc_cd, m.svc_nm
+            ORDER BY tot_sales_amt DESC NULLS LAST
+        """
+        try:
+            con, cur = self._db_con()
+            try:
+                params = {"cd": adstrd_cd}
+                if quarter:
+                    params["qtr"] = quarter
+                cur.execute(sql, params)
+                cols = [d[0].lower() for d in cur.description]
+                rows = cur.fetchall()
+                result = [dict(zip(cols, r)) for r in rows]
+                logger.info(f"[SangkwonDAO] getSalesBySvcCd: adm_cd={adstrd_cd} → {len(result)}개 업종")
+                return result
+            finally:
+                self._close(con, cur)
+        except Exception as e:
+            logger.error(f"[SangkwonDAO] getSalesBySvcCd 실패: {e}")
+            return []
+
     def getQuarters(self) -> list:
         """DB에 있는 분기 목록 조회"""
         try:

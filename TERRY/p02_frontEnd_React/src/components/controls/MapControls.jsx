@@ -1,4 +1,4 @@
-// 위치: src/components/controls/MapControls.jsx
+// components/MapControls.jsx
 
 
 // ── 메인 컴포넌트: 상단 컨트롤 바 + 동 모드 버튼 ────────────
@@ -66,9 +66,12 @@ export default function MapControls({
                   ⏳ 동 데이터 로딩 중...
                </div>
             )}
+            {/* 점포수 / 매출 / 실거래가 - 가로 배치 */}
+            <div style={{ display:"flex", flexDirection:"row", gap:6 }}>
             {[
-               { mode: "realestate", label: "🏢 실거래가", activeColor: "#2563EB" },
-               { mode: "sales",      label: "📊 매출",     activeColor: "#059669" },
+               { mode: "store",      label: "점포수",   activeColor: "#7C3AED" },
+               { mode: "sales",      label: "매출",     activeColor: "#059669" },
+               { mode: "realestate", label: "실거래가", activeColor: "#2563EB" },
             ].map(({ mode, label, activeColor }) => {
                const isActive = dongMode === mode;
                return (
@@ -78,7 +81,7 @@ export default function MapControls({
                      style={{
                         border:       `2px solid ${isActive ? activeColor : "#e5e7eb"}`,
                         borderRadius: 10,
-                        padding:      "7px 14px",
+                        padding:      "7px 12px",
                         fontSize:     12,
                         fontWeight:   700,
                         cursor:       "pointer",
@@ -93,6 +96,7 @@ export default function MapControls({
                   </button>
                );
             })}
+            </div>
          </div>
       </>
    );

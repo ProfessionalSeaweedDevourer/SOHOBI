@@ -32,13 +32,13 @@ class DongMappingDAO(BaseDAO):
             )
             for emd_cd, gu_nm, law_nm, law_cd, adm_cd, adm_nm in rows:
                 key = str(emd_cd).strip()
-                if key not in self._emd:  # confidence 내림차순이므로 첫 번째가 최고값
+                if key not in self._emd:   # confidence 내림차순이므로 첫 번째가 최고값
                     self._emd[key] = {
-                        "law_cd": str(law_cd).strip() if law_cd else None,
-                        "adm_cd": str(adm_cd).strip() if adm_cd else None,
-                        "adm_nm": str(adm_nm).strip() if adm_nm else None,
-                        "gu_nm": str(gu_nm).strip() if gu_nm else None,
-                        "law_nm": str(law_nm).strip() if law_nm else None,
+                        'law_cd': str(law_cd).strip() if law_cd else None,
+                        'adm_cd': str(adm_cd).strip() if adm_cd else None,
+                        'adm_nm': str(adm_nm).strip() if adm_nm else None,
+                        'gu_nm' : str(gu_nm).strip()  if gu_nm  else None,
+                        'law_nm': str(law_nm).strip() if law_nm else None,
                     }
             self._loaded = True
             logger.info(f"[DongMappingDAO] 로드 완료: {len(self._emd)}개 매핑")
@@ -56,12 +56,12 @@ class DongMappingDAO(BaseDAO):
         """
         matched = 0
         for feat in geojson.get("features", []):
-            p = feat.get("properties", {})
+            p      = feat.get("properties", {})
             emd_cd = str(p.get("emd_cd", "")).strip()
-            full = p.get("full_nm", "").strip()
+            full   = p.get("full_nm", "").strip()
 
             # gu_nm: "서울특별시 종로구 청운동" → "종로구"
-            parts = full.split()
+            parts      = full.split()
             p["gu_nm"] = parts[1] if len(parts) > 1 else ""
 
             info = self._emd.get(emd_cd)

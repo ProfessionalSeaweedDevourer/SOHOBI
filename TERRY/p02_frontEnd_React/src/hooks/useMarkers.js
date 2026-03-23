@@ -11,17 +11,15 @@ import { CATEGORIES } from "../constants/categories";
 
 // ── 마커 스타일 생성 ───────────────────────────────────────────
 const CAT_COLORS = {
-   음식: "#FF6B6B", 소매: "#FF9800", 생활서비스: "#4ecdc4",
-   부동산: "#2196F3", 숙박: "#9C27B0", 교육: "#FFD700",
-   의료: "#E03131", 스포츠: "#2F9E44", "과학·기술": "#1971C2",
-   "수리·개인": "#7B4F2E","시설관리": "#607D8B",
+   I2: "#FF6B6B", G2: "#FF9800", S2: "#4ecdc4",
+   L1: "#2196F3", I1: "#9C27B0", P1: "#F59E0B",
+   Q1: "#E03131", R1: "#2F9E44", M1: "#1971C2",
+   N1: "#607D8B",
 };
 
 function makeMarkerStyle(category, selected = false) {
    let color = "#999";
-   for (const [key, val] of Object.entries(CAT_COLORS)) {
-      if (category?.includes(key)) { color = val; break; }
-   }
+   color = CAT_COLORS[category] || "#999";
    return new Style({
       image: new CircleStyle({
          radius: selected ? 10 : 7,
@@ -66,15 +64,16 @@ export function useMarkers(mapInstance, visibleCats) {
       const features = stores
          .filter((s) => s.경도 && s.위도)
          .filter((s) => {
-            const key = CATEGORIES.find((c) => s.상권업종대분류명?.includes(c.key))?.key;
-            return key ? visible.has(key) : true;
+            const code = s.상권업종대분류코드;
+            if (!code) return true; // 코드 없으면 표시
+            return visible.has(code);
          })
          .map((store) => {
             const feature = new Feature({
                geometry: new Point(fromLonLat([parseFloat(store.경도), parseFloat(store.위도)])),
             });
             feature.setProperties({ store });
-            feature.setStyle(makeMarkerStyle(store.상권업종대분류명));
+            feature.setStyle(makeMarkerStyle(store.상권업종대분류코드));
             return feature;
          });
 
@@ -96,10 +95,12 @@ export function useMarkers(mapInstance, visibleCats) {
    };
 
    // visibleCats 바뀌면 마커 재렌더링
+   // Set 참조 동일성 문제 → size + join으로 변경 감지
+   const visibleKey = [...visibleCats].sort().join(",");
    useEffect(() => {
       if (allStoresRef.current.length > 0)
          drawMarkers(allStoresRef.current, visibleCats);
-   }, [visibleCats]); // eslint-disable-line react-hooks/exhaustive-deps
+   }, [visibleKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
    return { markerLayerRef, allStoresRef, drawCircle, drawMarkers, clearMarkers };
 }

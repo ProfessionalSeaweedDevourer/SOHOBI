@@ -9,9 +9,9 @@ export default function CategoryPanel({
    onHideAll,
    totalCount,
    catCounts,
-   onSearch,       // (query: string) => void  MapView에서 주입
+   onSearch, // (query: string) => void  MapView에서 주입
 }) {
-   const [collapsed,   setCollapsed]   = useState(false);
+   const [collapsed, setCollapsed] = useState(false);
    const [searchQuery, setSearchQuery] = useState("");
 
    // ── 검색 실행 ────────────────────────────────────────────────
@@ -21,11 +21,13 @@ export default function CategoryPanel({
 
    return (
       <div style={{ ...S.sidebar, width: collapsed ? 48 : 220 }}>
-
          {/* ── 헤더 ──────────────────────────────────────────── */}
          <div style={S.header}>
             {!collapsed && <span style={S.headerTitle}>🏪 상권 분석</span>}
-            <button style={S.collapseBtn} onClick={() => setCollapsed((v) => !v)}>
+            <button
+               style={S.collapseBtn}
+               onClick={() => setCollapsed((v) => !v)}
+            >
                {collapsed ? "▶" : "◀"}
             </button>
          </div>
@@ -43,7 +45,9 @@ export default function CategoryPanel({
                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                      style={S.searchInput}
                   />
-                  <button style={S.searchBtn} onClick={handleSearch}>🔍</button>
+                  <button style={S.searchBtn} onClick={handleSearch}>
+                     🔍
+                  </button>
                </div>
 
                {/* ── 전체 통계 ─────────────────────────────── */}
@@ -55,8 +59,12 @@ export default function CategoryPanel({
 
                {/* ── Hide all / Show all ───────────────────── */}
                <div style={S.allBtns}>
-                  <button style={S.hideAllBtn} onClick={onHideAll}>Hide all</button>
-                  <button style={S.showAllBtn} onClick={onShowAll}>Show all</button>
+                  <button style={S.hideAllBtn} onClick={onHideAll}>
+                     Hide all
+                  </button>
+                  <button style={S.showAllBtn} onClick={onShowAll}>
+                     Show all
+                  </button>
                </div>
 
                <div style={S.divider} />
@@ -64,24 +72,38 @@ export default function CategoryPanel({
                {/* ── 카테고리 목록 (스크롤) ────────────────── */}
                <div style={S.catList}>
                   {CATEGORIES.map((cat) => {
-                     const isOn  = visibleCats.has(cat.key);
+                     const isOn = visibleCats.has(cat.key);
                      const count = catCounts?.[cat.key] || 0;
                      return (
-                        <div key={cat.key} style={S.catRow}>
+                        <div key={cat.label || cat.key} style={S.catRow}>
                            <div style={S.catLeft}>
-                              <div style={{ ...S.catDot, background: isOn ? cat.color : "#ccc" }}>
-                                 <span style={{ fontSize: 12 }}>{cat.icon}</span>
+                              <div
+                                 style={{
+                                    ...S.catDot,
+                                    background: isOn ? cat.color : "#ccc",
+                                 }}
+                              >
+                                 <span style={{ fontSize: 12 }}>
+                                    {cat.icon}
+                                 </span>
                               </div>
-                              <span style={{ ...S.catName, color: isOn ? "#111" : "#aaa" }}>
-                                 {cat.key}
+                              <span
+                                 style={{
+                                    ...S.catName,
+                                    color: isOn ? "#111" : "#aaa",
+                                 }}
+                              >
+                                 {cat.label || cat.key}
                               </span>
                               {count > 0 && (
-                                 <span style={{
-                                    ...S.countChip,
-                                    background: isOn ? cat.bg  : "#f5f5f5",
-                                    color:      isOn ? cat.color : "#aaa",
-                                    border:     `1px solid ${isOn ? cat.color : "#ddd"}`,
-                                 }}>
+                                 <span
+                                    style={{
+                                       ...S.countChip,
+                                       background: isOn ? cat.bg : "#f5f5f5",
+                                       color: isOn ? cat.color : "#aaa",
+                                       border: `1px solid ${isOn ? cat.color : "#ddd"}`,
+                                    }}
+                                 >
                                     {count}
                                  </span>
                               )}
@@ -90,7 +112,7 @@ export default function CategoryPanel({
                               style={{
                                  ...S.toggleBtn,
                                  background: isOn ? cat.color : "#e5e7eb",
-                                 color:      isOn ? "#fff"    : "#999",
+                                 color: isOn ? "#fff" : "#999",
                               }}
                               onClick={() => onToggle(cat.key)}
                            >
@@ -132,84 +154,140 @@ const S = {
    },
    headerTitle: { fontSize: 13, fontWeight: 700, color: "#111" },
    collapseBtn: {
-      background: "transparent", border: "none", cursor: "pointer",
-      fontSize: 12, color: "#888", padding: "2px 4px", marginLeft: "auto",
+      background: "transparent",
+      border: "none",
+      cursor: "pointer",
+      fontSize: 12,
+      color: "#888",
+      padding: "2px 4px",
+      marginLeft: "auto",
    },
    // ── 검색 ──
    searchBox: {
-      display: "flex", gap: 4,
+      display: "flex",
+      gap: 4,
       padding: "10px 12px 0",
       flexShrink: 0,
       position: "relative",
-      zIndex: 1,             // 사이드바 내부에서만 동작
+      zIndex: 1, // 사이드바 내부에서만 동작
    },
    searchInput: {
-      flex: 1, padding: "5px 8px",
-      border: "1px solid #ddd", borderRadius: 8,
-      fontSize: 12, outline: "none",
+      flex: 1,
+      padding: "5px 8px",
+      border: "1px solid #ddd",
+      borderRadius: 8,
+      fontSize: 12,
+      outline: "none",
       color: "#111",
-      minWidth: 0,           // flex 자식 넘침 방지
+      minWidth: 0, // flex 자식 넘침 방지
       boxSizing: "border-box",
    },
    searchBtn: {
       padding: "5px 8px",
-      background: "#2563EB", border: "none",
-      borderRadius: 8, cursor: "pointer",
-      fontSize: 13, color: "#fff",
+      background: "#2563EB",
+      border: "none",
+      borderRadius: 8,
+      cursor: "pointer",
+      fontSize: 13,
+      color: "#fff",
       flexShrink: 0,
    },
    totalBadge: {
-      margin: "10px 12px 0", padding: "7px 10px",
-      background: "#EFF6FF", borderRadius: 8,
-      fontSize: 12, color: "#1971C2", textAlign: "center",
+      margin: "10px 12px 0",
+      padding: "7px 10px",
+      background: "#EFF6FF",
+      borderRadius: 8,
+      fontSize: 12,
+      color: "#1971C2",
+      textAlign: "center",
    },
    allBtns: { display: "flex", gap: 6, padding: "10px 12px 0" },
    hideAllBtn: {
-      flex: 1, padding: "5px 0",
-      background: "#f5f5f5", border: "1px solid #ddd",
-      borderRadius: 6, fontSize: 11, fontWeight: 600,
-      color: "#666", cursor: "pointer",
+      flex: 1,
+      padding: "5px 0",
+      background: "#f5f5f5",
+      border: "1px solid #ddd",
+      borderRadius: 6,
+      fontSize: 11,
+      fontWeight: 600,
+      color: "#666",
+      cursor: "pointer",
    },
    showAllBtn: {
-      flex: 1, padding: "5px 0",
-      background: "#2563EB", border: "none",
-      borderRadius: 6, fontSize: 11, fontWeight: 600,
-      color: "#fff", cursor: "pointer",
+      flex: 1,
+      padding: "5px 0",
+      background: "#2563EB",
+      border: "none",
+      borderRadius: 6,
+      fontSize: 11,
+      fontWeight: 600,
+      color: "#fff",
+      cursor: "pointer",
    },
-   divider: { height: 1, background: "#f0f0f0", margin: "10px 0 4px", flexShrink: 0 },
+   divider: {
+      height: 1,
+      background: "#f0f0f0",
+      margin: "10px 0 4px",
+      flexShrink: 0,
+   },
    catList: {
       overflowY: "scroll",
-      height: 0,              // flex 자식이 실제로 축소되도록
-      flex: "1 1 0",          // grow/shrink/basis=0 → 남은 공간만큼 먹고 스크롤
+      height: 0, // flex 자식이 실제로 축소되도록
+      flex: "1 1 0", // grow/shrink/basis=0 → 남은 공간만큼 먹고 스크롤
       padding: "0 8px 16px",
       scrollbarWidth: "thin",
       scrollbarColor: "#ddd transparent",
    },
    catRow: {
-      display: "flex", alignItems: "center",
+      display: "flex",
+      alignItems: "center",
       justifyContent: "space-between",
-      padding: "6px 4px", borderRadius: 8,
-      cursor: "pointer", transition: "background 0.1s",
+      padding: "6px 4px",
+      borderRadius: 8,
+      cursor: "pointer",
+      transition: "background 0.1s",
    },
-   catLeft: { display: "flex", alignItems: "center", gap: 7, flex: 1, minWidth: 0 },
+   catLeft: {
+      display: "flex",
+      alignItems: "center",
+      gap: 7,
+      flex: 1,
+      minWidth: 0,
+   },
    catDot: {
-      width: 28, height: 28, borderRadius: "50%",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      flexShrink: 0, transition: "background 0.2s",
+      width: 28,
+      height: 28,
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      transition: "background 0.2s",
    },
    catName: {
-      fontSize: 12, fontWeight: 600,
-      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+      fontSize: 12,
+      fontWeight: 600,
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
       transition: "color 0.2s",
    },
    countChip: {
-      fontSize: 10, fontWeight: 700,
-      padding: "1px 6px", borderRadius: 10,
-      flexShrink: 0, transition: "all 0.2s",
+      fontSize: 10,
+      fontWeight: 700,
+      padding: "1px 6px",
+      borderRadius: 10,
+      flexShrink: 0,
+      transition: "all 0.2s",
    },
    toggleBtn: {
-      border: "none", borderRadius: 6, padding: "3px 8px",
-      fontSize: 10, fontWeight: 700, cursor: "pointer",
-      flexShrink: 0, transition: "all 0.2s",
+      border: "none",
+      borderRadius: 6,
+      padding: "3px 8px",
+      fontSize: 10,
+      fontWeight: 700,
+      cursor: "pointer",
+      flexShrink: 0,
+      transition: "all 0.2s",
    },
 };

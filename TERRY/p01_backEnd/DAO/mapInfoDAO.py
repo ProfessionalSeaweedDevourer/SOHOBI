@@ -27,14 +27,17 @@ SIDO_BOUNDS = {
     "소상공인_제주": (33.10, 33.65, 126.10, 126.98),
 }
 
-SIDO_NAME_MAP = {k.replace("소상공인_", ""): k for k in SIDO_BOUNDS}  # "서울" → "소상공인_서울"
+SIDO_NAME_MAP = {
+    k.replace("소상공인_", ""): k for k in SIDO_BOUNDS
+}  # "서울" → "소상공인_서울"
 
 _DF_CACHE: dict = {}  # { table_name: pd.DataFrame }
 
 
 def getTableByCoord(lat: float, lng: float) -> list:
     matched = [
-        t for t, (la, lb, lna, lnb) in SIDO_BOUNDS.items()
+        t
+        for t, (la, lb, lna, lnb) in SIDO_BOUNDS.items()
         if la <= lat <= lb and lna <= lng <= lnb
     ]
     return matched or ["소상공인_서울"]
@@ -51,14 +54,16 @@ class MapInfoDAO(BaseDAO):
 
         con, cur = self._db_con()
         try:
-            cur.execute(f"""
+            cur.execute(
+                f"""
                 SELECT 상가업소번호, 상호명,
-                       상권업종대분류명, 상권업종중분류명, 상권업종소분류명,
+                       상권업종대분류코드, 상권업종대분류명, 상권업종중분류명, 상권업종소분류명,
                        시도명, 시군구명, 행정동명, 도로명주소,
                        층정보, 호정보, 경도, 위도
                 FROM {table}
                 WHERE 위도 IS NOT NULL AND 경도 IS NOT NULL
-            """)
+            """
+            )
             cols = [d[0] for d in cur.description]
             rows = cur.fetchall()
         finally:
@@ -83,7 +88,7 @@ class MapInfoDAO(BaseDAO):
     # ── 반경 조회 (캐시 우선, 캐시 미스 시 DB 직접) ──────────────
 
     def _query_cache(self, lat, lng, radius, limit, category=None):
-        tables    = getTableByCoord(lat, lng)
+        tables = getTableByCoord(lat, lng)
         lat_delta = radius / 111000.0
         lng_delta = radius / (111000.0 * abs(math.cos(math.radians(lat))) or 1)
         la_min, la_max = lat - lat_delta, lat + lat_delta
@@ -92,10 +97,12 @@ class MapInfoDAO(BaseDAO):
         all_rows = []
         for table in tables:
             if table in _DF_CACHE:
-                df   = _DF_CACHE[table]
+                df = _DF_CACHE[table]
                 mask = (
-                    (df["위도"] >= la_min) & (df["위도"] <= la_max) &
-                    (df["경도"] >= ln_min) & (df["경도"] <= ln_max)
+                    (df["위도"] >= la_min)
+                    & (df["위도"] <= la_max)
+                    & (df["경도"] >= ln_min)
+                    & (df["경도"] <= ln_max)
                 )
                 if category:
                     mask &= df["상권업종대분류명"] == category
@@ -104,7 +111,7 @@ class MapInfoDAO(BaseDAO):
                 where_cat = "AND 상권업종대분류명 = :category" if category else ""
                 sql = f"""
                     SELECT 상가업소번호, 상호명,
-                           상권업종대분류명, 상권업종중분류명, 상권업종소분류명,
+                           상권업종대분류코드, 상권업종대분류명, 상권업종중분류명, 상권업종소분류명,
                            시도명, 시군구명, 행정동명, 도로명주소,
                            층정보, 호정보, 경도, 위도
                     FROM {table}
@@ -114,8 +121,13 @@ class MapInfoDAO(BaseDAO):
                       {where_cat}
                     FETCH FIRST :limit ROWS ONLY
                 """
-                params = dict(lat_min=la_min, lat_max=la_max,
-                              lng_min=ln_min, lng_max=ln_max, limit=limit)
+                params = dict(
+                    lat_min=la_min,
+                    lat_max=la_max,
+                    lng_min=ln_min,
+                    lng_max=ln_max,
+                    limit=limit,
+                )
                 if category:
                     params["category"] = category
                 rows = self._query(sql, params)
@@ -132,12 +144,14 @@ class MapInfoDAO(BaseDAO):
     # ── 업종 목록 ────────────────────────────────────────────────
 
     def getCategories(self) -> list:
-        rows = self._query("""
+        rows = self._query(
+            """
             SELECT DISTINCT 상권업종대분류명
             FROM 소상공인_서울
             WHERE 상권업종대분류명 IS NOT NULL
             ORDER BY 상권업종대분류명
-        """)
+        """
+        )
         return [r[0] for r in rows]
 
     # ── 동별 밀집도 ──────────────────────────────────────────────
@@ -149,23 +163,30 @@ class MapInfoDAO(BaseDAO):
         rows = self._query(
             f"SELECT 상권업종대분류명, COUNT(*) FROM {table} "
             "WHERE 행정동명 = :1 GROUP BY 상권업종대분류명 ORDER BY 2 DESC",
-            [dong]
+            [dong],
         )
         cat_counts = {r[0]: r[1] for r in rows if r[0]}
         total = sum(cat_counts.values())
         level = 3 if total >= 500 else 2 if total >= 200 else 1 if total >= 50 else 0
-        return {"sido": sido, "sigg": sigg, "dong": dong,
-                "total": total, "level": level, "cat_counts": cat_counts, "table": table}
+        return {
+            "sido": sido,
+            "sigg": sigg,
+            "dong": dong,
+            "total": total,
+            "level": level,
+            "cat_counts": cat_counts,
+            "table": table,
+        }
 
     # ── 적재 현황 ────────────────────────────────────────────────
 
     def getStatus(self) -> dict:
         results = {}
-        total   = 0
+        total = 0
         for table in SIDO_BOUNDS:
             try:
                 rows = self._query(f"SELECT COUNT(*) FROM {table}")
-                cnt  = rows[0][0]
+                cnt = rows[0][0]
             except Exception:
                 cnt = "테이블 없음"
             results[table] = cnt
@@ -260,6 +281,7 @@ class MapInfoDAO(BaseDAO):
 # ── 하위 호환: mapController의 _get_df(table) 호출 지원 ────────────
 # mapController lifespan / _preload_caches 에서 사용
 _dao_instance = None
+
 
 def _get_df(table: str, force: bool = False):
     global _dao_instance
