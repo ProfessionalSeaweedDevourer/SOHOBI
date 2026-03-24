@@ -34,5 +34,5 @@ def get_signoff_client() -> openai.AsyncAzureOpenAI:
         azure_endpoint=os.getenv("AZURE_SIGNOFF_ENDPOINT"),
         azure_ad_token_provider=_TOKEN_PROVIDER,
         api_version="2025-04-01-preview",
-        timeout=180.0,
+        timeout=220.0,  # Container Apps 240초 timeout 이내에 Python이 먼저 에러 이벤트 전송하도록 상향
     )
