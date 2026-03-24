@@ -51,6 +51,7 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 
 - PR 본문에 "Generated with Claude Code" attribution 포함 금지
 - 커밋 메시지: `type: 한국어 설명` (예: `fix: location 에이전트 버그 수정`)
+- **PR 머지는 검증 완료 후에만 지시한다**: 코드 변경 후 curl 테스트 등으로 실제 동작을 확인하기 전까지 "PR을 머지하십시오"라고 지시하지 않는다. 검증 전 추가 수정이 필요하면 같은 브랜치에 커밋을 추가하고 열린 PR을 유지한다.
 
 ## 컴팩션 시 보존할 것
 
