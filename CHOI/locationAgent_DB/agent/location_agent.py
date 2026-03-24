@@ -3,11 +3,19 @@ location_agent.py
 상권분석 에이전트 본체
 - DB에서 raw 데이터 조회 후 LLM으로 분석
 - 오케스트레이터에서 SK Plugin(location_plugin.py)을 통해 호출됨
+
+[성능 개선]
+- Kernel 싱글턴 재사용 (매 호출마다 재생성 방지)
+- DB 쿼리 병렬 실행 (asyncio.gather + ThreadPoolExecutor)
+- LLM 호출과 유사상권 DB 쿼리 동시 실행
+- compare() 지역별 DB 쿼리 병렬 실행
 """
 
+import asyncio
 import json
 import sys
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -21,30 +29,38 @@ from semantic_kernel.functions import KernelArguments
 
 from db.repository import CommercialRepository
 
+# ── Kernel 싱글턴 (개선 2) ─────────────────────────────────
+_shared_kernel = None
 
-def _make_kernel() -> Kernel:
-    k = Kernel()
-    k.add_service(
-        AzureChatCompletion(
-            deployment_name=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"),
-            endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"),
+
+def _get_kernel() -> Kernel:
+    """Kernel + AzureChatCompletion 객체를 한 번만 생성하여 재사용"""
+    global _shared_kernel
+    if _shared_kernel is None:
+        _shared_kernel = Kernel()
+        _shared_kernel.add_service(
+            AzureChatCompletion(
+                deployment_name=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"),
+                endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"),
+            )
         )
-    )
-    return k
+    return _shared_kernel
+
+
+# ── 동기 DB 호출을 비동기로 감싸기 위한 스레드풀 ──────────────
+_executor = ThreadPoolExecutor(max_workers=4)
 
 
 class LocationAgent:
     def __init__(self):
         self.repo = CommercialRepository()
 
+    # ── 단일 지역 분석 (개선 1: DB 병렬 + LLM/유사상권 동시) ──
     async def analyze(
         self, location: str, business_type: str, quarter: str = "20253"
     ) -> dict:
-        sales_data = self.repo.get_sales(location, business_type, quarter)
-        store_data = self.repo.get_store_count(location, business_type, quarter)
-
         supported_industries = self.repo.get_supported_industries()
         if business_type not in supported_industries:
             return {
@@ -53,6 +69,18 @@ class LocationAgent:
                 "business_type": business_type,
                 "quarter": quarter,
             }
+
+        loop = asyncio.get_event_loop()
+
+        # ── DB 쿼리 2개 병렬 실행 ──────────────────────────
+        sales_data, store_data = await asyncio.gather(
+            loop.run_in_executor(
+                _executor, self.repo.get_sales, location, business_type, quarter
+            ),
+            loop.run_in_executor(
+                _executor, self.repo.get_store_count, location, business_type, quarter
+            ),
+        )
 
         if not sales_data and not store_data:
             return {
@@ -86,16 +114,19 @@ class LocationAgent:
                     int(s_sales / s_count) if s_count > 0 else 0
                 )
 
-        analysis = await self._run_agent(
-            location, business_type, quarter, sales_data, store_data
-        )
-
-        # 유사 상권 추천
-        similar = self.repo.get_similar_locations(
-            business_type=business_type,
-            quarter=quarter,
-            exclude_location=location,
-            top_n=3,
+        # ── LLM 분석 + 유사상권 DB 쿼리 동시 실행 ──────────
+        analysis, similar = await asyncio.gather(
+            self._run_agent(
+                location, business_type, quarter, sales_data, store_data
+            ),
+            loop.run_in_executor(
+                _executor,
+                self.repo.get_similar_locations,
+                business_type,
+                quarter,
+                location,
+                3,
+            ),
         )
 
         return {
@@ -111,7 +142,7 @@ class LocationAgent:
     async def _run_agent(
         self, location, business_type, quarter, sales_data, store_data
     ) -> str:
-        kernel = _make_kernel()
+        kernel = _get_kernel()
         settings = AzureChatPromptExecutionSettings()
         year = quarter[:4]
         q = quarter[4]
@@ -207,6 +238,7 @@ class LocationAgent:
 
         return result or ""
 
+    # ── 복수 지역 비교 (개선 3: 지역별 DB 쿼리 병렬) ──────────
     async def compare(
         self, locations: list, business_type: str, quarter: str = "20244"
     ) -> dict:
@@ -218,11 +250,29 @@ class LocationAgent:
         year = quarter[:4]
         q = quarter[4]
 
+        loop = asyncio.get_event_loop()
+
+        # ── 모든 지역의 sales + store를 한번에 병렬 실행 ────
+        tasks = []
+        for loc in locations:
+            tasks.append(
+                loop.run_in_executor(
+                    _executor, self.repo.get_sales, loc, business_type, quarter
+                )
+            )
+            tasks.append(
+                loop.run_in_executor(
+                    _executor, self.repo.get_store_count, loc, business_type, quarter
+                )
+            )
+        results = await asyncio.gather(*tasks)
+        # results = [sales_A, store_A, sales_B, store_B, ...]
+
         # 지역별 데이터 수집
         location_data = []
-        for loc in locations:
-            sales = self.repo.get_sales(loc, business_type, quarter)
-            store = self.repo.get_store_count(loc, business_type, quarter)
+        for i, loc in enumerate(locations):
+            sales = results[i * 2]
+            store = results[i * 2 + 1]
 
             # sales도 없고 store도 없으면 완전 제외
             if not sales and not store:
@@ -290,7 +340,7 @@ class LocationAgent:
     async def _run_compare_agent(
         self, location_data: list, business_type: str, year: str, q: str
     ) -> str:
-        kernel = _make_kernel()
+        kernel = _get_kernel()
         settings = AzureChatPromptExecutionSettings()
 
         # 점포 데이터 포함 여부 확인
