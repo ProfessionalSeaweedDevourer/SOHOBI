@@ -13,7 +13,7 @@ ORACLE_PASSWORD=...
 ORACLE_DSN=...   # host:port/service_name
 """
 
-import oracledb as cx_Oracle
+import oracledb
 import os
 from typing import Optional
 
@@ -370,7 +370,7 @@ INDUSTRY_CODE_MAP = {
 
 class CommercialRepository:
     def _connect(self):
-        return cx_Oracle.connect(
+        return oracledb.connect(
             user=os.getenv("ORACLE_USER"),
             password=os.getenv("ORACLE_PASSWORD"),
             dsn=os.getenv("ORACLE_DSN"),

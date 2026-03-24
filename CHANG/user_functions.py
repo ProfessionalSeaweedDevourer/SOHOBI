@@ -23,10 +23,22 @@ class FinanceSimulationSkill:
         rent: float = 0,
         admin: float = 0,
         fee: float = 0,
-        tax_rate: float = 0.2,
     ) -> dict[str, float]:
         iterations = 10000
         results = []
+
+        avg_sales = sum(revenue) / len(revenue)
+        if cost is None:
+            cost = avg_sales * 0.36
+        if salary is None:
+            salary = avg_sales * 0.20
+        if rent is None:
+            rent = avg_sales * 0.15
+        if admin is None:
+            admin = avg_sales * 0.03
+        if fee is None:
+            fee = avg_sales * 0.03
+        # None 값만 % 기반 연산, 추후 업종 별 % list 고려중(현재 카페 기준)
 
         salary_cost = self._calculate_salary(salary, hours)
 
@@ -35,15 +47,13 @@ class FinanceSimulationSkill:
                 simulated_revenue = random.gauss(revenue[0], revenue[0] * 0.1)
                 simulated_cost = random.gauss(cost, cost * 0.1)
                 gross_profit = simulated_revenue - simulated_cost - salary_cost - rent - admin - fee
-                net_profit = gross_profit * (1 - tax_rate)
-                results.append(net_profit)
+                results.append(gross_profit)
         else:
             for _ in range(iterations):
                 simulated_revenue = random.choice(revenue)
                 simulated_cost = random.gauss(cost, cost * 0.1)
                 gross_profit = simulated_revenue - simulated_cost - salary_cost - rent - admin - fee
-                net_profit = gross_profit * (1 - tax_rate)
-                results.append(net_profit)
+                results.append(gross_profit)
 
         avg_profit = sum(results) / iterations
         loss_probability = sum(1 for r in results if r < 0) / iterations
@@ -63,22 +73,30 @@ class FinanceSimulationSkill:
         return {"recoverable": True, "months": math.ceil(initial_investment / avg_profit)}
 
 
-    # 누적 정보 반영을 위한 JSON 상태 관리용 함수 2종 추가
-    def load_defaults(self) -> dict:
-        """
-        모든 변수에 평균치 또는 None 기본값을 부여한 초기 JSON 반환
-        """
+    def load_initial(self, region: str = None, industry: str = None) -> dict:
+        base_revenue = 17000000
+        revenue = None
+
+        if region and industry:
+            sales_list = self.dbwork.get_sales(region, industry)
+            if isinstance(sales_list, list) and sales_list:
+                revenue = sales_list
+
+        if revenue is None:
+            revenue = base_revenue
+
         return {
-            "revenue": 17000000,
-            "cost": 6120000,
-            "salary": 3400000,
+            "revenue": revenue,
+            "cost": None,
+            "salary": None,
             "hours": None,
-            "rent": 2550000,
-            "admin": 510000,
-            "fee": 510000,
+            "rent": None,
+            "admin": None,
+            "fee": None,
             "initial_investment": None
         }
-    # 카페-평균치 기준 기본값, 해당 값을 DB 등을 불러오는 형태로 추후 업데이트 상정중
+    # DB에서 매출 값만 불러오게됩니다, 해당 base_revenue는 카페 기준으로 추후 수정될 수 있습니다.
+    # region and industry의 경우 부모 에이전트에게서 받을 임시 정보입니다(지역 및 업종). 필요 시 변수 명 및 구조 수정.
 
     def merge_json(self, previous: dict, current: dict) -> dict:
         """

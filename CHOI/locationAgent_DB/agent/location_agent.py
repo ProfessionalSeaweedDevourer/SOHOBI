@@ -223,6 +223,8 @@ class LocationAgent:
         for loc in locations:
             sales = self.repo.get_sales(loc, business_type, quarter)
             store = self.repo.get_store_count(loc, business_type, quarter)
+
+            # sales도 없고 store도 없으면 완전 제외
             if not sales and not store:
                 continue
 
@@ -231,30 +233,36 @@ class LocationAgent:
 
             monthly = ss.get("monthly_sales_krw", 0)
             cnt = st.get("store_count", 0) if store else None
-            avg = int(monthly / cnt) if cnt else None
+            avg = int(monthly / cnt) if (monthly and cnt) else None
 
-            item = {
-                "location": loc,
-                "monthly_sales_krw": monthly,
-                "weekday_pct": (
-                    round(ss.get("weekday_sales_krw", 0) / monthly * 100)
-                    if monthly
-                    else 0
-                ),
-                "weekend_pct": (
-                    round(ss.get("weekend_sales_krw", 0) / monthly * 100)
-                    if monthly
-                    else 0
-                ),
-                "male_pct": (
-                    round(ss.get("male_sales_krw", 0) / monthly * 100) if monthly else 0
-                ),
-                "female_pct": (
-                    round(ss.get("female_sales_krw", 0) / monthly * 100)
-                    if monthly
-                    else 0
-                ),
-            }
+            # sales 데이터 있는 경우만 매출/비율 계산
+            if sales and monthly:
+                item = {
+                    "location": loc,
+                    "monthly_sales_krw": monthly,
+                    "weekday_pct": round(
+                        ss.get("weekday_sales_krw", 0) / monthly * 100
+                    ),
+                    "weekend_pct": round(
+                        ss.get("weekend_sales_krw", 0) / monthly * 100
+                    ),
+                    "male_pct": round(ss.get("male_sales_krw", 0) / monthly * 100),
+                    "female_pct": round(
+                        ss.get("female_sales_krw", 0) / monthly * 100
+                    ),
+                }
+            else:
+                # sales 없음 → 매출 항목은 None으로 표시
+                item = {
+                    "location": loc,
+                    "monthly_sales_krw": None,
+                    "weekday_pct": None,
+                    "weekend_pct": None,
+                    "male_pct": None,
+                    "female_pct": None,
+                    "no_sales_data": True,  # LLM에게 데이터 없음 알림
+                }
+
             # 점포 데이터 있을 때만 추가
             if store:
                 item["store_count"] = cnt
@@ -342,6 +350,9 @@ class LocationAgent:
                 "- 번호 매기기 절대 금지 (추천 순위 제외)\n"
                 "- 유의사항 이후 총평 문장 추가 금지\n"
                 "- 제공된 데이터만 사용, 임의로 수치 추론/생성 금지\n"
+                "- no_sales_data가 true인 지역은 비교표에서 매출/주중주말/성별 항목을 '데이터 없음'으로 표시\n"
+                "- 매출 데이터가 없는 지역도 점포수/개업률/폐업률은 정상 출력\n"
+                "- 추천 순위 결정 시 매출 데이터 없는 지역은 점포 데이터만으로 평가하고 그 사실을 명시\n"
             ),
             kernel=kernel,
             arguments=KernelArguments(settings=settings),
