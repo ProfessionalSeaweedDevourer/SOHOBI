@@ -51,14 +51,10 @@ async def run_signoff(client: openai.AsyncAzureOpenAI, domain: str, draft: str, 
     messages = _build_messages(domain, draft)
 
     for attempt in range(max_retries + 1):
-        # effort="low": 속도 우선 (기본 medium → 254초 이상 소요됨, Container Apps 240초 timeout 초과)
-        # 항목별 기준 대조 작업이므로 low effort로도 기능적으로 충분함
-        # 장기적으로는 gpt-4o 계열 전환(3-C) 권장
         response = await client.responses.create(
             model=deployment,
             input=messages,
             text={"format": {"type": "json_object"}},
-            reasoning={"effort": "low"},
         )
         result_text = response.output_text
         verdict = json.loads(result_text)
