@@ -369,12 +369,24 @@ INDUSTRY_CODE_MAP = {
 
 
 class CommercialRepository:
+    _pool = None
+
+    @classmethod
+    def _get_pool(cls):
+        """커넥션 풀 싱글턴 — 매 쿼리마다 connect/close 오버헤드 제거"""
+        if cls._pool is None:
+            cls._pool = oracledb.create_pool(
+                user=os.getenv("ORACLE_USER"),
+                password=os.getenv("ORACLE_PASSWORD"),
+                dsn=os.getenv("ORACLE_DSN"),
+                min=2,
+                max=5,
+                increment=1,
+            )
+        return cls._pool
+
     def _connect(self):
-        return oracledb.connect(
-            user=os.getenv("ORACLE_USER"),
-            password=os.getenv("ORACLE_PASSWORD"),
-            dsn=os.getenv("ORACLE_DSN"),
-        )
+        return self._get_pool().acquire()
 
     def _get_adm_codes(self, location: str) -> list:
         return AREA_MAP.get(location, [])
