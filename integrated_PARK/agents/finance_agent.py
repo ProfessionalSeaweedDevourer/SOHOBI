@@ -38,14 +38,17 @@ _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 질문을 했습니다:
 단, 숫자에 단위가 명시되지 않은 경우 기본적으로 '만원' 단위로 해석하세요.
 예: "매출 700" → 700만원 = 7,000,000원
 
-- revenue: 예상 월매출 데이터 리스트 (숫자 배열, 원 단위)
+- revenue: 예상 월매출 데이터 리스트 (숫자 배열, 원 단위). 사용자가 단일 값만 언급한 경우 반드시 1개짜리 배열로 작성.
 - cost: 예상 월 원가 (숫자, 원 단위)
 - salary: 직원 급여 (숫자, 원 단위, 고정급 또는 시급)
 - hours: 월 근무시간 (시급일 경우만, 없으면 생략)
-- rent: 임대료 (원 단위, 없으면 0)
-- admin: 관리비 (원 단위, 없으면 0)
-- fee: 수수료 (원 단위, 없으면 0)
-- initial_investment: 초기 투자비용 (원 단위, 언급 없으면 생략)
+- rent: 임대료 (원 단위)
+- admin: 관리비 (원 단위)
+- fee: 수수료 (원 단위)
+- initial_investment: 초기 투자비용 (원 단위)
+
+사용자가 명시적으로 언급한 항목만 값을 채우고, 언급하지 않은 항목은 반드시 null으로 두세요.
+임의로 값을 추정하거나 채워넣지 마세요.
 
 출력은 JSON 형식으로만 하세요."""
 
@@ -53,25 +56,37 @@ _EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다.
 
 [시뮬레이션 가정 조건]
 {assumptions}
+입력되지 않은 항목은 지역/업종/상권 평균치를 적용하였으며, 추가 입력 시 더 정확한 결과를 제공할 수 있습니다.
 
 [시뮬레이션 결과 — 10,000회 몬테카를로]
 ★ 손실 발생 확률: {loss_prob}  ← 핵심 지표
 - 평균 월 순이익: {avg_profit:,}원
+- 손실 발생 관측 여부: {loss_prob}
+- 비관 시나리오 월 순이익: {p20:,}원
+  (전체 시뮬레이션 중 하위 20%에 해당하는 케이스의 상단 기준값)
 
-위 결과를 바탕으로 아래 질문에 대한 창업 재무 분석 응답을 작성하십시오.
+위 수치를 그대로 사용하여 별도 계산 없이 아래 형식으로 작성하세요.
 
-질문: {question}
+[사용자 질문]
+{question}
 
-작성 기준:
-- 손실 발생 확률을 수치(%)로 응답의 첫 단락 또는 주요 강조 위치에 명시하십시오.
-  손실 케이스가 관측되지 않은 경우에도 '관측되지 않았습니다'로 명확히 서술하십시오.
-- 첫 단락에 위의 가정 조건(월매출, 원가, 급여 등)을 명시하십시오.
-- 평균 순이익은 참고 수치로 제시하되, 손실 확률이 핵심 메시지임을 유지하십시오.
-- 위험 요인과 기회 요인을 함께 언급하십시오.
-- 낙관·기본·비관 시나리오와 리스크 경고를 포함하십시오.
-- 시뮬레이션 범위 밖의 리스크(예: 경기 침체, 예상 외 비용 급증)가 존재함을 언급하십시오.
-- 투자 권유가 아닌 정보 제공임을 명시하십시오.
-- 경영자가 이해하기 쉬운 자연어로 작성하십시오."""
+[에이전트 응답]
+
+[1. 가정 조건]
+(위 가정 조건을 항목별로 나열)
+
+[2. 시뮬레이션 결과]
+(평균 순이익과 손실 발생 여부를 간결하게 서술.
+10명 중 2명꼴로 월 순이익이 {p20:,}원 이하에 그칠 수 있으며,
+이것이 지속될 경우 사업 운영에 부담이 될 수 있음을 언급하세요.)
+
+[3. 외부 리스크 경고]
+(시뮬레이션 가정 범위 밖의 외부 충격—경기 침체, 임대료 급등, 수요 급감 등—이
+발생할 경우 실제 손실로 이어질 수 있음을 경고하세요.)
+
+[안내]
+본 결과는 투자 권유가 아닌 정보 제공을 목적으로 하며, 실제 사업 결과와 다를 수 있습니다.
+"""
 
 _RECOVERY_PROMPT = """초기 투자비용 회수 시뮬레이션 결과:
 - 회수 가능 여부: {recoverable}
@@ -94,7 +109,7 @@ _PROFILE_CONTEXT = """[창업자 상황]
 
 
 class FinanceAgent:
-    def __init__(self, kernel: Kernel):
+    def __init__(self, kernel: Kernel, region: str = None, industry: str = None):
         self._kernel = kernel
         self._sim = FinanceSimulationPlugin()
 
@@ -102,10 +117,16 @@ class FinanceAgent:
         service: AzureChatCompletion = self._kernel.get_service("sign_off")
         history = ChatHistory()
         history.add_user_message(prompt)
-        settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=3000)
+        settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=5000)
         try:
             result = await service.get_chat_message_content(history, settings=settings)
-            return str(result)
+            print(f"result: {result}")
+            print(f"result type: {type(result)}")
+            print(f"result.content: {result.content}")
+            print(f"result.items: {result.items}")
+            print(f"result.metadata: {result.metadata}")
+            print(f"result.finish_reason: {result.finish_reason}")
+            return result.content or str(result)
         except Exception as e:
             err_str = str(e).lower()
             logger.error("FinanceAgent LLM 호출 실패 (_retry=%s): %s", _retry, e)
@@ -117,68 +138,55 @@ class FinanceAgent:
                 f"AI 응답 생성 중 오류가 발생했습니다: {e}"
             ) from e
 
-    async def _extract_params(self, question: str, profile: str = "", session_vars: dict | None = None) -> dict:
-        """자연어 질문 → 시뮬레이션 파라미터 JSON 추출.
-
-        session_vars(이전 대화에서 추출된 재무 변수)를 베이스로 사용하고,
-        현재 질문에서 추출한 값으로 덮어쓴다 (질문 우선).
-        """
-        context = (_PROFILE_CONTEXT.format(profile=profile) if profile else "")
-        raw = await self._call_llm(context + _PARAM_EXTRACT_PROMPT.format(user_input=question))
+    async def _extract_params(self, question: str, profile: str = "") -> dict:
+        raw = await self._call_llm(_PARAM_EXTRACT_PROMPT.format(user_input=question))
         clean = re.sub(r"^```json\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
         try:
-            from_question = json.loads(clean)
+            current = json.loads(clean)
         except json.JSONDecodeError:
-            from_question = {}
-
-        # 베이스: session_vars → 현재 질문 추출값으로 덮어쓰기
-        base: dict = {}
-        if session_vars:
-            # revenue가 session_vars에 int로 저장되어 있으면 리스트로 변환
-            for k, v in session_vars.items():
-                base[k] = [v] if k == "revenue" and isinstance(v, int) else v
-        base.update(from_question)
-
-        if base:
-            return base
-        # 베이스도 추출값도 없을 때 최소 기본값
-        return {"revenue": [5_000_000], "cost": 2_000_000, "salary": 2_000_000}
+            current = {}
+        return current  # ← LLM 추출값만 반환
 
     @kernel_function(name="generate_draft", description="재무 시뮬레이션 기반 draft 생성")
-    async def generate_draft(self, question: str, retry_prompt: str = "", profile: str = "", session_vars: dict | None = None) -> str:
+    async def generate_draft(
+        self,
+        question: str,
+        current_params: dict = None,
+        retry_prompt: str = "",
+        profile: str = "",
+    ) -> str:
         # ── 1단계: 파라미터 추출 ─────────────────────────────
-        variables = await self._extract_params(question, profile=profile, session_vars=session_vars)
-
+        # current_params 없으면 None 기반 초기값 사용
+        base = current_params or self._sim.load_initial()
+        extracted = await self._extract_params(question, profile=profile)
+        variables = self._sim.merge_json(base, extracted)
+        # state를 front-end에서 저장(브라우저별)하는 방식, current_params가 front에 저장된 변수들입니다.
+        # front 저장방식: 개인폴더 chat_test.html 의 line 408~부분 참조
+        
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]
         sim_input = {k: variables[k] for k in sim_keys if k in variables}
         sim_result = self._sim.monte_carlo_simulation(**sim_input)
 
         recovery_result: dict | None = None
-        if "initial_investment" in variables:
+        if variables.get("initial_investment") is not None:
             recovery_result = self._sim.investment_recovery(
                 initial_investment=variables["initial_investment"],
                 avg_profit=sim_result["average_net_profit"],
             )
 
         # ── 3단계: 설명 draft 생성 ──────────────────────────
-        # 가정 조건 문자열 구성 — 단일 입력 vs. 복수 데이터(실제 분포) 분기
-        rev = variables.get("revenue", [])
-        is_multi = len(rev) > 1
-        if is_multi:
-            rev_line = f"- 월매출: 실제 매장 {len(rev)}개 데이터 기반 (범위: {min(rev):,}~{max(rev):,}원)"
-        else:
-            rev_str = f"{rev[0]:,}원" if rev else "0원"
-            rev_line = f"- 월매출: {rev_str}"
-        cost_line = f"- 원가: {variables.get('cost', 0):,}원"
+        # 가정 조건 문자열 구성
+        rev = variables.get("revenue") or []
+        rev_str = f"{rev[0]:,}원" if len(rev) == 1 else f"{min(rev):,}~{max(rev):,}원 (복수 시나리오)"
         assumption_lines = [
-            rev_line,
-            cost_line,
-            f"- 급여: {variables.get('salary', 0):,}원",
+            f"- 월매출: {rev_str}",
+            f"- 원가: {sim_result['actual_cost']:,}원",
+            f"- 급여: {sim_result['actual_salary']:,}원",
+            f"- 임대료: {sim_result['actual_rent']:,}원",
+            f"- 관리비: {sim_result['actual_admin']:,}원",
+            f"- 수수료: {sim_result['actual_fee']:,}원",
         ]
-        if variables.get("rent"): assumption_lines.append(f"- 임대료: {variables['rent']:,}원")
-        if variables.get("admin"): assumption_lines.append(f"- 관리비: {variables['admin']:,}원")
-        if variables.get("fee"):   assumption_lines.append(f"- 수수료: {variables['fee']:,}원")
         assumptions = "\n".join(assumption_lines)
 
         # 손실확률: 핵심 지표로 명시.
@@ -198,13 +206,13 @@ class FinanceAgent:
             assumptions=assumptions,
             avg_profit=sim_result["average_net_profit"],
             loss_prob=loss_prob_str,
+            p20=sim_result["p20"],        # 추가
             question=question,
         )
         if profile:
             explain_prompt = _PROFILE_CONTEXT.format(profile=profile) + explain_prompt
         if retry_prompt:
             explain_prompt = _RETRY_PREFIX.format(retry_prompt=retry_prompt) + explain_prompt
-
         draft = await self._call_llm(explain_prompt)
 
         # ── 4단계: 투자 회수 설명 병합 (있을 때만) ───────────
