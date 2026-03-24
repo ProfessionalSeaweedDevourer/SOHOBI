@@ -47,22 +47,23 @@ def perform_vector_search(query_text: str, top_k: int = 3):
     query_vector = embedding_response.data[0].embedding
 
     # 2. 벡터 쿼리 객체 생성
-    # 이미지에서 확인된 벡터 필드명 'fullText_vector'를 사용합니다.
+    # 업로드 시 사용한 벡터 필드명 'content_vector'를 사용합니다.
     vector_query = VectorizedQuery(
-        vector=query_vector, 
-        k_nearest_neighbors=top_k, 
-        fields="fullText_vector"
+        vector=query_vector,
+        k_nearest_neighbors=top_k,
+        fields="content_vector"
     )
 
     # 3. 검색 실행
-    # 이미지에 정의된 모든 필드(lawName, mst, articleNo 등)를 select에 포함합니다.
+    # refined_law_data.json 필드 구조에 맞춰 select 지정
     results = search_client.search(
         search_text=None,
         vector_queries=[vector_query],
         select=[
-            "id", "lawName", "mst", "articleNo", 
-            "chapterTitle", "content", "fullText", 
-            "source", "lawType"
+            "id", "lawName", "mst", "articleNo",
+            "chapterTitle", "sectionTitle", "articleTitle",
+            "content", "fullText",
+            "source", "docType"
         ]
     )
 
