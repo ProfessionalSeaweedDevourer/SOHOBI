@@ -87,12 +87,13 @@ async def main():
         print(result.get("comparison", ""))
 
     # 정상 케이스
-    await test_single("홍대", "카페")
+    # await test_single("홍대", "카페")
     # await test_single("강남", "한식")
     # await test_single("잠실", "치킨")
 
     # 비교 케이스
-    await test_compare(["홍대", "강남", "잠실"], "카페")
+    # await test_compare(["홍대", "강남", "잠실"], "카페")
+    await test_compare(["연남동", "불광", "효창"], "양식")
 
     # 미지원 지역 (에러 처리 확인)
     # await test_single("부산", "카페")
