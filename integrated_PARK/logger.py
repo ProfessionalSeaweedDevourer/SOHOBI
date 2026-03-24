@@ -52,7 +52,6 @@ def _blob_append(blob_name: str, record: dict) -> None:
     container = os.environ.get("BLOB_LOGS_CONTAINER", "sohobi-logs")
     client = service.get_blob_client(container=container, blob=blob_name)
 
-    from azure.storage.blob import AppendBlobProperties
     from azure.core.exceptions import ResourceNotFoundError
 
     line = json.dumps(record, ensure_ascii=False) + "\n"
