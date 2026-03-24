@@ -20,7 +20,7 @@ def get_kernel() -> sk.Kernel:
             service_id="sign_off",
             deployment_name=os.getenv("AZURE_DEPLOYMENT_NAME"),
             endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            ad_token_provider=_TOKEN_PROVIDER,
             api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"),
         )
     )
