@@ -45,7 +45,7 @@ def _derive_grade(verdict: dict) -> str:
     return "A"
 
 
-async def run_signoff(client: openai.AsyncAzureOpenAI, domain: str, draft: str, max_retries: int = 2) -> dict:
+async def run_signoff(client: openai.AsyncAzureOpenAI, domain: str, draft: str, max_retries: int = 0) -> dict:
     required_codes = REQUIRED_CODES[domain]
     deployment = os.getenv("AZURE_SIGNOFF_DEPLOYMENT")
     messages = _build_messages(domain, draft)

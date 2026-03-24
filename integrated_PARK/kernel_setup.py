@@ -34,4 +34,5 @@ def get_signoff_client() -> openai.AsyncAzureOpenAI:
         azure_endpoint=os.getenv("AZURE_SIGNOFF_ENDPOINT"),
         azure_ad_token_provider=_TOKEN_PROVIDER,
         api_version="2025-04-01-preview",
+        timeout=180.0,
     )
