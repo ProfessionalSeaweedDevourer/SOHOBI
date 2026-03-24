@@ -7,6 +7,7 @@
 - GET  /api/v1/logs          — JSONL 로그 조회 (프론트엔드 로그 뷰어용)
 """
 
+import asyncio
 import json
 import os
 import time
@@ -76,6 +77,19 @@ class DocChatRequest(BaseModel):
     session_id: str = Field(default="default")
 
 
+# ── 내부 헬퍼 ─────────────────────────────────────────────────
+
+async def _extract_and_save(sid: str, session: dict, draft: str) -> None:
+    """재무 변수를 백그라운드에서 추출해 세션에 저장한다. 실패해도 메인 플로우에 영향 없음."""
+    try:
+        new_vars = await extract_financial_vars(draft)
+        if new_vars:
+            session["extracted"].update(new_vars)
+            await save_query_session(sid, session)
+    except Exception:
+        pass
+
+
 # ── 엔드포인트 ────────────────────────────────────────────────
 
 @app.get("/health")
@@ -122,13 +136,10 @@ async def query(req: QueryRequest):
         session["history"].add_user_message(req.question)
         session["history"].add_assistant_message(result["draft"])
 
-        # ── 재무 변수 추출 및 세션 누적 ──────────────────────
-        if result.get("status") == "approved" and result.get("draft"):
-            new_vars = await extract_financial_vars(result["draft"])
-            if new_vars:
-                session["extracted"].update(new_vars)
-
+        # 세션 저장 후, 재무 변수 추출은 백그라운드에서 처리 (사용자 응답 지연 없음)
         await save_query_session(sid, session)
+        if result.get("status") == "approved" and result.get("draft"):
+            asyncio.create_task(_extract_and_save(sid, session, result["draft"]))
 
         # ── 로깅 ─────────────────────────────────────────────
         log_query(
