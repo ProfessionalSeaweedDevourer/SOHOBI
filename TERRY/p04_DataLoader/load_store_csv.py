@@ -14,7 +14,7 @@
 # 대상 테이블: STORE_SEOUL (영문 컬럼)
 # =====================================================
 
-# python load_store_csv.py "csv/location_csv/소상공인시장진흥공단_상가(상권)정보_강원_202512" STORE_SEOUL
+
 
 import os
 import sys

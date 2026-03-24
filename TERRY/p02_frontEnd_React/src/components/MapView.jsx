@@ -124,7 +124,7 @@ export default function MapView() {
             }
          })
          .catch(() => {});
-   }, []); // eslint-disable-line
+   }, []); 
    useEffect(() => {
       clickModeRef.current = clickMode;
    }, [clickMode]);
