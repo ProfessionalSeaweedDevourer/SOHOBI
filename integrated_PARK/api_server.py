@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 import domain_router
 import orchestrator
 from signoff.signoff_agent import run_signoff
-from kernel_setup import get_kernel, get_signoff_client
+from kernel_setup import get_kernel, get_signoff_client, _TOKEN_PROVIDER
 from logger import log_query, log_error
 from log_formatter import load_entries_json
 from logger import _format_rejection_history
@@ -296,12 +296,14 @@ async def doc_chat(req: DocChatRequest):
         sid = req.session_id
 
         # 매 요청마다 kernel·settings 재구성 (직렬화 불가 객체)
+        _doc_api_key = os.getenv("AZURE_OPENAI_API_KEY")
         kernel = Kernel()
         kernel.add_service(
             AzureChatCompletion(
                 deployment_name=os.getenv("AZURE_DEPLOYMENT_NAME"),
                 endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                api_key=_doc_api_key if _doc_api_key else None,
+                ad_token_provider=None if _doc_api_key else _TOKEN_PROVIDER,
                 api_version="2024-12-01-preview",
             )
         )
