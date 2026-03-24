@@ -1,251 +1,242 @@
-# 위치: p01_backEnd/DAO/sangkwonDAO.py
+# 위치: p01_backEnd/DAO/seoulRtmsDAO.py
 #
-# ── 전략 ────────────────────────────────────────────────────────
-#  매출 (SANGKWON_SALES 테이블):
-#    19~25년 CSV를 DBeaver로 Oracle import
-#    서버 시작 시 V_SANGKWON_LATEST 뷰 → pandas DataFrame 메모리 로드
-#    조회: DataFrame 필터링 (1~5ms)
+# 서울시 부동산 실거래가 (서울 열린데이터광장)
+# API: tbLnOpendataRtmsV
+# END_POINT: http://openapi.seoul.go.kr:8088/{key}/xml/tbLnOpendataRtmsV/{start}/{end}/
 #
-#  유동인구:
-#    추후 구현
-# ────────────────────────────────────────────────────────────────
+# 주요 필드:
+#   STDG_CD   : 법정동코드(10자리) → EMD_CD(앞 8자리) = WFS emd_cd
+#   STDG_NM   : 법정동명
+#   CGG_NM    : 자치구명
+#   RTMS_TPCD : 1=매매 2=전세 3=월세
+#   THING_AMT : 물건금액(만원, 매매)
+#   RENT_GTN  : 보증금(만원, 전월세)
+#   RENT_FE   : 월세(만원)
+#   CNTRT_YMD : 계약일 (YYYYMMDD)
+#   BLDG_NM   : 건물명
+#   BLDG_USG  : 건물용도
+#   ARCH_AREA : 전용면적(㎡)
+#   FLR       : 층
+#   ARCH_YR   : 건축년도
+# ─────────────────────────────────────────────────────────────
 
-import os
+import asyncio
 import logging
-import pandas as pd
+import xml.etree.ElementTree as ET
+from datetime import datetime
+from typing import Optional
+
+import httpx
+from baseDAO import BaseDAO
 
 logger = logging.getLogger(__name__)
 
+SEOUL_RTMS_KEY = "4a656f6b4c7773743331707150564f"
+SEOUL_RTMS_URL = "http://openapi.seoul.go.kr:8088/{key}/xml/tbLnOpendataRtmsV/{start}/{end}/"
 
-
-from baseDAO import BaseDAO
 
 class SeoulRtmsDAO(BaseDAO):
+    """서울시 부동산 실거래가 조회 DAO"""
 
     def __init__(self):
-        self._df: pd.DataFrame = None  # V_SANGKWON_LATEST 전체 캐시
-        self._loaded = False
-        logger.info("[SeoulRtmsDAO] 초기화")
+        self._cache: dict = {}
 
-    # ════════════════════════════════════════════════════════════
-    # 1. 서버 시작 시 DB → DataFrame 로드
-    # ════════════════════════════════════════════════════════════
+    # ── 1. 법정동코드 조회 (DB) ──────────────────────────────────
 
-    def load(self):
-        """
-        서버 시작 시 호출
-        V_SANGKWON_LATEST 뷰 → 메모리 DataFrame
-        """
-        sql = """
-            SELECT
-                행정동_코드,
-                행정동_코드_명,
-                기준_년분기_코드,
-                TOT_SALES_AMT,
-                TOT_SELNG_CO,
-                ML_SALES_AMT,
-                FML_SALES_AMT,
-                MDWK_SALES_AMT,
-                WKEND_SALES_AMT,
-                AGE20_AMT,
-                AGE30_AMT,
-                AGE40_AMT,
-                AGE50_AMT
-            FROM V_SANGKWON_LATEST
-        """
+    def get_law_cd_by_emd(self, emd_cd: str) -> Optional[str]:
+        """WFS emd_cd(8자리) → 법정동코드(10자리)"""
+        rows = self._query("SELECT LAW_CD FROM LAW_DONG_SEOUL WHERE EMD_CD = :1", [emd_cd])
+        return str(rows[0][0]) if rows else None
+
+    def get_adm_by_law_cd(self, law_cd: str) -> list:
+        """법정동코드 → 행정동 목록 (1:N, confidence 내림차순)"""
+        rows = self._query(
+            "SELECT ADM_CD, ADM_NM, CONFIDENCE FROM LAW_ADM_MAP "
+            "WHERE LAW_CD = :1 ORDER BY CONFIDENCE DESC",
+            [law_cd]
+        )
+        return [{"adm_cd": r[0], "adm_nm": r[1], "confidence": r[2]} for r in rows]
+
+    def get_law_cds_by_adm_cd(self, adm_cd: str) -> list:
+        """행정동코드 → 법정동 목록 (adm 기준 실거래 합산용)"""
+        rows = self._query(
+            "SELECT DISTINCT M.LAW_CD, L.GU_NM, L.LAW_NM FROM LAW_ADM_MAP M "
+            "JOIN LAW_DONG_SEOUL L ON M.LAW_CD = L.LAW_CD "
+            "WHERE M.ADM_CD = :1",
+            [adm_cd]
+        )
+        return [{"law_cd": r[0], "gu_nm": r[1], "law_nm": r[2]} for r in rows]
+
+    # ── 2. API 조회 ─────────────────────────────────────────────
+
+    async def _fetch_page(self, client: httpx.AsyncClient,
+                          start: int, end: int, filters: dict) -> list:
+        """단일 페이지 조회"""
+        url = SEOUL_RTMS_URL.format(
+            key=SEOUL_RTMS_KEY, start=start, end=end
+        )
+        params = {k: v for k, v in filters.items() if v}
         try:
-            con, cur = self._db_con()
-            try:
-                cur.execute(sql)
-                cols = [d[0].lower() for d in cur.description]
-                rows = cur.fetchall()
-                self._df = pd.DataFrame(rows, columns=cols)
-                self._loaded = True
-                logger.info(f"[SangkwonDAO] DB 로드 완료: {len(self._df)}개 행정동")
-            finally:
-                self._close(con, cur)
+            r = await client.get(url, params=params, timeout=15)
+            root = ET.fromstring(r.text)
+            # 에러 체크
+            result = root.find('.//RESULT/CODE')
+            if result is not None and result.text != 'INFO-000':
+                msg = root.findtext('.//RESULT/MESSAGE', '')
+                logger.warning(f"[SeoulRtms] API 응답: {result.text} - {msg}")
+                return []
+            return root.findall('.//row')
         except Exception as e:
-            logger.error(f"[SangkwonDAO] DB 로드 실패: {e}")
-            self._df = pd.DataFrame()
-
-    # ════════════════════════════════════════════════════════════
-    # 2. 매출 조회 (DataFrame 필터링)
-    # ════════════════════════════════════════════════════════════
-
-    def getSalesByGu(self, gu: str) -> list:
-        """
-        구 내 전체 행정동 매출 반환
-        - gu: 자치구명 (예: 마포구)
-        - ADSTRD_CD 앞 5자리로 구 필터링
-        """
-        if self._df is None or self._df.empty:
+            logger.error(f"[SeoulRtms] _fetch_page error: {e}")
             return []
 
-        # 구코드 앞 5자리 매핑
-        GU_CODE = {
-            "종로구": "11110",
-            "중구": "11140",
-            "용산구": "11170",
-            "성동구": "11200",
-            "광진구": "11215",
-            "동대문구": "11230",
-            "중랑구": "11260",
-            "성북구": "11290",
-            "강북구": "11305",
-            "도봉구": "11320",
-            "노원구": "11350",
-            "은평구": "11380",
-            "서대문구": "11410",
-            "마포구": "11440",
-            "양천구": "11470",
-            "강서구": "11500",
-            "구로구": "11530",
-            "금천구": "11545",
-            "영등포구": "11560",
-            "동작구": "11590",
-            "관악구": "11620",
-            "서초구": "11650",
-            "강남구": "11680",
-            "송파구": "11710",
-            "강동구": "11740",
-        }
-        code_prefix = GU_CODE.get(gu)
-        if not code_prefix:
-            return []
-
-        df_gu = self._df[
-            self._df["행정동_코드"].astype(str).str.startswith(code_prefix)
-        ]
-        return df_gu.to_dict("records")
-
-    def getSalesByDong(self, dong: str, gu: str = "") -> dict:
+    async def fetch_by_gu(
+        self,
+        gu_nm: str,
+        year: Optional[str] = None,
+        rtms_type: Optional[str] = None,  # '1'=매매 '2'=전세 '3'=월세 None=전체
+        page_size: int = 1000,
+        max_pages: int = 5,
+    ) -> dict:
         """
-        행정동 단건 매출 반환
-        - dong: 행정동명 (예: 공덕동)
-        - gu: 자치구명 (중복 행정동명 구분용)
+        자치구 기준 실거래 조회
+        year: 4자리 연도 (None이면 최근 2년)
         """
-        if self._df is None or self._df.empty:
-            return None
+        if not year:
+            year = str(datetime.now().year)
 
-        df = self._df[self._df["행정동_코드_명"] == dong]
+        filters = {"CGG_NM": gu_nm, "RCPT_YR": year}
+        if rtms_type:
+            filters["RTMS_TPCD"] = rtms_type
 
-        # 구로 추가 필터
-        if gu and len(df) > 1:
-            GU_CODE = {
-                "종로구": "11110",
-                "중구": "11140",
-                "용산구": "11170",
-                "성동구": "11200",
-                "광진구": "11215",
-                "동대문구": "11230",
-                "중랑구": "11260",
-                "성북구": "11290",
-                "강북구": "11305",
-                "도봉구": "11320",
-                "노원구": "11350",
-                "은평구": "11380",
-                "서대문구": "11410",
-                "마포구": "11440",
-                "양천구": "11470",
-                "강서구": "11500",
-                "구로구": "11530",
-                "금천구": "11545",
-                "영등포구": "11560",
-                "동작구": "11590",
-                "관악구": "11620",
-                "서초구": "11650",
-                "강남구": "11680",
-                "송파구": "11710",
-                "강동구": "11740",
+        async with httpx.AsyncClient() as client:
+            all_rows = []
+            for page in range(max_pages):
+                start = page * page_size + 1
+                end   = (page + 1) * page_size
+                rows  = await self._fetch_page(client, start, end, filters)
+                all_rows.extend(rows)
+                if len(rows) < page_size:
+                    break
+
+        return self._parse_rows(all_rows)
+
+    async def fetch_by_emd_cd(
+        self,
+        emd_cd: str,
+        years_back: int = 3,
+        rtms_type: Optional[str] = None,
+    ) -> dict:
+        """
+        WFS emd_cd(8자리) 기준 실거래 조회
+        emd_cd[:5] = CGG_CD(구코드) → API 호출
+        API 응답에서 (CGG_CD+STDG_CD)[:8] == emd_cd 로 필터
+        이름 불일치 문제 없음, DB 매핑 테이블 불필요
+        """
+        emd_cd  = emd_cd.strip()
+        cgg_cd  = emd_cd[:5]          # '11110'
+        now     = datetime.now()
+        years   = [str(now.year - i) for i in range(years_back)]
+
+        logger.info(f"[SeoulRtms] fetch_by_emd_cd: emd_cd={emd_cd}, cgg_cd={cgg_cd}, years={years}")
+
+        async with httpx.AsyncClient() as client:
+            tasks = []
+            for yr in years:
+                filters = {"CGG_CD": cgg_cd, "RCPT_YR": yr}
+                if rtms_type:
+                    filters["RTMS_TPCD"] = rtms_type
+                tasks.append(self._fetch_page(client, 1, 1000, filters))
+            results = await asyncio.gather(*tasks)
+
+        all_rows = []
+        for rows in results:
+            all_rows.extend(rows)
+
+        logger.info(f"[SeoulRtms] 전체 수신: {len(all_rows)}건")
+
+        # (CGG_CD + STDG_CD) 앞 8자리 == emd_cd
+        def law_cd_8(r):
+            return ((r.findtext('CGG_CD') or '') + (r.findtext('STDG_CD') or ''))[:8]
+
+        filtered = [r for r in all_rows if law_cd_8(r) == emd_cd]
+        logger.info(f"[SeoulRtms] emd_cd={emd_cd} 필터 후: {len(filtered)}건")
+        return self._parse_rows(filtered)
+
+    # ── 3. 파싱 ─────────────────────────────────────────────────
+
+    def _parse_rows(self, rows: list) -> dict:
+        """
+        XML rows → 분석 결과 dict
+        tbLnOpendataRtmsV API 특성:
+          - RTMS_TPCD 없음 → 전부 매매 데이터
+          - 계약일 필드: CTRT_DAY (CNTRT_YMD 아님)
+          - STDG_CD: 5자리 (CGG_CD 5자리 + STDG_CD 5자리 = 10자리 → [:8] = emd_cd)
+        """
+        매매, 전세, 월세 = [], [], []
+
+        for r in rows:
+            def g(tag): return (r.findtext(tag) or '').strip()
+
+            tpcd      = g('RTMS_TPCD')          # 있으면 사용, 없으면 아래에서 매매 처리
+            cgg_cd    = g('CGG_CD')              # 5자리 구코드
+            stdg_cd   = g('STDG_CD')             # 5자리 법정동코드
+            emd_cd    = (cgg_cd + stdg_cd)[:8]   # 8자리 emd_cd
+            thing_amt = g('THING_AMT').replace(',', '')
+            rent_gtn  = g('RENT_GTN').replace(',', '')
+            rent_fe   = g('RENT_FE').replace(',', '')
+            # API마다 날짜 필드명 다름: CTRT_DAY 우선, 없으면 CNTRT_YMD
+            ctrt_day  = g('CTRT_DAY') or g('CNTRT_YMD')
+
+            base = {
+                "법정동코드": stdg_cd,
+                "emd_cd":    emd_cd,
+                "법정동":    g('STDG_NM'),
+                "구":        g('CGG_NM'),
+                "건물명":    g('BLDG_NM'),
+                "용도":      g('BLDG_USG'),
+                "면적":      g('ARCH_AREA'),
+                "층":        g('FLR'),
+                "건축년도":  g('ARCH_YR'),
+                "계약일":    ctrt_day,
+                "년":        ctrt_day[:4] if ctrt_day else '',
+                "월":        ctrt_day[4:6] if len(ctrt_day) >= 6 else '',
             }
-            prefix = GU_CODE.get(gu)
-            if prefix:
-                df = df[df["행정동_코드"].astype(str).str.startswith(prefix)]
 
-        if df.empty:
-            return None
-        return df.iloc[0].to_dict()
+            if tpcd == '2' and rent_gtn:
+                전세.append({**base, "보증금": rent_gtn, "보증금만원": self._to_int(rent_gtn)})
+            elif tpcd == '3':
+                월세.append({**base, "보증금": rent_gtn, "월세": rent_fe,
+                             "보증금만원": self._to_int(rent_gtn), "월세만원": self._to_int(rent_fe)})
+            elif thing_amt:
+                # TPCD==1 이거나 TPCD 없는 경우 모두 매매 처리
+                매매.append({**base, "거래금액": thing_amt, "거래금액만원": self._to_int(thing_amt)})
 
-    def getSalesByCode(self, adstrd_cd: str) -> dict:
-        """행정동 코드로 단건 조회 (8자리 또는 10자리 모두 대응)"""
-        if self._df is None or self._df.empty:
-            return None
-        adstrd_cd = str(adstrd_cd).strip()
-        db_codes = self._df["행정동_코드"].astype(str)
-        # 정확히 일치
-        df = self._df[db_codes == adstrd_cd]
-        # 8자리로 들어온 경우 DB가 10자리일 수 있음 → 앞 8자리 비교
-        if df.empty and len(adstrd_cd) == 8:
-            df = self._df[db_codes.str[:8] == adstrd_cd]
-        # DB가 8자리고 입력이 10자리인 경우 반대
-        if df.empty and len(adstrd_cd) == 10:
-            df = self._df[db_codes == adstrd_cd[:8]]
-        sample = db_codes.unique()[:5].tolist()
-        logger.info(f"[SangkwonDAO] getSalesByCode: adstrd_cd={adstrd_cd} → {'있음' if not df.empty else '없음'} / DB코드샘플={sample}")
-        if df.empty:
-            return None
-        return df.iloc[0].to_dict()
+        logger.info(f"[SeoulRtms] _parse_rows: 입력={len(rows)}건 → 매매={len(매매)} 전세={len(전세)} 월세={len(월세)}")
 
-    def getSalesByInduty(self, adstrd_cd: str, induty_cd: str = "") -> list:
-        """
-        특정 행정동 업종별 매출 (DB 직접 조회)
-        - 업종 분석 패널용
-        """
-        sql = """
-            SELECT
-                서비스_업종_코드,
-                서비스_업종_코드_명,
-                당월_매출_금액,
-                당월_매출_건수,
-                남성_매출_금액,
-                여성_매출_금액,
-                주중_매출_금액,
-                주말_매출_금액,
-                연령대_20_매출_금액,
-                연령대_30_매출_금액,
-                연령대_40_매출_금액,
-                연령대_50_매출_금액
-            FROM SANGKWON_SALES
-            WHERE 행정동_코드 = :cd
-              AND 기준_년분기_코드 = (SELECT MAX(기준_년분기_코드) FROM SANGKWON_SALES)
-        """
-        if induty_cd:
-            sql += " AND 서비스_업종_코드 = :ind"
-
-        try:
-            con, cur = self._db_con()
-            try:
-                params = {"cd": adstrd_cd}
-                if induty_cd:
-                    params["ind"] = induty_cd
-                cur.execute(sql, params)
-                cols = [d[0].lower() for d in cur.description]
-                rows = cur.fetchall()
-                return [dict(zip(cols, r)) for r in rows]
-            finally:
-                self._close(con, cur)
-        except Exception as e:
-            logger.error(f"[SangkwonDAO] 업종별 조회 실패: {e}")
-            return []
-
-    def getQuarters(self) -> list:
-        """DB에 있는 분기 목록 조회"""
-        try:
-            rows = self._query(
-                "SELECT DISTINCT 기준_년분기_코드 FROM SANGKWON_SALES ORDER BY 기준_년분기_코드"
-            )
-            return [r[0] for r in rows]
-        except Exception as e:
-            logger.error(f"[SangkwonDAO] 분기목록 조회 실패: {e}")
-            return []
-
-    def getStatus(self) -> dict:
-        cnt = len(self._df) if self._df is not None else 0
-        quarter = ""
-        if self._df is not None and not self._df.empty:
-            quarter = str(self._df["기준_년분기_코드"].max())
         return {
-            "loaded": self._loaded,
-            "dong_count": cnt,
-            "latest_quarter": quarter,
+            "has_data": len(매매) + len(전세) + len(월세) > 0,
+            "매매":  self._stats(매매,  "거래금액만원", "거래금액"),
+            "전세":  self._stats(전세,  "보증금만원",   "보증금"),
+            "월세":  {"건수": len(월세), "목록": sorted(월세, key=lambda x: x.get("계약일",""), reverse=True)[:10]},
         }
+
+    def _stats(self, items: list, amt_key: str, display_key: str) -> dict:
+        prices = [x[amt_key] for x in items if x.get(amt_key)]
+        if not prices:
+            return {"건수": 0, "평균가": None, "최저가": None, "최고가": None, "목록": []}
+        sorted_items = sorted(items, key=lambda x: x.get("계약일", ""), reverse=True)
+        return {
+            "건수":  len(prices),
+            "평균가": f"{int(sum(prices)/len(prices)):,}만원",
+            "최저가": f"{min(prices):,}만원",
+            "최고가": f"{max(prices):,}만원",
+            "목록":  sorted_items[:20],
+        }
+
+    @staticmethod
+    def _to_int(val: str) -> Optional[int]:
+        try:
+            return int(str(val).replace(',', '').strip())
+        except:
+            return None

@@ -17,9 +17,9 @@ class FinanceSimulationPlugin:
     @kernel_function(
         name="monte_carlo_simulation",
         description=(
-            "월매출, 원가, 급여, 임대료, 관리비, 수수료, 세율을 입력받아 "
+            "월매출, 원가, 급여, 임대료, 관리비, 수수료를 입력받아 "
             "10,000회 몬테카를로 시뮬레이션으로 평균 순이익과 손실 확률을 계산합니다. "
-            "revenue는 [단일값] 또는 [최소값, 최대값, ...] 형태의 숫자 목록(원 단위)입니다."
+            "revenue는 [단일값] 또는 [임의의 복수 값] 형태의 숫자 목록(원 단위)입니다."
         ),
     )
     def monte_carlo_simulation(
@@ -31,7 +31,6 @@ class FinanceSimulationPlugin:
         rent: float = 0,
         admin: float = 0,
         fee: float = 0,
-        tax_rate: float = 0.2,
     ) -> dict:
         iterations = 10_000
         results = []
@@ -41,27 +40,20 @@ class FinanceSimulationPlugin:
             for _ in range(iterations):
                 sim_rev = random.gauss(revenue[0], revenue[0] * 0.1)
                 sim_cost = random.gauss(cost, cost * 0.1)
-                net = (sim_rev - sim_cost - salary_cost - rent - admin - fee) * (1 - tax_rate)
+                net = sim_rev - sim_cost - salary_cost - rent - admin - fee
                 results.append(net)
         else:
             for _ in range(iterations):
                 sim_rev = random.choice(revenue)
                 sim_cost = random.gauss(cost, cost * 0.1)
-                net = (sim_rev - sim_cost - salary_cost - rent - admin - fee) * (1 - tax_rate)
+                net = sim_rev - sim_cost - salary_cost - rent - admin - fee
                 results.append(net)
 
         avg = sum(results) / iterations
         loss_prob = sum(1 for r in results if r < 0) / iterations
-        sorted_results = sorted(results)
-        std = math.sqrt(sum((r - avg) ** 2 for r in results) / iterations)
-        p5  = sorted_results[int(iterations * 0.05)]
-        p95 = sorted_results[int(iterations * 0.95)]
         return {
             "average_net_profit": round(avg),
             "loss_probability":   round(loss_prob, 4),
-            "std_profit":         round(std),
-            "p5_net_profit":      round(p5),
-            "p95_net_profit":     round(p95),
         }
 
     @kernel_function(
