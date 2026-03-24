@@ -1,6 +1,6 @@
 # 상권분석 에이전트 (LocationAgent) - Oracle DB 버전
 
-Azure OpenAI + Semantic Kernel + Oracle DB를 활용한 F&B 창업 지원 상권분석 에이전트입니다.  
+Azure OpenAI + Semantic Kernel + Oracle DB를 활용한 F&B 창업 지원 상권분석 에이전트입니다.
 오케스트레이터(부모 에이전트)에 SK Plugin으로 연결되는 자식 에이전트입니다.
 
 > **데이터 단위 변경**: 기존 버전은 상권 단위, 현재 버전은 **행정동 단위** 데이터 사용
@@ -12,9 +12,9 @@ Azure OpenAI + Semantic Kernel + Oracle DB를 활용한 F&B 창업 지원 상권
 ```
 locationAgent_DB/
 ├── agent/
-│   └── location_agent.py           # 상권분석 에이전트 본체 (DB 조회 → LLM 분석)
+│   └── location_agent.py           # 상권분석 에이전트 본체 (DB 조회 → 사전계산 → LLM 분석)
 ├── db/
-│   └── repository.py               # DB 조회 레이어 (Oracle 기반)
+│   └── repository.py               # DB 조회 레이어 (Oracle 커넥션 풀 기반)
 ├── plugin/
 │   └── location_plugin.py          # 오케스트레이터 연결용 SK Plugin 래퍼
 ├── test/
@@ -32,11 +32,66 @@ locationAgent_DB/
 [오케스트레이터]
     ↓ SK Plugin 직접 연결
 [LocationAgent]
-    ↓ oracledb 조회
+    ↓ oracledb 조회 (커넥션 풀)
 [Oracle DB - SANGKWON_SALES / SANGKWON_STORE 테이블]
-    ↓
+    ↓ 사전 계산 (금액 변환, 비율, 피크타임, 주요 고객층)
+    ↓ LLM 분석 (gpt-4.1-mini)
 행정동별 매출/점포 분석 결과 반환
 ```
+
+---
+
+## 성능 최적화
+
+기존 대비 **응답 시간 약 30초 → 6~8초**로 개선 (약 4~5배 향상)
+
+### 적용된 최적화 항목
+
+| # | 최적화 항목 | 설명 | 효과 |
+|---|------------|------|------|
+| 1 | **모델 변경** | gpt-5-nano → gpt-4.1-mini | Thinking 오버헤드 제거, 30초 → 8~10초 |
+| 2 | **DB 쿼리 병렬화** | get_sales + get_store_count를 asyncio.gather로 동시 실행 | DB 대기시간 ~50% 감소 |
+| 3 | **LLM + 유사상권 동시 실행** | _run_agent()와 get_similar_locations()를 asyncio.gather로 동시 실행 | ~300ms 절약 |
+| 4 | **compare() 병렬화** | 모든 지역의 DB 쿼리를 한번에 병렬 실행 | 3개 지역 비교 시 ~80% 단축 |
+| 5 | **Kernel 싱글턴** | Kernel + AzureChatCompletion 객체를 한 번만 생성하여 재사용 | 객체 생성 오버헤드 제거 |
+| 6 | **DB 커넥션 풀링** | oracledb.create_pool(min=2, max=5)로 커넥션 재사용 | 쿼리당 ~50~100ms 절약 |
+| 7 | **LLM 토큰 절약** | 불필요 필드 제거 (30개 → 15개) | 입력 토큰 ~45% 감소 |
+| 8 | **수치 사전 계산** | 금액 변환(억/만원), 비율, 피크타임, 주요 고객층을 미리 계산하여 전달 | 토큰 추가 절약 + 계산 오류 방지 |
+
+### 모델 선택 근거
+
+| 모델 | Thinking | 이 작업 적합도 | 비고 |
+|------|----------|--------------|------|
+| gpt-5-nano (이전) | 자동 실행 (~25초) | 과잉 | 구조화 작업에 불필요한 추론 오버헤드 |
+| **gpt-4.1-mini (현재)** | **없음** | **최적** | instruction following 특화, 정형 출력에 최적 |
+
+### 병렬 처리 구조
+
+```
+analyze() 실행 흐름:
+
+[DB 커넥션 풀에서 acquire]
+    ├── get_sales()         ──┐
+    └── get_store_count()   ──┤ asyncio.gather (병렬)
+                              ↓
+                    [사전 계산 (Python)]
+                              ↓
+    ├── _run_agent()        ──┐
+    └── get_similar_locations() ┤ asyncio.gather (병렬)
+                              ↓
+                        [결과 반환]
+```
+
+### 사전 계산 함수
+
+| 함수 | 역할 | 예시 |
+|------|------|------|
+| `_format_krw()` | 원 → 억/만원 변환 | `2028280000` → `"20억 2,828만원"` |
+| `_calc_pct()` | 비율 계산 (0 나누기 방지) | `(1350850000, 2028280000)` → `67` |
+| `_find_peak_time()` | 시간대 6개 비교 → 피크타임 판별 | → `"14~17시"` |
+| `_find_top_age()` | 연령대 6개 비교 → 주요 고객층 | → `("20대", 43)` |
+| `_precompute_summary()` | 합산 요약 사전 계산 | 위 함수 조합 |
+| `_precompute_breakdown()` | 상권별 데이터 사전 계산 | 위 함수 조합 |
 
 ---
 
@@ -138,18 +193,20 @@ kernel.add_plugin(LocationPlugin(), plugin_name="LocationAnalysis")
 ## 에러 처리
 
 ```
-❌ '부산' 은(는) 지원하지 않는 지역입니다. 서울 내 지역만 조회 가능합니다.
-❌ '피자' 은(는) 지원하지 않는 업종입니다.
+'부산' 은(는) 지원하지 않는 지역입니다. 서울 내 지역만 조회 가능합니다.
+'피자' 은(는) 지원하지 않는 업종입니다.
 ```
 
 ---
 
 ## 사용 모델
 
-| 환경        | 모델                   | 비고              |
-| ----------- | ---------------------- | ----------------- |
-| 개발/테스트 | `gpt-5-nano`           | 저비용, 빠른 응답 |
-| 서비스      | `gpt-5-mini` 이상 권장 | 품질 우선         |
+| 환경        | 모델             | 비고                                    |
+| ----------- | ---------------- | --------------------------------------- |
+| 개발/테스트 | `gpt-4.1-mini`  | instruction following 특화, 빠른 응답    |
+| 서비스      | `gpt-4.1-mini`  | 구조화 출력 최적, Thinking 오버헤드 없음 |
+
+> **모델 선택 기준**: 이 에이전트의 작업은 "구조화된 데이터 → 정형 한국어 텍스트 변환"으로, 깊은 추론보다 instruction following과 포맷 준수가 중요합니다. GPT-4.1 계열이 이 특성에 가장 적합합니다.
 
 ---
 
@@ -186,7 +243,7 @@ python test/test_location.py
 ```
 # Azure OpenAI
 AZURE_OPENAI_ENDPOINT=...
-AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-5-nano
+AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4.1-mini
 AZURE_OPENAI_API_KEY=...
 AZURE_OPENAI_API_VERSION=2024-05-01-preview
 

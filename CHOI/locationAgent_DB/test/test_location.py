@@ -48,6 +48,9 @@ async def test_single(location: str, business_type: str, quarter: str = "20244")
     print(
         f"  11~14시: {sales.get('time_11_14_krw', 0):,}원 / 17~21시: {sales.get('time_17_21_krw', 0):,}원"
     )
+    print(f"  [전 시간대] 00~06: {sales.get('time_00_06_krw', 0):,} / 06~11: {sales.get('time_06_11_krw', 0):,} / "
+          f"11~14: {sales.get('time_11_14_krw', 0):,} / 14~17: {sales.get('time_14_17_krw', 0):,} / "
+          f"17~21: {sales.get('time_17_21_krw', 0):,} / 21~24: {sales.get('time_21_24_krw', 0):,}")
 
     print(f"\n[RAW - 점포]")
     if store:
@@ -87,7 +90,7 @@ async def main():
         print(result.get("comparison", ""))
 
     # 정상 케이스
-    # await test_single("홍대", "카페")
+    await test_single("홍대", "카페")
     # await test_single("강남", "한식")
     # await test_single("잠실", "치킨")
 

@@ -9,6 +9,8 @@ location_agent.py
 - DB 쿼리 병렬 실행 (asyncio.gather + ThreadPoolExecutor)
 - LLM 호출과 유사상권 DB 쿼리 동시 실행
 - compare() 지역별 DB 쿼리 병렬 실행
+- LLM 프롬프트 토큰 절약 (필요한 필드만 전송)
+- 수치 사전 계산 (금액 변환, 비율, 피크타임, 주요 고객층)
 """
 
 import asyncio
@@ -29,7 +31,7 @@ from semantic_kernel.functions import KernelArguments
 
 from db.repository import CommercialRepository
 
-# ── Kernel 싱글턴 (개선 2) ─────────────────────────────────
+# ── Kernel 싱글턴 ──────────────────────────────────────────
 _shared_kernel = None
 
 
@@ -53,11 +55,124 @@ def _get_kernel() -> Kernel:
 _executor = ThreadPoolExecutor(max_workers=4)
 
 
+# ── 사전 계산 유틸리티 ─────────────────────────────────────
+def _format_krw(amount: int) -> str:
+    """원 → 억/만원 변환 (예: 2028280000 → '20억 2,828만원')"""
+    if not amount:
+        return "0만원"
+    eok = amount // 100_000_000
+    man = (amount % 100_000_000) // 10_000
+    if eok > 0:
+        return f"{eok}억 {man:,}만원"
+    return f"{man:,}만원"
+
+
+def _calc_pct(part: int, total: int) -> int:
+    """비율 계산 (0 나누기 방지)"""
+    return round(part / total * 100) if total > 0 else 0
+
+
+def _find_peak_time(data: dict) -> str:
+    """시간대별 매출에서 피크타임 판별"""
+    time_slots = {
+        "00~06시": data.get("time_00_06_krw", 0),
+        "06~11시": data.get("time_06_11_krw", 0),
+        "11~14시": data.get("time_11_14_krw", 0),
+        "14~17시": data.get("time_14_17_krw", 0),
+        "17~21시": data.get("time_17_21_krw", 0),
+        "21~24시": data.get("time_21_24_krw", 0),
+    }
+    return max(time_slots, key=time_slots.get)
+
+
+def _find_top_age(data: dict) -> tuple:
+    """연령대별 매출에서 주요 고객층 판별 → (연령대, 비율%)"""
+    total = data.get("monthly_sales_krw", 0) or 1
+    ages = {
+        "10대": data.get("age_10s_krw", 0),
+        "20대": data.get("age_20s_krw", 0),
+        "30대": data.get("age_30s_krw", 0),
+        "40대": data.get("age_40s_krw", 0),
+        "50대": data.get("age_50s_krw", 0),
+        "60대": data.get("age_60s_krw", 0),
+    }
+    top = max(ages, key=ages.get)
+    return top, _calc_pct(ages[top], total)
+
+
+def _precompute_summary(sales_summary: dict, store_summary: dict | None) -> dict:
+    """LLM에 보낼 사전 계산된 합산 요약"""
+    total = sales_summary.get("monthly_sales_krw", 0) or 1
+    top_age, top_age_pct = _find_top_age(sales_summary)
+
+    result = {
+        "location": sales_summary.get("location", ""),
+        "business_type": sales_summary.get("business_type", ""),
+        "monthly_sales": _format_krw(total),
+        "weekday_pct": _calc_pct(sales_summary.get("weekday_sales_krw", 0), total),
+        "weekend_pct": _calc_pct(sales_summary.get("weekend_sales_krw", 0), total),
+        "peak_time": _find_peak_time(sales_summary),
+        "male_pct": _calc_pct(sales_summary.get("male_sales_krw", 0), total),
+        "female_pct": _calc_pct(sales_summary.get("female_sales_krw", 0), total),
+        "top_age": top_age,
+        "top_age_pct": top_age_pct,
+    }
+
+    if store_summary:
+        result["store_count"] = store_summary.get("store_count", 0)
+        result["avg_sales_per_store"] = _format_krw(
+            sales_summary.get("avg_sales_per_store_krw", 0)
+        )
+        result["open_rate_pct"] = store_summary.get("open_rate_pct", 0)
+        result["close_rate_pct"] = store_summary.get("close_rate_pct", 0)
+
+    return result
+
+
+def _precompute_breakdown(
+    sales_breakdown: list, store_breakdown: list | None
+) -> list:
+    """LLM에 보낼 사전 계산된 상권별 데이터"""
+    store_map = {}
+    if store_breakdown:
+        store_map = {b["adm_name"]: b for b in store_breakdown}
+
+    items = []
+    for s in sales_breakdown:
+        total = s.get("monthly_sales_krw", 0) or 1
+        top_age, top_age_pct = _find_top_age(s)
+        adm_name = s["adm_name"]
+
+        item = {
+            "adm_name": adm_name,
+            "monthly_sales": _format_krw(total),
+            "weekday_pct": _calc_pct(s.get("weekday_sales_krw", 0), total),
+            "weekend_pct": _calc_pct(s.get("weekend_sales_krw", 0), total),
+            "peak_time": _find_peak_time(s),
+            "male_pct": _calc_pct(s.get("male_sales_krw", 0), total),
+            "female_pct": _calc_pct(s.get("female_sales_krw", 0), total),
+            "top_age": top_age,
+            "top_age_pct": top_age_pct,
+        }
+
+        st = store_map.get(adm_name)
+        if st:
+            item["store_count"] = st.get("store_count", 0)
+            item["avg_sales_per_store"] = _format_krw(
+                s.get("avg_sales_per_store_krw", 0)
+            )
+            item["open_rate_pct"] = st.get("open_rate_pct", 0)
+            item["close_rate_pct"] = st.get("close_rate_pct", 0)
+
+        items.append(item)
+    return items
+
+
 class LocationAgent:
     def __init__(self):
         self.repo = CommercialRepository()
 
-    # ── 단일 지역 분석 (개선 1: DB 병렬 + LLM/유사상권 동시) ──
+    # ── 단일 지역 분석 ──────────────────────────────────────
     async def analyze(
         self, location: str, business_type: str, quarter: str = "20253"
     ) -> dict:
@@ -133,8 +248,8 @@ class LocationAgent:
             "location": location,
             "business_type": business_type,
             "quarter": quarter,
-            "sales_data": sales_data,  # {summary, breakdown}
-            "store_data": store_data,  # {summary, breakdown}
+            "sales_data": sales_data,  # {summary, breakdown} — 원본 유지
+            "store_data": store_data,  # {summary, breakdown} — 원본 유지
             "analysis": analysis,
             "similar_locations": similar,  # 추천 상권
         }
@@ -152,7 +267,7 @@ class LocationAgent:
         store_format = (
             ("")  # 점포 데이터 없으면 항목 자체 제외
             if not has_store
-            else ("- 점포수: XX개\n" "- 점포당 평균 매출: XXX만원\n")
+            else ("- 점포수: XX개\n" "- 점포당 평균 매출: X,XXX만원\n")
         )
 
         store_breakdown_format = (
@@ -171,7 +286,7 @@ class LocationAgent:
             name="LocationAgent",
             instructions=(
                 "You are a Seoul F&B startup commercial area analysis expert. "
-                "Analyze the provided summary and breakdown data from DB.\n\n"
+                "Analyze the provided pre-computed data.\n\n"
                 "## CRITICAL LANGUAGE RULE\n"
                 "You MUST respond ONLY in Korean. "
                 "NEVER use English, Russian, Chinese, Japanese, or any other language. "
@@ -180,29 +295,21 @@ class LocationAgent:
                 "## Response Format (strictly follow this format)\n\n"
                 f"📅 데이터 기준: {year}년 {q}분기\n\n"
                 "📊 전체 합산 요약\n"
-                "- 월매출: XXX억 X,XXX만원\n"
-                + store_format
-                + "- 주중/주말 비율: 주중 XX% / 주말 XX%\n"
-                "- 피크타임: XX시~XX시\n"
-                "- 주요 고객층: 성별(남성 XX% / 여성 XX%), 연령(XX대 중심)\n\n"
+                "(합산 요약 데이터를 그대로 복사하여 출력)\n\n"
                 "🏪 상권별 분리 분석\n" + store_breakdown_format + "\n✅ 기회 요인\n"
                 "- 핵심 기회 2~3가지 (각 1줄)\n\n"
                 "⚠️ 리스크 요인\n"
                 "- 핵심 리스크 2~3가지 (각 1줄)\n\n"
-                "## Rules\n"
+                "## Rules (절대 준수)\n"
+                "- monthly_sales, peak_time, top_age, weekday_pct 등 데이터에 이미 계산된 값을 반드시 그대로 사용. 절대 자체 판단으로 변경 금지\n"
+                "- 피크타임은 반드시 데이터의 peak_time 값을 그대로 출력 (자체 추론 금지)\n"
                 "- 지정된 섹션 외 추가 섹션(## 메모, ## 참고 등) 절대 생성 금지\n"
                 + (
                     "- 점포 데이터 없으므로 점포수/점포당 평균 매출/개업률/폐업률 항목 절대 출력 금지\n"
                     if not has_store
                     else ""
                 )
-                + "- 금액 변환 규칙: 1억=100,000,000원. "
-                "예시) 2,028,280,000 → 20억 2,828만원, "
-                "11,366,060,000 → 113억 6,606만원, "
-                "315,840,000 → 3억 1,584만원\n"
-                "- 모든 금액은 반드시 억/만원 단위로 변환\n"
-                "- 점포당 평균 매출도 반드시 만원 단위로 표시\n"
-                "- 원 단위 절대 사용 금지\n"
+                + "- 원 단위 절대 사용 금지\n"
                 "- 번호 매기기 절대 금지 (1. 2. 3. 사용 금지)\n"
                 "- 800자 이내로 작성\n"
                 "- 리스크 요인 이후 총평 문장 추가 금지\n"
@@ -212,23 +319,44 @@ class LocationAgent:
             arguments=KernelArguments(settings=settings),
         )
 
-        sales_summary = sales_data.get("summary", {}) if sales_data else {}
-        sales_breakdown = sales_data.get("breakdown", []) if sales_data else []
-
-        store_section = (
-            (
-                f"[점포 합산]\n{json.dumps(store_data.get('summary', {}), ensure_ascii=False, indent=2)}\n\n"
-                f"[점포 상권별]\n{json.dumps(store_data.get('breakdown', []), ensure_ascii=False, indent=2)}"
+        # ── 사전 계산된 데이터 구성 ─────────────────────────
+        computed_summary = {}
+        computed_breakdown = []
+        if sales_data:
+            computed_summary = _precompute_summary(
+                sales_data["summary"],
+                store_data["summary"] if store_data else None,
             )
-            if store_data
-            else "※ 점포 데이터 없음 (매출 데이터만으로 분석할 것)"
+            computed_breakdown = _precompute_breakdown(
+                sales_data.get("breakdown", []),
+                store_data.get("breakdown", []) if store_data else None,
+            )
+
+        # ── 합산 요약을 텍스트로 직접 구성 (LLM이 그대로 사용) ──
+        cs = computed_summary
+        summary_text = (
+            f"- 월매출: {cs.get('monthly_sales', '0만원')}\n"
+            f"- 주중/주말 비율: 주중 {cs.get('weekday_pct', 0)}% / 주말 {cs.get('weekend_pct', 0)}%\n"
+            f"- 피크타임: {cs.get('peak_time', '')}\n"
+            f"- 주요 고객층: 성별(남성 {cs.get('male_pct', 0)}% / 여성 {cs.get('female_pct', 0)}%), "
+            f"연령({cs.get('top_age', '')} {cs.get('top_age_pct', 0)}%)"
         )
+        if store_data and cs.get("store_count"):
+            summary_text = (
+                f"- 월매출: {cs.get('monthly_sales', '0만원')}\n"
+                f"- 점포수: {cs.get('store_count', 0)}개\n"
+                f"- 점포당 평균 매출: {cs.get('avg_sales_per_store', '0만원')}\n"
+                f"- 개업률: {cs.get('open_rate_pct', 0)}% / 폐업률: {cs.get('close_rate_pct', 0)}%\n"
+                f"- 주중/주말 비율: 주중 {cs.get('weekday_pct', 0)}% / 주말 {cs.get('weekend_pct', 0)}%\n"
+                f"- 피크타임: {cs.get('peak_time', '')}\n"
+                f"- 주요 고객층: 성별(남성 {cs.get('male_pct', 0)}% / 여성 {cs.get('female_pct', 0)}%), "
+                f"연령({cs.get('top_age', '')} {cs.get('top_age_pct', 0)}%)"
+            )
 
         prompt = (
             f"지역: {location} / 업종: {business_type} / 분기: {year}년 {q}분기\n\n"
-            f"[매출 합산]\n{json.dumps(sales_summary, ensure_ascii=False, indent=2)}\n\n"
-            f"[매출 상권별]\n{json.dumps(sales_breakdown, ensure_ascii=False, indent=2)}\n\n"
-            + store_section
+            f"[합산 요약 — 아래 수치를 전체 합산 요약 섹션에 그대로 사용할 것]\n{summary_text}\n\n"
+            f"[상권별]\n{json.dumps(computed_breakdown, ensure_ascii=False, indent=2)}"
         )
 
         thread = ChatHistoryAgentThread()
@@ -238,7 +366,7 @@ class LocationAgent:
 
         return result or ""
 
-    # ── 복수 지역 비교 (개선 3: 지역별 DB 쿼리 병렬) ──────────
+    # ── 복수 지역 비교 ──────────────────────────────────────
     async def compare(
         self, locations: list, business_type: str, quarter: str = "20244"
     ) -> dict:
@@ -266,15 +394,13 @@ class LocationAgent:
                 )
             )
         results = await asyncio.gather(*tasks)
-        # results = [sales_A, store_A, sales_B, store_B, ...]
 
-        # 지역별 데이터 수집
+        # 지역별 데이터 수집 (사전 계산 적용)
         location_data = []
         for i, loc in enumerate(locations):
             sales = results[i * 2]
             store = results[i * 2 + 1]
 
-            # sales도 없고 store도 없으면 완전 제외
             if not sales and not store:
                 continue
 
@@ -285,38 +411,33 @@ class LocationAgent:
             cnt = st.get("store_count", 0) if store else None
             avg = int(monthly / cnt) if (monthly and cnt) else None
 
-            # sales 데이터 있는 경우만 매출/비율 계산
             if sales and monthly:
+                top_age, top_age_pct = _find_top_age(ss)
                 item = {
                     "location": loc,
-                    "monthly_sales_krw": monthly,
-                    "weekday_pct": round(
-                        ss.get("weekday_sales_krw", 0) / monthly * 100
-                    ),
-                    "weekend_pct": round(
-                        ss.get("weekend_sales_krw", 0) / monthly * 100
-                    ),
-                    "male_pct": round(ss.get("male_sales_krw", 0) / monthly * 100),
-                    "female_pct": round(
-                        ss.get("female_sales_krw", 0) / monthly * 100
-                    ),
+                    "monthly_sales": _format_krw(monthly),
+                    "weekday_pct": _calc_pct(ss.get("weekday_sales_krw", 0), monthly),
+                    "weekend_pct": _calc_pct(ss.get("weekend_sales_krw", 0), monthly),
+                    "peak_time": _find_peak_time(ss),
+                    "male_pct": _calc_pct(ss.get("male_sales_krw", 0), monthly),
+                    "female_pct": _calc_pct(ss.get("female_sales_krw", 0), monthly),
+                    "top_age": top_age,
+                    "top_age_pct": top_age_pct,
                 }
             else:
-                # sales 없음 → 매출 항목은 None으로 표시
                 item = {
                     "location": loc,
-                    "monthly_sales_krw": None,
+                    "monthly_sales": "데이터 없음",
                     "weekday_pct": None,
                     "weekend_pct": None,
                     "male_pct": None,
                     "female_pct": None,
-                    "no_sales_data": True,  # LLM에게 데이터 없음 알림
+                    "no_sales_data": True,
                 }
 
-            # 점포 데이터 있을 때만 추가
             if store:
                 item["store_count"] = cnt
-                item["avg_sales_per_store_krw"] = avg
+                item["avg_sales_per_store"] = _format_krw(avg) if avg else "데이터 없음"
                 item["open_rate_pct"] = st.get("open_rate_pct", 0)
                 item["close_rate_pct"] = st.get("close_rate_pct", 0)
 
@@ -343,7 +464,6 @@ class LocationAgent:
         kernel = _get_kernel()
         settings = AzureChatPromptExecutionSettings()
 
-        # 점포 데이터 포함 여부 확인
         has_store = "store_count" in location_data[0] if location_data else False
 
         store_rows = (
@@ -382,7 +502,7 @@ class LocationAgent:
                 "📊 지역별 비교표\n\n"
                 "| 항목 | 지역A | 지역B | ... |\n"
                 "|------|-------|-------|\n"
-                "| 월매출 | XXX억 X,XXX만원 | XXX억 X,XXX만원 |\n"
+                "| 월매출 | [monthly_sales] | [monthly_sales] |\n"
                 + store_rows
                 + "| 주중/주말 | XX%/XX% | XX%/XX% |\n"
                 "| 주요 성별 | 남XX%/여XX% | 남XX%/여XX% |\n\n"
@@ -391,11 +511,10 @@ class LocationAgent:
                 "- **2순위: XXX** - 추천 이유 1~2줄\n\n"
                 "⚠️ 유의사항\n"
                 "- 각 지역별 리스크 1줄씩\n\n"
-                "## Rules\n"
+                "## Rules (절대 준수)\n"
+                "- monthly_sales, peak_time, top_age 등 데이터에 이미 계산된 값을 반드시 그대로 사용. 절대 자체 판단으로 변경 금지\n"
                 + store_rank_rule
                 + "- 유의사항은 비교한 모든 지역에 대해 각각 1줄씩 반드시 작성\n"
-                "- 모든 금액은 반드시 억/만원 단위로 변환 (예: 24,608,228,093 → 246억 828만원)\n"
-                "- 점포당 평균매출도 반드시 만원 단위 (예: 42,722,618 → 4,272만원)\n"
                 "- 원 단위 절대 사용 금지\n"
                 "- 번호 매기기 절대 금지 (추천 순위 제외)\n"
                 "- 유의사항 이후 총평 문장 추가 금지\n"
