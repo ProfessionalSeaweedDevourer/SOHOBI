@@ -35,4 +35,4 @@ ENV MPLBACKEND=Agg
 EXPOSE 8000
 
 # uvicorn: worker 수는 환경변수로 조정 가능 (기본 1)
-CMD ["sh", "-c", "uvicorn api_server:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1}"]
+CMD ["sh", "-c", "uvicorn api_server:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${UVICORN_WORKERS:-1}"]
