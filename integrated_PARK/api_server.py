@@ -65,6 +65,10 @@ class QueryRequest(BaseModel):
     )
     domain: str | None = Field(default=None, description="없으면 domain_router로 자동 분류")
     max_retries: int = Field(default=3, ge=0, le=10)
+    current_params: dict | None = Field(
+        default=None,
+        description="재무 에이전트 누적 파라미터. 이전 응답의 updated_params를 그대로 전달한다.",
+    )
 
 
 class SignoffRequest(BaseModel):
@@ -123,13 +127,15 @@ async def query(req: QueryRequest):
             domain = classification["domain"]
 
         # ── 오케스트레이터 실행 ───────────────────────────────
+        # current_params: 클라이언트 전달값 우선, 없으면 서버 세션 추출값 사용
+        params = req.current_params or (session["extracted"] if session["extracted"] else None)
         result = await orchestrator.run(
             domain=domain,
             question=req.question,
             profile=session["profile"],
             session_id=sid,
             max_retries=req.max_retries,
-            session_vars=session["extracted"] if session["extracted"] else None,
+            current_params=params,
         )
 
         # 세션 대화 이력 누적
@@ -163,6 +169,8 @@ async def query(req: QueryRequest):
             "grade":             result.get("grade", ""),
             "confidence_note":   result.get("confidence_note", ""),
             "draft":             result["draft"],
+            "chart":             result.get("chart"),
+            "updated_params":    result.get("updated_params"),
             "retry_count":       result["retry_count"],
             "agent_ms":          result.get("agent_ms", 0),
             "signoff_ms":        result.get("signoff_ms", 0),
@@ -206,6 +214,7 @@ async def stream_query(req: QueryRequest):
             yield f"event: domain_classified\ndata: {json.dumps({'domain': domain, 'session_id': sid})}\n\n"
 
             # ── 오케스트레이터 스트리밍 ───────────────────────
+            params = req.current_params or (session["extracted"] if session["extracted"] else None)
             final_result = None
             async for ev in orchestrator.run_stream(
                 domain=domain,
@@ -213,7 +222,7 @@ async def stream_query(req: QueryRequest):
                 profile=session["profile"],
                 session_id=sid,
                 max_retries=req.max_retries,
-                session_vars=session["extracted"] if session["extracted"] else None,
+                current_params=params,
             ):
                 event_name = ev.get("event", "message")
 

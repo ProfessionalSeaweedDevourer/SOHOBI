@@ -191,6 +191,7 @@ class FinanceAgent:
 
         # 손실확률: 핵심 지표로 명시.
         # 0%이면 서술형으로 표현 (수치 "0%"가 리스크 부정으로 오해되는 것을 방지)
+        is_multi = len(rev) > 1
         raw_loss = sim_result["loss_probability"]
         if raw_loss == 0.0:
             range_desc = f"실제 매장 {len(rev)}개 데이터" if is_multi else "매출·원가 ±10%"
@@ -225,4 +226,8 @@ class FinanceAgent:
             )
             draft = f"{draft}\n\n[투자 회수 전망]\n{recovery_text}"
 
-        return draft
+        return {
+            "draft":          draft,
+            "chart":          sim_result.get("chart"),   # base64 PNG 또는 None
+            "updated_params": variables,                  # 누적된 파라미터 (프론트 저장용)
+        }
