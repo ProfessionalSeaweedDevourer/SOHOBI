@@ -36,7 +36,8 @@ async def test_single(location: str, business_type: str, quarter: str = "20244")
             )
         return
 
-    sales = result.get("sales_data", {}).get("summary", {})
+    sales_data = result.get("sales_data")
+    sales = sales_data.get("summary", {}) if sales_data else {}
     store_data = result.get("store_data")
     store = store_data.get("summary", {}) if store_data else {}
 

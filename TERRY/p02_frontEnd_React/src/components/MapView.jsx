@@ -18,6 +18,7 @@ import {
 } from "ol/style";
 import Layerpanel from "./Layerpanel";
 import CategoryPanel from "./CategoryPanel";
+import ChatPanel from "./ChatPanel";
 import { CATEGORIES } from "../constants/categories";
 import "./MapView.css";
 
@@ -225,6 +226,8 @@ export default function MapView() {
    const clickModeRef = useRef(true);
 
    const [coords, setCoords] = useState({ lat: "37.5665", lng: "126.9780" });
+   const [chatOpen, setChatOpen] = useState(false);
+   const [chatContext, setChatContext] = useState(null);
    const [popup, setPopup] = useState(null);
    const [kakaoDetail, setKakaoDetail] = useState(null);
    const [loadingDetail, setLoadingDetail] = useState(false);
@@ -473,6 +476,9 @@ export default function MapView() {
                      }
                   } catch (_e) { console.error("[동 클릭 패널]", _e); }
                   finally { setDongLoading(false); }
+                  // 채팅 패널에 컨텍스트 전달
+                  setChatContext({ dongName: _dongNm, guName: _guNm, admCd: _admCd, coordinates: toLonLat(e.coordinate) });
+                  setChatOpen(true);
                   return;
                }
             }
@@ -736,6 +742,12 @@ export default function MapView() {
       };
       init();
    }, [mapInstance.current]); // eslint-disable-line
+
+   const handleChatNavigate = useCallback((lng, lat, zoom = 15) => {
+      const map = mapInstance.current;
+      if (!map) return;
+      map.getView().animate({ center: fromLonLat([lng, lat]), zoom, duration: 500 });
+   }, []);
 
    const cat = popup ? getCatStyle(popup.상권업종대분류명) : null;
 
@@ -1994,6 +2006,14 @@ className="mv-layer-btn"
                   </div>
                );
             })()}
+
+         {/* 상권분석 채팅 패널 */}
+         <ChatPanel
+            isOpen={chatOpen}
+            onToggle={() => setChatOpen((v) => !v)}
+            onNavigate={handleChatNavigate}
+            mapContext={chatContext}
+         />
 
          {/* 좌표 바 */}
          <div className="coord-bar">📍 위도: {coords.lat} | 경도: {coords.lng}</div>
