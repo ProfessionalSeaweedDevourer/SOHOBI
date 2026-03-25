@@ -12,12 +12,6 @@ _TOKEN_PROVIDER = get_bearer_token_provider(
     "https://cognitiveservices.azure.com/.default",
 )
 
-# AI Foundry 엔드포인트(*.services.ai.azure.com)는 별도 audience 필요
-_SIGNOFF_TOKEN_PROVIDER = get_bearer_token_provider(
-    DefaultAzureCredential(),
-    "https://ai.azure.com/.default",
-)
-
 
 def get_kernel() -> sk.Kernel:
     kernel = sk.Kernel()
@@ -38,7 +32,7 @@ def get_kernel() -> sk.Kernel:
 def get_signoff_client() -> openai.AsyncAzureOpenAI:
     return openai.AsyncAzureOpenAI(
         azure_endpoint=os.getenv("AZURE_SIGNOFF_ENDPOINT", os.getenv("AZURE_OPENAI_ENDPOINT")),
-        azure_ad_token_provider=_SIGNOFF_TOKEN_PROVIDER,
+        azure_ad_token_provider=_TOKEN_PROVIDER,
         api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"),
         timeout=220.0,
     )
