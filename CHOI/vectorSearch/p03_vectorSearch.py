@@ -1,5 +1,6 @@
 import os
 from typing import List, Dict, Any
+from functools import lru_cache
 from openai import AzureOpenAI
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
@@ -32,19 +33,25 @@ search_client = SearchClient(
     credential=AzureKeyCredential(SEARCH_KEY)
 )
 
+@lru_cache(maxsize=128)
+def get_query_embedding(query_text: str) -> tuple:
+    """쿼리 임베딩을 생성하고 캐싱합니다. 동일 질문 재호출 시 API 호출을 건너뜁니다."""
+    response = ai_client.embeddings.create(
+        input=query_text.replace("\n", " "),
+        model=AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+    )
+    return tuple(response.data[0].embedding)
+
+
 def perform_vector_search(query_text: str, top_k: int = 3):
     """
     사용자의 질문을 벡터로 변환하여 Azure AI Search에서 검색합니다.
     이미지에서 확인된 'fullText_vector' 필드 및 법령 상세 필드 구조를 반영합니다.
     """
     print("질문 분석 중: '%s'" % query_text)
-    
-    # 1. 질문을 벡터(Embedding)로 변환
-    embedding_response = ai_client.embeddings.create(
-        input=query_text.replace("\n", " "),
-        model=AZURE_OPENAI_EMBEDDING_DEPLOYMENT
-    )
-    query_vector = embedding_response.data[0].embedding
+
+    # 1. 질문을 벡터(Embedding)로 변환 (캐싱 적용)
+    query_vector = list(get_query_embedding(query_text))
 
     # 2. 벡터 쿼리 객체 생성
     # 업로드 시 사용한 벡터 필드명 'content_vector'를 사용합니다.
