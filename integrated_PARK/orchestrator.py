@@ -33,7 +33,7 @@ async def run(
     profile: str = "",
     session_id: str = "",
     max_retries: int = 3,
-    session_vars: dict | None = None,
+    current_params: dict | None = None,
 ) -> dict:
     kernel = get_kernel()
     signoff_client = get_signoff_client()
@@ -45,17 +45,28 @@ async def run(
     draft = ""
     prev_draft = None
 
+    chart = None
+    updated_params = None
+
     for attempt in range(1, max_retries + 2):
         # ── 에이전트 호출 (타이밍 측정) ─────────────────────
         t_agent = time.monotonic()
-        extra = {"session_vars": session_vars} if domain == "finance" and session_vars else {}
-        draft = await agent.generate_draft(
+        extra = {"current_params": current_params} if domain == "finance" and current_params else {}
+        raw = await agent.generate_draft(
             question=question,
             retry_prompt=retry_prompt,
             profile=profile,
             **extra,
         )
         agent_ms = round((time.monotonic() - t_agent) * 1000)
+
+        # finance 에이전트는 dict를 반환 (draft + chart + updated_params)
+        if isinstance(raw, dict):
+            draft = raw.get("draft", "")
+            chart = raw.get("chart")
+            updated_params = raw.get("updated_params")
+        else:
+            draft = raw
 
         # 이전 attempt와 draft가 동일하면 재시도해도 개선 불가 → 조기 종료
         if draft == prev_draft:
@@ -87,6 +98,8 @@ async def run(
                 "message":          "",
                 "rejection_history": rejection_history,
                 "draft":            draft,
+                "chart":            chart,
+                "updated_params":   updated_params,
             }
 
         rejection_history.append({
@@ -113,6 +126,8 @@ async def run(
                             f"{rejection_history[-1]['verdict'].get('retry_prompt', '')}",
         "rejection_history": rejection_history,
         "draft":            draft,
+        "chart":            chart,
+        "updated_params":   updated_params,
     }
 
 
@@ -122,7 +137,7 @@ async def run_stream(
     profile: str = "",
     session_id: str = "",
     max_retries: int = 3,
-    session_vars: dict | None = None,
+    current_params: dict | None = None,
 ) -> AsyncGenerator[dict, None]:
     """SSE 스트리밍용 async generator.
     각 단계마다 event dict를 yield한다.
@@ -144,19 +159,28 @@ async def run_stream(
     retry_prompt = ""
     draft = ""
     prev_draft = None
+    chart = None
+    updated_params = None
 
     for attempt in range(1, max_retries + 2):
         yield {"event": "agent_start", "attempt": attempt, "max_attempts": max_retries + 1}
 
         t_agent = time.monotonic()
-        extra = {"session_vars": session_vars} if domain == "finance" and session_vars else {}
-        draft = await agent.generate_draft(
+        extra = {"current_params": current_params} if domain == "finance" and current_params else {}
+        raw = await agent.generate_draft(
             question=question,
             retry_prompt=retry_prompt,
             profile=profile,
             **extra,
         )
         agent_ms = round((time.monotonic() - t_agent) * 1000)
+
+        if isinstance(raw, dict):
+            draft = raw.get("draft", "")
+            chart = raw.get("chart")
+            updated_params = raw.get("updated_params")
+        else:
+            draft = raw
 
         if draft == prev_draft:
             break
@@ -202,6 +226,8 @@ async def run_stream(
                 "message":          "",
                 "rejection_history": rejection_history,
                 "draft":            draft,
+                "chart":            chart,
+                "updated_params":   updated_params,
             }
             return
 
@@ -229,4 +255,6 @@ async def run_stream(
         "message":          f"재시도 {max_retries}회 초과.",
         "rejection_history": rejection_history,
         "draft":            draft,
+        "chart":            chart,
+        "updated_params":   updated_params,
     }
