@@ -13,8 +13,20 @@ try:
     import matplotlib
     matplotlib.use("Agg")  # 헤드리스 환경 (서버/컨테이너)
     import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
+    import matplotlib.font_manager as fm
     import numpy as np
+
+    # 한글 폰트 설정: 우선순위 순으로 시도
+    _KO_FONT_CANDIDATES = [
+        "Apple SD Gothic Neo", "Nanum Gothic", "AppleGothic",
+        "Malgun Gothic", "NanumGothic", "Noto Sans CJK KR",
+    ]
+    _available = {f.name for f in fm.fontManager.ttflist}
+    _ko_font = next((f for f in _KO_FONT_CANDIDATES if f in _available), None)
+    if _ko_font:
+        matplotlib.rcParams["font.family"] = _ko_font
+    matplotlib.rcParams["axes.unicode_minus"] = False  # 마이너스 기호 깨짐 방지
+
     _MATPLOTLIB_AVAILABLE = True
 except ImportError:
     _MATPLOTLIB_AVAILABLE = False
