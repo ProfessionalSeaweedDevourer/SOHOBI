@@ -1,7 +1,7 @@
 # 상권분석 에이전트 (LocationAgent) - Oracle DB 버전
 
 Azure OpenAI + Semantic Kernel + Oracle DB를 활용한 F&B 창업 지원 상권분석 에이전트입니다.
-오케스트레이터(부모 에이전트)에 SK Plugin으로 연결되는 자식 에이전트입니다.
+오케스트레이터(부모 에이전트)에 SK Plugin으로 연결되거나, **FastAPI 서버를 통해 지도 프론트엔드와 직접 연동**됩니다.
 
 > **데이터 단위 변경**: 기존 버전은 상권 단위, 현재 버전은 **행정동 단위** 데이터 사용
 
@@ -19,6 +19,7 @@ locationAgent_DB/
 │   └── location_plugin.py          # 오케스트레이터 연결용 SK Plugin 래퍼
 ├── test/
 │   └── test_location.py            # 단독 테스트
+├── api_server.py                    # ★ FastAPI REST 서버 (프론트엔드 연동용)
 ├── .env                            # API 키 설정 (Git 미포함)
 ├── .env.example                    # 환경변수 예시
 └── requirements.txt                # 패키지 의존성
@@ -27,6 +28,8 @@ locationAgent_DB/
 ---
 
 ## 시스템 구조
+
+### SK Plugin 연결 (오케스트레이터 경유)
 
 ```
 [오케스트레이터]
@@ -38,6 +41,75 @@ locationAgent_DB/
     ↓ LLM 분석 (gpt-4.1-mini)
 행정동별 매출/점포 분석 결과 반환
 ```
+
+### FastAPI 서버 연결 (지도 프론트엔드 직접 연동)
+
+```
+[React 지도 프론트 (ChatPanel)]
+    ↓ POST /agent/chat (Vite 프록시)
+[api_server.py — FastAPI :8000]
+    ↓ 자연어 → 파라미터 추출 (Azure OpenAI)
+    ↓ analyze() 또는 compare() 자동 분기
+[LocationAgent]
+    ↓ Oracle DB + LLM 분석
+    ↓
+[JSON 응답 → ChatPanel 렌더링]
+```
+
+---
+
+## 지도 프론트엔드 연동
+
+### 연동 구조
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  React + OpenLayers (TERRY/p02_frontEnd_React)           │
+│                                                          │
+│  ┌──────────────┐    ┌────────────────────────────────┐  │
+│  │   MapView    │◄──►│  ChatPanel (400px 슬라이드)    │  │
+│  │  (OpenLayers) │    │  - 채팅 입력/응답              │  │
+│  │              │    │  - 지도 네비게이션 (보여줘)     │  │
+│  │  행정동 클릭 ─┼───►│  - 지도 컨텍스트 자동 주입     │  │
+│  │              │◄───┼─ 좌표 이동 (animate)           │  │
+│  └──────────────┘    └────────────────────────────────┘  │
+│         │                         │                      │
+│         │  Vite Proxy (/agent → localhost:8000)          │
+└─────────┼─────────────────────────┼──────────────────────┘
+          │                         │
+          ▼                         ▼
+┌──────────────────────────────────────────────────────────┐
+│  FastAPI (api_server.py :8000)                           │
+│  POST /chat — 자연어 → 파라미터 추출 → 에이전트 호출    │
+│  GET  /locations — 지원 지역 목록 (208개)                │
+│  GET  /industries — 지원 업종 목록 (14개)                │
+│  GET  /health — 서버 상태 확인                           │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 양방향 상호작용
+
+| 방향 | 트리거 | 동작 |
+|------|--------|------|
+| **채팅 → 지도** | `"강남역 보여줘"`, `"홍대 이동"` | Kakao 키워드 검색 → 좌표 → `map.getView().animate()` |
+| **지도 → 채팅** | 행정동 영역 클릭 | `mapContext = {guName, dongName}` → ChatPanel에 컨텍스트 자동 주입 |
+| **채팅 → 에이전트** | `"강남 카페 상권 분석해줘"` | POST /agent/chat → LocationAgent 분석 → 응답 렌더링 |
+
+### 프론트엔드 파일 구성 (TERRY/p02_frontEnd_React)
+
+| 파일 | 설명 |
+|------|------|
+| `src/api/agentApi.js` | API 클라이언트 (sendChatMessage, getLocations, getIndustries) |
+| `src/components/ChatPanel.jsx` | 채팅 패널 컴포넌트 (세션 관리, 네비게이션 감지, 컨텍스트 주입) |
+| `src/components/ChatPanel.css` | 채팅 UI 스타일 (슬라이드 패널, 메시지 버블, 로딩 애니메이션) |
+| `vite.config.js` | `/agent` 프록시 설정 (→ `http://localhost:8000`) |
+
+### ChatPanel 주요 기능
+
+- **네비게이션 패턴 감지**: `/(.+?)\s*(보여줘|이동|찾아줘|어디)/` → Kakao 키워드 검색 → 지도 이동
+- **업종 자동 감지**: 카페, 한식, 치킨 등 입력 시 현재 선택된 행정동을 자동 주입
+- **로딩 타이머**: 분석 소요 시간 실시간 표시 (초 단위)
+- **세션 관리**: UUID 기반 session_id로 다회차 대화 유지
 
 ---
 
@@ -92,6 +164,37 @@ analyze() 실행 흐름:
 | `_find_top_age()`         | 연령대 6개 비교 → 주요 고객층   | → `("20대", 43)`                  |
 | `_precompute_summary()`   | 합산 요약 사전 계산             | 위 함수 조합                      |
 | `_precompute_breakdown()` | 상권별 데이터 사전 계산         | 위 함수 조합                      |
+
+---
+
+## API 서버 (api_server.py)
+
+### 엔드포인트
+
+| Method | Path | 설명 | 요청 | 응답 |
+|--------|------|------|------|------|
+| `POST` | `/chat` | 자연어 상권 분석 요청 | `{question, session_id?}` | `{response, analysis, locations, ...}` |
+| `GET` | `/locations` | 지원 지역 목록 | — | `{locations: [...]}` |
+| `GET` | `/industries` | 지원 업종 목록 | — | `{industries: [...]}` |
+| `GET` | `/health` | 서버 상태 확인 | — | `{status: "ok"}` |
+
+### 파라미터 추출 (자연어 → 구조화)
+
+`POST /chat`에 전달된 자연어를 Azure OpenAI로 파싱하여 에이전트 파라미터로 변환합니다.
+
+```
+"강남에서 카페 창업하려는데 분석해줘"
+    ↓ _extract_params()
+{
+    "mode": "analyze",
+    "locations": ["강남"],
+    "business_type": "카페",
+    "quarter": "20244"
+}
+```
+
+- **mode**: `analyze` (단일 지역) 또는 `compare` (복수 지역 비교) 자동 분기
+- **quarter**: 미지정 시 최근 분기 자동 적용
 
 ---
 
@@ -182,8 +285,6 @@ kernel.add_plugin(LocationPlugin(), plugin_name="LocationAnalysis")
 - **208개 키워드 → 행정동 코드** 매핑
 - 권역별 분류: 홍대/마포, 강남, 서초/사당, 여의도/영등포, 이태원/용산, 건대/성수, 신촌/서대문, 잠실/송파, 강동, 노원/도봉/강북, 관악/동작, 강서/양천, DMC/은평, 종로/도심, 성북/강북, 중랑, 동대문구, 왕십리/성동, 구로
 
----
-
 ## 지원 업종
 
 한식, 중식, 일식, 양식, 베이커리/제과점, 패스트푸드, 치킨, 분식, 호프/술집, 카페/커피, 미용실, 네일, 노래방, 편의점
@@ -220,6 +321,8 @@ kernel.add_plugin(LocationPlugin(), plugin_name="LocationAnalysis")
 
 ## 실행 방법
 
+### 에이전트 단독 테스트
+
 ```bash
 # 1. 가상환경 생성 및 활성화
 py -3.12 -m venv .venv
@@ -234,6 +337,23 @@ copy .env.example .env
 
 # 4. 테스트 실행
 python test/test_location.py
+```
+
+### API 서버 + 프론트엔드 연동 실행
+
+```bash
+# 터미널 1: FastAPI 서버 시작
+cd CHOI/locationAgent_DB
+.venv\Scripts\activate
+python api_server.py
+# → http://localhost:8000 에서 서버 실행
+
+# 터미널 2: React 프론트엔드 시작
+cd TERRY/p02_frontEnd_React
+npm install
+npm run dev
+# → http://localhost:5173 에서 프론트 실행
+# → /agent/* 요청은 Vite 프록시로 localhost:8000 으로 전달
 ```
 
 ---
