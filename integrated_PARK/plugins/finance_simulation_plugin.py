@@ -3,9 +3,20 @@
 출처: CHANG/user_functions.py — FinanceSimulationSkill
 """
 
+import base64
+import io
 import math
 import random
 from semantic_kernel.functions import kernel_function
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.font_manager as fm
+
+fontF = "C:\Windows\Fonts\gulim.ttc"
+fontN = fm.FontProperties(fname=fontF, size= 10).get_name()
+plt.rc("font", family=fontN)
+plt.rcParams["axes.unicode_minus"]=False
+
 
 
 class FinanceSimulationPlugin:
@@ -74,6 +85,7 @@ class FinanceSimulationPlugin:
         avg_loss = round(sum(loss_results) / len(loss_results)) if loss_results else 0
 
         p20 = sorted_results[int(iterations * 0.20)]
+        chart_b64 = self._generate_chart(results, p20, avg)
 
         return {
             "average_net_profit": round(avg),
@@ -85,6 +97,7 @@ class FinanceSimulationPlugin:
             "actual_rent":        round(rent),      # 결과값 세분화용 변수 추가
             "actual_admin":       round(admin),     # 결과값 세분화용 변수 추가
             "actual_fee":         round(fee),       # 결과값 세분화용 변수 추가
+            "chart":              chart_b64,
         }
 
     @kernel_function(
@@ -138,6 +151,42 @@ class FinanceSimulationPlugin:
                 merged[key] = value
         return merged
 
+
+    def _generate_chart(self, results: list, p20: float, avg: float) -> str:
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        n, bins, patches = ax.hist(results, bins=40, edgecolor="none")
+
+        for patch, left_edge in zip(patches, bins[:-1]):
+            if left_edge < 0:
+                patch.set_facecolor("#E24B4A")   # 손실
+            elif left_edge < p20:
+                patch.set_facecolor("#EF9F27")   # 하위 20%
+            else:
+                patch.set_facecolor("#378ADD")   # 수익
+
+        ax.axvline(x=0,   color="#E24B4A", linestyle="--", linewidth=1.2, alpha=0.8)
+        ax.axvline(x=avg, color="#378ADD", linestyle="--", linewidth=1.2, alpha=0.8)
+        ax.axvline(x=p20, color="#EF9F27", linestyle="--", linewidth=1.2, alpha=0.8)
+
+        legend_handles = [
+            mpatches.Patch(color="#E24B4A", label="손실 구간"),
+            mpatches.Patch(color="#EF9F27", label=f"하위 20% 기준: {round(p20/10000):,}만원"),
+            mpatches.Patch(color="#378ADD", label=f"평균: {round(avg/10000):,}만원"),
+        ]
+        ax.legend(handles=legend_handles, fontsize=9)
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x/10000):,}만"))
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x):,}"))
+        ax.set_xlabel("월 순이익 (만원)", fontsize=10)
+        ax.set_ylabel("빈도 (회)", fontsize=10)
+
+        plt.tight_layout()
+
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=120)
+        plt.close(fig)
+        buf.seek(0)
+        return base64.b64encode(buf.read()).decode("utf-8")
 
 
 ## DB파트 로컬기준 정상 작동되는것 확인하였으나 우선 주석처리 해둡니다(처리방안 고민중)
