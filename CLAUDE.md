@@ -37,6 +37,9 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 | `integrated_PARK/signoff/` | 최종 검증 에이전트 |
 | `integrated_PARK/db/commercial.db` | 상권 SQLite DB (2024 Q4, 서울) |
 | `frontend/` | React + Vite + Tailwind 프론트엔드 |
+| `docs/session-reports/` | 세션 리포트 (날짜별) |
+| `docs/architecture/` | 아키텍처 다이어그램 (HTML) |
+| `docs/plans/` | 개선·테스트 플랜 문서 |
 | `CHANG/`, `CHOI/`, `NAM/`, `PARK/`, `TERRY/` | 팀원별 개발 폴더 |
 
 ## 코드 규칙
