@@ -1,0 +1,45 @@
+name: Deploy Backend to Azure Container Apps
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "integrated_PARK/**"
+      - ".github/workflows/deploy-backend.yml"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC 토큰 발급 (서비스 주체 비밀 없이 Azure 인증)
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure 로그인 (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR 로그인
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Docker 이미지 빌드 및 푸시
+        run: |
+          IMAGE=${{ secrets.ACR_NAME }}.azurecr.io/sohobi-backend:${{ github.sha }}
+          docker build -t $IMAGE integrated_PARK/
+          docker push $IMAGE
+          # latest 태그도 동시 업데이트
+          docker tag $IMAGE ${{ secrets.ACR_NAME }}.azurecr.io/sohobi-backend:latest
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/sohobi-backend:latest
+
+      - name: Container App 배포
+        run: |
+          az containerapp update \
+            --name ${{ secrets.CONTAINER_APP_NAME }} \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --image ${{ secrets.ACR_NAME }}.azurecr.io/sohobi-backend:${{ github.sha }}

@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SOHOBI 아키텍처 다이어그램</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #f0f4f8;
+  font-family: 'Noto Sans KR', sans-serif;
+  min-height: 100vh;
+  padding: 40px 36px 60px;
+  color: #1a202c;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ── */
+.page-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.page-header h1 {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a202c;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+.page-header p {
+  font-size: 12.5px;
+  color: #718096;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Legend ── */
+.legend {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; color: #4a5568; font-weight: 600;
+}
+.legend-swatch {
+  width: 14px; height: 14px; border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* ── Diagram ── */
+.diagram {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Layer ── */
+.layer {
+  border-radius: 16px;
+  border: 2px solid;
+  padding: 22px 22px 20px;
+  position: relative;
+  background: white;
+}
+.layer-tag {
+  position: absolute;
+  top: -12px; left: 18px;
+  font-size: 10.5px; font-weight: 800;
+  letter-spacing: 0.9px; text-transform: uppercase;
+  padding: 3px 11px;
+  border-radius: 5px;
+  border: 1.5px solid;
+}
+
+/* ── Connector ── */
+.connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 0;
+  gap: 2px;
+}
+.conn-line {
+  width: 2px;
+  height: 13px;
+}
+.conn-arrow {
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+.conn-label-row {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 2px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.conn-label {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ════════════════════════
+   USER
+════════════════════════ */
+.layer-user {
+  border-color: #cbd5e0;
+  background: #f7fafc;
+  display: flex; justify-content: center; padding: 16px;
+}
+.user-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 32px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+.user-icon { font-size: 28px; }
+.user-text h3 { font-size: 15px; font-weight: 800; color: #2d3748; }
+.user-text p { font-size: 12px; color: #a0aec0; margin-top: 2px; }
+
+/* ════════════════════════
+   FRONTEND
+════════════════════════ */
+.layer-frontend {
+  border-color: #7c3aed;
+  background: #faf5ff;
+}
+.layer-frontend .layer-tag {
+  background: #6d28d9;
+  color: white;
+  border-color: #6d28d9;
+}
+.fe-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.fe-left-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.fe-right {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.fe-page-card {
+  padding: 11px 13px;
+  background: white;
+  border: 1.5px solid #ddd6fe;
+  border-radius: 10px;
+}
+.fe-page-title {
+  font-size: 12px; font-weight: 800; color: #5b21b6;
+  display: flex; align-items: center; gap: 5px;
+  margin-bottom: 5px;
+}
+.fe-page-title span { font-size: 15px; }
+.fe-page-items { display: flex; flex-direction: column; gap: 3px; }
+.fe-page-item { font-size: 11.5px; color: #6b7280; }
+
+.fe-info-card {
+  padding: 11px 13px;
+  background: white;
+  border: 1.5px solid #ddd6fe;
+  border-radius: 10px;
+}
+.fe-info-title { font-size: 11px; font-weight: 800; color: #7c3aed; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 6px; }
+.fe-info-item { font-size: 12px; color: #4a5568; margin-bottom: 3px; display: flex; align-items: flex-start; gap: 5px; line-height: 1.4; }
+.fe-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; background: #7c3aed; }
+
+.fe-api-card {
+  padding: 12px 14px;
+  background: #ede9fe;
+  border: 1.5px solid #c4b5fd;
+  border-radius: 10px;
+}
+.fe-api-title { font-size: 11px; font-weight: 800; color: #5b21b6; letter-spacing: 0.8px; margin-bottom: 7px; }
+.fe-endpoint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px; color: #4c1d95;
+  padding: 3px 8px;
+  background: white;
+  border-radius: 5px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* ════════════════════════
+   BACKEND API
+════════════════════════ */
+.layer-backend {
+  border-color: #0891b2;
+  background: #ecfeff;
+}
+.layer-backend .layer-tag {
+  background: #0e7490;
+  color: white;
+  border-color: #0e7490;
+}
+.be-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.be-server-card {
+  padding: 14px 14px;
+  background: white;
+  border: 1.5px solid #a5f3fc;
+  border-radius: 12px;
+}
+.be-server-tag { font-size: 10px; font-weight: 800; color: #0e7490; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+.be-server-name { font-size: 17px; font-weight: 800; color: #164e63; margin-bottom: 10px; }
+.be-tech-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.be-tech-pill {
+  padding: 3px 9px; border-radius: 5px;
+  font-size: 10.5px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.be-deploy-note {
+  font-size: 11.5px; color: #0e7490;
+  padding: 7px 10px;
+  background: #cffafe;
+  border-radius: 7px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.be-endpoints-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.be-ep-card {
+  padding: 10px 12px;
+  background: white;
+  border: 1.5px solid #a5f3fc;
+  border-radius: 9px;
+}
+.be-ep-method {
+  display: inline-block;
+  font-size: 9.5px; font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 2px 6px; border-radius: 3px;
+  margin-bottom: 4px;
+}
+.method-post { background: #dcfce7; color: #166534; }
+.method-get { background: #dbeafe; color: #1e40af; }
+.be-ep-path {
+  font-size: 11.5px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: #164e63;
+  margin-bottom: 4px;
+}
+.be-ep-desc { font-size: 11px; color: #6b7280; line-height: 1.4; }
+
+/* ════════════════════════
+   PIPELINE
+════════════════════════ */
+.layer-pipeline {
+  border-color: #059669;
+  background: #f0fdf4;
+}
+.layer-pipeline .layer-tag {
+  background: #047857;
+  color: white;
+  border-color: #047857;
+}
+
+/* Domain Router */
+.router-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.router-box {
+  padding: 12px 16px;
+  background: white;
+  border: 2px solid #059669;
+  border-radius: 11px;
+  flex: 1;
+  display: flex; align-items: center; gap: 12px;
+}
+.router-icon { font-size: 28px; }
+
+.router-title { font-size: 14px; font-weight: 800; color: #064e3b; margin-bottom: 3px; }
+.router-sub { font-size: 12px; color: #065f46; }
+.router-steps {
+  display: flex; flex-direction: column; gap: 5px;
+  flex: 1;
+}
+.router-step {
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12px; color: #065f46;
+  display: flex; align-items: center; gap: 7px;
+}
+.router-step-num {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #059669;
+  color: white;
+  font-size: 11px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Orchestrator */
+.orch-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.orch-main-box {
+  flex: 1;
+  padding: 12px 16px;
+  background: white;
+  border: 2px solid #0284c7;
+  border-radius: 11px;
+  display: flex; align-items: center; gap: 12px;
+}
+.orch-icon { font-size: 26px; }
+.orch-title { font-size: 14px; font-weight: 800; color: #0c4a6e; margin-bottom: 3px; }
+.orch-sub { font-size: 12px; color: #075985; }
+.orch-features {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  flex: 1; align-items: center;
+}
+.orch-chip {
+  padding: 4px 10px;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  border-radius: 20px;
+  font-size: 11.5px; font-weight: 600; color: #075985;
+}
+
+/* Agents Row */
+.agents-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.agent-card {
+  background: white;
+  border-radius: 13px;
+  border: 2px solid;
+  overflow: hidden;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+}
+.agent-head {
+  padding: 12px 14px 9px;
+  display: flex; align-items: center; gap: 9px;
+}
+.agent-emoji { font-size: 24px; }
+.agent-type-tag { font-size: 9.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 1px; }
+.agent-name-big { font-size: 14px; font-weight: 800; line-height: 1.2; }
+.agent-body-inner { padding: 0 14px 12px; }
+.agent-divider { height: 1px; background: #f1f5f9; margin-bottom: 8px; }
+.agent-caps { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.agent-cap-item {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 12px; color: #4a5568; line-height: 1.4;
+}
+.cap-icon { font-size: 11.5px; flex-shrink: 0; margin-top: 1px; }
+.agent-plugin-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 2px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+.plugin-led { width: 5px; height: 5px; border-radius: 50%; }
+
+/* Admin Agent */
+.agent-admin { border-color: #2563eb; }
+.agent-admin .agent-type-tag { color: #1d4ed8; }
+.agent-admin .agent-name-big { color: #1e3a8a; }
+.agent-admin .agent-head { background: #eff6ff; }
+.agent-admin .agent-plugin-tag { background: #eff6ff; color: #1d4ed8; }
+.agent-admin .plugin-led { background: #2563eb; }
+
+/* Legal Agent */
+.agent-legal { border-color: #7c3aed; }
+.agent-legal .agent-type-tag { color: #6d28d9; }
+.agent-legal .agent-name-big { color: #4c1d95; }
+.agent-legal .agent-head { background: #f5f3ff; }
+.agent-legal .agent-plugin-tag { background: #f5f3ff; color: #6d28d9; }
+.agent-legal .plugin-led { background: #7c3aed; }
+
+/* Finance Agent */
+.agent-finance { border-color: #dc2626; }
+.agent-finance .agent-type-tag { color: #b91c1c; }
+.agent-finance .agent-name-big { color: #7f1d1d; }
+.agent-finance .agent-head { background: #fff1f2; }
+.agent-finance .agent-plugin-tag { background: #fff1f2; color: #b91c1c; }
+.agent-finance .plugin-led { background: #dc2626; }
+
+/* Sign-Off Agent */
+.signoff-strip {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: stretch;
+}
+.signoff-main {
+  padding: 13px 16px;
+  background: white;
+  border: 2px solid #d97706;
+  border-radius: 11px;
+  display: flex; gap: 14px; align-items: flex-start;
+}
+.signoff-icon { font-size: 28px; flex-shrink: 0; }
+.signoff-content {}
+.signoff-title { font-size: 14px; font-weight: 800; color: #78350f; margin-bottom: 4px; }
+.signoff-desc { font-size: 12px; color: #92400e; margin-bottom: 8px; line-height: 1.5; }
+.signoff-codes { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.code-chip {
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.signoff-retry-note {
+  font-size: 12px; color: #92400e;
+  padding: 7px 10px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 7px;
+  display: flex; align-items: center; gap: 6px;
+}
+.grades-col {
+  display: flex; flex-direction: column; gap: 8px;
+  min-width: 145px;
+}
+.grade-box {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+  border-radius: 10px;
+  border: 2px solid;
+  padding: 10px 8px;
+  text-align: center;
+}
+.grade-a { border-color: #16a34a; background: #f0fdf4; }
+.grade-b { border-color: #d97706; background: #fffbeb; }
+.grade-c { border-color: #dc2626; background: #fef2f2; }
+.grade-letter { font-size: 20px; font-weight: 800; }
+.grade-a .grade-letter { color: #15803d; }
+.grade-b .grade-letter { color: #b45309; }
+.grade-c .grade-letter { color: #b91c1c; }
+.grade-label { font-size: 11px; font-weight: 700; }
+.grade-a .grade-label { color: #166534; }
+.grade-b .grade-label { color: #92400e; }
+.grade-c .grade-label { color: #991b1b; }
+.grade-sub { font-size: 10px; color: #9ca3af; line-height: 1.4; }
+
+/* Retry arrow */
+.retry-arrow-row {
+  display: flex; justify-content: flex-end;
+  margin-top: 6px;
+  padding-right: 145px;
+}
+.retry-arrow-box {
+  padding: 6px 14px;
+  background: #fef3c7;
+  border: 1.5px dashed #f59e0b;
+  border-radius: 20px;
+  font-size: 11.5px; color: #92400e; font-weight: 600;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* Logger */
+.logger-strip {
+  margin-top: 14px;
+  padding: 11px 16px;
+  background: white;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  display: flex; align-items: center; gap: 16px;
+}
+.logger-icon { font-size: 20px; }
+.logger-title { font-size: 13px; font-weight: 800; color: #374151; margin-right: 12px; flex-shrink: 0; }
+.logger-files { display: flex; gap: 8px; }
+.logger-file {
+  padding: 4px 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #374151; font-weight: 600;
+}
+.logger-arrow {
+  font-size: 11.5px; color: #9ca3af; margin-left: auto;
+  font-style: italic;
+}
+
+/* ════════════════════════
+   EXTERNAL SERVICES
+════════════════════════ */
+.layer-external {
+  border-color: #475569;
+  background: #f8fafc;
+}
+.layer-external .layer-tag {
+  background: #334155;
+  color: white;
+  border-color: #334155;
+}
+.ext-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.ext-card {
+  padding: 12px 14px;
+  background: white;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+}
+.ext-card-title {
+  font-size: 12px; font-weight: 800; color: #1e293b;
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 7px;
+}
+.ext-icon { font-size: 18px; }
+.ext-badge {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 2px 6px; border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.ext-item {
+  font-size: 11.5px; color: #475569;
+  padding: 3px 0;
+  border-bottom: 1px solid #f8fafc;
+  display: flex; align-items: flex-start; gap: 5px;
+  line-height: 1.4;
+}
+.ext-item:last-child { border-bottom: none; }
+.ext-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+
+/* ════════════════════════
+   DEPLOYMENT
+════════════════════════ */
+.deploy-bar {
+  max-width: 1120px;
+  margin: 14px auto 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.deploy-card {
+  padding: 12px 16px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex; align-items: center; gap: 10px;
+}
+.deploy-icon { font-size: 22px; }
+.deploy-title { font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 2px; }
+.deploy-detail { font-size: 11.5px; color: #64748b; font-family: 'JetBrains Mono', monospace; }
+
+/* Footer */
+.footer-note {
+  max-width: 1120px;
+  margin: 14px auto 0;
+  padding: 11px 20px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 11.5px; color: #718096;
+  text-align: center;
+  line-height: 1.7;
+  font-family: 'JetBrains Mono', monospace;
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>SOHOBI — F&B 창업 지원 멀티 에이전트 시스템 아키텍처</h1>
+  <p>FastAPI + Semantic Kernel · Azure OpenAI GPT-4o · 3-Domain Agent Pipeline · Sign-Off Quality Gate · v1.0</p>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#7c3aed;"></div>프론트엔드 (React + Vite)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#0891b2;"></div>백엔드 API (FastAPI)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#059669;"></div>에이전트 파이프라인 (Semantic Kernel)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#d97706;"></div>Sign-Off 품질 검증</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#475569;"></div>외부 서비스 / 플러그인</div>
+</div>
+
+<div class="diagram">
+
+  <!-- ① USER -->
+  <div class="layer" style="border-color:#cbd5e0;background:#f7fafc;display:flex;justify-content:center;padding:16px;">
+    <div class="layer-tag" style="background:#718096;color:white;border-color:#718096;">사용자</div>
+    <div class="user-card">
+      <div class="user-icon">👤</div>
+      <div class="user-text">
+        <h3>F&B 1인 창업자</h3>
+        <p>자연어 질문 입력 · 행정 / 법무 / 재무 도메인</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector 1 -->
+  <div class="connector">
+    <div class="conn-line" style="background:#7c3aed;"></div>
+    <div class="conn-label-row">
+      <div class="conn-label" style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;">↓ 질문 입력 (User / Dev 모드)</div>
+      <div class="conn-label" style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;">↑ 응답 · 등급 · 루브릭 결과 표시</div>
+    </div>
+    <div class="conn-line" style="background:#7c3aed;"></div>
+  </div>
+
+  <!-- ② FRONTEND -->
+  <div class="layer layer-frontend">
+    <div class="layer-tag">프론트엔드 — React 19 + Vite 7 (Vercel 배포)</div>
+    <div class="fe-grid">
+      <div class="fe-left-grid">
+        <div class="fe-page-card">
+          <div class="fe-page-title"><span>🏠</span>Home.jsx</div>
+          <div class="fe-page-items">
+            <div class="fe-page-item">User / Developer 모드 선택</div>
+            <div class="fe-page-item">진입점 분기</div>
+          </div>
+        </div>
+        <div class="fe-page-card">
+          <div class="fe-page-title"><span>💬</span>UserChat.jsx</div>
+          <div class="fe-page-items">
+            <div class="fe-page-item">일반 사용자 채팅 UI</div>
+            <div class="fe-page-item">ResponseCard (Markdown)</div>
+          </div>
+        </div>
+        <div class="fe-page-card">
+          <div class="fe-page-title"><span>🛠️</span>DevChat.jsx</div>
+          <div class="fe-page-items">
+            <div class="fe-page-item">등급 · 루브릭 · 재시도 이력</div>
+            <div class="fe-page-item">SignoffPanel (Accordion)</div>
+          </div>
+        </div>
+        <div class="fe-page-card">
+          <div class="fe-page-title"><span>📋</span>LogViewer.jsx</div>
+          <div class="fe-page-items">
+            <div class="fe-page-item">queries / rejections JSONL</div>
+            <div class="fe-page-item">LogTable (확장 가능)</div>
+          </div>
+        </div>
+      </div>
+      <div class="fe-right">
+        <div class="fe-info-card">
+          <div class="fe-info-title">공통 컴포넌트</div>
+          <div class="fe-info-item"><div class="fe-dot"></div><b>ChatInput.jsx</b> — 에러 상태 보존 입력창</div>
+          <div class="fe-info-item"><div class="fe-dot"></div><b>ResponseCard.jsx</b> — 도메인·등급 배지 + Markdown</div>
+          <div class="fe-info-item"><div class="fe-dot"></div><b>SignoffPanel.jsx</b> — passed / warnings / issues 아코디언</div>
+        </div>
+        <div class="fe-api-card">
+          <div class="fe-api-title">API 호출 (api.js)</div>
+          <code class="fe-endpoint">POST /api/v1/query</code>
+          <code class="fe-endpoint">GET  /api/v1/logs?type=&limit=</code>
+          <div style="font-size:11.5px;color:#5b21b6;margin-top:6px;">dev: proxy → localhost:8000<br>prod: VITE_API_URL (Railway)</div>
+        </div>
+        <div class="fe-info-card">
+          <div class="fe-info-title">스택 / 배포</div>
+          <div class="fe-info-item"><div class="fe-dot"></div>Tailwind CSS 3.4 · React Router v7</div>
+          <div class="fe-info-item"><div class="fe-dot"></div>react-markdown · ESLint 9</div>
+          <div class="fe-info-item"><div class="fe-dot"></div>Vercel (vercel.json) · port 3000</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector 2 -->
+  <div class="connector">
+    <div class="conn-line" style="background:#0891b2;"></div>
+    <div class="conn-label-row">
+      <div class="conn-label" style="background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc;">↓ HTTP REST (JSON) · session_id, question, founder_context</div>
+      <div class="conn-label" style="background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc;">↑ status, domain, grade, draft, rejection_history</div>
+    </div>
+    <div class="conn-line" style="background:#0891b2;"></div>
+  </div>
+
+  <!-- ③ BACKEND API -->
+  <div class="layer layer-backend">
+    <div class="layer-tag">백엔드 API 서버 — FastAPI 0.115 + Uvicorn (Railway 배포)</div>
+    <div class="be-grid">
+      <div class="be-server-card">
+        <div class="be-server-tag">API Server</div>
+        <div class="be-server-name">FastAPI<br>+ Uvicorn</div>
+        <div class="be-tech-pills">
+          <span class="be-tech-pill" style="background:#cffafe;color:#155e75;">FastAPI 0.115</span>
+          <span class="be-tech-pill" style="background:#cffafe;color:#155e75;">Pydantic 2.11</span>
+          <span class="be-tech-pill" style="background:#cffafe;color:#155e75;">CORS MW</span>
+          <span class="be-tech-pill" style="background:#cffafe;color:#155e75;">python-dotenv</span>
+        </div>
+        <div class="be-deploy-note">
+          railway.json<br>
+          port $PORT · ON_FAILURE restart<br>
+          .env → Railway Secrets
+        </div>
+      </div>
+      <div class="be-endpoints-grid">
+        <div class="be-ep-card">
+          <span class="be-ep-method method-post">POST</span>
+          <div class="be-ep-path">/api/v1/query</div>
+          <div class="be-ep-desc">메인 Q&A 파이프라인<br>domain 라우팅 → 에이전트 → sign-off → 응답</div>
+        </div>
+        <div class="be-ep-card">
+          <span class="be-ep-method method-post">POST</span>
+          <div class="be-ep-path">/api/v1/signoff</div>
+          <div class="be-ep-desc">단독 Sign-Off 검증<br>draft 입력 → 루브릭 평가 → 등급 반환</div>
+        </div>
+        <div class="be-ep-card">
+          <span class="be-ep-method method-post">POST</span>
+          <div class="be-ep-path">/api/v1/doc/chat</div>
+          <div class="be-ep-desc">문서 생성 파이프라인<br>식품영업신고서 PDF 자동 작성</div>
+        </div>
+        <div class="be-ep-card">
+          <span class="be-ep-method method-get">GET</span>
+          <div class="be-ep-path">/api/v1/logs</div>
+          <div class="be-ep-desc">JSONL 로그 조회<br>type=(queries|rejections) · limit</div>
+        </div>
+        <div class="be-ep-card">
+          <span class="be-ep-method method-get">GET</span>
+          <div class="be-ep-path">/health</div>
+          <div class="be-ep-desc">서버 상태 확인<br>사용 가능 도메인 목록 반환</div>
+        </div>
+        <div class="be-ep-card" style="border-color:#f1f5f9;background:#f8fafc;">
+          <div style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:6px;">세션 관리</div>
+          <div class="be-ep-desc" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#64748b;">_query_sessions{}<br>session_id → profile<br>+ ChatHistory (인메모리)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector 3 -->
+  <div class="connector">
+    <div class="conn-line" style="background:#059669;"></div>
+    <div class="conn-label-row">
+      <div class="conn-label" style="background:#f0fdf4;color:#047857;border:1px solid #a7f3d0;">↓ 도메인 라우팅 → 에이전트 실행 → Sign-Off 품질 검증 루프</div>
+    </div>
+    <div class="conn-line" style="background:#059669;"></div>
+  </div>
+
+  <!-- ④ AGENT PIPELINE -->
+  <div class="layer layer-pipeline">
+    <div class="layer-tag">에이전트 파이프라인 — Semantic Kernel 1.40 · Azure OpenAI GPT-4o</div>
+
+    <!-- Domain Router -->
+    <div class="router-strip">
+      <div class="router-box">
+        <div class="router-icon">🗂️</div>
+        <div class="router-text">
+          <div class="router-title">DomainRouter</div>
+          <div class="router-sub">도메인 분류 · 에이전트 선택</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;font-size:18px;color:#9ca3af;">→</div>
+      <div class="router-steps" style="background:white;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px 12px;">
+        <div class="router-step" style="background:#f0fdf4;">
+          <div class="router-step-num">1</div>
+          <span><b>키워드 매칭</b> — 행정/재무/법무 키워드 1차 판별</span>
+        </div>
+        <div class="router-step" style="background:#f0fdf4;">
+          <div class="router-step-num">2</div>
+          <span><b>LLM 분류</b> — 키워드 불명확 시 GPT-4o 2차 판별</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;font-size:18px;color:#9ca3af;">→</div>
+      <div style="display:flex;flex-direction:column;gap:5px;justify-content:center;">
+        <div style="padding:5px 12px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:7px;font-size:12px;font-weight:700;color:#1d4ed8;">admin (행정)</div>
+        <div style="padding:5px 12px;background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:7px;font-size:12px;font-weight:700;color:#6d28d9;">legal (법무)</div>
+        <div style="padding:5px 12px;background:#fff1f2;border:1.5px solid #fecdd3;border-radius:7px;font-size:12px;font-weight:700;color:#b91c1c;">finance (재무)</div>
+      </div>
+    </div>
+
+    <!-- Orchestrator -->
+    <div class="orch-strip">
+      <div class="orch-main-box">
+        <div class="orch-icon">🎛️</div>
+        <div>
+          <div class="orch-title">Orchestrator</div>
+          <div class="orch-sub">에이전트 실행 · 재시도 루프 관리</div>
+        </div>
+      </div>
+      <div class="orch-features">
+        <div class="orch-chip">세션 컨텍스트 주입 (founder_context)</div>
+        <div class="orch-chip">ChatHistory 누적</div>
+        <div class="orch-chip">retry_prompt → 에이전트 재호출</div>
+        <div class="orch-chip">max_retries+1 회 시도</div>
+        <div class="orch-chip">에이전트별 latency 측정</div>
+      </div>
+    </div>
+
+    <!-- 3 Domain Agents -->
+    <div class="agents-row">
+
+      <!-- Admin Agent -->
+      <div class="agent-card agent-admin">
+        <div class="agent-head">
+          <div class="agent-emoji">🏛️</div>
+          <div class="agent-head-text">
+            <div class="agent-type-tag">Admin Agent</div>
+            <div class="agent-name-big">행정·인허가<br>안내 에이전트</div>
+          </div>
+        </div>
+        <div class="agent-body-inner">
+          <div class="agent-divider"></div>
+          <div class="agent-caps">
+            <div class="agent-cap-item"><span class="cap-icon">📋</span>영업 신고·허가 절차 안내<br><span style="font-size:11px;color:#718096;">(보건증, 위생교육, 영업신고 등)</span></div>
+            <div class="agent-cap-item"><span class="cap-icon">📝</span>식품영업신고서 자동 작성<br><span style="font-size:11px;color:#718096;">(FoodBusinessPlugin → ReportLab PDF)</span></div>
+            <div class="agent-cap-item"><span class="cap-icon">🗺️</span>서울 상권 데이터 조회<br><span style="font-size:11px;color:#718096;">(홍대·강남 등 구별 예상 매출)</span></div>
+          </div>
+          <div class="agent-plugin-tag">
+            <div class="plugin-led"></div>Plugin: SeoulCommercialPlugin
+          </div>
+        </div>
+      </div>
+
+      <!-- Legal Agent -->
+      <div class="agent-card agent-legal">
+        <div class="agent-head">
+          <div class="agent-emoji">⚖️</div>
+          <div class="agent-head-text">
+            <div class="agent-type-tag">Legal Agent</div>
+            <div class="agent-name-big">법무·계약<br>안내 에이전트</div>
+          </div>
+        </div>
+        <div class="agent-body-inner">
+          <div class="agent-divider"></div>
+          <div class="agent-caps">
+            <div class="agent-cap-item"><span class="cap-icon">📜</span>법령 조항 기반 Q&A<br><span style="font-size:11px;color:#718096;">(식품위생법·상가임대차보호법 등)</span></div>
+            <div class="agent-cap-item"><span class="cap-icon">🔍</span>벡터 RAG 법령 검색<br><span style="font-size:11px;color:#718096;">(top-k=3, semantic search)</span></div>
+            <div class="agent-cap-item"><span class="cap-icon">⚠️</span>법적 면책 조항 자동 포함<br><span style="font-size:11px;color:#718096;">(전문 법률 자문 권고)</span></div>
+          </div>
+          <div class="agent-plugin-tag">
+            <div class="plugin-led"></div>Plugin: LegalSearchPlugin (Azure AI Search)
+          </div>
+        </div>
+      </div>
+
+      <!-- Finance Agent -->
+      <div class="agent-card agent-finance">
+        <div class="agent-head">
+          <div class="agent-emoji">📊</div>
+          <div class="agent-head-text">
+            <div class="agent-type-tag">Finance Agent</div>
+            <div class="agent-name-big">재무 리스크<br>분석 에이전트</div>
+          </div>
+        </div>
+        <div class="agent-body-inner">
+          <div class="agent-divider"></div>
+          <div class="agent-caps">
+            <div class="agent-cap-item"><span class="cap-icon">🔢</span>자연어 → JSON 파라미터 추출<br><span style="font-size:11px;color:#718096;">(매출·비용·인건비·임대료 등)</span></div>
+            <div class="agent-cap-item"><span class="cap-icon">🎲</span>몬테카를로 시뮬레이션<br><span style="font-size:11px;color:#718096;">(10,000회 · P5/P95 신뢰구간)</span></div>
+            <div class="agent-cap-item"><span class="cap-icon">⏱️</span>투자 회수 기간 계산 (ROI)<br><span style="font-size:11px;color:#718096;">(손익분기점 분포 산출)</span></div>
+          </div>
+          <div class="agent-plugin-tag">
+            <div class="plugin-led"></div>Plugin: FinanceSimulationPlugin (Pure Python)
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Sign-Off Agent -->
+    <div class="signoff-strip">
+      <div class="signoff-main">
+        <div class="signoff-icon">🔎</div>
+        <div class="signoff-content">
+          <div class="signoff-title">Sign-Off Agent — 품질 검증 게이트</div>
+          <div class="signoff-desc">에이전트 초안을 도메인별 루브릭 코드로 평가 → A / B / C 등급 결정 · C등급 시 retry_prompt 생성</div>
+          <div class="signoff-codes">
+            <span class="code-chip" style="background:#dbeafe;color:#1d4ed8;">C1–C5 공통</span>
+            <span class="code-chip" style="background:#eff6ff;color:#2563eb;">A1–A5 행정</span>
+            <span class="code-chip" style="background:#f5f3ff;color:#6d28d9;">G1–G4 법무</span>
+            <span class="code-chip" style="background:#fff1f2;color:#b91c1c;">F1–F5 재무</span>
+          </div>
+          <div class="signoff-retry-note">
+            🔁 C등급 판정 시 retry_prompt → Orchestrator로 반환 → 에이전트 재호출 (최대 max_retries회)
+          </div>
+        </div>
+      </div>
+      <div class="grades-col">
+        <div class="grade-box grade-a">
+          <div class="grade-letter">A</div>
+          <div class="grade-label">승인</div>
+          <div class="grade-sub">issues=0<br>warnings=0</div>
+        </div>
+        <div class="grade-box grade-b">
+          <div class="grade-letter">B</div>
+          <div class="grade-label">조건부 승인</div>
+          <div class="grade-sub">issues=0<br>warnings>0</div>
+        </div>
+        <div class="grade-box grade-c">
+          <div class="grade-letter">C</div>
+          <div class="grade-label">재시도</div>
+          <div class="grade-sub">issues>0<br>재생성 요청</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logger -->
+    <div class="logger-strip">
+      <div class="logger-icon">🗃️</div>
+      <div class="logger-title">Logger</div>
+      <div class="logger-files">
+        <div class="logger-file">logs/queries.jsonl</div>
+        <div class="logger-file">logs/rejections.jsonl</div>
+      </div>
+      <div class="logger-arrow">모든 요청 기록 · rejection_history > 0 → rejections 파일 추가 기록 · LogViewer에서 조회 가능 →</div>
+    </div>
+
+  </div>
+
+  <!-- Connector 4 -->
+  <div class="connector">
+    <div class="conn-line" style="background:#475569;"></div>
+    <div class="conn-label-row">
+      <div class="conn-label" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e0;">↓ LLM 추론 · 벡터 검색 · 외부 API 호출</div>
+    </div>
+    <div class="conn-line" style="background:#475569;"></div>
+  </div>
+
+  <!-- ⑤ EXTERNAL SERVICES -->
+  <div class="layer layer-external">
+    <div class="layer-tag">외부 서비스 · 플러그인 연동</div>
+    <div class="ext-grid">
+
+      <div class="ext-card">
+        <div class="ext-card-title">
+          <span class="ext-icon">🤖</span>
+          Azure OpenAI
+          <span class="ext-badge" style="background:#dbeafe;color:#1e40af;">LLM</span>
+        </div>
+        <div class="ext-item"><div class="ext-dot" style="background:#2563eb;"></div><b>GPT-4o</b> — 모든 에이전트 추론</div>
+        <div class="ext-item"><div class="ext-dot" style="background:#2563eb;"></div>DomainRouter LLM 분류</div>
+        <div class="ext-item"><div class="ext-dot" style="background:#2563eb;"></div>Sign-Off 루브릭 평가</div>
+        <div class="ext-item"><div class="ext-dot" style="background:#7c3aed;"></div><b>text-embedding-3-small</b><br><span style="font-size:10.5px;color:#9ca3af;">법령 벡터 임베딩 생성</span></div>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-card-title">
+          <span class="ext-icon">🔍</span>
+          Azure AI Search
+          <span class="ext-badge" style="background:#f3e8ff;color:#7c3aed;">RAG</span>
+        </div>
+        <div class="ext-item"><div class="ext-dot" style="background:#7c3aed;"></div>인덱스: <b>legal-index</b></div>
+        <div class="ext-item"><div class="ext-dot" style="background:#7c3aed;"></div>의미론적 벡터 검색 (top-k=3)</div>
+        <div class="ext-item"><div class="ext-dot" style="background:#7c3aed;"></div>반환: category, title, content</div>
+        <div class="ext-item"><div class="ext-dot" style="background:#7c3aed;"></div>미설정 시 graceful degradation</div>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-card-title">
+          <span class="ext-icon">🗺️</span>
+          Seoul Open Data API
+          <span class="ext-badge" style="background:#dcfce7;color:#166534;">공공</span>
+        </div>
+        <div class="ext-item"><div class="ext-dot" style="background:#16a34a;"></div>구별 상권 예상 매출 (분기별)</div>
+        <div class="ext-item"><div class="ext-dot" style="background:#16a34a;"></div>업종·지역별 비즈니스 지표</div>
+        <div class="ext-item"><div class="ext-dot" style="background:#16a34a;"></div>홍대·강남·이태원 등 매핑</div>
+        <div class="ext-item"><div class="ext-dot" style="background:#16a34a;"></div>API 키 미설정 시 graceful degradation</div>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-card-title">
+          <span class="ext-icon">📄</span>
+          PDF 생성 (ReportLab)
+          <span class="ext-badge" style="background:#fef3c7;color:#92400e;">문서</span>
+        </div>
+        <div class="ext-item"><div class="ext-dot" style="background:#d97706;"></div><b>FoodBusinessPlugin</b></div>
+        <div class="ext-item"><div class="ext-dot" style="background:#d97706;"></div>식품영업신고서 [별지 제40호]</div>
+        <div class="ext-item"><div class="ext-dot" style="background:#d97706;"></div>NAM/overlay_main.py 연동</div>
+        <div class="ext-item"><div class="ext-dot" style="background:#d97706;"></div>자연어 → PDF 픽셀 정밀 오버레이</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Deployment Info -->
+<div class="deploy-bar">
+  <div class="deploy-card">
+    <div class="deploy-icon">▲</div>
+    <div>
+      <div class="deploy-title">프론트엔드 배포 — Vercel</div>
+      <div class="deploy-detail">npm run build → dist/ · VITE_API_URL=https://…railway.app · port 3000</div>
+    </div>
+  </div>
+  <div class="deploy-card">
+    <div class="deploy-icon">🚂</div>
+    <div>
+      <div class="deploy-title">백엔드 배포 — Railway</div>
+      <div class="deploy-detail">uvicorn api_server:app --host 0.0.0.0 --port $PORT · NIXPACKS build · ON_FAILURE restart ×3</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-note">
+  integrated_PARK/ — FastAPI api_server.py · agents/{admin,legal,finance}_agent.py · plugins/{seoul_commercial,legal_search,finance_simulation,food_business}_plugin.py · signoff/signoff_agent.py<br>
+  세션: 인메모리 (서버 재시작 시 초기화) · 인증: 없음 (내부 데모) · CORS: 전체 허용 · 로그: logs/*.jsonl append-only
+</div>
+
+</body>
+</html>

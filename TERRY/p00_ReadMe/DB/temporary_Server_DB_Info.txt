@@ -1,0 +1,24 @@
+임시 서버 DB정보 공유의건(250316)
+
+1) DB_INFO = "fable/1@//10.1.92.112:1521/xe"
+
+서버IP: 10.1.92.112
+포트번호: 1521
+ID: fable
+PW: 1
+
+2) TABLE_INFO
+
+ⓐ 소상공인_서울: 
+	- 반경 시장 관련 테이블
+	- 경기, 강원등 도별 테이블 분할되어 있음
+	- "MS2_PROJECT_VWORLD_MAP.sql"로 컬럼명 참고
+ⓑ STG_LAW_ADM: 
+	- 행정동&법정동 매칭 테이블
+    - "MS2_PROJECT_Create_dong.sql"로 컴럼명 참고
+ⓒ SANGKWON_SALES:
+	- 상권 매출 관련 테이블
+	- "MS2_PROJECT_VWORLD_SangKwon.sql"로 컬럼명 참고
+ⓓ REALTIME_FLPOP:
+	- 유동인구 관련 테이블
+    - 미진행 中

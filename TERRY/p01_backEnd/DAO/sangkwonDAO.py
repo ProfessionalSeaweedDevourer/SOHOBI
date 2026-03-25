@@ -10,6 +10,18 @@
 #    추후 구현
 # ────────────────────────────────────────────────────────────────
 
+# 위치: p01_backEnd/DAO/sangkwonDAO.py
+#
+# ── 전략 ────────────────────────────────────────────────────────
+#  매출 (SANGKWON_SALES 테이블):
+#    19~25년 CSV를 DBeaver로 Oracle import
+#    서버 시작 시 V_SANGKWON_LATEST 뷰 → pandas DataFrame 메모리 로드
+#    조회: DataFrame 필터링 (1~5ms)
+#
+#  유동인구:
+#    추후 구현
+# ────────────────────────────────────────────────────────────────
+
 import os
 import logging
 import pandas as pd
@@ -17,8 +29,8 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+from .baseDAO import BaseDAO
 
-from baseDAO import BaseDAO
 
 class SangkwonDAO(BaseDAO):
 
@@ -38,19 +50,18 @@ class SangkwonDAO(BaseDAO):
         """
         sql = """
             SELECT
-                행정동_코드,
-                행정동_코드_명,
-                기준_년분기_코드,
-                TOT_SALES_AMT,
-                TOT_SELNG_CO,
-                ML_SALES_AMT,
-                FML_SALES_AMT,
-                MDWK_SALES_AMT,
-                WKEND_SALES_AMT,
-                AGE20_AMT,
-                AGE30_AMT,
-                AGE40_AMT,
-                AGE50_AMT
+                adm_cd,
+                adm_nm,
+                base_yr_qtr_cd,
+                tot_sales_amt,
+                ml_sales_amt,
+                fml_sales_amt,
+                mdwk_sales_amt,
+                wkend_sales_amt,
+                age20_amt,
+                age30_amt,
+                age40_amt,
+                age50_amt
             FROM V_SANGKWON_LATEST
         """
         try:
@@ -113,9 +124,7 @@ class SangkwonDAO(BaseDAO):
         if not code_prefix:
             return []
 
-        df_gu = self._df[
-            self._df["행정동_코드"].astype(str).str.startswith(code_prefix)
-        ]
+        df_gu = self._df[self._df["adm_cd"].astype(str).str.startswith(code_prefix)]
         return df_gu.to_dict("records")
 
     def getSalesByDong(self, dong: str, gu: str = "") -> dict:
@@ -127,7 +136,7 @@ class SangkwonDAO(BaseDAO):
         if self._df is None or self._df.empty:
             return None
 
-        df = self._df[self._df["행정동_코드_명"] == dong]
+        df = self._df[self._df["adm_nm"] == dong]
 
         # 구로 추가 필터
         if gu and len(df) > 1:
@@ -160,20 +169,116 @@ class SangkwonDAO(BaseDAO):
             }
             prefix = GU_CODE.get(gu)
             if prefix:
-                df = df[df["행정동_코드"].astype(str).str.startswith(prefix)]
+                df = df[df["adm_cd"].astype(str).str.startswith(prefix)]
 
         if df.empty:
             return None
         return df.iloc[0].to_dict()
 
     def getSalesByCode(self, adstrd_cd: str) -> dict:
-        """행정동 코드로 단건 조회"""
+        """행정동 코드로 단건 조회 (8자리 또는 10자리, float형 모두 대응)"""
         if self._df is None or self._df.empty:
             return None
-        df = self._df[self._df["행정동_코드"].astype(str) == str(adstrd_cd)]
+        adstrd_cd = str(adstrd_cd).strip()
+        # Oracle NUMBER → float → '1115051000.0' 형태 정리
+        db_codes = self._df["adm_cd"].apply(
+            lambda x: str(int(float(x))) if str(x).endswith(".0") else str(x)
+        )
+        df = self._df[db_codes == adstrd_cd]
+        if df.empty and len(adstrd_cd) == 8:
+            df = self._df[db_codes.str[:8] == adstrd_cd]
+        if df.empty and len(adstrd_cd) == 10:
+            df = self._df[db_codes == adstrd_cd[:8]]
+        sample = db_codes.unique()[:5].tolist()
+        logger.info(
+            f"[SangkwonDAO] getSalesByCode: adstrd_cd={adstrd_cd} → {'있음' if not df.empty else '없음'} / DB코드샘플={sample}"
+        )
         if df.empty:
             return None
         return df.iloc[0].to_dict()
+
+    def getSalesByCodeAndQuarter(self, adstrd_cd: str, quarter: str) -> dict:
+        """특정 분기 단건 조회 (DB 직접)"""
+        sql = """
+            SELECT
+                adm_cd, adm_nm, base_yr_qtr_cd,
+                SUM(tot_sales_amt)   AS tot_sales_amt,
+                SUM(tot_selng_co)    AS tot_selng_co,
+                SUM(ml_sales_amt)    AS ml_sales_amt,
+                SUM(fml_sales_amt)   AS fml_sales_amt,
+                SUM(mdwk_sales_amt)  AS mdwk_sales_amt,
+                SUM(wkend_sales_amt) AS wkend_sales_amt,
+                SUM(age20_amt)       AS age20_amt,
+                SUM(age30_amt)       AS age30_amt,
+                SUM(age40_amt)       AS age40_amt,
+                SUM(age50_amt)       AS age50_amt
+            FROM SANGKWON_SALES
+            WHERE adm_cd = :cd
+              AND base_yr_qtr_cd = :qtr
+            GROUP BY adm_cd, adm_nm, base_yr_qtr_cd
+        """
+        try:
+            con, cur = self._db_con()
+            try:
+                cur.execute(sql, {"cd": adstrd_cd, "qtr": quarter})
+                cols = [d[0].lower() for d in cur.description]
+                row = cur.fetchone()
+                return dict(zip(cols, row)) if row else None
+            finally:
+                self._close(con, cur)
+        except Exception as e:
+            logger.error(f"[SangkwonDAO] 분기조회 실패: {e}")
+            return None
+
+    def getSalesAvgByCode(self, adstrd_cd: str) -> dict:
+        """전체 분기 평균 매출 (19~25년 DB 직접)"""
+        sql = """
+            SELECT
+                COUNT(DISTINCT base_yr_qtr_cd)  AS qtr_cnt,
+                SUM(tot_sales_amt)               AS tot_sales_sum,
+                SUM(tot_selng_co)                AS tot_selng_sum,
+                SUM(ml_sales_amt)                AS ml_sales_sum,
+                SUM(fml_sales_amt)               AS fml_sales_sum,
+                SUM(mdwk_sales_amt)              AS mdwk_sales_sum,
+                SUM(wkend_sales_amt)             AS wkend_sales_sum,
+                SUM(age20_amt)                   AS age20_sum,
+                SUM(age30_amt)                   AS age30_sum,
+                SUM(age40_amt)                   AS age40_sum,
+                SUM(age50_amt)                   AS age50_sum
+            FROM SANGKWON_SALES
+            WHERE adm_cd = :cd
+        """
+        try:
+            con, cur = self._db_con()
+            try:
+                cur.execute(sql, {"cd": adstrd_cd})
+                cols = [d[0].lower() for d in cur.description]
+                row = cur.fetchone()
+                if not row:
+                    return None
+                d = dict(zip(cols, row))
+                cnt = d["qtr_cnt"] or 1
+                # 분기 수로 나눠서 평균
+                return {
+                    "adm_cd": adstrd_cd,
+                    "quarter": "avg",
+                    "qtr_cnt": cnt,
+                    "tot_sales_amt": round((d["tot_sales_sum"] or 0) / cnt),
+                    "tot_selng_co": round((d["tot_selng_sum"] or 0) / cnt),
+                    "ml_sales_amt": round((d["ml_sales_sum"] or 0) / cnt),
+                    "fml_sales_amt": round((d["fml_sales_sum"] or 0) / cnt),
+                    "mdwk_sales_amt": round((d["mdwk_sales_sum"] or 0) / cnt),
+                    "wkend_sales_amt": round((d["wkend_sales_sum"] or 0) / cnt),
+                    "age20_amt": round((d["age20_sum"] or 0) / cnt),
+                    "age30_amt": round((d["age30_sum"] or 0) / cnt),
+                    "age40_amt": round((d["age40_sum"] or 0) / cnt),
+                    "age50_amt": round((d["age50_sum"] or 0) / cnt),
+                }
+            finally:
+                self._close(con, cur)
+        except Exception as e:
+            logger.error(f"[SangkwonDAO] 평균조회 실패: {e}")
+            return None
 
     def getSalesByInduty(self, adstrd_cd: str, induty_cd: str = "") -> list:
         """
@@ -182,24 +287,23 @@ class SangkwonDAO(BaseDAO):
         """
         sql = """
             SELECT
-                서비스_업종_코드,
-                서비스_업종_코드_명,
-                당월_매출_금액,
-                당월_매출_건수,
-                남성_매출_금액,
-                여성_매출_금액,
-                주중_매출_금액,
-                주말_매출_금액,
-                연령대_20_매출_금액,
-                연령대_30_매출_금액,
-                연령대_40_매출_금액,
-                연령대_50_매출_금액
+                svc_induty_cd,
+                svc_induty_nm,
+                tot_sales_amt,
+                ml_sales_amt,
+                fml_sales_amt,
+                mdwk_sales_amt,
+                wkend_sales_amt,
+                age20_amt,
+                age30_amt,
+                age40_amt,
+                age50_amt
             FROM SANGKWON_SALES
-            WHERE 행정동_코드 = :cd
-              AND 기준_년분기_코드 = (SELECT MAX(기준_년분기_코드) FROM SANGKWON_SALES)
+            WHERE adm_cd = :cd
+              AND base_yr_qtr_cd = (SELECT MAX(base_yr_qtr_cd) FROM SANGKWON_SALES)
         """
         if induty_cd:
-            sql += " AND 서비스_업종_코드 = :ind"
+            sql += " AND svc_induty_cd = :ind"
 
         try:
             con, cur = self._db_con()
@@ -217,11 +321,84 @@ class SangkwonDAO(BaseDAO):
             logger.error(f"[SangkwonDAO] 업종별 조회 실패: {e}")
             return []
 
+    def getSalesBySvcCd(self, adstrd_cd: str, quarter: str = "") -> list:
+        """
+        행정동 SVC_CD(대분류) 기준 매출 합산
+        - SVC_INDUTY_MAP JOIN → SVC_CD 그룹핑
+        - quarter 없으면 최신 분기
+        """
+        qtr_cond = (
+            "= :qtr"
+            if quarter
+            else "= (SELECT MAX(base_yr_qtr_cd) FROM SANGKWON_SALES)"
+        )
+        sql = f"""
+            SELECT
+                m.svc_cd,
+                m.svc_nm,
+                SUM(s.tot_sales_amt)  AS tot_sales_amt,
+                SUM(s.ml_sales_amt)   AS ml_sales_amt,
+                SUM(s.fml_sales_amt)  AS fml_sales_amt,
+                SUM(s.mdwk_sales_amt) AS mdwk_sales_amt,
+                SUM(s.wkend_sales_amt)AS wkend_sales_amt,
+                SUM(s.age20_amt)      AS age20_amt,
+                SUM(s.age30_amt)      AS age30_amt,
+                SUM(s.age40_amt)      AS age40_amt,
+                SUM(s.age50_amt)      AS age50_amt,
+                COUNT(DISTINCT s.svc_induty_cd) AS induty_cnt
+            FROM SANGKWON_SALES s
+            JOIN SVC_INDUTY_MAP m ON s.svc_induty_cd = m.svc_induty_cd
+            WHERE s.adm_cd = :cd
+              AND s.base_yr_qtr_cd {qtr_cond}
+            GROUP BY m.svc_cd, m.svc_nm
+            ORDER BY tot_sales_amt DESC NULLS LAST
+        """
+        try:
+            con, cur = self._db_con()
+            try:
+                params = {"cd": adstrd_cd}
+                if quarter:
+                    params["qtr"] = quarter
+                cur.execute(sql, params)
+                cols = [d[0].lower() for d in cur.description]
+                rows = cur.fetchall()
+                result = [dict(zip(cols, r)) for r in rows]
+                logger.info(
+                    f"[SangkwonDAO] getSalesBySvcCd: adm_cd={adstrd_cd} → {len(result)}개 업종"
+                )
+                return result
+            finally:
+                self._close(con, cur)
+        except Exception as e:
+            logger.error(f"[SangkwonDAO] getSalesBySvcCd 실패: {e}")
+            return []
+
+    def searchDong(self, q: str) -> list:
+        """
+        행정동 이름 LIKE 검색
+        - SANGKWON_SALES에서 adm_cd, adm_nm 검색
+        - q: 검색어 (부분 일치)
+        """
+        try:
+            sql = """
+                SELECT DISTINCT adm_cd, adm_nm
+                FROM SANGKWON_SALES
+                WHERE adm_nm LIKE :q
+                ORDER BY adm_nm
+            """
+            rows = self._query(sql, {"q": f"%{q}%"})
+            result = [{"adm_cd": r[0], "adm_nm": r[1]} for r in rows]
+            logger.info(f"[SangkwonDAO] searchDong: '{q}' → {len(result)}개")
+            return result
+        except Exception as e:
+            logger.error(f"[SangkwonDAO] searchDong 실패: {e}")
+            return []
+
     def getQuarters(self) -> list:
         """DB에 있는 분기 목록 조회"""
         try:
             rows = self._query(
-                "SELECT DISTINCT 기준_년분기_코드 FROM SANGKWON_SALES ORDER BY 기준_년분기_코드"
+                "SELECT DISTINCT base_yr_qtr_cd FROM SANGKWON_SALES ORDER BY base_yr_qtr_cd"
             )
             return [r[0] for r in rows]
         except Exception as e:
@@ -232,7 +409,7 @@ class SangkwonDAO(BaseDAO):
         cnt = len(self._df) if self._df is not None else 0
         quarter = ""
         if self._df is not None and not self._df.empty:
-            quarter = str(self._df["기준_년분기_코드"].max())
+            quarter = str(self._df["base_yr_qtr_cd"].max())
         return {
             "loaded": self._loaded,
             "dong_count": cnt,

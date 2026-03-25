@@ -2,7 +2,7 @@
 import logging
 import httpx
 from datetime import datetime
-from DAO.baseDAO import BaseDAO
+from .baseDAO import BaseDAO
 
 logger = logging.getLogger(__name__)
 
@@ -32,23 +32,27 @@ class LandValueDAO(BaseDAO):
                     raw = res.text.strip()
                     if not raw or raw.startswith("<"):
                         continue
-                    d      = res.json()
+                    d = res.json()
                     if d.get("response", {}).get("status") != "OK":
                         continue
                     features = (
-                        d.get("response", {}).get("result", {})
-                         .get("featureCollection", {}).get("features", [])
+                        d.get("response", {})
+                        .get("result", {})
+                        .get("featureCollection", {})
+                        .get("features", [])
                     )
-                    for feat in (features or []):
+                    for feat in features or []:
                         props = feat.get("properties", {})
                         price = props.get("pblntfPclnd")
-                        stdr  = props.get("stdrYear", year)
+                        stdr = props.get("stdrYear", year)
                         if price and str(price).strip() not in ("", "0", "null"):
-                            results.append({
-                                "year":      str(stdr),
-                                "price":     int(str(price).replace(",", "")),
-                                "price_str": f"{int(str(price).replace(',','')):,}원/㎡",
-                            })
+                            results.append(
+                                {
+                                    "year": str(stdr),
+                                    "price": int(str(price).replace(",", "")),
+                                    "price_str": f"{int(str(price).replace(',','')):,}원/㎡",
+                                }
+                            )
                             break
                 except Exception as e:
                     logger.error(f"[LandValueDAO] {year} error={e}")

@@ -1,0 +1,160 @@
+
+<style>
+  body { background: #000; margin: 0; padding: 20px; }
+  #diagram { background: #000; }
+  #diagram svg .cluster-label span { font-size: 30px !important; font-weight: bold; }
+  #diagram svg .cluster-label foreignObject { overflow: visible; }
+
+  #toolbar {
+    display: flex; gap: 10px; margin-bottom: 16px;
+  }
+  #toolbar button {
+    background: #2a1a00; color: #ffd080; border: 1px solid #c89000;
+    padding: 7px 18px; border-radius: 6px; font-size: 14px;
+    font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+    cursor: pointer;
+  }
+  #toolbar button:hover { background: #3a2800; }
+</style>
+
+<div id="toolbar">
+  <button id="btn-svg">SVG 내보내기</button>
+  <button id="btn-png">PNG 내보내기</button>
+</div>
+<div id="diagram"></div>
+
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
+  themeVariables: {
+    darkMode: true,
+    fontSize: '14px',
+    fontFamily: '"Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
+    primaryColor: '#3a2800',
+    primaryTextColor: '#f8d454',
+    primaryBorderColor: '#f8d454',
+    secondaryColor: '#3d2000',
+    secondaryTextColor: '#ffcb6c',
+    secondaryBorderColor: '#ffcb6c',
+    tertiaryColor: '#3d1a00',
+    tertiaryTextColor: '#ffc58b',
+    tertiaryBorderColor: '#ffc58b',
+    lineColor: '#998070',
+    textColor: '#ffeedd',
+    edgeLabelBackground: '#1a0f00',
+    clusterBkg: '#120a00',
+    clusterBorder: '#c8a000',
+  },
+  flowchart: { curve: 'basis', padding: 20, nodeSpacing: 45, rankSpacing: 80 },
+});
+
+const diagram = `flowchart LR
+  classDef terminal fill:#f8d454,color:#1a0f00,stroke:#c8a000,stroke-width:2px
+  classDef router   fill:#ffcb6c,color:#1a0f00,stroke:#b87000,stroke-width:1px
+  classDef system   fill:#2a1a00,color:#ffd080,stroke:#c89000,stroke-width:2px
+  classDef agent    fill:#3a2800,color:#f8d454,stroke:#c8a000,stroke-width:1px
+  classDef pass     fill:#0e2610,color:#7de050,stroke:#4a9020,stroke-width:1px
+  classDef fail     fill:#300e0e,color:#ffaa70,stroke:#b85030,stroke-width:1px
+
+  A(["<b style='font-size:33px'>사용자 질문</b>"]):::terminal
+  A --> C{"<b style='font-size:25px'>도메인<br/>라우터</b>"}:::router
+  C --> ORC["<b style='font-size:27px'>오케스트레이터</b><br/><span style='font-size:20px'>재시도 루프 관리</span>"]:::system
+
+  subgraph AGENTS["하위 에이전트"]
+    direction TB
+    D["<b style='font-size:33px'>행정 에이전트</b><br/><span style='font-size:25px'>행정 절차/규정 대응</span>"]:::agent
+    E["<b style='font-size:33px'>재무 에이전트</b><br/><span style='font-size:25px'>금융 시뮬레이션</span>"]:::agent
+    F["<b style='font-size:33px'>법무 에이전트</b><br/><span style='font-size:25px'>RAG 활용 법률 상담</span>"]:::agent
+    G["<b style='font-size:33px'>상권 에이전트</b><br/><span style='font-size:25px'>반응형 데이터 지도</span>"]:::agent
+  end
+
+  ORC --> D & E & F & G
+  D & E & F & G --> H
+
+  H["<b style='font-size:27px'>응답 검증</b><br/><span style='font-size:20px'>정확성 & 환각 검증</span>"]:::system
+  H -->|"<span style='font-size:22px'>승인</span>"| J(["<b style='font-size:28px'>✓ 응답 승인</b>"]):::pass
+  H -->|"<span style='font-size:22px'>거부</span>"| K(["<b style='font-size:28px'>✕ 수정 요청</b>"]):::fail
+  K -.->|"<span style='font-size:22px'>retry_prompt 재주입</span>"| ORC
+  J --> I(["<b style='font-size:33px'>최종 응답</b>"]):::terminal
+
+  linkStyle 10 stroke:#4a9020,stroke-width:2px
+  linkStyle 11 stroke:#b85030,stroke-width:2px
+  linkStyle 12 stroke:#b85030,stroke-width:2px
+  linkStyle 13 stroke:#4a9020,stroke-width:2px
+`;
+
+const { svg } = await mermaid.render('arch-svg', diagram);
+document.getElementById('diagram').innerHTML = svg;
+const el = document.querySelector('#diagram svg');
+if (el) { el.style.width = '100%'; el.style.maxWidth = '100%'; el.style.background = '#000'; }
+
+// ── 내보내기 공통: SVG 문자열 준비 ──────────────────────────
+function getExportSvgString() {
+  const orig = document.querySelector('#diagram svg');
+  const clone = orig.cloneNode(true);
+
+  // 배경 rect 삽입
+  const { width, height } = orig.getBoundingClientRect();
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '100%');
+  bg.setAttribute('height', '100%');
+  bg.setAttribute('fill', '#000000');
+  clone.insertBefore(bg, clone.firstChild);
+
+  // 페이지 스타일 인라인 삽입 (폰트 포함)
+  const styleText = [...document.styleSheets]
+    .flatMap(s => { try { return [...s.cssRules].map(r => r.cssText); } catch { return []; } })
+    .join('\n');
+  const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+  styleEl.textContent = styleText;
+  clone.insertBefore(styleEl, clone.firstChild);
+
+  // viewBox / 명시적 크기 보정
+  if (!clone.getAttribute('viewBox')) {
+    clone.setAttribute('viewBox', `0 0 ${Math.ceil(width)} ${Math.ceil(height)}`);
+  }
+  clone.setAttribute('width', Math.ceil(width));
+  clone.setAttribute('height', Math.ceil(height));
+
+  return new XMLSerializer().serializeToString(clone);
+}
+
+// ── SVG 내보내기 ────────────────────────────────────────────
+document.getElementById('btn-svg').addEventListener('click', () => {
+  const svgStr = getExportSvgString();
+  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'sohobi_architecture.svg';
+  a.click(); URL.revokeObjectURL(url);
+});
+
+// ── PNG 내보내기 ────────────────────────────────────────────
+document.getElementById('btn-png').addEventListener('click', () => {
+  const svgStr = getExportSvgString();
+  const orig = document.querySelector('#diagram svg');
+  const { width, height } = orig.getBoundingClientRect();
+  const scale = 2; // 2× 고해상도
+
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.ceil(width)  * scale;
+    canvas.height = Math.ceil(height) * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, 0, 0);
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'sohobi_architecture.png';
+      a.click(); URL.revokeObjectURL(url);
+    }, 'image/png');
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+});
+</script>
