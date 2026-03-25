@@ -1,7 +1,7 @@
 # 위치: p01_backEnd/DAO/fable/oracleDBConnect.py
 from oracledb import connect
 
-DB_INFO = "fable/1@//10.1.92.112:1521/xe"
+DB_INFO = "shobi/8680@//10.1.92.119:1521/xe"
 
 class OracleDBConnect:
 

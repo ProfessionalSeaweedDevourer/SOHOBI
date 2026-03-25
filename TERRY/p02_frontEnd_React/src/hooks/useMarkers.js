@@ -11,9 +11,15 @@ import { CATEGORIES } from "../constants/categories";
 
 // ── 마커 스타일 생성 ───────────────────────────────────────────
 const CAT_COLORS = {
-   I2: "#FF6B6B", G2: "#FF9800", S2: "#4ecdc4",
-   L1: "#2196F3", I1: "#9C27B0", P1: "#F59E0B",
-   Q1: "#E03131", R1: "#2F9E44", M1: "#1971C2",
+   I2: "#FF6B6B",
+   G2: "#FF9800",
+   S2: "#4ecdc4",
+   L1: "#2196F3",
+   I1: "#9C27B0",
+   P1: "#F59E0B",
+   Q1: "#E03131",
+   R1: "#2F9E44",
+   M1: "#1971C2",
    N1: "#607D8B",
 };
 
@@ -23,7 +29,7 @@ function makeMarkerStyle(category, selected = false) {
    return new Style({
       image: new CircleStyle({
          radius: selected ? 10 : 7,
-         fill:   new Fill({ color }),
+         fill: new Fill({ color }),
          stroke: new Stroke({ color: "#fff", width: selected ? 3 : 2 }),
       }),
    });
@@ -33,7 +39,7 @@ function makeMarkerStyle(category, selected = false) {
 export function useMarkers(mapInstance, visibleCats) {
    const markerLayerRef = useRef(null);
    const circleLayerRef = useRef(null);
-   const allStoresRef   = useRef([]);
+   const allStoresRef = useRef([]);
 
    // ── 반경 원 그리기 ──────────────────────────────────────────
    const drawCircle = (lng, lat, radius) => {
@@ -43,10 +49,12 @@ export function useMarkers(mapInstance, visibleCats) {
       const circle = circular([lng, lat], radius, 64);
       circle.transform("EPSG:4326", "EPSG:3857");
       const feature = new Feature(circle);
-      feature.setStyle(new Style({
-         stroke: new Stroke({ color: "#2563EB", width: 2 }),
-         fill:   new Fill({ color: "rgba(37,99,235,0.08)" }),
-      }));
+      feature.setStyle(
+         new Style({
+            stroke: new Stroke({ color: "#2563EB", width: 2 }),
+            fill: new Fill({ color: "rgba(37,99,235,0.08)" }),
+         }),
+      );
       const layer = new VectorLayer({
          source: new VectorSource({ features: [feature] }),
          zIndex: 99,
@@ -62,18 +70,20 @@ export function useMarkers(mapInstance, visibleCats) {
       if (markerLayerRef.current) map.removeLayer(markerLayerRef.current);
 
       const features = stores
-         .filter((s) => s.경도 && s.위도)
+         .filter((s) => s.LNG && s.LAT)
          .filter((s) => {
-            const code = s.상권업종대분류코드;
+            const code = s.CAT_CD;
             if (!code) return true; // 코드 없으면 표시
             return visible.has(code);
          })
          .map((store) => {
             const feature = new Feature({
-               geometry: new Point(fromLonLat([parseFloat(store.경도), parseFloat(store.위도)])),
+               geometry: new Point(
+                  fromLonLat([parseFloat(store.LNG), parseFloat(store.LAT)]),
+               ),
             });
             feature.setProperties({ store });
-            feature.setStyle(makeMarkerStyle(store.상권업종대분류코드));
+            feature.setStyle(makeMarkerStyle(store.CAT_CD));
             return feature;
          });
 
@@ -89,8 +99,14 @@ export function useMarkers(mapInstance, visibleCats) {
    const clearMarkers = () => {
       const map = mapInstance.current;
       if (!map) return;
-      if (markerLayerRef.current) { map.removeLayer(markerLayerRef.current); markerLayerRef.current = null; }
-      if (circleLayerRef.current) { map.removeLayer(circleLayerRef.current); circleLayerRef.current = null; }
+      if (markerLayerRef.current) {
+         map.removeLayer(markerLayerRef.current);
+         markerLayerRef.current = null;
+      }
+      if (circleLayerRef.current) {
+         map.removeLayer(circleLayerRef.current);
+         circleLayerRef.current = null;
+      }
       allStoresRef.current = [];
    };
 
@@ -102,5 +118,11 @@ export function useMarkers(mapInstance, visibleCats) {
          drawMarkers(allStoresRef.current, visibleCats);
    }, [visibleKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-   return { markerLayerRef, allStoresRef, drawCircle, drawMarkers, clearMarkers };
+   return {
+      markerLayerRef,
+      allStoresRef,
+      drawCircle,
+      drawMarkers,
+      clearMarkers,
+   };
 }

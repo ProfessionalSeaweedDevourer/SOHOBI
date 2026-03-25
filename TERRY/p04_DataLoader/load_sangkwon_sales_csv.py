@@ -9,6 +9,7 @@ import glob
 import csv
 import oracledb
 import logging
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,13 @@ DB_INFO = "shobi/8680@//10.1.92.119:1521/xe"
 # ── CSV 폴더 경로 ──────────────────────────────────
 # 연도별 폴더 지정: csv/sangkwon_sales/sangkwon_2024_utf8 등
 import sys
-CSV_DIR = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "csv", "sangkwon_sales"
+
+CSV_DIR = (
+    sys.argv[1]
+    if len(sys.argv) > 1
+    else os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "csv", "sangkwon_sales"
+    )
 )
 ENCODING = "utf-8-sig"  # BOM 있는 경우 자동 처리
 BATCH = 1000  # 한 번에 INSERT할 행 수
@@ -171,13 +176,15 @@ def main():
     print(f"CSV 폴더: {CSV_DIR}")
     # 하위 폴더까지 재귀 탐색
     csv_files = sorted(
-        glob.glob(os.path.join(CSV_DIR, "**", "*.csv"), recursive=True) or
-        glob.glob(os.path.join(CSV_DIR, "*.csv"))
+        glob.glob(os.path.join(CSV_DIR, "**", "*.csv"), recursive=True)
+        or glob.glob(os.path.join(CSV_DIR, "*.csv"))
     )
     if not csv_files:
         print(f"❌ CSV 파일 없음: {CSV_DIR}")
         print(f"사용법: python load_sangkwon_sales_csv.py [폴더경로]")
-        print(f"  예시: python load_sangkwon_sales_csv.py csv/sangkwon_sales/sangkwon_2024_utf8")
+        print(
+            f"  예시: python load_sangkwon_sales_csv.py csv/sangkwon_sales/sangkwon_2024_utf8"
+        )
         return
 
     print(f"총 {len(csv_files)}개 CSV 파일 발견")
