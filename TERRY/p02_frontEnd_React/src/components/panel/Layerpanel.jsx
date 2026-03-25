@@ -1,14 +1,8 @@
+// 위치: src/components/panel/Layerpanel.jsx
+
 import { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
-
-// VWorld 행정동 경계 레이어 후보
-const DONG_LAYER_CANDIDATES = [
-   "lt_c_ademd",
-   "lt_c_ademd_info",
-   "lt_c_lsmd",
-   "lp_pa_lsmd_cont_ldreg",
-];
 
 function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
    const layer = new TileLayer({
@@ -39,8 +33,6 @@ export default function LayerPanel({ map, vworldKey, wmsLayerRef }) {
    const [touristInfoOn, setTouristInfoOn] = useState(false);
    const [touristSpotOn, setTouristSpotOn] = useState(false);
    const [marketOn, setMarketOn] = useState(false);
-   const [dongBoundaryOn, setDongBoundaryOn] = useState(false);
-   const [dongLayerIdx, setDongLayerIdx] = useState(0);
 
    // ── 지적도 ──────────────────────────────────────────────────────
    const toggleCadastral = () => {
@@ -130,43 +122,6 @@ export default function LayerPanel({ map, vworldKey, wmsLayerRef }) {
       }
    };
 
-   // ── 행정동 경계 ─────────────────────────────────────────────────
-   const toggleDongBoundary = (forceIdx) => {
-      const idx = forceIdx ?? dongLayerIdx;
-      map.getLayers()
-         .getArray()
-         .filter((l) => l.get("name") === "dong_boundary_panel")
-         .forEach((l) => map.removeLayer(l));
-      if (dongBoundaryOn && forceIdx === undefined) {
-         setDongBoundaryOn(false);
-      } else {
-         const layerNm = DONG_LAYER_CANDIDATES[idx];
-         console.log(`[동 경계 테스트] ${layerNm}`);
-         const layer = new TileLayer({
-            source: new TileWMS({
-               url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
-               params: {
-                  SERVICE: "WMS",
-                  VERSION: "1.3.0",
-                  REQUEST: "GetMap",
-                  LAYERS: layerNm,
-                  FORMAT: "image/png",
-                  TRANSPARENT: "TRUE",
-                  CRS: "EPSG:3857",
-               },
-               crossOrigin: "anonymous",
-               transition: 0,
-            }),
-            opacity: 0.8,
-            zIndex: 150,
-         });
-         layer.set("name", "dong_boundary_panel");
-         map.addLayer(layer);
-         setDongBoundaryOn(true);
-         setDongLayerIdx(idx);
-      }
-   };
-
    return (
       <div style={S.panel}>
          <div style={S.title}>🗂️ 레이어 관리</div>
@@ -202,55 +157,6 @@ export default function LayerPanel({ map, vworldKey, wmsLayerRef }) {
 
          <div style={S.notice}>💡 각 레이어 클릭 시 상세 팝업 표시</div>
 
-         {/* 행정동 경계 */}
-         <div style={{ ...S.row, marginTop: 4 }}>
-            <div style={{ flex: 1 }}>
-               <div style={S.layerName}>행정동 경계</div>
-               <div style={S.layerDesc}>
-                  {DONG_LAYER_CANDIDATES[dongLayerIdx]}
-               </div>
-            </div>
-            <button
-               onClick={() => toggleDongBoundary()}
-               style={{
-                  ...S.toggle,
-                  background: dongBoundaryOn ? "#059669" : "#e0e0e0",
-                  color: dongBoundaryOn ? "#fff" : "#555",
-               }}
-            >
-               {dongBoundaryOn ? "ON" : "OFF"}
-            </button>
-         </div>
-         <div
-            style={{
-               display: "flex",
-               gap: 4,
-               flexWrap: "wrap",
-               padding: "0 4px 8px",
-            }}
-         >
-            {DONG_LAYER_CANDIDATES.map((nm, i) => (
-               <button
-                  key={nm}
-                  onClick={() => toggleDongBoundary(i)}
-                  style={{
-                     fontSize: 9,
-                     padding: "2px 6px",
-                     borderRadius: 4,
-                     border: "1px solid #ddd",
-                     cursor: "pointer",
-                     background:
-                        i === dongLayerIdx && dongBoundaryOn
-                           ? "#059669"
-                           : "#f5f5f5",
-                     color:
-                        i === dongLayerIdx && dongBoundaryOn ? "#fff" : "#666",
-                  }}
-               >
-                  {nm}
-               </button>
-            ))}
-         </div>
       </div>
    );
 }

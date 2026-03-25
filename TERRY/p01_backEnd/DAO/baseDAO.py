@@ -1,7 +1,7 @@
 # 위치: p01_backEnd/DAO/baseDAO.py
 # 모든 DAO가 상속 - DB 연결/해제 공통 처리
 
-from fable.oracleDBConnect import OracleDBConnect
+from .fable.oracleDBConnect import OracleDBConnect
 
 
 class BaseDAO:

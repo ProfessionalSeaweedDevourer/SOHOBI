@@ -1,3 +1,5 @@
+// 위치: src/components/panel/RoadviewPanel.jsx
+
 /**
  * RoadviewPanel.jsx  –  카카오 로드뷰 플로팅 오버레이
  *
