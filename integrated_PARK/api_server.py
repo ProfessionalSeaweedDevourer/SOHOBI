@@ -7,36 +7,24 @@
 - GET  /api/v1/logs          — JSONL 로그 조회 (프론트엔드 로그 뷰어용)
 """
 
-import asyncio
 import json
 import os
 import time
-<<<<<<< HEAD
 import traceback
 from uuid import uuid4
 
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
-=======
 from contextlib import asynccontextmanager
-from uuid import uuid4
 
-from fastapi import FastAPI, Query
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
->>>>>>> origin/main
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 import domain_router
 import orchestrator
 from signoff.signoff_agent import run_signoff
-<<<<<<< HEAD
-from kernel_setup import get_kernel
-=======
-from kernel_setup import get_kernel, get_signoff_client, _TOKEN_PROVIDER
->>>>>>> origin/main
+from kernel_setup import get_kernel, get_signoff_client
 from logger import log_query, log_error
 from log_formatter import load_entries_json
 from logger import _format_rejection_history
@@ -91,19 +79,6 @@ class DocChatRequest(BaseModel):
     session_id: str = Field(default="default")
 
 
-# ── 내부 헬퍼 ─────────────────────────────────────────────────
-
-async def _extract_and_save(sid: str, session: dict, draft: str) -> None:
-    """재무 변수를 백그라운드에서 추출해 세션에 저장한다. 실패해도 메인 플로우에 영향 없음."""
-    try:
-        new_vars = await extract_financial_vars(draft)
-        if new_vars:
-            session["extracted"].update(new_vars)
-            await save_query_session(sid, session)
-    except Exception:
-        pass
-
-
 # ── 엔드포인트 ────────────────────────────────────────────────
 
 @app.get("/health")
@@ -143,21 +118,20 @@ async def query(req: QueryRequest):
             profile=session["profile"],
             session_id=sid,
             max_retries=req.max_retries,
-<<<<<<< HEAD
             current_params=req.current_params,  # ← 누적치 반영 : session_vars에서 current_params제로 변경.
-=======
-            session_vars=session["extracted"] if session["extracted"] else None,
->>>>>>> origin/main
         )
 
         # 세션 대화 이력 누적
         session["history"].add_user_message(req.question)
         session["history"].add_assistant_message(result["draft"])
 
-        # 세션 저장 후, 재무 변수 추출은 백그라운드에서 처리 (사용자 응답 지연 없음)
-        await save_query_session(sid, session)
+        # ── 재무 변수 추출 및 세션 누적 ──────────────────────
         if result.get("status") == "approved" and result.get("draft"):
-            asyncio.create_task(_extract_and_save(sid, session, result["draft"]))
+            new_vars = await extract_financial_vars(result["draft"])
+            if new_vars:
+                session["extracted"].update(new_vars)
+
+        await save_query_session(sid, session)
 
         # ── 로깅 ─────────────────────────────────────────────
         log_query(
@@ -327,14 +301,12 @@ async def doc_chat(req: DocChatRequest):
         sid = req.session_id
 
         # 매 요청마다 kernel·settings 재구성 (직렬화 불가 객체)
-        _doc_api_key = os.getenv("AZURE_OPENAI_API_KEY")
         kernel = Kernel()
         kernel.add_service(
             AzureChatCompletion(
                 deployment_name=os.getenv("AZURE_DEPLOYMENT_NAME"),
                 endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-                api_key=_doc_api_key if _doc_api_key else None,
-                ad_token_provider=None if _doc_api_key else _TOKEN_PROVIDER,
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
                 api_version="2024-12-01-preview",
             )
         )
