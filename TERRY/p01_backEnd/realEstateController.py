@@ -1,37 +1,38 @@
 # 위치: p01_backEnd/realEstateController.py
 # 실행: uvicorn realEstateController:app --host=0.0.0.0 --port=8682 --reload
 
-import os, sys, asyncio, logging
+import os, asyncio, logging
 from contextlib import asynccontextmanager
 from typing import Optional
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(BASE_DIR, "DAO"))
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
-from DAO.sangkwonDAO    import SangkwonDAO
+from DAO.sangkwonDAO import SangkwonDAO
 from DAO.dongMappingDAO import DongMappingDAO
-from DAO.seoulRtmsDAO   import SeoulRtmsDAO
-from DAO.landValueDAO   import LandValueDAO
-from DAO.wfsDAO         import WfsDAO
+from DAO.seoulRtmsDAO import SeoulRtmsDAO
+from DAO.landValueDAO import LandValueDAO
+from DAO.wfsDAO import WfsDAO  # WFS 엔드포인트 하위호환용 유지
+from DAO.sangkwonStoreDAO import SangkwonStoreDAO
 
+# ── 서버 로그 설정 ───────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-skDAO   = SangkwonDAO()
-dmDAO   = DongMappingDAO()
+skDAO = SangkwonDAO()
+dmDAO = DongMappingDAO()
 rtmsDAO = SeoulRtmsDAO()
-lvDAO   = LandValueDAO()
-wfsDAO  = WfsDAO(dmDAO)
+lvDAO = LandValueDAO()
+wfsDAO = WfsDAO(dmDAO)  # WFS 엔드포인트 하위호환용
+storeDAO = SangkwonStoreDAO()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    skDAO.load()   # V_SANGKWON_LATEST → DataFrame
-    dmDAO.load()   # V_LAW_TO_ADM     → emd_cd dict
+    skDAO.load()  # SANGKWON_SALES → DataFrame 캐시
+    dmDAO.load()  # LAW_ADM_MAP    → emd_cd dict 캐시
+    # wfsDAO 프리로드 제거 (프론트에서 public/seoul_adm_dong.geojson 직접 로드)
     yield
 
 
@@ -40,8 +41,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://192.168.9.168:5173",
-        "http://195.168.9.169:5173",
+        "http://192.168.9.4:5173",
+        "http://195.168.9.5:5173",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,15 +54,50 @@ app.add_middleware(
 #    MapView: p.emd_cd 항상 전달
 # ════════════════════════════════════════════════════════════════
 
+
 @app.get("/realestate/seoul-rtms")
 async def getSeoulRtms(
-    emd_cd:     str           = Query(..., description="WFS emd_cd 8자리"),
-    years_back: int           = Query(3),
-    rtms_type:  Optional[str] = Query(None, description="1=매매 2=전세 3=월세"),
+    adm_cd: str = Query(..., description="행정동코드 8자리 (lt_c_cademd)"),
+    years_back: int = Query(3),
+    rtms_type: Optional[str] = Query(None, description="1=매매 2=전세 3=월세"),
 ):
-    """법정동(emd_cd) 기준 실거래 조회"""
-    logger.info(f"[seoul-rtms] emd_cd={emd_cd}")
-    return await rtmsDAO.fetch_by_emd_cd(emd_cd, years_back, rtms_type)
+    """행정동(adm_cd) → 법정동(emd_cd) 변환 후 실거래 조회"""
+    logger.info(f"[seoul-rtms] adm_cd={adm_cd}")
+
+    # adm_cd → LAW_ADM_MAP → emd_cd 목록
+    emd_cds = rtmsDAO.get_emd_cd_by_adm_cd(adm_cd)
+    if not emd_cds:
+        logger.warning(f"[seoul-rtms] adm_cd={adm_cd} → emd_cd 매핑 없음")
+        return {
+            "has_data": False,
+            "매매": {"건수": 0, "목록": []},
+            "전세": {"건수": 0, "목록": []},
+            "월세": {"건수": 0, "목록": []},
+        }
+
+    logger.info(f"[seoul-rtms] emd_cds={emd_cds}")
+    results = await asyncio.gather(
+        *[rtmsDAO.fetch_by_emd_cd(emd_cd, years_back, rtms_type) for emd_cd in emd_cds]
+    )
+
+    # 결과 합산
+    all_매매, all_전세, all_월세 = [], [], []
+    for res in results:
+        all_매매.extend(res.get("매매", {}).get("목록", []))
+        all_전세.extend(res.get("전세", {}).get("목록", []))
+        all_월세.extend(res.get("월세", {}).get("목록", []))
+
+    return {
+        "has_data": bool(all_매매 or all_전세 or all_월세),
+        "매매": rtmsDAO._stats(all_매매, "거래금액만원", "거래금액"),
+        "전세": rtmsDAO._stats(all_전세, "보증금만원", "보증금"),
+        "월세": {
+            "건수": len(all_월세),
+            "목록": sorted(all_월세, key=lambda x: x.get("계약일", ""), reverse=True)[
+                :10
+            ],
+        },
+    }
 
 
 # ════════════════════════════════════════════════════════════════
@@ -69,16 +105,72 @@ async def getSeoulRtms(
 #    MapView: p.adm_cd 전달
 # ════════════════════════════════════════════════════════════════
 
+
 @app.get("/realestate/sangkwon")
 async def getSangkwon(
-    adm_cd: str = Query(..., description="행정동코드 8자리"),
+    adm_cd: str = Query("", description="행정동코드 (enrich 주입값, 우선)"),
+    dong: str = Query("", description="행정동명 (fallback)"),
+    gu: str = Query("", description="구이름"),
+    quarter: str = Query("", description="분기코드 (예: 20253) 비우면 최신"),
 ):
-    """행정동(adm_cd) 기준 매출 조회"""
-    logger.info(f"[sangkwon] adm_cd={adm_cd}")
-    row = skDAO.getSalesByCode(adm_cd)
+    """행정동코드(adm_cd) 우선, 없으면 동이름으로 매출 조회 + 분기 선택 + 전체 평균"""
+    if adm_cd:
+        logger.info(f"[sangkwon] adm_cd={adm_cd} quarter={quarter or '최신'}")
+        row = (
+            skDAO.getSalesByCodeAndQuarter(adm_cd, quarter)
+            if quarter
+            else skDAO.getSalesByCode(adm_cd)
+        )
+    else:
+        logger.info(f"[sangkwon] dong={dong} gu={gu}")
+        row = skDAO.getSalesByDong(dong, gu)
     if not row:
-        return {"data": None, "message": "데이터 없음"}
-    return {"data": _format_sangkwon_row(row)}
+        return {"data": None, "avg": None, "message": "데이터 없음"}
+    avg = skDAO.getSalesAvgByCode(adm_cd) if adm_cd else None
+    return {
+        "data": _format_sangkwon_row(row),
+        "avg": _format_sangkwon_row(avg) if avg else None,
+    }
+
+
+@app.get("/realestate/sangkwon-svc")
+async def getSangkwonBySvc(
+    adm_cd: str = Query(..., description="행정동코드"),
+    quarter: str = Query("", description="분기코드 (비우면 최신)"),
+):
+    """SVC_CD(대분류) 기준 업종별 매출 합산"""
+    logger.info(f"[sangkwon-svc] adm_cd={adm_cd} quarter={quarter or '최신'}")
+    rows = skDAO.getSalesBySvcCd(adm_cd, quarter)
+    return {"adm_cd": adm_cd, "count": len(rows), "data": rows}
+
+
+@app.get("/realestate/search-dong")
+async def searchDong(q: str = Query(..., description="동이름 검색어")):
+    """행정동 이름 LIKE 검색 → adm_cd, adm_nm, gu_nm 반환"""
+    logger.info(f"[search-dong] q={q}")
+    try:
+        rows = skDAO.searchDong(q)
+        return {"count": len(rows), "data": rows}
+    except Exception as e:
+        logger.error(f"[search-dong] {e}")
+        return {"count": 0, "data": []}
+
+
+@app.get("/realestate/sangkwon-store")
+async def getSangkwonStore(
+    adm_cd: str = Query(..., description="행정동코드"),
+    quarter: str = Query("", description="분기코드 (비우면 최신)"),
+    svc_cd: str = Query("", description="업종 대분류 코드 (비우면 전체)"),
+):
+    """SVC_CD 기준 점포수/개폐업률 조회"""
+    logger.info(
+        f"[sangkwon-store] adm_cd={adm_cd} quarter={quarter or '최신'} svc_cd={svc_cd or '전체'}"
+    )
+    if svc_cd:
+        rows = storeDAO.getStoreByInduty(adm_cd, svc_cd, quarter)
+    else:
+        rows = storeDAO.getStoreBySvcCd(adm_cd, quarter)
+    return {"adm_cd": adm_cd, "count": len(rows), "data": rows}
 
 
 @app.get("/realestate/sangkwon-gu")
@@ -86,12 +178,16 @@ async def getSangkwonByGu(
     gu: str = Query(..., description="자치구명"),
 ):
     rows = skDAO.getSalesByGu(gu)
-    return {"gu": gu, "count": len(rows), "data": [_format_sangkwon_row(r) for r in rows]}
+    return {
+        "gu": gu,
+        "count": len(rows),
+        "data": [_format_sangkwon_row(r) for r in rows],
+    }
 
 
 @app.get("/realestate/sangkwon-induty")
 async def getSangkwonByInduty(
-    code:   str = Query(...),
+    code: str = Query(...),
     induty: str = Query(""),
 ):
     rows = skDAO.getSalesByInduty(code, induty)
@@ -113,9 +209,10 @@ async def getSangkwonStatus():
 # 3. 공시지가
 # ════════════════════════════════════════════════════════════════
 
+
 @app.get("/realestate/land-value")
 async def getLandValue(
-    pnu:   str = Query(...),
+    pnu: str = Query(...),
     years: int = Query(5),
 ):
     return await lvDAO.fetch(pnu, years)
@@ -125,12 +222,14 @@ async def getLandValue(
 # 4. WFS 프록시
 # ════════════════════════════════════════════════════════════════
 
+
 @app.get("/realestate/wfs-dong")
 async def getWfsDong(
     sig_cd: str = Query("11"),
 ):
     try:
         import json
+
         gj = await wfsDAO.get_dong(sig_cd)
         return Response(
             content=json.dumps(gj, ensure_ascii=False).encode("utf-8"),
@@ -146,19 +245,19 @@ async def getWfsDong(
 # 공통 포맷
 # ════════════════════════════════════════════════════════════════
 
+
 def _format_sangkwon_row(row: dict) -> dict:
     return {
-        "dong":         row.get("행정동_코드_명", ""),
-        "code":         row.get("행정동_코드", ""),
-        "quarter":      row.get("기준_년분기_코드", ""),
-        "sales":        row.get("tot_sales_amt"),
-        "selng_co":     row.get("tot_selng_co"),
-        "sales_male":   row.get("ml_sales_amt"),
+        "dong": row.get("adm_nm", ""),
+        "code": row.get("adm_cd", ""),
+        "quarter": row.get("base_yr_qtr_cd", ""),
+        "sales": row.get("tot_sales_amt"),
+        "sales_male": row.get("ml_sales_amt"),
         "sales_female": row.get("fml_sales_amt"),
-        "sales_mdwk":   row.get("mdwk_sales_amt"),
-        "sales_wkend":  row.get("wkend_sales_amt"),
-        "age20":        row.get("age20_amt"),
-        "age30":        row.get("age30_amt"),
-        "age40":        row.get("age40_amt"),
-        "age50":        row.get("age50_amt"),
+        "sales_mdwk": row.get("mdwk_sales_amt"),
+        "sales_wkend": row.get("wkend_sales_amt"),
+        "age20": row.get("age20_amt"),
+        "age30": row.get("age30_amt"),
+        "age40": row.get("age40_amt"),
+        "age50": row.get("age50_amt"),
     }

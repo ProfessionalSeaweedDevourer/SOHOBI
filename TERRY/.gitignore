@@ -1,0 +1,23 @@
+# 대용량 CSV 데이터
+p04_DataLoader/csv/sangkwon_sales/
+p04_DataLoader/csv/sangkwon_store/
+p04_DataLoader/csv/location_csv/
+
+# GeoJSON 원본
+p04_DataLoader/geojson/
+
+# 소형 매핑 CSV는 포함 (위에서 제외했으니 명시적으로 포함)
+!p04_DataLoader/csv/mapping/
+
+# Python 캐시
+__pycache__/
+*.pyc
+*.pyo
+
+# 환경변수
+.env
+*.env
+
+# IDE
+.vscode/
+.idea/
