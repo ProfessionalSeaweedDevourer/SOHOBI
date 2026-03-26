@@ -1,30 +1,52 @@
-import random
+"""
+재무 시뮬레이션 플러그인
+출처: CHANG/user_functions.py — FinanceSimulationSkill
+"""
+
+import base64
+import io
 import math
+import random
 from semantic_kernel.functions import kernel_function
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.font_manager as fm
+from db_test import DBWork
+
+fontF = "C:\Windows\Fonts\gulim.ttc"
+fontN = fm.FontProperties(fname=fontF, size= 10).get_name()
+plt.rc("font", family=fontN)
+plt.rcParams["axes.unicode_minus"]=False
 
 
-class FinanceSimulationSkill:
-    def _calculate_salary(self, salary: float, hours: float | None = None) -> float:
-        if hours is None:
-            return salary
-        else:
-            return salary * hours
+
+class FinanceSimulationPlugin:
+    """몬테카를로 시뮬레이션 기반 재무 분석 플러그인"""
+    def __init__(self):
+        self.dbwork = DBWork()
+
+    def _calculate_salary(self, salary: float, hours: float = None) -> float:
+        return salary if hours is None else salary * hours
 
     @kernel_function(
         name="monte_carlo_simulation",
-        description="월매출, 원가, 급여, 임대료, 관리비, 수수료를 고려한 몬테카를로 시뮬레이션"
+        description=(
+            "월매출, 원가, 급여, 임대료, 관리비, 수수료를 입력받아 "
+            "10,000회 몬테카를로 시뮬레이션으로 평균 순이익과 손실 확률을 계산합니다. "
+            "revenue는 [단일값] 또는 [임의의 복수 값] 형태의 숫자 목록(원 단위)입니다."
+        ),
     )
     def monte_carlo_simulation(
         self,
         revenue: list[float],
-        cost: float,
-        salary: float,
+        cost: float | None = None,
+        salary: float | None = None,
         hours: float | None = None,
-        rent: float = 0,
-        admin: float = 0,
-        fee: float = 0,
-    ) -> dict[str, float]:
-        iterations = 10000
+        rent: float | None = None,
+        admin: float | None = None,
+        fee: float | None = None,
+    ) -> dict:
+        iterations = 10_000
         results = []
 
         avg_sales = sum(revenue) / len(revenue)
@@ -41,49 +63,69 @@ class FinanceSimulationSkill:
         # None 값만 % 기반 연산, 추후 업종 별 % list 고려중(현재 카페 기준)
 
         salary_cost = self._calculate_salary(salary, hours)
+        # 시급 관련 연산
 
         if len(revenue) == 1:
             for _ in range(iterations):
-                simulated_revenue = random.gauss(revenue[0], revenue[0] * 0.1)
-                simulated_cost = random.gauss(cost, cost * 0.1)
-                gross_profit = simulated_revenue - simulated_cost - salary_cost - rent - admin - fee
-                results.append(gross_profit)
+                sim_rev = random.gauss(revenue[0], revenue[0] * 0.1)
+                sim_cost = random.gauss(cost, cost * 0.1)
+                net = (sim_rev - sim_cost - salary_cost - rent - admin - fee)
+                results.append(net)
         else:
             for _ in range(iterations):
-                simulated_revenue = random.choice(revenue)
-                simulated_cost = random.gauss(cost, cost * 0.1)
-                gross_profit = simulated_revenue - simulated_cost - salary_cost - rent - admin - fee
-                results.append(gross_profit)
+                sim_rev = random.choice(revenue)* random.gauss(1.0, 0.1)
+                sim_cost = random.gauss(cost, cost * 0.1)
+                net = (sim_rev - sim_cost - salary_cost - rent - admin - fee)
+                results.append(net)
 
-        avg_profit = sum(results) / iterations
-        loss_probability = sum(1 for r in results if r < 0) / iterations
+        avg = sum(results) / iterations
+        loss_prob = sum(1 for r in results if r < 0) / iterations
+        
+        sorted_results = sorted(results)
+        loss_results = [r for r in results if r < 0]
+        avg_loss = round(sum(loss_results) / len(loss_results)) if loss_results else 0
+
+        p20 = sorted_results[int(iterations * 0.20)]
+        chart_b64 = self._generate_chart(results, p20, avg)
 
         return {
-            "average_net_profit": avg_profit,
-            "loss_probability": loss_probability
+            "average_net_profit": round(avg),
+            "loss_probability":   round(loss_prob, 4),
+            "avg_loss_amount":    avg_loss,
+            "p20":                round(p20),
+            "actual_cost":        round(cost),      # 결과값 세분화용 변수 추가
+            "actual_salary":      round(salary_cost),  # 결과값 세분화용 변수 추가
+            "actual_rent":        round(rent),      # 결과값 세분화용 변수 추가
+            "actual_admin":       round(admin),     # 결과값 세분화용 변수 추가
+            "actual_fee":         round(fee),       # 결과값 세분화용 변수 추가
+            "chart":              chart_b64,
         }
 
     @kernel_function(
         name="investment_recovery",
-        description="초기 투자비용 회수 가능성 평가"
+        description=(
+            "초기 투자비용과 월 평균 순이익을 입력받아 "
+            "투자금 회수 가능 여부와 예상 회수 기간(개월)을 반환합니다."
+        ),
     )
-    def investment_recovery(self, initial_investment: float, avg_profit: float) -> dict[str, object]:
+    def investment_recovery(self, initial_investment: float, avg_profit: float) -> dict:
         if avg_profit <= 0:
             return {"recoverable": False, "months": None}
-        return {"recoverable": True, "months": math.ceil(initial_investment / avg_profit)}
+        months = math.ceil(initial_investment / avg_profit)
+        return {"recoverable": True, "months": months}
 
-
+    # 누적 정보 반영을 위한 JSON 상태 관리용
     def load_initial(self, region: str = None, industry: str = None) -> dict:
-        base_revenue = 17000000
-        revenue = None
-
-        if region and industry:
+        if region is None and industry is None:
+            # 지역/업종 입력 없는 경우 전체 평균
+            revenue = self.dbwork.get_average_sales()
+        else:
+            # 하나라도 있으면 리스트 반환
             sales_list = self.dbwork.get_sales(region, industry)
-            if isinstance(sales_list, list) and sales_list:
-                revenue = sales_list
-
-        if revenue is None:
-            revenue = base_revenue
+            revenue = sales_list
+        
+        # DB 제외용 단순초기값
+        revenue = [14000000]
 
         return {
             "revenue": revenue,
@@ -95,7 +137,8 @@ class FinanceSimulationSkill:
             "fee": None,
             "initial_investment": None
         }
-    # DB에서 매출 값만 불러오게됩니다, 해당 base_revenue는 카페 기준으로 추후 수정될 수 있습니다.
+    # DB에서 매출 값만 불러오게됩니다(.dbwork.get_sales(region, industry))
+    # base_revenue는 카페 기준으로 추후 수정될 수 있습니다.(industry 기반 평균치)
     # region and industry의 경우 부모 에이전트에게서 받을 임시 정보입니다(지역 및 업종). 필요 시 변수 명 및 구조 수정.
 
     def merge_json(self, previous: dict, current: dict) -> dict:
@@ -110,4 +153,39 @@ class FinanceSimulationSkill:
         return merged
 
 
+    def _generate_chart(self, results: list, p20: float, avg: float) -> str:
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        n, bins, patches = ax.hist(results, bins=40, edgecolor="none")
+
+        for patch, left_edge in zip(patches, bins[:-1]):
+            if left_edge < 0:
+                patch.set_facecolor("#E24B4A")   # 손실
+            elif left_edge < p20:
+                patch.set_facecolor("#EF9F27")   # 하위 20%
+            else:
+                patch.set_facecolor("#378ADD")   # 수익
+
+        ax.axvline(x=0,   color="#E24B4A", linestyle="--", linewidth=1.2, alpha=0.8)
+        ax.axvline(x=avg, color="#378ADD", linestyle="--", linewidth=1.2, alpha=0.8)
+        ax.axvline(x=p20, color="#EF9F27", linestyle="--", linewidth=1.2, alpha=0.8)
+
+        legend_handles = [
+            mpatches.Patch(color="#E24B4A", label="손실 구간"),
+            mpatches.Patch(color="#EF9F27", label=f"하위 20% 기준: {round(p20/10000):,}만원"),
+            mpatches.Patch(color="#378ADD", label=f"평균: {round(avg/10000):,}만원"),
+        ]
+        ax.legend(handles=legend_handles, fontsize=9)
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x/10000):,}만"))
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x):,}"))
+        ax.set_xlabel("월 순이익 (만원)", fontsize=10)
+        ax.set_ylabel("빈도 (회)", fontsize=10)
+
+        plt.tight_layout()
+
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=120)
+        plt.close(fig)
+        buf.seek(0)
+        return base64.b64encode(buf.read()).decode("utf-8")
 
