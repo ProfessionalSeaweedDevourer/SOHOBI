@@ -81,6 +81,27 @@ class DocChatRequest(BaseModel):
     session_id: str = Field(default="default")
 
 
+# ── 보안: 프롬프트 인젝션 의심 패턴 ──────────────────────────
+import re as _re
+
+_INJECTION_PATTERNS = [
+    r"ignore\s+(all\s+)?.*instruction",
+    r"approved\s*[=:]\s*true",
+    r"\{\{.*\}\}",
+    r"\[SYSTEM\]",
+    r"<<<",
+    r"override\s+(the\s+)?rubric",
+    r"evaluation\s+rule",
+    r"무조건\s*(통과|승인|approved)",
+    r"평가\s*(규칙|기준).*(무시|비활성|적용\s*하지)",
+]
+
+def _detect_injection(text: str) -> bool:
+    """의심 패턴 감지 — 거부가 아닌 로깅 목적."""
+    t = text.lower()
+    return any(_re.search(p, t) for p in _INJECTION_PATTERNS)
+
+
 # ── 내부 헬퍼 ─────────────────────────────────────────────────
 
 async def _extract_and_save(sid: str, session: dict, draft: str) -> None:
@@ -111,6 +132,13 @@ async def query(req: QueryRequest):
     """Q&A 플로우: 질문 → 도메인 분류 → 에이전트(창업자 컨텍스트 주입) → Sign-off → 최종 응답"""
     t0 = time.monotonic()
     try:
+        # ── 프롬프트 인젝션 의심 패턴 감지 (거부 없이 로깅만) ─
+        if _detect_injection(req.question):
+            import logging
+            logging.getLogger("sohobi.security").warning(
+                "INJECTION_SUSPECT question=%r", req.question[:200]
+            )
+
         # ── 세션 복원 또는 신규 생성 ──────────────────────────
         sid     = req.session_id or str(uuid4())
         session = await get_query_session(sid)
