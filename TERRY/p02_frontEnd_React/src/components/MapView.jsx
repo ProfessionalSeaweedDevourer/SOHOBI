@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useMap } from "../hooks/useMap";
-import { toLonLat } from "ol/proj";
+import { toLonLat, fromLonLat } from "ol/proj";
 import { getCenter as getExtentCenter } from "ol/extent";
 
 // ── UI 컴포넌트 ────────────────────────────────────────────────
@@ -11,6 +11,7 @@ import DongPanel from "./panel/DongPanel";
 import DongTooltip from "./controls/DongTooltip";
 import WmsPopup from "./popup/WmsPopup";
 import StorePopup from "./popup/StorePopup";
+import ChatPanel from "./ChatPanel";
 
 // ── 커스텀 훅 ──────────────────────────────────────────────────
 import { useMarkers } from "../hooks/useMarkers";
@@ -64,6 +65,8 @@ export default function MapView() {
    const wmsLayerRef = useRef(null);
 
    const [coords, setCoords] = useState({ lat: "37.5665", lng: "126.9780" });
+   const [chatOpen, setChatOpen] = useState(false);
+   const [chatContext, setChatContext] = useState(null);
    const [popup, setPopup] = useState(null);
    const [kakaoDetail, setKakaoDetail] = useState(null);
    const [loadingDetail, setLoadingDetail] = useState(false);
@@ -165,6 +168,18 @@ export default function MapView() {
    const handleHideAll = () => {
       visibleCatsRef.current = new Set();
       setVisibleCats(new Set());
+   };
+
+   // ── 채팅 → 지도 네비게이션 콜백 ────────────────────────────────
+   // ChatPanel에서 onNavigate(lng, lat, zoom) 형태로 호출
+   const handleChatNavigate = (lng, lat, zoom = 16) => {
+      const map = mapInstance.current;
+      if (!map) return;
+      map.getView().animate({
+         center: fromLonLat([lng, lat]),
+         zoom,
+         duration: 800,
+      });
    };
 
    const clearAll = () => {
@@ -734,6 +749,18 @@ export default function MapView() {
             quarters={quarters}
             selectedQuarter={selectedQtr}
             onQuarterChange={(q) => setSelectedQtr(q)}
+            onAiAnalyze={(ctx) => {
+               setChatContext(ctx);
+               setChatOpen(true);
+               setDongPanel(null);
+            }}
+         />
+         <ChatPanel
+            isOpen={chatOpen}
+            onToggle={() => setChatOpen((prev) => !prev)}
+            mapContext={chatContext}
+            onNavigate={handleChatNavigate}
+            onClearContext={() => setChatContext(null)}
          />
          <div className="coord-bar">
             📍 위도: {coords.lat} | 경도: {coords.lng}

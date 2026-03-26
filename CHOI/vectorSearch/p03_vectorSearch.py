@@ -1,5 +1,6 @@
 import os
 from typing import List, Dict, Any
+from functools import lru_cache
 from openai import AzureOpenAI
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
@@ -32,33 +33,64 @@ search_client = SearchClient(
     credential=AzureKeyCredential(SEARCH_KEY)
 )
 
-def perform_vector_search(query_text: str, top_k: int = 3):
-    """
-    사용자의 질문을 벡터로 변환하여 Azure AI Search에서 검색합니다.
-    이미지에서 확인된 'fullText_vector' 필드 및 법령 상세 필드 구조를 반영합니다.
-    """
-    print("질문 분석 중: '%s'" % query_text)
-    
-    # 1. 질문을 벡터(Embedding)로 변환
-    embedding_response = ai_client.embeddings.create(
+@lru_cache(maxsize=128)
+def get_query_embedding(query_text: str) -> tuple:
+    """쿼리 임베딩을 생성하고 캐싱합니다. 동일 질문 재호출 시 API 호출을 건너뜁니다."""
+    response = ai_client.embeddings.create(
         input=query_text.replace("\n", " "),
         model=AZURE_OPENAI_EMBEDDING_DEPLOYMENT
     )
-    query_vector = embedding_response.data[0].embedding
+    return tuple(response.data[0].embedding)
 
-    # 2. 벡터 쿼리 객체 생성
-    # 업로드 시 사용한 벡터 필드명 'content_vector'를 사용합니다.
+
+# --- 법령명 자동 감지 → 메타데이터 필터링 ---
+LAW_NAMES = [
+    "식품위생법", "근로기준법", "상가건물 임대차보호법",
+    "최저임금법", "부가가치세법", "소방시설", "공중위생관리법",
+    "소득세법", "중소기업창업 지원법", "건축법",
+    "소상공인 보호 및 지원에 관한 법률", "국민건강증진법",
+    "주세법", "폐기물관리법",
+]
+
+
+def detect_law_filter(query: str) -> str:
+    """질문에서 법령명을 감지하여 OData 필터 생성"""
+    for name in LAW_NAMES:
+        if name in query:
+            return "search.ismatch('%s*', 'lawName')" % name
+    return None
+
+
+def perform_vector_search(query_text: str, top_k: int = 5):
+    """
+    하이브리드 검색: 벡터 유사도 + BM25 키워드 + 시맨틱 리랭킹.
+    질문에 법령명이 포함되면 해당 법령으로 필터링합니다.
+    """
+    print("질문 분석 중: '%s'" % query_text)
+
+    # 1. 질문을 벡터(Embedding)로 변환 (캐싱 적용)
+    query_vector = list(get_query_embedding(query_text))
+
+    # 2. 벡터 쿼리 객체 생성 (리랭킹 여유분 확보)
     vector_query = VectorizedQuery(
         vector=query_vector,
-        k_nearest_neighbors=top_k,
+        k_nearest_neighbors=top_k * 2,
         fields="content_vector"
     )
 
-    # 3. 검색 실행
-    # refined_law_data.json 필드 구조에 맞춰 select 지정
+    # 3. 법령명 필터 감지
+    filter_expr = detect_law_filter(query_text)
+    if filter_expr:
+        print("법령 필터 적용: %s" % filter_expr)
+
+    # 4. 하이브리드 검색 실행 (벡터 + 키워드 + 시맨틱 리랭킹)
     results = search_client.search(
-        search_text=None,
+        search_text=query_text,
         vector_queries=[vector_query],
+        query_type="semantic",
+        semantic_configuration_name="semantic-config",
+        top=top_k,
+        filter=filter_expr,
         select=[
             "id", "lawName", "mst", "articleNo",
             "chapterTitle", "sectionTitle", "articleTitle",
@@ -69,16 +101,24 @@ def perform_vector_search(query_text: str, top_k: int = 3):
 
     print("--- 검색 결과 (상위 %d건) ---" % top_k)
     search_results = []
-    
+
     for result in results:
         score = result.get("@search.score", 0.0)
+        reranker_score = result.get("@search.reranker_score", 0.0)
         law_name = result.get('lawName', '법령명 없음')
         article_no = result.get('articleNo', '조항 미상')
-        
-        # 로그 출력: [법령명] 제N조 (유사도 점수)
-        print("[%s] %s (유사도 점수: %.4f)" % (law_name, article_no, score))
+
+        # 시맨틱 리랭커 점수 기준 필터링 (0~4 범위, 1.5 미만 제거)
+        if reranker_score and reranker_score < 1.5:
+            print("[%s] %s (리랭커: %.2f — 임계값 미달, 제외)" % (law_name, article_no, reranker_score))
+            continue
+
+        score_info = "점수: %.4f" % score
+        if reranker_score:
+            score_info += ", 리랭커: %.2f" % reranker_score
+        print("[%s] %s (%s)" % (law_name, article_no, score_info))
         search_results.append(result)
-    
+
     return search_results
 
 if __name__ == "__main__":

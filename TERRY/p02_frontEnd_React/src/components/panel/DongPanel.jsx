@@ -709,6 +709,7 @@ export default function DongPanel({
    svcData,
    selectedSvc,
    onSvcChange,
+   onAiAnalyze,
 }) {
    if (!dongPanel) return null;
 
@@ -731,9 +732,27 @@ export default function DongPanel({
                      {dongPanel.dongNm || dongPanel.admNm}
                   </div>
                </div>
-               <button onClick={onClose} className="mv-dong-panel__close">
-                  ✕
-               </button>
+               <div style={{ display: "flex", gap: 6 }}>
+                  {onAiAnalyze && (
+                     <button
+                        onClick={() =>
+                           onAiAnalyze({
+                              guName: dongPanel.guNm,
+                              dongName: dongPanel.dongNm || dongPanel.admNm,
+                              admCd: dongPanel.admCd,
+                           })
+                        }
+                        className="mv-dong-panel__close"
+                        title="AI 상권분석"
+                        style={{ fontSize: 13 }}
+                     >
+                        🤖 AI
+                     </button>
+                  )}
+                  <button onClick={onClose} className="mv-dong-panel__close">
+                     ✕
+                  </button>
+               </div>
             </div>
             <div className="mv-dong-panel__mode-label">
                {isRE

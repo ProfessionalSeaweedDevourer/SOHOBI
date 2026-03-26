@@ -71,8 +71,8 @@ def create_legal_index():
                 name="hnsw-config",
                 parameters={
                     "m": 4,
-                    "efConstruction": 400,
-                    "efSearch": 500,
+                    "efConstruction": 200,
+                    "efSearch": 100,
                     "metric": "cosine"
                 }
             )
@@ -241,4 +241,15 @@ def create_legal_index():
 
 
 if __name__ == "__main__":
+    # 기존 인덱스 삭제 후 재생성
+    # index_client = SearchIndexClient(
+    #     endpoint=SEARCH_ENDPOINT,
+    #     credential=AzureKeyCredential(SEARCH_KEY)
+    # )
+    # try:
+    #     index_client.delete_index(INDEX_NAME)
+    #     print("🗑️ 기존 인덱스 '%s' 삭제 완료" % INDEX_NAME)
+    # except Exception as e:
+    #     print("기존 인덱스 없음 또는 삭제 스킵: %s" % e)
+
     create_legal_index()

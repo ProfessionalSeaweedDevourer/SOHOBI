@@ -11,7 +11,7 @@ export default function CategoryPanel({
    catCounts,
    onSearch, // (query: string) => void  MapView에서 주입
 }) {
-   const [collapsed, setCollapsed] = useState(false);
+   const [collapsed, setCollapsed] = useState(false); // false = 확장 상태로 시작
    const [searchQuery, setSearchQuery] = useState("");
 
    // ── 검색 실행 ────────────────────────────────────────────────
@@ -131,8 +131,7 @@ export default function CategoryPanel({
 const S = {
    sidebar: {
       position: "relative",
-      height: "80vh",
-      maxHeight: "80vh",
+      height: "100%",
       background: "rgba(255,255,255,0.97)",
       borderRight: "1px solid #e5e7eb",
       borderRadius: "0 12px 12px 0",
@@ -143,6 +142,8 @@ const S = {
       transition: "width 0.2s ease",
       overflow: "hidden",
       isolation: "isolate",
+      flexShrink: 0,
+      minWidth: 0,
    },
    header: {
       display: "flex",

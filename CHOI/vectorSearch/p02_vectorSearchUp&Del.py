@@ -118,13 +118,42 @@ def delete_documents_by_id(doc_ids):
         print("문서 ID %s: %s" % (result.key, status))
 
 
+def delete_all_documents():
+    """인덱스 내 모든 문서를 조회하여 일괄 삭제합니다."""
+    print("전체 문서 ID 수집 중...")
+
+    all_ids = []
+    results = search_client.search(
+        search_text="*",
+        select=["id"],
+        top=1000
+    )
+    for r in results:
+        all_ids.append(r["id"])
+
+    if not all_ids:
+        print("인덱스에 문서가 없습니다.")
+        return
+
+    print("삭제 대상: %s개" % len(all_ids))
+
+    # 배치 단위로 삭제 (1000개씩)
+    for i in range(0, len(all_ids), 1000):
+        batch = all_ids[i:i + 1000]
+        docs_to_delete = [{"id": doc_id} for doc_id in batch]
+        results = search_client.delete_documents(documents=docs_to_delete)
+        success = sum(1 for r in results if r.succeeded)
+        fail = len(batch) - success
+        print("  배치 %s: 삭제 성공 %s개, 실패 %s개" % (i // 1000 + 1, success, fail))
+
+    print("전체 삭제 완료.")
+
+
 def delete_documents_by_filter(filter_field, filter_value):
     """
     특정 필드 값으로 문서를 검색한 후 일괄 삭제합니다.
     예: delete_documents_by_filter("lawName", "식품위생법")
     """
-    from azure.search.documents import SearchClient
-
     filter_str = "%s eq '%s'" % (filter_field, filter_value)
     print("필터 조건: %s" % filter_str)
 
@@ -163,19 +192,23 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     data_file = os.path.join(current_dir, "refined_law_data.json")
 
-    # --- 1. 데이터 로드 ---
-    print("\n[1] 전처리 데이터 로드...")
+    # --- 1. 기존 인덱스 데이터 전체 삭제 ---
+    # print("\n[1] 기존 인덱스 데이터 전체 삭제...")
+    # delete_all_documents()
+
+    # --- 2. 데이터 로드 ---
+    print("\n[2] 전처리 데이터 로드...")
     docs = load_refined_data(data_file)
     if not docs:
         exit(1)
 
-    # --- 2. 전체 업로드 ---
-    print("\n[2] Azure AI Search 업로드 시작...")
+    # --- 3. 전체 업로드 ---
+    print("\n[3] Azure AI Search 업로드 시작...")
     upload_documents(docs)
 
-    # --- 3. 삭제 예시 (필요 시 주석 해제) ---
-    # print("\n[3] 특정 문서 삭제...")
+    # --- 4. 삭제 예시 (필요 시 주석 해제) ---
+    # print("\n[4] 특정 문서 삭제...")
     # delete_documents_by_id(["law_277149_1_1"])
 
-    # print("\n[3] 특정 법령 전체 삭제...")
+    # print("\n[4] 특정 법령 전체 삭제...")
     # delete_documents_by_filter("lawName", "식품위생법")
