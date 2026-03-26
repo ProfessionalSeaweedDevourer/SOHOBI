@@ -9,6 +9,7 @@ export default function UserChat() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
+  const [latestParams, setLatestParams] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeEvents, setActiveEvents] = useState([]);
   const [error, setError] = useState(null);
@@ -35,7 +36,7 @@ export default function UserChat() {
         if (eventName === "complete") {
           finalResult = data;
         }
-      });
+      }, latestParams);
     } catch (e) {
       setError(e.message);
       setLoading(false);
@@ -53,8 +54,10 @@ export default function UserChat() {
           confidenceNote: finalResult.confidence_note,
           draft:          finalResult.draft,
           retryCount:     finalResult.retry_count,
+          chart:          finalResult.chart || null,
         },
       ]);
+      if (finalResult.updated_params) setLatestParams(finalResult.updated_params);
     }
 
     setActiveEvents([]);
@@ -111,6 +114,7 @@ export default function UserChat() {
               confidenceNote={msg.confidenceNote}
               draft={msg.draft}
               retryCount={msg.retryCount}
+              chart={msg.chart}
               showMeta={false}
             />
           ))}

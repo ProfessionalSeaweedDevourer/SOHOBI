@@ -31,7 +31,7 @@ const GRADE_LABEL = {
  *   showMeta?: boolean        // dev 모드에서 true
  * }} props
  */
-export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, showMeta }) {
+export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, showMeta }) {
   const isEscalated = status === "escalated";
   // grade가 없을 때는 status로 추론
   const effectiveGrade = grade || (isEscalated ? "C" : "A");
@@ -74,7 +74,18 @@ export default function ResponseCard({ question, domain, status, grade, confiden
               )}
             </div>
           ) : (
-            <ReactMarkdown>{draft}</ReactMarkdown>
+            <>
+              <ReactMarkdown>{draft}</ReactMarkdown>
+              {chart && (
+                <div className="mt-3">
+                  <img
+                    src={`data:image/png;base64,${chart}`}
+                    alt="시뮬레이션 결과 그래프"
+                    className="rounded-lg max-w-full"
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
 

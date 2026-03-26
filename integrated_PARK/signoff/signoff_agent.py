@@ -20,9 +20,14 @@ REQUIRED_CODES = {
 }
 
 
+_DRAFT_START = "<<<DRAFT_START>>>"
+_DRAFT_END   = "<<<DRAFT_END>>>"
+
+
 def _build_messages(domain: str, draft: str) -> list[dict]:
     prompt_file = PROMPTS_DIR / f"signoff_{domain}" / "evaluate" / "skprompt.txt"
-    raw = prompt_file.read_text(encoding="utf-8").replace("{{$draft}}", draft)
+    safe_draft = f"{_DRAFT_START}\n{draft}\n{_DRAFT_END}"
+    raw = prompt_file.read_text(encoding="utf-8").replace("{{$draft}}", safe_draft)
 
     messages = []
     for m in re.finditer(r'<message role="(\w+)">(.*?)</message>', raw, re.DOTALL):

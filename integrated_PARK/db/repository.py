@@ -1,460 +1,646 @@
 """
-repository.py
-DB 조회 레이어 — LocationAgent가 이 클래스만 바라봄
+repository.py (Oracle 버전)
+DB 조회 레이어 - LocationAgent가 이 클래스만 바라봄
 
-출처: CHOI/locationAgent_sang/db/repository.py
-변경: DB_PATH를 COMMERCIAL_DB_PATH 환경변수로 오버라이드 가능하게 수정
-     (Railway 볼륨 마운트 시 경로 주입용)
+[연결 설정]
+- DB: Oracle (SANGKWON_SALES 테이블)
+- 지역 기준: 행정동 단위 (ADM_CD, ADM_NM)
+- 업종 기준: 서비스 업종 코드 (SVC_INDUTY_CD)
 
-[SQLite → Oracle 전환 시 변경 포인트]
-1. import sqlite3           →  import cx_Oracle
-2. sqlite3.connect(DB_PATH) →  cx_Oracle.connect(user, pw, dsn)
-3. 플레이스홀더: ?           →  :1 또는 :변수명
+[환경변수 필요]
+ORACLE_USER=...
+ORACLE_PASSWORD=...
+ORACLE_DSN=...   # host:port/service_name
 """
 
+import oracledb
 import os
-import sqlite3
 from typing import Optional
+from dotenv import load_dotenv
 
-_DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commercial.db")
-DB_PATH = os.getenv("COMMERCIAL_DB_PATH", _DEFAULT_DB_PATH)
+load_dotenv()
 
-# 사용자 키워드 → 상권명 매핑
+# 행정동 코드 기반 지역 매핑 (208개 키워드)
 AREA_MAP = {
     # 홍대/마포권
-    "홍대":       ["홍대입구역(홍대)", "서교동(홍대)", "연남동(홍대)", "상수역(홍대)"],
-    "합정":       ["합정역"],
-    "연남동":     ["연남동(홍대)"],
-    "상수":       ["상수역(홍대)"],
-    "망원":       ["망원역"],
-    "공덕":       ["공덕역(공덕오거리)"],
-    "마포":       ["마포역"],
-    "월드컵":     ["월드컵경기장역(월드컵경기장)"],
-
+    "홍대": ["11440660"],
+    "합정": ["11440680"],
+    "연남동": ["11440710"],
+    "망원": ["11440690", "11440700"],
+    "상암": ["11440740"],
+    "공덕": ["11440565"],
+    "마포": [
+        "11440565",
+        "11440585",
+        "11440600",
+        "11440590",
+        "11440655",
+        "11440610",
+        "11440630",
+        "11440555",
+    ],
+    "대흥": ["11440600"],
+    "아현": ["11440555"],
     # 강남권
-    "강남":       ["강남역", "강남구청역", "강남을지병원", "강남구청(청담역_8번, 강남세무서)"],
-    "강남역":     ["강남역"],
-    "신논현":     ["신논현역", "신논현역 1번"],
-    "역삼":       ["역삼역"],
-    "선릉":       ["선릉역"],
-    "선정릉":     ["선정릉역"],
-    "삼성":       ["삼성역", "삼성중앙역"],
-    "코엑스":     ["코엑스"],
-    "봉은사":     ["봉은사역"],
-    "압구정":     ["압구정역", "압구정로데오역(압구정로데오)"],
-    "청담":       ["청담사거리(청담동명품거리)", "강남구청(청담역_8번, 강남세무서)"],
-    "논현":       ["논현역", "논현역 4번", "논현역 5번"],
-    "신사":       ["신사역"],
-    "가로수길":   ["가로수길"],
-    "도산공원":   ["도산공원교차로"],
-    "학동":       ["학동역", "학동사거리"],
-    "언주":       ["언주역(차병원)"],
-    "대치":       ["대치역", "대치사거리"],
-    "한티":       ["한티역"],
-    "매봉":       ["매봉역"],
-    "양재":       ["양재역", "양재천카페거리", "양재시민의숲역(양재동꽃시장, aT센터)"],
-    "뱅뱅":       ["뱅뱅사거리"],
-    "도곡":       ["도곡1동"],
-
+    "강남": ["11680640", "11680650", "11680521", "11680531"],
+    "역삼": ["11680640", "11680650"],
+    "논현": ["11680521", "11680531"],
+    "압구정": ["11680545"],
+    "청담": ["11680565"],
+    "삼성": ["11680580", "11680590"],
+    "대치": ["11680600", "11680610", "11680630"],
+    "도곡": ["11680655", "11680656"],
+    "개포": ["11680660", "11680670", "11680690"],
+    "일원": ["11680730", "11680740", "11680720"],
+    "수서": ["11680750"],
+    "세곡": ["11680700"],
     # 서초/사당권
-    "교대":       ["교대역(법원.검찰청)", "교대입구교차로"],
-    "서초":       ["서초역", "서초3동사거리"],
-    "사당":       ["사당역(사당)", "사당역 11번(사당역먹자골목)"],
-    "방배":       ["방배역", "방배동카페골목", "방배동가구거리(사당동가구거리)"],
-    "남부터미널": ["남부터미널역"],
-    "고속터미널": ["고속터미널(고속터미널역)"],
-    "총신대":     ["총신대입구역(이수, 총신대)", "총신대학교"],
-    "서래마을":   ["서래마을카페거리(서래마을)"],
-
+    "서초": ["11650510", "11650520", "11650530", "11650531"],
+    "반포": ["11650560", "11650570", "11650580", "11650581", "11650550"],
+    "잠원": ["11650540"],
+    "방배": ["11650600", "11650610", "11650620", "11650621", "11650590"],
+    "양재": ["11650651", "11650652"],
+    "내곡": ["11650660"],
+    "사당": ["11590620", "11590630", "11590640", "11590650", "11590651"],
     # 여의도/영등포권
-    "여의도":     ["여의도역(여의도)"],
-    "영등포":     ["영등포역(영등포)", "영등포구청역", "영등포청과시장교차로"],
-    "당산":       ["당산역", "당산2동(영등포우체국)"],
-    "문래":       ["문래역(문래로데오거리)", "문래동주민센터"],
-    "신도림":     ["신도림역"],
-    "대림":       ["대림역", "대림3동사거리"],
-    "구로":       ["구로역", "구로구청", "구로디지털단지", "구로디지털단지역", "구로전화국"],
-    "가산":       ["가산디지털단지"],
-    "오목교":     ["오목교역"],
-    "목동":       ["목동사거리", "목동신시가지", "목동역 8번출구"],
-    "양평":       ["양평역"],
-    "63빌딩":     ["63빌딩"],
-    "국회":       ["국회의사당역(국회의사당)"],
-
-    # 종로/도심권
-    "종각":       ["종각역"],
-    "종로3가":    ["종로3가역"],
-    "종로4가":    ["종로4가"],
-    "종로5가":    ["종로5가역"],
-    "종로6가":    ["종로6가"],
-    "종로구청":   ["종로구청"],
-    "광화문":     ["광화문역"],
-    "인사동":     ["인사동"],
-    "북촌":       ["북촌(안국역)"],
-    "삼청동":     ["삼청동"],
-    "서촌":       ["서촌(경복궁역)"],
-    "명동":       ["명동(명동거리)", "명동역(명동재미로)"],
-    "시청":       ["서울시청", "시청역_1번", "시청역_8번", "롯데백화점(시청광장 지하쇼핑센터)"],
-    "북창동":     ["북창동(시청역_6번)"],
-    "을지로":     ["을지로입구역", "을지로2가", "을지로3가역", "을지로4가역"],
-    "충무로":     ["충무로역"],
-    "충정로":     ["충정로역"],
-    "중림동":     ["중림동"],
-    "서울역":     ["서울역"],
-    "남영동":     ["남영동 먹자골목", "숙대입구역(남영역, 남영동)"],
-    "회현":       ["회현역"],
-    "퇴계로":     ["퇴계로5가"],
-    "중구청":     ["중구청(퇴계로4가)"],
-    "장충동":     ["장충동족발거리(남소영길)"],
-    "대학로":     ["대학로(혜화역)"],
-    "원남동":     ["원남동사거리"],
-
+    "여의도": ["11560540"],
+    "영등포": ["11560515", "11560535"],
+    "당산": ["11560550", "11560560"],
+    "문래": ["11560605"],
+    "양평": ["11560610", "11560620"],
+    "신길": ["11560630", "11560650", "11560660", "11560670", "11560680", "11560690"],
+    "대림": ["11560700", "11560710", "11560720"],
+    "도림": ["11560585"],
     # 이태원/용산권
-    "이태원":     ["이태원(이태원역)"],
-    "한남":       ["한남오거리"],
-    "삼각지":     ["삼각지역"],
-    "용산":       ["신용산역(용산역)", "용산전자상가(용산역)"],
-    "약수":       ["약수역"],
-    "금호":       ["금호역"],
-
-    # 건대/성수/왕십리권
-    "건대":       ["건대입구역(건대)"],
-    "성수":       ["성수역", "성수대교남단", "서울숲역"],
-    "뚝섬":       ["뚝섬역"],
-    "왕십리":     ["왕십리역(왕십리)"],
-    "군자":       ["군자역"],
-    "아차산":     ["아차산역"],
-    "구의":       ["구의역", "구의사거리"],
-    "강변":       ["강변역(테크노마트)"],
-
+    "이태원": ["11170650", "11170660"],
+    "한남": ["11170685"],
+    "용산": ["11170520", "11170625"],
+    "이촌": ["11170630", "11170640"],
+    "서빙고": ["11170690"],
+    "보광": ["11170700"],
+    "효창": ["11170580"],
+    "청파": ["11170555"],
+    "원효로": ["11170560", "11170570"],
+    "후암": ["11170510"],
+    # 건대/성수권
+    "건대": ["11215710"],
+    "성수": ["11200650", "11200660", "11200670", "11200690"],
+    "뚝섬": ["11200650", "11200660"],
+    "자양": ["11215820", "11215830", "11215840", "11215847"],
+    "구의": ["11215850", "11215860", "11215870"],
+    "광장": ["11215810"],
+    "군자": ["11215730"],
+    "능동": ["11215780"],
     # 신촌/서대문권
-    "신촌":       ["신촌역(신촌역, 신촌로터리)"],
-    "이대":       ["이화여대(이대역, 이대)", "이화사거리"],
-    "서대문":     ["서대문역"],
-    "홍제":       ["홍제역"],
-    "연희동":     ["연희동"],
-    "불광":       ["불광역"],
-    "응암":       ["응암역"],
-    "구산":       ["구산역"],
-    "구파발":     ["구파발역"],
-    "연신내":     ["연신내역"],
-
+    "신촌": ["11410585"],
+    "연희": ["11410615"],
+    "홍제": ["11410620", "11410655", "11410640"],
+    "홍은": ["11410660", "11410685"],
+    "북가좌": ["11410710", "11410720"],
+    "남가좌": ["11410690", "11410700"],
+    "천연": ["11410520"],
+    "충현": ["11410565"],
+    "북아현": ["11410555"],
     # 잠실/송파권
-    "잠실":       ["잠실역", "잠실새내역(신천)"],
-    "잠실역":     ["잠실역"],
-    "석촌":       ["석촌역(석촌호수)", "석촌고분역"],
-    "방이":       ["방이역", "방이동먹자골목"],
-    "송파":       ["송파사거리(송파역)", "송파나루역"],
-    "가락":       ["가락시장", "가락시장역"],
-    "문정":       ["문정역"],
-    "장지":       ["장지역(가든파이브)"],
-    "몽촌":       ["몽촌토성역"],
-    "오금":       ["오금역"],
-    "거여":       ["거여역"],
-    "개롱":       ["개롱역"],
-    "굽은다리":   ["굽은다리역"],
-
+    "잠실": ["11710650", "11710670", "11710680", "11710690", "11710710", "11710720"],
+    "송파": ["11710580", "11710590"],
+    "석촌": ["11710600"],
+    "삼전": ["11710610"],
+    "방이": ["11710561", "11710562"],
+    "오금": ["11710570"],
+    "가락": ["11710620", "11710631", "11710632"],
+    "문정": ["11710641", "11710642"],
+    "장지": ["11710646"],
+    "위례": ["11710647"],
+    "마천": ["11710540", "11710550"],
+    "거여": ["11710531", "11710532"],
+    "풍납": ["11710510", "11710520"],
     # 강동권
-    "강동구청":   ["강동구청역"],
-    "천호":       ["천호역"],
-    "암사":       ["암사역"],
-    "명일":       ["명일역"],
-    "고덕":       ["고덕역"],
-    "길동":       ["길동역"],
-    "둔촌":       ["둔촌역"],
-
+    "강동": ["11740600", "11740610", "11740620"],
+    "천호": ["11740600", "11740610", "11740620"],
+    "길동": ["11740685"],
+    "둔촌": ["11740690", "11740700"],
+    "성내": ["11740640", "11740650", "11740660"],
+    "암사": ["11740570", "11740580", "11740590"],
+    "명일": ["11740530", "11740540"],
+    "고덕": ["11740550", "11740560"],
+    "상일": ["11740520"],
+    "강일": ["11740515"],
     # 노원/도봉/강북권
-    "노원":       ["노원역"],
-    "창동":       ["창동역"],
-    "수유":       ["수유역"],
-    "미아":       ["미아역", "미아사거리역", "미아사거리"],
-    "월곡":       ["월곡역"],
-    "성북구청":   ["성북구청"],
-    "성신여대":   ["성신여대"],
-    "한성대":     ["한성대입구역"],
-    "안암":       ["안암역"],
-    "회기":       ["회기역"],
-    "경희대":     ["경희대학교(경희대)"],
-    "태릉":       ["태릉입구역"],
-    "공릉":       ["공릉역"],
-    "마들":       ["마들역"],
-    "사가정":     ["사가정역"],
-    "상봉":       ["상봉역"],
-    "장안동":     ["장안동사거리"],
-    "장한평":     ["장한평역(장한평)"],
-    "신설동":     ["신설동역"],
-    "동대문":     ["동대문역", "동대문역사문화공원역"],
-    "신당":       ["신당역"],
-
+    "노원": [
+        "11350630",
+        "11350640",
+        "11350665",
+        "11350670",
+        "11350695",
+        "11350700",
+        "11350710",
+        "11350720",
+    ],
+    "상계": [
+        "11350630",
+        "11350640",
+        "11350665",
+        "11350670",
+        "11350695",
+        "11350700",
+        "11350710",
+        "11350720",
+    ],
+    "중계": ["11350619", "11350621", "11350625", "11350624"],
+    "하계": ["11350611", "11350612"],
+    "공릉": ["11350595", "11350600"],
+    "월계": ["11350560", "11350570", "11350580"],
+    "도봉": ["11320521", "11320522"],
+    "방학": ["11320690", "11320700", "11320710"],
+    "쌍문": ["11320660", "11320670", "11320680", "11320681"],
+    "창동": ["11320511", "11320512", "11320513", "11320514", "11320515"],
+    "수유": ["11305615", "11305625", "11305635"],
+    "미아": ["11305535"],
+    "삼양": ["11305534"],
+    "삼각산": ["11305575"],
+    "번동": ["11305595", "11305603", "11305608"],
+    "우이": ["11305645"],
+    "인수": ["11305660"],
+    "길음": ["11290660", "11290685"],
     # 관악/동작권
-    "신림":       ["신림역(신림)"],
-    "서울대":     ["서울대입구역"],
-    "녹두거리":   ["녹두거리(대학동)"],
-    "보라매":     ["보라매역", "보라매공원"],
-    "신대방":     ["신대방삼거리역"],
-    "노량진":     ["노량진역(노량진)"],
-    "내방":       ["내방역"],
-    "독산":       ["독산동"],
-
+    "관악": ["11620695", "11620585"],
+    "신림": ["11620695"],
+    "낙성대": ["11620585"],
+    "봉천": [
+        "11620615",
+        "11620595",
+        "11620565",
+        "11620575",
+        "11620605",
+        "11620645",
+        "11620665",
+        "11620775",
+        "11620715",
+        "11620765",
+        "11620625",
+        "11620630",
+        "11620735",
+        "11620745",
+        "11620525",
+    ],
+    "노량진": ["11590510", "11590520"],
+    "대방": ["11590660"],
+    "신대방": ["11590670", "11590680"],
+    "흑석": ["11590605"],
+    "동작": ["11590530", "11590540", "11590550", "11590560"],
+    "상도": ["11590530", "11590540", "11590550", "11590560"],
     # 강서/양천권
-    "마곡":       ["마곡역(마곡)", "발산역(마곡)"],
-    "강서구청":   ["강서구청"],
-    "화곡":       ["화곡역"],
-    "까치산":     ["까치산역"],
-    "신정":       ["신정네거리역"],
-    "오류동":     ["오류동역"],
-    "등촌":       ["등촌역"],
-    "송정":       ["송정역"],
-    "김포공항":   ["김포공항역(김포공항)"],
-
+    "강서": [
+        "11500540",
+        "11500550",
+        "11500560",
+        "11500570",
+        "11500591",
+        "11500593",
+        "11500590",
+    ],
+    "화곡": [
+        "11500540",
+        "11500550",
+        "11500560",
+        "11500570",
+        "11500591",
+        "11500593",
+        "11500590",
+    ],
+    "방화": ["11500630", "11500640", "11500641"],
+    "가양": ["11500603", "11500604", "11500605"],
+    "등촌": ["11500520", "11500530", "11500535"],
+    "염창": ["11500510"],
+    "발산": ["11500611"],
+    "공항": ["11500620"],
+    "우장산": ["11500615"],
+    "마곡": ["11500611"],
+    "신월": [
+        "11470560",
+        "11470570",
+        "11470580",
+        "11470590",
+        "11470600",
+        "11470610",
+        "11470611",
+    ],
+    "신정": ["11470620", "11470630", "11470640", "11470650", "11470670", "11470680"],
+    "목동": ["11470510", "11470520", "11470530", "11470540", "11470550"],
     # DMC/은평권
-    "DMC":            ["DMC(디지털미디어시티)"],
-    "디지털미디어시티": ["DMC(디지털미디어시티)"],
-
-    # 기타
-    "포스코":     ["포스코사거리"],
-    "경찰병원":   ["경찰병원역"],
-    "수서":       ["수서역"],
-    "청량리":     ["청량리역(청량리)"],
-    "동묘":       ["동묘앞역(동묘)"],
+    "DMC": ["11440740"],
+    "은평": [
+        "11380520",
+        "11380530",
+        "11380510",
+        "11380570",
+        "11380560",
+        "11380551",
+        "11380552",
+        "11380580",
+        "11380590",
+        "11380600",
+        "11380625",
+        "11380640",
+        "11380650",
+        "11380690",
+    ],
+    "불광": ["11380520", "11380530"],
+    "녹번": ["11380510"],
+    "응암": ["11380580", "11380590", "11380600"],
+    "역촌": ["11380625"],
+    "수색": ["11380650"],
+    "진관": ["11380690"],
+    # 종로/도심권
+    "종로": ["11110615", "11110630"],
+    "광화문": ["11110515", "11110530"],
+    "인사동": ["11110615"],
+    "명동": ["11140550"],
+    "을지로": ["11140605"],
+    "동대문": ["11230705", "11230545", "11230560", "11230570"],
+    "청량리": ["11230705"],
+    "회현": ["11140540"],
+    "소공": ["11140520"],
+    "장충": ["11140580"],
+    "신당": ["11140615", "11140650"],
+    "다산": ["11140625"],
+    "약수": ["11140635"],
+    "청구": ["11140645"],
+    "황학": ["11140670"],
+    "중림": ["11140680"],
+    "광희": ["11140590"],
+    "교남": ["11110580"],
+    "평창": ["11110560"],
+    "부암": ["11110550"],
+    "혜화": ["11110650"],
+    "이화": ["11110640"],
+    "창신": ["11110670", "11110680", "11110690"],
+    "숭인": ["11110700", "11110710"],
+    "삼청": ["11110540"],
+    "가회": ["11110600"],
+    "무악": ["11110570"],
+    # 성북/강북권
+    "성북": ["11290525"],
+    "삼선": ["11290555"],
+    "동선": ["11290575"],
+    "보문": ["11290610"],
+    "안암": ["11290600"],
+    "돈암": ["11290580", "11290590"],
+    "종암": ["11290705"],
+    "월곡": ["11290715", "11290725"],
+    "장위": ["11290760", "11290770", "11290780"],
+    "석관": ["11290810"],
+    "정릉": ["11290620", "11290630", "11290640", "11290650"],
+    # 중랑권
+    "중랑": [
+        "11260600",
+        "11260610",
+        "11260620",
+        "11260630",
+        "11260680",
+        "11260690",
+        "11260565",
+        "11260520",
+        "11260575",
+        "11260540",
+        "11260550",
+        "11260570",
+        "11260655",
+        "11260660",
+        "11260580",
+        "11260590",
+    ],
+    "면목": ["11260565", "11260520", "11260575", "11260540", "11260550", "11260570"],
+    "망우": ["11260655", "11260660"],
+    "상봉": ["11260580", "11260590"],
+    "신내": ["11260680", "11260690"],
+    "중화": ["11260600", "11260610"],
+    "묵동": ["11260620", "11260630"],
+    # 동대문구
+    "장안": ["11230650", "11230660"],
+    "답십리": ["11230600", "11230610"],
+    "전농": ["11230560", "11230570"],
+    "이문": ["11230740", "11230750"],
+    "휘경": ["11230720", "11230730"],
+    "회기": ["11230710"],
+    "용신": ["11230536"],
+    "제기": ["11230545"],
+    # 왕십리/성동권
+    "왕십리": ["11200520", "11200535"],
+    "행당": ["11200560", "11200570"],
+    "응봉": ["11200580"],
+    "금호": ["11200590", "11200615", "11200620"],
+    "옥수": ["11200645"],
+    "마장": ["11200540"],
+    "사근": ["11200550"],
+    "송정": ["11200720"],
+    "용답": ["11200790"],
+    # 구로권
+    "구로": ["11530520", "11530530", "11530540", "11530550", "11530560"],
+    "가산": ["11545510"],
+    "가리봉": ["11530595"],
+    "신도림": ["11530510"],
+    "개봉": ["11530740", "11530750", "11530760"],
+    "오류": ["11530770", "11530780"],
+    "고척": ["11530720", "11530730"],
+    "수궁": ["11530790"],
+    "항동": ["11530800"],
+    "독산": ["11545610", "11545620", "11545630", "11545640"],
+    "시흥": ["11545670", "11545680", "11545690", "11545700", "11545710"],
 }
 
 INDUSTRY_CODE_MAP = {
-    "한식":       "CS100001",
-    "중식":       "CS100002",
-    "일식":       "CS100003",
-    "양식":       "CS100004",
-    "베이커리":   "CS100005",
+    "한식": "CS100001",
+    "중식": "CS100002",
+    "일식": "CS100003",
+    "양식": "CS100004",
+    "베이커리": "CS100005",
+    "제과점": "CS100005",
     "패스트푸드": "CS100006",
-    "치킨":       "CS100007",
-    "분식":       "CS100008",
-    "호프":       "CS100009",
-    "술집":       "CS100009",
-    "카페":       "CS100010",
-    "커피":       "CS100010",
-    "미용실":     "CS200028",
-    "네일":       "CS200029",
-    "노래방":     "CS200037",
-    "편의점":     "CS300002",
+    "치킨": "CS100007",
+    "분식": "CS100008",
+    "호프": "CS100009",
+    "술집": "CS100009",
+    "카페": "CS100010",
+    "커피": "CS100010",
+    "미용실": "CS200028",
+    "네일": "CS200029",
+    "노래방": "CS200037",
+    "편의점": "CS300002",
 }
 
 
 class CommercialRepository:
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        return conn
+    _pool = None
 
-    def _get_trdar_names(self, location: str) -> list:
+    @classmethod
+    def _get_pool(cls):
+        """커넥션 풀 싱글턴 — 매 쿼리마다 connect/close 오버헤드 제거"""
+        if cls._pool is None:
+            cls._pool = oracledb.create_pool(
+                user=os.getenv("ORACLE_USER"),
+                password=os.getenv("ORACLE_PASSWORD"),
+                host=os.getenv("ORACLE_HOST"),
+                port=int(os.getenv("ORACLE_PORT", "1521")),
+                sid=os.getenv("ORACLE_SID"),
+                min=2,
+                max=5,
+                increment=1,
+            )
+        return cls._pool
+
+    def _connect(self):
+        return self._get_pool().acquire()
+
+    def _get_adm_codes(self, location: str) -> list:
         return AREA_MAP.get(location, [])
 
     def _get_industry_code(self, business_type: str) -> str:
         return INDUSTRY_CODE_MAP.get(business_type, "")
 
-    def get_sales(self, location: str, business_type: str,
-                  quarter: str = "20244",
-                  trdar_types: list = None) -> Optional[dict]:
-        """상권별 매출 조회 + 합산."""
-        if trdar_types is None:
-            trdar_types = ["발달상권"]
-
-        trdar_names   = self._get_trdar_names(location)
+    def get_sales(
+        self, location: str, business_type: str, quarter: str = "20244"
+    ) -> Optional[dict]:
+        """
+        행정동별 매출 조회 + 합산
+        반환: {summary(합산), breakdown(행정동별 분리)}
+        """
+        adm_codes = self._get_adm_codes(location)
         industry_code = self._get_industry_code(business_type)
 
-        if not trdar_names or not industry_code:
+        if not adm_codes or not industry_code:
             return None
 
-        name_placeholders = ",".join("?" * len(trdar_names))
-        type_placeholders = ",".join("?" * len(trdar_types))
+        placeholders = ",".join(f":{i+1}" for i in range(len(adm_codes)))
         sql = f"""
-            SELECT * FROM commercial_sales
-            WHERE quarter = ?
-              AND trdar_name IN ({name_placeholders})
-              AND industry_code = ?
-              AND trdar_type IN ({type_placeholders})
+            SELECT ADM_CD, ADM_NM, SVC_INDUTY_NM,
+                   TOT_SALES_AMT, TOT_SELNG_CO,
+                   MDWK_SALES_AMT, WKEND_SALES_AMT,
+                   MON_SALES_AMT, TUE_SALES_AMT, WED_SALES_AMT,
+                   THU_SALES_AMT, FRI_SALES_AMT, SAT_SALES_AMT, SUN_SALES_AMT,
+                   TM00_06_SALES_AMT, TM06_11_SALES_AMT, TM11_14_SALES_AMT,
+                   TM14_17_SALES_AMT, TM17_21_SALES_AMT, TM21_24_SALES_AMT,
+                   ML_SALES_AMT, FML_SALES_AMT,
+                   AGE10_AMT, AGE20_AMT, AGE30_AMT,
+                   AGE40_AMT, AGE50_AMT, AGE60_AMT
+            FROM SANGKWON_SALES
+            WHERE BASE_YR_QTR_CD = :qtr
+              AND ADM_CD IN ({placeholders})
+              AND SVC_INDUTY_CD = :induty
         """
         with self._connect() as conn:
-            rows = conn.execute(
-                sql, (quarter, *trdar_names, industry_code, *trdar_types)
-            ).fetchall()
+            cursor = conn.cursor()
+            cursor.execute(sql, [quarter] + adm_codes + [industry_code])
+            columns = [d[0].lower() for d in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
         if not rows:
             return None
 
         breakdown = []
         for r in rows:
-            breakdown.append({
-                "trdar_name":        r["trdar_name"],
-                "trdar_type":        r["trdar_type"],
-                "monthly_sales_krw": r["monthly_sales"],
-                "monthly_tx_count":  r["monthly_tx"],
-                "weekday_sales_krw": r["weekday_sales"],
-                "weekend_sales_krw": r["weekend_sales"],
-                "mon_sales_krw":     r["mon_sales"],
-                "tue_sales_krw":     r["tue_sales"],
-                "wed_sales_krw":     r["wed_sales"],
-                "thu_sales_krw":     r["thu_sales"],
-                "fri_sales_krw":     r["fri_sales"],
-                "sat_sales_krw":     r["sat_sales"],
-                "sun_sales_krw":     r["sun_sales"],
-                "time_00_06_krw":    r["time_00_06"],
-                "time_06_11_krw":    r["time_06_11"],
-                "time_11_14_krw":    r["time_11_14"],
-                "time_14_17_krw":    r["time_14_17"],
-                "time_17_21_krw":    r["time_17_21"],
-                "time_21_24_krw":    r["time_21_24"],
-                "male_sales_krw":    r["male_sales"],
-                "female_sales_krw":  r["female_sales"],
-                "age_10s_krw":       r["age_10s"],
-                "age_20s_krw":       r["age_20s"],
-                "age_30s_krw":       r["age_30s"],
-                "age_40s_krw":       r["age_40s"],
-                "age_50s_krw":       r["age_50s"],
-                "age_60s_krw":       r["age_60s"],
-            })
+            breakdown.append(
+                {
+                    "adm_name": r["adm_nm"],
+                    "monthly_sales_krw": r["tot_sales_amt"] or 0,
+                    "monthly_tx_count": r["tot_selng_co"] or 0,
+                    "weekday_sales_krw": r["mdwk_sales_amt"] or 0,
+                    "weekend_sales_krw": r["wkend_sales_amt"] or 0,
+                    "mon_sales_krw": r["mon_sales_amt"] or 0,
+                    "tue_sales_krw": r["tue_sales_amt"] or 0,
+                    "wed_sales_krw": r["wed_sales_amt"] or 0,
+                    "thu_sales_krw": r["thu_sales_amt"] or 0,
+                    "fri_sales_krw": r["fri_sales_amt"] or 0,
+                    "sat_sales_krw": r["sat_sales_amt"] or 0,
+                    "sun_sales_krw": r["sun_sales_amt"] or 0,
+                    "time_00_06_krw": r["tm00_06_sales_amt"] or 0,
+                    "time_06_11_krw": r["tm06_11_sales_amt"] or 0,
+                    "time_11_14_krw": r["tm11_14_sales_amt"] or 0,
+                    "time_14_17_krw": r["tm14_17_sales_amt"] or 0,
+                    "time_17_21_krw": r["tm17_21_sales_amt"] or 0,
+                    "time_21_24_krw": r["tm21_24_sales_amt"] or 0,
+                    "male_sales_krw": r["ml_sales_amt"] or 0,
+                    "female_sales_krw": r["fml_sales_amt"] or 0,
+                    "age_10s_krw": r["age10_amt"] or 0,
+                    "age_20s_krw": r["age20_amt"] or 0,
+                    "age_30s_krw": r["age30_amt"] or 0,
+                    "age_40s_krw": r["age40_amt"] or 0,
+                    "age_50s_krw": r["age50_amt"] or 0,
+                    "age_60s_krw": r["age60_amt"] or 0,
+                }
+            )
 
-        def _sum(key): return sum(b[key] for b in breakdown)
+        def _sum(key):
+            return sum(b[key] for b in breakdown)
 
         summary = {
-            "location":          location,
-            "business_type":     rows[0]["industry_name"],
-            "quarter":           quarter,
-            "trdar_count":       len(breakdown),
+            "location": location,
+            "business_type": rows[0]["svc_induty_nm"],
+            "quarter": quarter,
+            "adm_count": len(breakdown),
             "monthly_sales_krw": _sum("monthly_sales_krw"),
-            "monthly_tx_count":  _sum("monthly_tx_count"),
+            "monthly_tx_count": _sum("monthly_tx_count"),
             "weekday_sales_krw": _sum("weekday_sales_krw"),
             "weekend_sales_krw": _sum("weekend_sales_krw"),
-            "mon_sales_krw":     _sum("mon_sales_krw"),
-            "tue_sales_krw":     _sum("tue_sales_krw"),
-            "wed_sales_krw":     _sum("wed_sales_krw"),
-            "thu_sales_krw":     _sum("thu_sales_krw"),
-            "fri_sales_krw":     _sum("fri_sales_krw"),
-            "sat_sales_krw":     _sum("sat_sales_krw"),
-            "sun_sales_krw":     _sum("sun_sales_krw"),
-            "time_00_06_krw":    _sum("time_00_06_krw"),
-            "time_06_11_krw":    _sum("time_06_11_krw"),
-            "time_11_14_krw":    _sum("time_11_14_krw"),
-            "time_14_17_krw":    _sum("time_14_17_krw"),
-            "time_17_21_krw":    _sum("time_17_21_krw"),
-            "time_21_24_krw":    _sum("time_21_24_krw"),
-            "male_sales_krw":    _sum("male_sales_krw"),
-            "female_sales_krw":  _sum("female_sales_krw"),
-            "age_10s_krw":       _sum("age_10s_krw"),
-            "age_20s_krw":       _sum("age_20s_krw"),
-            "age_30s_krw":       _sum("age_30s_krw"),
-            "age_40s_krw":       _sum("age_40s_krw"),
-            "age_50s_krw":       _sum("age_50s_krw"),
-            "age_60s_krw":       _sum("age_60s_krw"),
-            "source":            "상권분석 DB (commercial_sales)",
+            "mon_sales_krw": _sum("mon_sales_krw"),
+            "tue_sales_krw": _sum("tue_sales_krw"),
+            "wed_sales_krw": _sum("wed_sales_krw"),
+            "thu_sales_krw": _sum("thu_sales_krw"),
+            "fri_sales_krw": _sum("fri_sales_krw"),
+            "sat_sales_krw": _sum("sat_sales_krw"),
+            "sun_sales_krw": _sum("sun_sales_krw"),
+            "time_00_06_krw": _sum("time_00_06_krw"),
+            "time_06_11_krw": _sum("time_06_11_krw"),
+            "time_11_14_krw": _sum("time_11_14_krw"),
+            "time_14_17_krw": _sum("time_14_17_krw"),
+            "time_17_21_krw": _sum("time_17_21_krw"),
+            "time_21_24_krw": _sum("time_21_24_krw"),
+            "male_sales_krw": _sum("male_sales_krw"),
+            "female_sales_krw": _sum("female_sales_krw"),
+            "age_10s_krw": _sum("age_10s_krw"),
+            "age_20s_krw": _sum("age_20s_krw"),
+            "age_30s_krw": _sum("age_30s_krw"),
+            "age_40s_krw": _sum("age_40s_krw"),
+            "age_50s_krw": _sum("age_50s_krw"),
+            "age_60s_krw": _sum("age_60s_krw"),
+            "source": "상권분석 DB (SANGKWON_SALES)",
         }
 
         return {"summary": summary, "breakdown": breakdown}
 
-    def get_store_count(self, location: str, business_type: str,
-                        quarter: str = "20244",
-                        trdar_types: list = None) -> Optional[dict]:
-        """점포수/개폐업률 조회 + 합산."""
-        if trdar_types is None:
-            trdar_types = ["발달상권"]
-
-        trdar_names   = self._get_trdar_names(location)
+    def get_store_count(
+        self, location: str, business_type: str, quarter: str = "20244"
+    ) -> Optional[dict]:
+        """
+        점포수/개폐업률 조회 + 합산 (SANGKWON_STORE 테이블)
+        """
+        adm_codes = self._get_adm_codes(location)
         industry_code = self._get_industry_code(business_type)
 
-        if not trdar_names or not industry_code:
+        if not adm_codes or not industry_code:
             return None
 
-        name_placeholders = ",".join("?" * len(trdar_names))
-        type_placeholders = ",".join("?" * len(trdar_types))
+        placeholders = ",".join(f":{i+2}" for i in range(len(adm_codes)))
         sql = f"""
-            SELECT * FROM commercial_store
-            WHERE quarter = ?
-              AND trdar_name IN ({name_placeholders})
-              AND industry_code = ?
-              AND trdar_type IN ({type_placeholders})
+            SELECT ADM_CD, ADM_NM, SVC_INDUTY_NM,
+                   STOR_CO, SIMILR_INDUTY_STOR_CO,
+                   OPBIZ_RT, OPBIZ_STOR_CO,
+                   CLSBIZ_RT, CLSBIZ_STOR_CO,
+                   FRC_STOR_CO
+            FROM SANGKWON_STORE
+            WHERE BASE_YR_QTR_CD = :1
+              AND ADM_CD IN ({placeholders})
+              AND SVC_INDUTY_CD = :{len(adm_codes)+2}
         """
         with self._connect() as conn:
-            rows = conn.execute(
-                sql, (quarter, *trdar_names, industry_code, *trdar_types)
-            ).fetchall()
+            cursor = conn.cursor()
+            cursor.execute(sql, [quarter] + adm_codes + [industry_code])
+            columns = [d[0].lower() for d in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
         if not rows:
             return None
 
-        breakdown = [
-            {
-                "trdar_name":     r["trdar_name"],
-                "trdar_type":     r["trdar_type"],
-                "store_count":    r["store_count"],
-                "open_rate_pct":  r["open_rate"],
-                "close_rate_pct": r["close_rate"],
-            }
-            for r in rows
-        ]
+        breakdown = []
+        for r in rows:
+            breakdown.append(
+                {
+                    "adm_name": r["adm_nm"],
+                    "store_count": int(r["stor_co"] or 0),
+                    "similar_store_count": int(r["similr_induty_stor_co"] or 0),
+                    "open_rate_pct": float(r["opbiz_rt"] or 0),
+                    "open_store_count": int(r["opbiz_stor_co"] or 0),
+                    "close_rate_pct": float(r["clsbiz_rt"] or 0),
+                    "close_store_count": int(r["clsbiz_stor_co"] or 0),
+                    "franchise_store_count": int(r["frc_stor_co"] or 0),
+                }
+            )
 
         total_stores = sum(b["store_count"] for b in breakdown)
-        avg_open     = sum(b["open_rate_pct"]  for b in breakdown) / len(breakdown)
-        avg_close    = sum(b["close_rate_pct"] for b in breakdown) / len(breakdown)
+        avg_open = sum(b["open_rate_pct"] for b in breakdown) / len(breakdown)
+        avg_close = sum(b["close_rate_pct"] for b in breakdown) / len(breakdown)
 
         summary = {
-            "location":        location,
-            "business_type":   rows[0]["industry_name"],
-            "quarter":         quarter,
-            "trdar_count":     len(breakdown),
-            "store_count":     total_stores,
-            "open_rate_pct":   round(avg_open, 2),
-            "close_rate_pct":  round(avg_close, 2),
-            "source":          "상권분석 DB (commercial_store)",
+            "location": location,
+            "business_type": rows[0]["svc_induty_nm"],
+            "quarter": quarter,
+            "adm_count": len(breakdown),
+            "store_count": total_stores,
+            "open_rate_pct": round(avg_open, 2),
+            "close_rate_pct": round(avg_close, 2),
+            "source": "상권분석 DB (SANGKWON_STORE)",
         }
 
         return {"summary": summary, "breakdown": breakdown}
 
-    def get_similar_locations(self, business_type: str, quarter: str = "20244",
-                               exclude_location: str = None, top_n: int = 3) -> list:
-        """업종 기준 유사 상권 추천 (복합 점수)."""
-        import math
-
+    def get_similar_locations(
+        self,
+        business_type: str,
+        quarter: str = "20244",
+        exclude_location: str = None,
+        top_n: int = 3,
+    ) -> list:
+        """
+        업종 기준 유사 상권 추천 (복합 점수)
+        점수 = 점포당평균매출(0.4) + 폐업률낮음(0.3) + 매출규모(0.2) + 개업률적정(0.1)
+        """
         industry_code = self._get_industry_code(business_type)
         if not industry_code:
             return []
 
-        exclude_names = self._get_trdar_names(exclude_location) if exclude_location else []
+        exclude_codes = (
+            self._get_adm_codes(exclude_location) if exclude_location else []
+        )
 
         sql = """
-            SELECT s.trdar_name,
-                   s.monthly_sales,
-                   t.store_count,
-                   t.open_rate,
-                   t.close_rate
-            FROM commercial_sales s
-            JOIN commercial_store t
-              ON s.trdar_name = t.trdar_name
-             AND s.quarter    = t.quarter
-             AND s.industry_code = t.industry_code
-            WHERE s.quarter = ?
-              AND s.industry_code = ?
-              AND s.trdar_type = '발달상권'
+            SELECT s.ADM_CD, s.ADM_NM,
+                   SUM(s.TOT_SALES_AMT) AS monthly_sales,
+                   t.STOR_CO            AS store_count,
+                   AVG(t.OPBIZ_RT)      AS open_rate,
+                   AVG(t.CLSBIZ_RT)     AS close_rate
+            FROM SANGKWON_SALES s
+            JOIN SANGKWON_STORE t
+              ON s.ADM_CD          = t.ADM_CD
+             AND s.BASE_YR_QTR_CD  = t.BASE_YR_QTR_CD
+             AND s.SVC_INDUTY_CD   = t.SVC_INDUTY_CD
+            WHERE s.BASE_YR_QTR_CD = :1
+              AND s.SVC_INDUTY_CD  = :2
+              AND t.STOR_CO        > 2
+            GROUP BY s.ADM_CD, s.ADM_NM, t.STOR_CO
         """
         with self._connect() as conn:
-            rows = conn.execute(sql, (quarter, industry_code)).fetchall()
+            cursor = conn.cursor()
+            cursor.execute(sql, [quarter, industry_code])
+            columns = [d[0].lower() for d in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
         if not rows:
             return []
 
-        rows = [r for r in rows if r["trdar_name"] not in exclude_names]
-        rows = [r for r in rows
-                if r["store_count"] >= 3
-                and (r["monthly_sales"] / r["store_count"]) <= 80_000_000]
+        # 제외 코드 필터링
+        rows = [r for r in rows if r["adm_cd"] not in exclude_codes]
 
-        if not rows:
-            return []
+        # 점포당 평균매출 계산
+        for r in rows:
+            monthly = r["monthly_sales"] or 0
+            store_cnt = r["store_count"] or 1
+            r["avg_sales_per_store"] = monthly / store_cnt
 
+        # 이상치 제거 (점포당 평균매출 상위 5%)
+        avg_list = [r["avg_sales_per_store"] for r in rows]
+        threshold = sorted(avg_list)[int(len(avg_list) * 0.95)]
+        rows = [r for r in rows if r["avg_sales_per_store"] <= threshold]
+
+        # 정규화
         def normalize(values, inverse=False):
-            min_v, max_v = min(values), max(values)
-            if max_v == min_v:
+            mn, mx = min(values), max(values)
+            if mx == mn:
                 return [0.5] * len(values)
-            normed = [(v - min_v) / (max_v - min_v) for v in values]
+            normed = [(v - mn) / (mx - mn) for v in values]
             return [1 - n for n in normed] if inverse else normed
 
+        # 개업률 적정 점수: 3~5% 구간 최고점
         def open_rate_score(rate):
             if 3 <= rate <= 5:
                 return 1.0
@@ -463,53 +649,34 @@ class CommercialRepository:
             else:
                 return max(0, 1 - (rate - 5) / 10)
 
-        avg_sales_list     = [r["monthly_sales"] / r["store_count"] if r["store_count"] > 0 else 0 for r in rows]
-        monthly_sales_list = [r["monthly_sales"] for r in rows]
-        close_rate_list    = [r["close_rate"] for r in rows]
-
-        norm_avg   = normalize(avg_sales_list)
-        norm_sales = normalize(monthly_sales_list)
-        norm_close = normalize(close_rate_list, inverse=True)
-        norm_open  = [open_rate_score(r["open_rate"]) for r in rows]
+        norm_avg = normalize([r["avg_sales_per_store"] for r in rows])
+        norm_close = normalize([r["close_rate"] or 0 for r in rows], inverse=True)
+        norm_sales = normalize([r["monthly_sales"] or 0 for r in rows])
+        norm_open = [open_rate_score(r["open_rate"] or 0) for r in rows]
 
         scored = []
         for i, r in enumerate(rows):
             score = (
-                norm_avg[i]   * 0.4 +
-                norm_close[i] * 0.3 +
-                norm_sales[i] * 0.2 +
-                norm_open[i]  * 0.1
+                norm_avg[i] * 0.4
+                + norm_close[i] * 0.3
+                + norm_sales[i] * 0.2
+                + norm_open[i] * 0.1
             )
-            scored.append({
-                "trdar_name":              r["trdar_name"],
-                "monthly_sales_krw":       r["monthly_sales"],
-                "store_count":             r["store_count"],
-                "avg_sales_per_store_krw": int(avg_sales_list[i]),
-                "open_rate_pct":           r["open_rate"],
-                "close_rate_pct":          r["close_rate"],
-                "score":                   round(score, 4),
-            })
-
-        trdar_to_keyword = {}
-        for keyword, names in AREA_MAP.items():
-            for name in names:
-                if name not in trdar_to_keyword:
-                    trdar_to_keyword[name] = keyword
+            scored.append(
+                {
+                    "adm_cd": r["adm_cd"],
+                    "adm_name": r["adm_nm"],
+                    "monthly_sales_krw": r["monthly_sales"],
+                    "store_count": int(r["store_count"]),
+                    "avg_sales_per_store_krw": int(r["avg_sales_per_store"]),
+                    "open_rate_pct": round(r["open_rate"] or 0, 2),
+                    "close_rate_pct": round(r["close_rate"] or 0, 2),
+                    "score": round(score, 4),
+                }
+            )
 
         scored.sort(key=lambda x: x["score"], reverse=True)
-        result = []
-        seen_keywords = set()
-        for item in scored:
-            keyword = trdar_to_keyword.get(item["trdar_name"], item["trdar_name"])
-            if keyword in seen_keywords:
-                continue
-            seen_keywords.add(keyword)
-            item["keyword"] = keyword
-            result.append(item)
-            if len(result) >= top_n:
-                break
-
-        return result
+        return scored[:top_n]
 
     def get_supported_locations(self) -> list:
         return list(AREA_MAP.keys())

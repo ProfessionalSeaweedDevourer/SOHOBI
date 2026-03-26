@@ -10,6 +10,7 @@ export default function DevChat() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
+  const [latestParams, setLatestParams] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeEvents, setActiveEvents] = useState([]); // 스트리밍 중인 이벤트 목록
   const [error, setError] = useState(null);
@@ -39,7 +40,7 @@ export default function DevChat() {
         if (eventName === "complete") {
           finalResult = data;
         }
-      });
+      }, latestParams);
     } catch (e) {
       setError(e.message);
       setLoading(false);
@@ -60,8 +61,10 @@ export default function DevChat() {
           agentMs:          finalResult.agent_ms,
           signoffMs:        finalResult.signoff_ms,
           rejectionHistory: finalResult.rejection_history || [],
+          chart:            finalResult.chart || null,
         },
       ]);
+      if (finalResult.updated_params) setLatestParams(finalResult.updated_params);
     }
 
     setActiveEvents([]);
@@ -112,6 +115,7 @@ export default function DevChat() {
                 confidenceNote={msg.confidenceNote}
                 draft={msg.draft}
                 retryCount={msg.retryCount}
+                chart={msg.chart}
                 showMeta={true}
               />
               <SignoffPanel
