@@ -6,6 +6,7 @@
 import base64
 import io
 import math
+import os
 import random
 from semantic_kernel.functions import kernel_function
 
@@ -16,13 +17,21 @@ try:
     import matplotlib.font_manager as fm
     import numpy as np
 
-    # 한글 폰트 설정: 우선순위 순으로 시도
-    _KO_FONT_CANDIDATES = [
-        "Apple SD Gothic Neo", "Nanum Gothic", "AppleGothic",
-        "Malgun Gothic", "NanumGothic", "Noto Sans CJK KR",
-    ]
-    _available = {f.name for f in fm.fontManager.ttflist}
-    _ko_font = next((f for f in _KO_FONT_CANDIDATES if f in _available), None)
+    # 한글 폰트 설정
+    # 1순위: 프로젝트 번들 폰트 (nam/malgun.ttf) — 배포 환경에서도 항상 사용 가능
+    _BUNDLED_FONT = os.path.join(os.path.dirname(__file__), "..", "nam", "malgun.ttf")
+    if os.path.exists(_BUNDLED_FONT):
+        fm.fontManager.addfont(_BUNDLED_FONT)
+        _ko_font = fm.FontProperties(fname=_BUNDLED_FONT).get_name()
+    else:
+        # 2순위: 시스템 설치 폰트 (로컬 개발 환경 등)
+        _KO_FONT_CANDIDATES = [
+            "Apple SD Gothic Neo", "Nanum Gothic", "AppleGothic",
+            "Malgun Gothic", "NanumGothic", "Noto Sans CJK KR",
+        ]
+        _available = {f.name for f in fm.fontManager.ttflist}
+        _ko_font = next((f for f in _KO_FONT_CANDIDATES if f in _available), None)
+
     if _ko_font:
         matplotlib.rcParams["font.family"] = _ko_font
     matplotlib.rcParams["axes.unicode_minus"] = False  # 마이너스 기호 깨짐 방지
