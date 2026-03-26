@@ -14,13 +14,6 @@ import matplotlib.font_manager as fm
 
 from CHANG.db_test import DBWork
 
-
-fontF = "C:\Windows\Fonts\gulim.ttc"
-fontN = fm.FontProperties(fname=fontF, size= 10).get_name()
-plt.rc("font", family=fontN)
-plt.rcParams["axes.unicode_minus"]=False
-
-
 try:
     import matplotlib
     matplotlib.use("Agg")  # 헤드리스 환경 (서버/컨테이너)
@@ -43,11 +36,50 @@ try:
 except ImportError:
     _MATPLOTLIB_AVAILABLE = False
 
+INDUSTRY_RATIO = {
+    "CS100001": {  # 한식
+        "cost": 0.35, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+    },
+    "CS100002": {  # 중식
+        "cost": 0.40, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+    },
+    "CS100003": {  # 일식
+        "cost": 0.45, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+    },
+    "CS100004": {  # 양식
+        "cost": 0.45, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+    },
+    "CS100005": {  # 베이커리
+        "cost": 0.55, "salary": 0.20, "rent": 0.08, "admin": 0.03, "fee": 0.03,
+    },
+    "CS100006": {  # 패스트푸드
+        "cost": 0.40, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.05,
+    },
+    "CS100007": {  # 치킨
+        "cost": 0.52, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.05,
+    },
+    "CS100008": {  # 분식
+        "cost": 0.40, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+    },
+    "CS100009": {  # 호프/술집
+        "cost": 0.40, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+    },
+    "CS100010": {  # 카페/커피
+        "cost": 0.36, "salary": 0.20, "rent": 0.15, "admin": 0.03, "fee": 0.03,
+    },
+    "default": {
+        "cost": 0.35, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+    },
+}
+# 업종별 % 수치
 
 class FinanceSimulationPlugin:
     """몬테카를로 시뮬레이션 기반 재무 분석 플러그인"""
     def _calculate_salary(self, salary: float, hours: float = None) -> float:
         return salary if hours is None else salary * hours
+    
+    def get_industry_ratio(self, industry: str = None) -> dict:
+        return INDUSTRY_RATIO.get(industry, INDUSTRY_RATIO["default"])
 
     def _generate_chart(self, results: list, avg: float, p20: float, loss_prob: float) -> str | None:
         """몬테카를로 결과 히스토그램을 base64 PNG로 반환. matplotlib 없으면 None."""
@@ -62,7 +94,7 @@ class FinanceSimulationPlugin:
             # 손실 구간 강조
             loss_vals = arr[arr < 0]
             if len(loss_vals):
-                ax.hist(loss_vals, bins=30, color="#e74c3c", alpha=0.6, edgecolor="none")
+                ax.hist(loss_vals, bins=60, color="#e74c3c", alpha=0.6, edgecolor="none")
 
             ax.axvline(avg,  color="#2ecc71", linewidth=1.8, linestyle="--", label=f"평균: {avg/10000:,.0f}만원")
             ax.axvline(p20,  color="#e67e22", linewidth=1.8, linestyle=":",  label=f"하위 20%: {p20/10000:,.0f}만원")
@@ -100,22 +132,19 @@ class FinanceSimulationPlugin:
         rent: float | None = None,
         admin: float | None = None,
         fee: float | None = None,
+        industry: str = None,
     ) -> dict:
         iterations = 10_000
         results = []
 
         avg_sales = sum(revenue) / len(revenue)
-        if cost is None:
-            cost = avg_sales * 0.36
-        if salary is None:
-            salary = avg_sales * 0.20
-        if rent is None:
-            rent = avg_sales * 0.15
-        if admin is None:
-            admin = avg_sales * 0.03
-        if fee is None:
-            fee = avg_sales * 0.03
-        # None 값만 % 기반 연산, 추후 업종 별 % list 고려중(현재 카페 기준)
+        ratio = self.get_industry_ratio(industry)
+
+        if cost   is None: cost   = avg_sales * ratio["cost"]
+        if salary is None: salary = avg_sales * ratio["salary"]
+        if rent   is None: rent   = avg_sales * ratio["rent"]
+        if admin  is None: admin  = avg_sales * ratio["admin"]
+        if fee    is None: fee    = avg_sales * ratio["fee"]
 
         salary_cost = self._calculate_salary(salary, hours)
         # 시급 관련 연산
@@ -141,7 +170,6 @@ class FinanceSimulationPlugin:
         avg_loss = round(sum(loss_results) / len(loss_results)) if loss_results else 0
 
         p20 = sorted_results[int(iterations * 0.20)]
-        chart_b64 = self._generate_chart(results, p20, avg)
 
         chart = self._generate_chart(results, avg, p20, loss_prob)
         return {
@@ -204,41 +232,3 @@ class FinanceSimulationPlugin:
             if value is not None:
                 merged[key] = value
         return merged
-
-
-    def _generate_chart(self, results: list, p20: float, avg: float) -> str:
-        fig, ax = plt.subplots(figsize=(8, 4))
-
-        n, bins, patches = ax.hist(results, bins=40, edgecolor="none")
-
-        for patch, left_edge in zip(patches, bins[:-1]):
-            if left_edge < 0:
-                patch.set_facecolor("#E24B4A")   # 손실
-            elif left_edge < p20:
-                patch.set_facecolor("#EF9F27")   # 하위 20%
-            else:
-                patch.set_facecolor("#378ADD")   # 수익
-
-        ax.axvline(x=0,   color="#E24B4A", linestyle="--", linewidth=1.2, alpha=0.8)
-        ax.axvline(x=avg, color="#378ADD", linestyle="--", linewidth=1.2, alpha=0.8)
-        ax.axvline(x=p20, color="#EF9F27", linestyle="--", linewidth=1.2, alpha=0.8)
-
-        legend_handles = [
-            mpatches.Patch(color="#E24B4A", label="손실 구간"),
-            mpatches.Patch(color="#EF9F27", label=f"하위 20% 기준: {round(p20/10000):,}만원"),
-            mpatches.Patch(color="#378ADD", label=f"평균: {round(avg/10000):,}만원"),
-        ]
-        ax.legend(handles=legend_handles, fontsize=9)
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x/10000):,}만"))
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x):,}"))
-        ax.set_xlabel("월 순이익 (만원)", fontsize=10)
-        ax.set_ylabel("빈도 (회)", fontsize=10)
-
-        plt.tight_layout()
-
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=120)
-        plt.close(fig)
-        buf.seek(0)
-        return base64.b64encode(buf.read()).decode("utf-8")
-
