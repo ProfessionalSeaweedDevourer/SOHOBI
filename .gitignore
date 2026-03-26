@@ -1,3 +1,7 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
 # Claude
 .claude/
 
@@ -25,3 +29,8 @@ uv.lock
 
 # 로그 파일 (구조 파일인 .gitkeep은 유지)
 integrated_PARK/logs/*.jsonl
+integrated_PARK/logs/remote/
+logs/
+CHOI/SK학습/test/.env
+
+# 상권 DB — 2024년 4분기 단일 분기로 축소 (13 MB), Git 포함

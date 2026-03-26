@@ -1,0 +1,206 @@
+<style>
+  body { background: #07101e; margin: 0; padding: 20px; font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; }
+  #diagram { background: #07101e; }
+  #diagram svg .cluster-label span { font-size: 16px !important; font-weight: bold; }
+  #diagram svg .cluster-label foreignObject { overflow: visible; }
+
+  #toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+  #toolbar button {
+    background: #0a1e38; color: #4db2ff; border: 1px solid #0078D4;
+    padding: 7px 18px; border-radius: 6px; font-size: 14px;
+    font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; cursor: pointer;
+  }
+  #toolbar button:hover { background: #0d2a50; }
+  .page-title { color: #c0a0ff; font-size: 17px; font-weight: bold; margin-left: 10px; }
+  .page-sub   { color: #405870; font-size: 13px; margin-left: 6px; }
+
+  #legend { margin-top: 24px; border-top: 1px solid #1a2848; padding-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+  .lcard {
+    display: flex; align-items: center; gap: 10px;
+    background: #0a1828; border: 1px solid #0078D430; border-radius: 8px; padding: 9px 13px;
+  }
+  .licon { flex-shrink: 0; width: 32px; height: 32px; }
+  .ltext strong { display: block; color: #60aaff; font-size: 12px; }
+  .ltext span   { color: #5080a0; font-size: 11px; }
+  .lnote {
+    flex-basis: 100%; background: #081018; border: 1px solid #304860;
+    border-radius: 6px; padding: 9px 14px; color: #5090b0; font-size: 12px; line-height: 1.6;
+  }
+  .lnote b { color: #c0a0ff; }
+  .highlight-box {
+    background: #0a0820; border: 1px solid #6030b0; border-radius: 6px;
+    padding: 9px 14px; color: #9070d0; font-size: 12px; line-height: 1.6;
+  }
+  .highlight-box b { color: #c080ff; }
+</style>
+
+<div id="toolbar">
+  <button id="btn-svg">SVG 내보내기</button>
+  <button id="btn-png">PNG 내보내기</button>
+  <span class="page-title">⚖️ LegalAgent</span>
+  <span class="page-sub">Azure 연동 구조 · legal_agent.py</span>
+</div>
+<div id="diagram"></div>
+
+<div id="legend">
+  <div class="lcard">
+    <svg class="licon" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="5" fill="#00183a"/>
+      <path d="M16 5 L27 10.5 L27 21.5 L16 27 L5 21.5 L5 10.5 Z" fill="none" stroke="#00d2ff" stroke-width="1.5"/>
+      <circle cx="16" cy="16" r="3.5" fill="#00d2ff" opacity="0.85"/>
+    </svg>
+    <div class="ltext">
+      <strong>Azure OpenAI · Chat Completion</strong>
+      <span>gpt-4o 계열 · RAG 결과 + 법률 응답 생성<br/>사인오프 루브릭 평가 공유</span>
+    </div>
+  </div>
+  <div class="lcard">
+    <svg class="licon" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="5" fill="#00183a"/>
+      <path d="M7 16 C7 11 11 8 16 8 C21 8 25 11 25 16" stroke="#00d2ff" stroke-width="1.5" fill="none"/>
+      <path d="M9 20 C9 15 12 11 16 11 C20 11 23 15 23 20" stroke="#00d2ff" stroke-width="1" fill="none" opacity="0.5"/>
+      <circle cx="16" cy="20" r="3.5" fill="none" stroke="#00d2ff" stroke-width="1.5"/>
+      <line x1="16" y1="16" x2="16" y2="20" stroke="#00d2ff" stroke-width="1.5"/>
+    </svg>
+    <div class="ltext">
+      <strong>Azure OpenAI · Embeddings</strong>
+      <span>text-embedding-3-small · 법률 쿼리 벡터화<br/>LegalSearchPlugin 내부 호출 (1단계)</span>
+    </div>
+  </div>
+  <div class="lcard">
+    <svg class="licon" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="5" fill="#001830"/>
+      <circle cx="14" cy="14" r="6.5" fill="none" stroke="#50d8c0" stroke-width="2"/>
+      <line x1="19" y1="19" x2="26" y2="26" stroke="#50d8c0" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="14" cy="14" r="2.5" fill="#50d8c0" opacity="0.5"/>
+    </svg>
+    <div class="ltext">
+      <strong>Azure AI Search · legal-index</strong>
+      <span>벡터 인덱스 · 한국 법률 문서 RAG<br/>LegalSearchPlugin 내부 호출 (2단계)</span>
+    </div>
+  </div>
+  <div class="highlight-box">
+    <b>⚠️ 가장 Azure 집약적인 에이전트:</b>
+    LegalAgent는 4개의 에이전트 중 유일하게 <b>Azure 서비스를 3개</b> 동시에 사용합니다.
+    LegalSearchPlugin이 사용자 쿼리를 <b>Embeddings → AI Search</b> 2단계 파이프라인으로 처리하여
+    관련 법조문 top-k를 검색한 뒤 Chat Completion이 이를 바탕으로 법률 응답을 생성합니다.
+  </div>
+  <div class="lnote">
+    <b>RAG 파이프라인 순서:</b>
+    ① 사용자 쿼리 수신 → ② Azure OpenAI Embeddings로 쿼리 벡터화 →
+    ③ Azure AI Search (legal-index)에서 유사 법률 문서 검색 →
+    ④ 검색 결과 + 원문 쿼리를 Azure OpenAI Chat에 프롬프트로 전달 → ⑤ 법률 응답 생성
+  </div>
+</div>
+
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
+  themeVariables: {
+    darkMode: true, fontSize: '12px',
+    fontFamily: '"Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
+    primaryColor: '#0d2040', primaryTextColor: '#60aaff', primaryBorderColor: '#0078D4',
+    lineColor: '#305878', textColor: '#b0ccdf',
+    edgeLabelBackground: '#07101e', clusterBkg: '#07101e', clusterBorder: '#1a4060',
+  },
+  flowchart: { curve: 'basis', padding: 20, nodeSpacing: 40, rankSpacing: 80 },
+});
+
+const diagram = `flowchart LR
+  classDef client fill:#0d2008,color:#90e050,stroke:#40a010,stroke-width:2px
+  classDef api    fill:#181400,color:#ffd060,stroke:#a08000,stroke-width:1px
+  classDef infra  fill:#081018,color:#5090b0,stroke:#204060,stroke-width:1px
+  classDef kernel fill:#1a1000,color:#ffb060,stroke:#c07000,stroke-width:2px
+  classDef agent  fill:#120820,color:#c0a0ff,stroke:#7040c0,stroke-width:2.5px
+  classDef plugin fill:#180a28,color:#c080ff,stroke:#7030c0,stroke-width:1.5px
+  classDef aoai   fill:#001828,color:#00d2ff,stroke:#009ab8,stroke-width:2px
+  classDef asrch  fill:#001822,color:#50d8c0,stroke:#009888,stroke-width:2px
+  classDef log    fill:#080814,color:#6878a0,stroke:#303858,stroke-width:1px
+
+  CLIENT(["<b>👤 Client</b><br/><span style='font-size:10px'>HTTP / REST</span>"]):::client
+
+  subgraph API["🖥️ api_server.py"]
+    direction TB
+    Q_EP["POST /api/v1/query<br/><span style='font-size:10px'>세션 · 프로파일 관리</span>"]:::api
+    LOG["logger.py<br/><span style='font-size:10px'>queries / rejections / errors</span>"]:::log
+  end
+
+  subgraph INFRA["공통 오케스트레이션 인프라"]
+    direction TB
+    DR{"domain_router.py<br/><span style='font-size:10px'>→ legal 분류</span>"}:::infra
+    OR["orchestrator.py<br/><span style='font-size:10px'>Draft-Retry Loop</span>"]:::infra
+    SO["signoff_agent.py<br/><span style='font-size:10px'>루브릭 평가 A / B / C</span>"]:::infra
+    KN["🔧 kernel_setup.py<br/><span style='font-size:10px'>Semantic Kernel<br/>AzureChatCompletion</span>"]:::kernel
+  end
+
+  LEGAL["<b style='font-size:15px'>⚖️ LegalAgent</b><br/><span style='font-size:11px'>legal_agent.py<br/>RAG 법률 조항 인용<br/>면책 조항 포함</span>"]:::agent
+
+  subgraph PLG["플러그인"]
+    LEGSRCH["LegalSearchPlugin<br/><span style='font-size:10px'>쿼리 임베딩 → 벡터 검색<br/>top-k 법률 문서 반환</span>"]:::plugin
+  end
+
+  subgraph AZURE["☁️ Azure Environment"]
+    direction TB
+    subgraph AOAI["⚡ Azure OpenAI Service"]
+      CHAT["<b>Chat Completion</b><br/><span style='font-size:10px'>gpt-4o 계열 배포</span>"]:::aoai
+      EMBED["<b>Embeddings</b><br/><span style='font-size:10px'>text-embedding-3-small</span>"]:::aoai
+    end
+    subgraph AISRCH["🔍 Azure AI Search"]
+      LIDX["<b>legal-index</b><br/><span style='font-size:10px'>벡터 인덱스<br/>한국 법률 문서</span>"]:::asrch
+    end
+  end
+
+  CLIENT --> Q_EP
+  Q_EP --> LOG
+  Q_EP --> DR
+  DR --> OR
+  OR --> LEGAL
+  OR --> SO
+  SO -->|"<span style='font-size:10px'>거부 + retry_prompt</span>"| OR
+  LEGAL --> LEGSRCH
+  LEGSRCH --> EMBED
+  EMBED -->|"<span style='font-size:10px'>벡터 검색</span>"| LIDX
+  LEGAL & SO --> KN
+  KN --> CHAT
+`;
+
+const { svg } = await mermaid.render('arch-svg', diagram);
+document.getElementById('diagram').innerHTML = svg;
+const el = document.querySelector('#diagram svg');
+if (el) { el.style.width = '100%'; el.style.maxWidth = '100%'; el.style.background = '#07101e'; }
+
+function getExportSvgString() {
+  const orig = document.querySelector('#diagram svg');
+  const clone = orig.cloneNode(true);
+  const { width, height } = orig.getBoundingClientRect();
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '100%'); bg.setAttribute('height', '100%'); bg.setAttribute('fill', '#07101e');
+  clone.insertBefore(bg, clone.firstChild);
+  const styleText = [...document.styleSheets].flatMap(s => { try { return [...s.cssRules].map(r => r.cssText); } catch { return []; } }).join('\n');
+  const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+  styleEl.textContent = styleText; clone.insertBefore(styleEl, clone.firstChild);
+  if (!clone.getAttribute('viewBox')) clone.setAttribute('viewBox', `0 0 ${Math.ceil(width)} ${Math.ceil(height)}`);
+  clone.setAttribute('width', Math.ceil(width)); clone.setAttribute('height', Math.ceil(height));
+  return new XMLSerializer().serializeToString(clone);
+}
+document.getElementById('btn-svg').addEventListener('click', () => {
+  const blob = new Blob([getExportSvgString()], { type: 'image/svg+xml;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sohobi_legal_agent_azure.svg'; a.click();
+});
+document.getElementById('btn-png').addEventListener('click', () => {
+  const svgStr = getExportSvgString();
+  const { width, height } = document.querySelector('#diagram svg').getBoundingClientRect();
+  const scale = 2; const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(width) * scale; canvas.height = Math.ceil(height) * scale;
+    const ctx = canvas.getContext('2d'); ctx.scale(scale, scale); ctx.drawImage(img, 0, 0);
+    canvas.toBlob(blob => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sohobi_legal_agent_azure.png'; a.click(); }, 'image/png');
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+});
+</script>

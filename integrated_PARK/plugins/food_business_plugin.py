@@ -12,7 +12,7 @@ from typing import Annotated
 from semantic_kernel.functions import kernel_function
 
 # NAM 폴더의 overlay_main(픽셀 정밀 PDF 생성기) 참조
-_NAM_DIR = Path(__file__).parent.parent.parent / "NAM"
+_NAM_DIR = Path(__file__).parent.parent / "nam"
 if str(_NAM_DIR) not in sys.path:
     sys.path.insert(0, str(_NAM_DIR))
 

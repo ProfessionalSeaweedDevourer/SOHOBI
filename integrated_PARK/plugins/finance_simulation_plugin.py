@@ -21,11 +21,67 @@ plt.rc("font", family=fontN)
 plt.rcParams["axes.unicode_minus"]=False
 
 
+try:
+    import matplotlib
+    matplotlib.use("Agg")  # 헤드리스 환경 (서버/컨테이너)
+    import matplotlib.pyplot as plt
+    import matplotlib.font_manager as fm
+    import numpy as np
+
+    # 한글 폰트 설정: 우선순위 순으로 시도
+    _KO_FONT_CANDIDATES = [
+        "Apple SD Gothic Neo", "Nanum Gothic", "AppleGothic",
+        "Malgun Gothic", "NanumGothic", "Noto Sans CJK KR",
+    ]
+    _available = {f.name for f in fm.fontManager.ttflist}
+    _ko_font = next((f for f in _KO_FONT_CANDIDATES if f in _available), None)
+    if _ko_font:
+        matplotlib.rcParams["font.family"] = _ko_font
+    matplotlib.rcParams["axes.unicode_minus"] = False  # 마이너스 기호 깨짐 방지
+
+    _MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    _MATPLOTLIB_AVAILABLE = False
+
 
 class FinanceSimulationPlugin:
     """몬테카를로 시뮬레이션 기반 재무 분석 플러그인"""
     def _calculate_salary(self, salary: float, hours: float = None) -> float:
         return salary if hours is None else salary * hours
+
+    def _generate_chart(self, results: list, avg: float, p20: float, loss_prob: float) -> str | None:
+        """몬테카를로 결과 히스토그램을 base64 PNG로 반환. matplotlib 없으면 None."""
+        if not _MATPLOTLIB_AVAILABLE:
+            return None
+        try:
+            fig, ax = plt.subplots(figsize=(7, 4))
+            arr = np.array(results)
+
+            ax.hist(arr, bins=60, color="#4e8cff", alpha=0.7, edgecolor="none")
+
+            # 손실 구간 강조
+            loss_vals = arr[arr < 0]
+            if len(loss_vals):
+                ax.hist(loss_vals, bins=30, color="#e74c3c", alpha=0.6, edgecolor="none")
+
+            ax.axvline(avg,  color="#2ecc71", linewidth=1.8, linestyle="--", label=f"평균: {avg/10000:,.0f}만원")
+            ax.axvline(p20,  color="#e67e22", linewidth=1.8, linestyle=":",  label=f"하위 20%: {p20/10000:,.0f}만원")
+            ax.axvline(0,    color="#e74c3c", linewidth=1.2, linestyle="-",  alpha=0.5)
+
+            ax.set_xlabel("월 순이익 (원)", fontsize=10)
+            ax.set_ylabel("빈도", fontsize=10)
+            ax.set_title(f"몬테카를로 시뮬레이션 (10,000회) — 손실 확률 {loss_prob:.1%}", fontsize=11)
+            ax.legend(fontsize=9)
+            ax.yaxis.set_visible(False)
+            plt.tight_layout()
+
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", dpi=100)
+            plt.close(fig)
+            buf.seek(0)
+            return base64.b64encode(buf.read()).decode("utf-8")
+        except Exception:
+            return None
 
     @kernel_function(
         name="monte_carlo_simulation",
@@ -68,13 +124,13 @@ class FinanceSimulationPlugin:
             for _ in range(iterations):
                 sim_rev = random.gauss(revenue[0], revenue[0] * 0.1)
                 sim_cost = random.gauss(cost, cost * 0.1)
-                net = (sim_rev - sim_cost - salary_cost - rent - admin - fee)
+                net = sim_rev - sim_cost - salary_cost - rent - admin - fee
                 results.append(net)
         else:
             for _ in range(iterations):
                 sim_rev = random.choice(revenue)* random.gauss(1.0, 0.1)
                 sim_cost = random.gauss(cost, cost * 0.1)
-                net = (sim_rev - sim_cost - salary_cost - rent - admin - fee)
+                net = sim_rev - sim_cost - salary_cost - rent - admin - fee
                 results.append(net)
 
         avg = sum(results) / iterations
@@ -87,17 +143,18 @@ class FinanceSimulationPlugin:
         p20 = sorted_results[int(iterations * 0.20)]
         chart_b64 = self._generate_chart(results, p20, avg)
 
+        chart = self._generate_chart(results, avg, p20, loss_prob)
         return {
             "average_net_profit": round(avg),
             "loss_probability":   round(loss_prob, 4),
             "avg_loss_amount":    avg_loss,
             "p20":                round(p20),
-            "actual_cost":        round(cost),      # 결과값 세분화용 변수 추가
-            "actual_salary":      round(salary_cost),  # 결과값 세분화용 변수 추가
-            "actual_rent":        round(rent),      # 결과값 세분화용 변수 추가
-            "actual_admin":       round(admin),     # 결과값 세분화용 변수 추가
-            "actual_fee":         round(fee),       # 결과값 세분화용 변수 추가
-            "chart":              chart_b64,
+            "actual_cost":        round(cost),
+            "actual_salary":      round(salary_cost),
+            "actual_rent":        round(rent),
+            "actual_admin":       round(admin),
+            "actual_fee":         round(fee),
+            "chart":              chart,  # base64 PNG 또는 None
         }
 
     @kernel_function(

@@ -29,7 +29,7 @@ def _make_kernel() -> Kernel:
             deployment_name=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"),
             endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"),
         )
     )
     return k
@@ -121,8 +121,13 @@ class LocationAgent:
             instructions=(
                 "You are a Seoul F&B startup commercial area analysis expert. "
                 "Analyze the provided summary and breakdown data from DB.\n\n"
+                "## CRITICAL LANGUAGE RULE\n"
+                "You MUST respond ONLY in Korean. "
+                "NEVER use English, Russian, Chinese, Japanese, or any other language. "
+                "Every single word in your response must be Korean or numbers. "
+                "This is an absolute requirement with no exceptions.\n\n"
                 "## Response Format (strictly follow this format)\n\n"
-                "📅 데이터 기준: {year}년 {q}분기\n\n"
+                f"📅 데이터 기준: {year}년 {q}분기\n\n"
                 "📊 전체 합산 요약\n"
                 "- 월매출: XXX억 X,XXX만원\n"
                 "- 점포수: XX개\n"
@@ -131,20 +136,26 @@ class LocationAgent:
                 "- 주요 고객층: 성별(남성 XX% / 여성 XX%), 연령(XX대 중심)\n"
                 "- 점포당 평균 매출: XXX만원\n\n"
                 "🏪 상권별 분리 분석\n"
-                "- **상권명**: 월매출 XXX억원, 점포수 XX개, 점포당 평균 XXX만원, 개업률 X% / 폐업률 X%, 특징 1~2줄\n"
+                "- **상권명**: 월매출 XXX억 X,XXX만원, 점포수 XX개, 점포당 평균 X,XXX만원, 개업률 X% / 폐업률 X%, 특징 1~2줄\n"
                 "(모든 상권에 개업률과 폐업률을 반드시 포함할 것)\n\n"
                 "✅ 기회 요인\n"
                 "- 핵심 기회 2~3가지 (각 1줄)\n\n"
                 "⚠️ 리스크 요인\n"
                 "- 핵심 리스크 2~3가지 (각 1줄)\n\n"
                 "## Rules\n"
-                "- Convert sales to 억/만원 unit (e.g. 24,608,228,093 → 246억 828만원)\n"
-                "- Never use numbering (1. 2. 3.), strictly follow the format above\n"
-                "- Keep under 500 words\n"
-                "- Do not add any closing summary sentence after the risk factors.\n"
-                "- Round sales to the nearest 만원, do not show 원 units (e.g. 6억 5,247만원, NOT 6억 5,247만 2,006원)\n"
-                "- Only use data explicitly provided. Never infer, assume, or fabricate any figures not present in the data\n"
-                "- Always respond in Korean"
+                "- 유의사항은 비교한 모든 지역에 대해 각각 1줄씩 반드시 작성\n"
+                "- 지정된 섹션 외 추가 섹션(## 메모, ## 참고 등) 절대 생성 금지\n"
+                "- 금액 변환 규칙: 1억=100,000,000원. "
+                "예시) 2,028,280,000 → 20억 2,828만원, "
+                "11,366,060,000 → 113억 6,606만원, "
+                "315,840,000 → 3억 1,584만원\n"
+                "- 모든 금액은 반드시 억/만원 단위로 변환 (예: 24,608,228,093 → 246억 828만원)\n"
+                "- 점포당 평균 매출도 반드시 만원 단위로 표시 (예: 42,722,618 → 4,272만원)\n"
+                "- 원 단위 절대 사용 금지 (예: 6억 5,247만원 O, 6억 5,247만 2,006원 X)\n"
+                "- 번호 매기기 절대 금지 (1. 2. 3. 사용 금지)\n"
+                "- 800자 이내로 작성\n"
+                "- 리스크 요인 이후 총평 문장 추가 금지\n"
+                "- 제공된 데이터만 사용, 임의로 수치 추론/생성 금지\n"
             ),
             kernel=kernel,
             arguments=KernelArguments(settings=settings),
@@ -179,7 +190,7 @@ class LocationAgent:
             return {"error": "업종 미지원", "business_type": business_type}
 
         year = quarter[:4]
-        q    = quarter[4]
+        q = quarter[4]
 
         # 지역별 데이터 수집
         location_data = []
@@ -192,69 +203,96 @@ class LocationAgent:
             ss = sales.get("summary", {}) if sales else {}
             st = store.get("summary", {}) if store else {}
 
-            monthly  = ss.get("monthly_sales_krw", 0)
-            cnt      = st.get("store_count", 0)
-            avg      = int(monthly / cnt) if cnt > 0 else 0
+            monthly = ss.get("monthly_sales_krw", 0)
+            cnt = st.get("store_count", 0)
+            avg = int(monthly / cnt) if cnt > 0 else 0
 
-            location_data.append({
-                "location":              loc,
-                "monthly_sales_krw":     monthly,
-                "store_count":           cnt,
-                "avg_sales_per_store_krw": avg,
-                "weekday_pct":           round(ss.get("weekday_sales_krw", 0) / monthly * 100) if monthly else 0,
-                "weekend_pct":           round(ss.get("weekend_sales_krw", 0) / monthly * 100) if monthly else 0,
-                "open_rate_pct":         st.get("open_rate_pct", 0),
-                "close_rate_pct":        st.get("close_rate_pct", 0),
-                "male_pct":              round(ss.get("male_sales_krw", 0) / monthly * 100) if monthly else 0,
-                "female_pct":            round(ss.get("female_sales_krw", 0) / monthly * 100) if monthly else 0,
-            })
+            location_data.append(
+                {
+                    "location": loc,
+                    "monthly_sales_krw": monthly,
+                    "store_count": cnt,
+                    "avg_sales_per_store_krw": avg,
+                    "weekday_pct": (
+                        round(ss.get("weekday_sales_krw", 0) / monthly * 100)
+                        if monthly
+                        else 0
+                    ),
+                    "weekend_pct": (
+                        round(ss.get("weekend_sales_krw", 0) / monthly * 100)
+                        if monthly
+                        else 0
+                    ),
+                    "open_rate_pct": st.get("open_rate_pct", 0),
+                    "close_rate_pct": st.get("close_rate_pct", 0),
+                    "male_pct": (
+                        round(ss.get("male_sales_krw", 0) / monthly * 100)
+                        if monthly
+                        else 0
+                    ),
+                    "female_pct": (
+                        round(ss.get("female_sales_krw", 0) / monthly * 100)
+                        if monthly
+                        else 0
+                    ),
+                }
+            )
 
         if not location_data:
             return {"error": "데이터 없음"}
 
-        comparison = await self._run_compare_agent(location_data, business_type, year, q)
+        comparison = await self._run_compare_agent(
+            location_data, business_type, year, q
+        )
 
         return {
-            "locations":     locations,
+            "locations": locations,
             "business_type": business_type,
-            "quarter":       quarter,
-            "data":          location_data,
-            "comparison":    comparison,
+            "quarter": quarter,
+            "data": location_data,
+            "comparison": comparison,
         }
 
     async def _run_compare_agent(
         self, location_data: list, business_type: str, year: str, q: str
     ) -> str:
-        kernel   = _make_kernel()
+        kernel = _make_kernel()
         settings = AzureChatPromptExecutionSettings()
 
         agent = ChatCompletionAgent(
             name="LocationCompareAgent",
             instructions=(
                 "You are a Seoul F&B startup commercial area comparison expert.\n\n"
+                "## CRITICAL LANGUAGE RULE\n"
+                "You MUST respond ONLY in Korean. "
+                "NEVER use English, Russian, Chinese, Japanese, or any other language. "
+                "Every single word in your response must be Korean or numbers. "
+                "This is an absolute requirement with no exceptions.\n\n"
                 "## Response Format (strictly follow this format)\n\n"
                 f"📅 데이터 기준: {year}년 {q}분기 / 업종: {business_type}\n\n"
                 "📊 지역별 비교표\n\n"
                 "| 항목 | 지역A | 지역B | ... |\n"
                 "|------|-------|-------|\n"
-                "| 월매출 | XXX억원 | XXX억원 |\n"
+                "| 월매출 | XXX억 X,XXX만원 | XXX억 X,XXX만원 |\n"
                 "| 점포수 | XX개 | XX개 |\n"
-                "| 점포당 평균매출 | XXX만원 | XXX만원 |\n"
+                "| 점포당 평균매출 | X,XXX만원 | X,XXX만원 |\n"
                 "| 주중/주말 | XX%/XX% | XX%/XX% |\n"
-                "| 개업률 | X% | X% |\n"
-                "| 폐업률 | X% | X% |\n"
-                "| 주요 성별 | 남/여 XX%/XX% | 남/여 XX%/XX% |\n\n"
+                "| 개업률 | X.X% | X.X% |\n"
+                "| 폐업률 | X.X% | X.X% |\n"
+                "| 주요 성별 | 남XX%/여XX% | 남XX%/여XX% |\n\n"
                 "✅ 창업 추천 순위\n"
                 "- **1순위: XXX** - 추천 이유 1~2줄\n"
                 "- **2순위: XXX** - 추천 이유 1~2줄\n\n"
                 "⚠️ 유의사항\n"
                 "- 각 지역별 리스크 1줄씩\n\n"
                 "## Rules\n"
-                "- Convert sales to 억/만원 unit\n"
-                "- Only use data explicitly provided\n"
-                "- Never use numbering (1. 2. 3.) outside the ranking section\n"
-                "- Do not add closing summary after 유의사항\n"
-                "- Always respond in Korean"
+                "- 창업 추천 순위 기준: 점포당 평균매출 높음 > 폐업률 낮음 > 개업률 적정 순으로 평가\n"
+                "- 모든 금액은 반드시 억/만원 단위로 변환 (예: 24,608,228,093 → 246억 828만원)\n"
+                "- 점포당 평균매출도 반드시 만원 단위 (예: 42,722,618 → 4,272만원)\n"
+                "- 원 단위 절대 사용 금지\n"
+                "- 번호 매기기 절대 금지 (추천 순위 제외)\n"
+                "- 유의사항 이후 총평 문장 추가 금지\n"
+                "- 제공된 데이터만 사용, 임의로 수치 추론/생성 금지\n"
             ),
             kernel=kernel,
             arguments=KernelArguments(settings=settings),

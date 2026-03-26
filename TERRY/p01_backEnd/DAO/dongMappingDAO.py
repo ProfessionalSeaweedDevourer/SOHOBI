@@ -1,16 +1,12 @@
 # 위치: p01_backEnd/DAO/dongMappingDAO.py
 #
-# DB 테이블: ADMIN_DONG, LAW_DONG, V_SEOUL_DONG_MAP
-# create_dong_tables.sql 실행 후 사용
-#
 # 역할:
-#   1. load() → V_SEOUL_DONG_MAP을 메모리 dict 캐시
-#   2. get_adm_by_emd(emd_cd) → 행정동코드/명 반환
-#   3. enrich_geojson(gj) → WFS feature에 adm_cd, adm_nm, gu_nm 주입
+#   1. load() → LAW_ADM_MAP에서 SUBSTR(LAW_CD,1,8)=emd_cd → adm_cd 딕셔너리 캐시
+#   2. enrich_geojson() → lt_c_ademd_info feature에 adm_cd, gu_nm 주입
 
 import logging
 from typing import Optional
-from baseDAO import BaseDAO
+from .baseDAO import BaseDAO
 
 logger = logging.getLogger(__name__)
 
@@ -22,63 +18,61 @@ class DongMappingDAO(BaseDAO):
         self._loaded = False
 
     def load(self):
-        """서버 시작 시 V_LAW_TO_ADM → 메모리 dict"""
+        """
+        LAW_ADM_MAP → emd_cd(SUBSTR(LAW_CD,1,8)) → adm_cd 딕셔너리
+        별도 컬럼 추가 없이 기존 테이블 그대로 사용
+        """
         try:
             rows = self._query(
-                "SELECT EMD_CD, GU_NM, LAW_NM, LAW_CD, ADM_CD, ADM_NM "
-                "FROM V_LAW_TO_ADM"
+                "SELECT SUBSTR(M.LAW_CD,1,8) AS EMD_CD, "
+                "       L.GU_NM, L.LAW_NM, M.LAW_CD, M.ADM_CD, M.ADM_NM "
+                "FROM LAW_ADM_MAP M "
+                "JOIN LAW_DONG_SEOUL L ON M.LAW_CD = L.LAW_CD "
+                "ORDER BY SUBSTR(M.LAW_CD,1,8), M.CONFIDENCE DESC"
             )
             for emd_cd, gu_nm, law_nm, law_cd, adm_cd, adm_nm in rows:
                 key = str(emd_cd).strip()
-                # emd_cd 1:N 이면 confidence 높은 순으로 이미 정렬된 첫 번째 유지
-                if key not in self._emd:
+                if key not in self._emd:   # confidence 내림차순이므로 첫 번째가 최고값
                     self._emd[key] = {
-                        'law_cd': str(law_cd).strip()  if law_cd  else None,
-                        'adm_cd': str(adm_cd).strip()  if adm_cd  else None,
-                        'adm_nm': str(adm_nm).strip()  if adm_nm  else None,
-                        'gu_nm' : str(gu_nm).strip()   if gu_nm   else None,
-                        'law_nm': str(law_nm).strip()   if law_nm  else None,
+                        'law_cd': str(law_cd).strip() if law_cd else None,
+                        'adm_cd': str(adm_cd).strip() if adm_cd else None,
+                        'adm_nm': str(adm_nm).strip() if adm_nm else None,
+                        'gu_nm' : str(gu_nm).strip()  if gu_nm  else None,
+                        'law_nm': str(law_nm).strip() if law_nm else None,
                     }
             self._loaded = True
-            logger.info(f"[DongMappingDAO] 로드 완료: {len(self._emd)}개 법정동 매핑")
+            logger.info(f"[DongMappingDAO] 로드 완료: {len(self._emd)}개 매핑")
         except Exception as e:
             logger.error(f"[DongMappingDAO] 로드 실패: {e}")
 
-    # ── 조회 ─────────────────────────────────────────────────────
-
     def get_adm_by_emd(self, emd_cd: str) -> Optional[dict]:
-        """WFS emd_cd → {'adm_cd','adm_nm','gu_nm','law_nm'}"""
         return self._emd.get(str(emd_cd).strip())
-
-    # ── WFS GeoJSON 보강 ─────────────────────────────────────────
 
     def enrich_geojson(self, geojson: dict) -> dict:
         """
-        WFS feature.properties에 행정동 정보 주입
-          adm_cd  : 행정동코드 (SANGKWON_SALES 매칭용)
-          adm_nm  : 행정동명
-          gu_nm   : 자치구명
-          law_nm  : 원본 법정동명 (표시용)
+        lt_c_ademd_info feature에 adm_cd, gu_nm 주입
+          - emd_cd → LAW_ADM_MAP → adm_cd
+          - full_nm → gu_nm 파싱
         """
-        features = geojson.get("features", [])
         matched = 0
-        for feat in features:
-            p = feat.get("properties", {})
+        for feat in geojson.get("features", []):
+            p      = feat.get("properties", {})
             emd_cd = str(p.get("emd_cd", "")).strip()
-            info   = self._emd.get(emd_cd)
+            full   = p.get("full_nm", "").strip()
+
+            # gu_nm: "서울특별시 종로구 청운동" → "종로구"
+            parts      = full.split()
+            p["gu_nm"] = parts[1] if len(parts) > 1 else ""
+
+            info = self._emd.get(emd_cd)
             if info:
                 p["adm_cd"] = info["adm_cd"]
                 p["adm_nm"] = info["adm_nm"]
-                p["gu_nm"]  = info["gu_nm"]
-                p["law_nm"] = info["law_nm"]  # 원본 법정동명 보존
                 matched += 1
             else:
                 p["adm_cd"] = None
                 p["adm_nm"] = None
-                p["gu_nm"]  = p.get("sig_kor_nm") or p.get("sig_nm") or ""
-                p["law_nm"] = p.get("emd_kor_nm") or ""
-        logger.info(f"[DongMappingDAO] enrich: {matched}/{len(features)} 매칭")
-        return geojson
 
-    def status(self) -> dict:
-        return {"loaded": self._loaded, "emd_count": len(self._emd)}
+        total = len(geojson.get("features", []))
+        logger.info(f"[DongMappingDAO] enrich: {matched}/{total} 매칭")
+        return geojson
