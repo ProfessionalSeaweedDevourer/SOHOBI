@@ -61,7 +61,13 @@ class LegalAgent:
             self._kernel.add_plugin(LegalSearchPlugin(), plugin_name="LegalSearch")
 
     @kernel_function(name="generate_draft", description="법무 정보 관련 draft 생성")
-    async def generate_draft(self, question: str, retry_prompt: str = "", profile: str = "") -> str:
+    async def generate_draft(
+        self,
+        question: str,
+        retry_prompt: str = "",
+        profile: str = "",
+        prior_history: list[dict] | None = None,
+    ) -> str:
         service: AzureChatCompletion = self._kernel.get_service("sign_off")
         system = (
             (PROFILE_PREFIX.format(profile=profile) if profile else "")
@@ -71,6 +77,11 @@ class LegalAgent:
 
         history = ChatHistory()
         history.add_system_message(system)
+        for msg in (prior_history or []):
+            if msg["role"] == "user":
+                history.add_user_message(msg["content"])
+            elif msg["role"] == "assistant":
+                history.add_assistant_message(msg["content"])
         history.add_user_message(question)
 
         settings = OpenAIChatPromptExecutionSettings(

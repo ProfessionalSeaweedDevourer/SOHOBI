@@ -31,6 +31,7 @@ from variable_extractor import extract_financial_vars
 from session_store import (
     get_query_session, save_query_session,
     get_doc_history, save_doc_history,
+    get_recent_history,
 )
 import session_store
 
@@ -162,6 +163,7 @@ async def query(req: QueryRequest):
             question=req.question,
             profile=session["profile"],
             session_id=sid,
+            prior_history=get_recent_history(session["history"]),
             max_retries=req.max_retries,
             current_params=params,
         )

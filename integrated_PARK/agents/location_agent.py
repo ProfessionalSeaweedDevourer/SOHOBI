@@ -171,11 +171,18 @@ class LocationAgent:
 
     # ── 파라미터 추출 ───────────────────────────────────────────
 
-    async def _extract_params(self, question: str) -> dict:
+    async def _extract_params(self, question: str, prior_history: list[dict] | None = None) -> dict:
         """자연어 질문 → {mode, locations, business_type, quarter}"""
+        history_ctx = ""
+        if prior_history:
+            lines = []
+            for msg in prior_history:
+                role_label = "사용자" if msg["role"] == "user" else "에이전트"
+                lines.append(f"[{role_label}] {msg['content']}")
+            history_ctx = "이전 대화 맥락:\n" + "\n".join(lines) + "\n\n"
         raw = await self._call_llm(
             "You are a parameter extractor. Output JSON only.",
-            _PARAM_EXTRACT_PROMPT.format(user_input=question),
+            history_ctx + _PARAM_EXTRACT_PROMPT.format(user_input=question),
         )
         clean = re.sub(r"^```json\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
         try:
@@ -343,8 +350,9 @@ class LocationAgent:
         question: str,
         retry_prompt: str = "",
         profile: str = "",
+        prior_history: list[dict] | None = None,
     ) -> str:
-        params = await self._extract_params(question)
+        params = await self._extract_params(question, prior_history=prior_history)
         mode = params["mode"]
         locations = params["locations"]
         business_type = params["business_type"]

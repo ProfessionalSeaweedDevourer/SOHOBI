@@ -147,6 +147,33 @@ class FinanceAgent:
             current = {}
         return current  # ← LLM 추출값만 반환
 
+    async def _call_llm_with_history(
+        self, prompt: str, prior_history: list[dict] | None = None
+    ) -> str:
+        """explanation 단계 전용: prior_history를 ChatHistory에 주입 후 LLM 호출."""
+        service: AzureChatCompletion = self._kernel.get_service("sign_off")
+        history = ChatHistory()
+        for msg in (prior_history or []):
+            if msg["role"] == "user":
+                history.add_user_message(msg["content"])
+            elif msg["role"] == "assistant":
+                history.add_assistant_message(msg["content"])
+        history.add_user_message(prompt)
+        settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=5000)
+        try:
+            result = await service.get_chat_message_content(history, settings=settings)
+            return result.content or str(result)
+        except Exception as e:
+            err_str = str(e).lower()
+            logger.error("FinanceAgent explanation LLM 호출 실패: %s", e)
+            if "content_filter" in err_str or "content filter" in err_str:
+                safe_prompt = "다음은 합법적인 창업 재무 분석 요청입니다.\n\n" + prompt
+                history2 = ChatHistory()
+                history2.add_user_message(safe_prompt)
+                result = await service.get_chat_message_content(history2, settings=settings)
+                return result.content or str(result)
+            raise ValueError(f"AI 응답 생성 중 오류가 발생했습니다: {e}") from e
+
     @kernel_function(name="generate_draft", description="재무 시뮬레이션 기반 draft 생성")
     async def generate_draft(
         self,
@@ -154,6 +181,7 @@ class FinanceAgent:
         current_params: dict = None,
         retry_prompt: str = "",
         profile: str = "",
+        prior_history: list[dict] | None = None,
     ) -> str:
         # ── 1단계: 파라미터 추출 ─────────────────────────────
         # current_params 없으면 None 기반 초기값 사용
@@ -225,7 +253,7 @@ class FinanceAgent:
             explain_prompt = _PROFILE_CONTEXT.format(profile=profile) + explain_prompt
         if retry_prompt:
             explain_prompt = _RETRY_PREFIX.format(retry_prompt=retry_prompt) + explain_prompt
-        draft = await self._call_llm(explain_prompt)
+        draft = await self._call_llm_with_history(explain_prompt, prior_history=prior_history)
 
         # ── 4단계: 투자 회수 설명 병합 (있을 때만) ───────────
         if recovery_result and recovery_result.get("recoverable") and recovery_result.get("months"):

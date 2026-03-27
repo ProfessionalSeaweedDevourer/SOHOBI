@@ -32,6 +32,7 @@ async def run(
     question: str,
     profile: str = "",
     session_id: str = "",
+    prior_history: list[dict] | None = None,
     max_retries: int = 3,
     current_params: dict | None = None,
 ) -> dict:
@@ -56,6 +57,7 @@ async def run(
             question=question,
             retry_prompt=retry_prompt,
             profile=profile,
+            prior_history=prior_history,
             **extra,
         )
         agent_ms = round((time.monotonic() - t_agent) * 1000)
@@ -136,6 +138,7 @@ async def run_stream(
     question: str,
     profile: str = "",
     session_id: str = "",
+    prior_history: list[dict] | None = None,
     max_retries: int = 3,
     current_params: dict | None = None,
 ) -> AsyncGenerator[dict, None]:
@@ -171,6 +174,7 @@ async def run_stream(
             question=question,
             retry_prompt=retry_prompt,
             profile=profile,
+            prior_history=prior_history,
             **extra,
         )
         agent_ms = round((time.monotonic() - t_agent) * 1000)

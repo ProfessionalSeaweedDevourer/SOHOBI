@@ -145,6 +145,20 @@ async def save_query_session(session_id: str, session: dict) -> None:
     })
 
 
+HISTORY_WINDOW = 6  # 에이전트에 주입할 최대 메시지 수 (user+assistant 쌍 3턴)
+
+
+def get_recent_history(history: ChatHistory, n: int = HISTORY_WINDOW) -> list[dict]:
+    """히스토리에서 최근 n개 메시지(user/assistant)를 [{role, content}] 형태로 반환."""
+    msgs = [
+        {"role": m.role.value.lower() if hasattr(m.role, "value") else str(m.role).split(".")[-1].lower(),
+         "content": str(m.content)}
+        for m in history.messages
+        if ("user" in str(m.role).lower() or "assistant" in str(m.role).lower())
+    ]
+    return msgs[-n:]
+
+
 async def get_doc_history(session_id: str) -> list[dict]:
     """문서 생성 플로우의 대화 이력(raw list)을 반환."""
     container = await _get_container()
