@@ -166,6 +166,17 @@ class FinanceAgent:
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]
         sim_input = {k: variables[k] for k in sim_keys if k in variables}
+
+        if not sim_input:
+            return {
+                "draft": (
+                    "재무 시뮬레이션을 위한 수치(매출, 원가, 임대료 등)가 질문에 포함되어 있지 않습니다. "
+                    "예상 월매출, 원가 비율, 임대료 등을 알려주시면 시뮬레이션을 수행할 수 있습니다."
+                ),
+                "updated_params": None,
+                "chart": None,
+            }
+
         sim_result = self._sim.monte_carlo_simulation(**sim_input)
 
         recovery_result: dict | None = None

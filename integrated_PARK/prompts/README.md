@@ -30,19 +30,24 @@ prompts/
 │   └── evaluate/
 │       ├── skprompt.txt             ← 재무 도메인 루브릭 (F1~F5)
 │       └── config.json
-└── signoff_legal/
+├── signoff_legal/
+│   └── evaluate/
+│       ├── skprompt.txt             ← 법률 도메인 루브릭 (G1~G4)
+│       └── config.json
+└── signoff_location/
     └── evaluate/
-        ├── skprompt.txt             ← 법률 도메인 루브릭 (G1~G4)
+        ├── skprompt.txt             ← 상권分析 도메인 루브릭 (S1~S5)
         └── config.json
 ```
 
 각 폴더는 **해당 도메인 팀원이 수정 책임**을 집니다.
 
 | 팀원 | 담당 폴더 | 평가 항목 |
-|---|---|---|
+| --- | --- | --- |
 | CHOI | `signoff_legal/` | G1~G4 (면책 조항, 법령 인용 등) |
 | CHANG | `signoff_finance/` | F1~F5 (수치, 가정 조건, 리스크 등) |
 | NAM | `signoff_admin/` | A1~A5 (법령, 서식, 절차, 기관, 기한) |
+| CHOI | `signoff_location/` | S1~S5 (수치·기준·기회리스크·지역업종·면책) |
 | PARK | 공통(C1~C5) 포함 전체 관리 | C1~C5 (응답성, 완결성, 일관성 등) |
 
 ---
