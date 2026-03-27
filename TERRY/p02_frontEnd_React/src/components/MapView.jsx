@@ -182,6 +182,56 @@ export default function MapView() {
       });
    };
 
+   // ── 상권분석 결과 → 해당 행정동 하이라이트 + 지도 이동 ────────
+   const handleHighlightArea = async (admCodes) => {
+      const map = mapInstance.current;
+      if (!map) return;
+
+      // 동 경계 레이어 확보
+      await ensureDongBoundaryLayer();
+      const bLayer = dongBoundaryLayerRef.current;
+      if (!bLayer?.getSource?.()?.getFeatures) return;
+
+      const features = bLayer.getSource().getFeatures();
+
+      // 이전 검색 하이라이트 초기화
+      dongSearchFeatsRef.current.forEach((f) => f.setStyle(DONG_STYLE_DEFAULT));
+      dongSearchFeatsRef.current = [];
+      if (dongSelectedFeatRef.current) {
+         dongSelectedFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+         dongSelectedFeatRef.current = null;
+      }
+
+      // 빈 배열이면 초기화만 (비교 분석 등)
+      if (!admCodes?.length) return;
+
+      const admSet = new Set(admCodes.map((c) => String(c).trim()));
+
+      // 매칭 폴리곤 찾기 + 하이라이트
+      const matched = features.filter((f) =>
+         admSet.has((f.getProperties().adm_cd || "").trim()),
+      );
+      if (!matched.length) return;
+
+      matched.forEach((f) => f.setStyle(DONG_STYLE_SELECTED));
+      dongSearchFeatsRef.current = matched;
+
+      // 전체 extent 계산 후 지도 이동
+      let extent = matched[0].getGeometry().getExtent().slice();
+      for (let i = 1; i < matched.length; i++) {
+         const e = matched[i].getGeometry().getExtent();
+         extent[0] = Math.min(extent[0], e[0]);
+         extent[1] = Math.min(extent[1], e[1]);
+         extent[2] = Math.max(extent[2], e[2]);
+         extent[3] = Math.max(extent[3], e[3]);
+      }
+      map.getView().fit(extent, {
+         padding: [80, 480, 80, 80],
+         duration: 800,
+         maxZoom: 16,
+      });
+   };
+
    const clearAll = () => {
       clearMarkers();
       setPopup(null);
@@ -761,6 +811,7 @@ export default function MapView() {
             mapContext={chatContext}
             onNavigate={handleChatNavigate}
             onClearContext={() => setChatContext(null)}
+            onHighlightArea={handleHighlightArea}
          />
          <div className="coord-bar">
             📍 위도: {coords.lat} | 경도: {coords.lng}
