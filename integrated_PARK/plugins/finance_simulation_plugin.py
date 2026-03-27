@@ -6,35 +6,43 @@
 import base64
 import io
 import math
+import os
 import random
 from semantic_kernel.functions import kernel_function
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.font_manager as fm
 
-from CHANG.db_test import DBWork
+# [PR#51 수정] from CHANG.db_test import DBWork 제거
+#   CHANG/은 팀원 개인 폴더로 integrated_PARK에서 직접 임포트 불가
+#   (Azure 배포 환경에 CHANG 패키지 존재하지 않음 → ModuleNotFoundError)
+#   DB 연동은 integrated_PARK 내부 모듈로 분리 후 재통합 예정
 
-
-fontF = "C:\Windows\Fonts\gulim.ttc"
-fontN = fm.FontProperties(fname=fontF, size= 10).get_name()
-plt.rc("font", family=fontN)
-plt.rcParams["axes.unicode_minus"]=False
-
+# [PR#51 수정] Windows 전용 폰트 하드코딩 3줄 제거
+#   fontF = "C:\Windows\Fonts\gulim.ttc" 는 Linux(Azure) 환경에서 크래시 발생
+#   commit 8a1daaa 에서 번들 폰트(nam/malgun.ttf) + fallback 방식으로 이미 수정됨
+#   아래 try 블록이 그 수정사항을 담당함
 
 try:
     import matplotlib
     matplotlib.use("Agg")  # 헤드리스 환경 (서버/컨테이너)
     import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
     import matplotlib.font_manager as fm
     import numpy as np
 
-    # 한글 폰트 설정: 우선순위 순으로 시도
-    _KO_FONT_CANDIDATES = [
-        "Apple SD Gothic Neo", "Nanum Gothic", "AppleGothic",
-        "Malgun Gothic", "NanumGothic", "Noto Sans CJK KR",
-    ]
-    _available = {f.name for f in fm.fontManager.ttflist}
-    _ko_font = next((f for f in _KO_FONT_CANDIDATES if f in _available), None)
+    # 한글 폰트 설정
+    # 1순위: 프로젝트 번들 폰트 (nam/malgun.ttf) — 배포 환경에서도 항상 사용 가능
+    _BUNDLED_FONT = os.path.join(os.path.dirname(__file__), "..", "nam", "malgun.ttf")
+    if os.path.exists(_BUNDLED_FONT):
+        fm.fontManager.addfont(_BUNDLED_FONT)
+        _ko_font = fm.FontProperties(fname=_BUNDLED_FONT).get_name()
+    else:
+        # 2순위: 시스템 설치 폰트 (로컬 개발 환경 등)
+        _KO_FONT_CANDIDATES = [
+            "Apple SD Gothic Neo", "Nanum Gothic", "AppleGothic",
+            "Malgun Gothic", "NanumGothic", "Noto Sans CJK KR",
+        ]
+        _available = {f.name for f in fm.fontManager.ttflist}
+        _ko_font = next((f for f in _KO_FONT_CANDIDATES if f in _available), None)
+
     if _ko_font:
         matplotlib.rcParams["font.family"] = _ko_font
     matplotlib.rcParams["axes.unicode_minus"] = False  # 마이너스 기호 깨짐 방지
@@ -141,8 +149,8 @@ class FinanceSimulationPlugin:
         avg_loss = round(sum(loss_results) / len(loss_results)) if loss_results else 0
 
         p20 = sorted_results[int(iterations * 0.20)]
-        chart_b64 = self._generate_chart(results, p20, avg)
-
+        # [PR#51 수정] chart_b64 dead-code 호출 제거
+        #   아래의 chart = self._generate_chart(results, avg, p20, loss_prob) 가 실제 사용됨
         chart = self._generate_chart(results, avg, p20, loss_prob)
         return {
             "average_net_profit": round(avg),
@@ -172,14 +180,18 @@ class FinanceSimulationPlugin:
 
     # 누적 정보 반영을 위한 JSON 상태 관리용
     def load_initial(self, region: str = None, industry: str = None) -> dict:
-        dbwork = DBWork() # 해당 DB작업파일 분리를 위해 개인폴더의 함수 끌어왔습니다 통합시 필요에따라 해당 파일(db_test.py)복사/변경 해주시면 됩니다
-        if region is None and industry is None:
-            # 지역/업종 입력 없는 경우 전체 평균
-            revenue = dbwork.get_average_sales()
-        else:
-            # 하나라도 있으면 리스트 반환
-            revenue = dbwork.get_sales(region, industry)
-        
+        # [PR#51 수정] DBWork(CHANG.db_test) 임포트 제거에 따라 DB 조회 임시 비활성화
+        #   DB 연동 로직은 integrated_PARK 내부 모듈 분리 후 재통합 예정
+        #   (PR#51 원본 의도: region/industry 코드 기반 매출 조회 → 통합 시 아래 주석 복원)
+        #
+        # if region is None and industry is None:
+        #     revenue = dbwork.get_average_sales()
+        # else:
+        #     revenue = dbwork.get_sales(region, industry)
+
+        # DB 제외용 임시 기본값 (카페 기준, 업종별 평균치로 추후 수정 예정)
+        revenue = [14000000]
+
         return {
             "revenue": revenue,
             "cost": None,
@@ -206,39 +218,40 @@ class FinanceSimulationPlugin:
         return merged
 
 
-    def _generate_chart(self, results: list, p20: float, avg: float) -> str:
-        fig, ax = plt.subplots(figsize=(8, 4))
-
-        n, bins, patches = ax.hist(results, bins=40, edgecolor="none")
-
-        for patch, left_edge in zip(patches, bins[:-1]):
-            if left_edge < 0:
-                patch.set_facecolor("#E24B4A")   # 손실
-            elif left_edge < p20:
-                patch.set_facecolor("#EF9F27")   # 하위 20%
-            else:
-                patch.set_facecolor("#378ADD")   # 수익
-
-        ax.axvline(x=0,   color="#E24B4A", linestyle="--", linewidth=1.2, alpha=0.8)
-        ax.axvline(x=avg, color="#378ADD", linestyle="--", linewidth=1.2, alpha=0.8)
-        ax.axvline(x=p20, color="#EF9F27", linestyle="--", linewidth=1.2, alpha=0.8)
-
-        legend_handles = [
-            mpatches.Patch(color="#E24B4A", label="손실 구간"),
-            mpatches.Patch(color="#EF9F27", label=f"하위 20% 기준: {round(p20/10000):,}만원"),
-            mpatches.Patch(color="#378ADD", label=f"평균: {round(avg/10000):,}만원"),
-        ]
-        ax.legend(handles=legend_handles, fontsize=9)
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x/10000):,}만"))
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x):,}"))
-        ax.set_xlabel("월 순이익 (만원)", fontsize=10)
-        ax.set_ylabel("빈도 (회)", fontsize=10)
-
-        plt.tight_layout()
-
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=120)
-        plt.close(fig)
-        buf.seek(0)
-        return base64.b64encode(buf.read()).decode("utf-8")
+    # [PR#51 수정] 아래 _generate_chart 정의 주석 처리
+    #   이유: 클래스 상단(line ~52)에 이미 동일 메서드가 정의되어 있음
+    #   Python은 마지막 정의를 사용하므로 이 버전이 덮어쓰면
+    #   기존 4인수 호출 self._generate_chart(results, avg, p20, loss_prob) 이 TypeError 발생
+    #   인수 순서도 (results, p20, avg) vs 기존 (results, avg, p20, loss_prob) 로 불일치
+    #   색상·레전드 개선은 추후 상단 메서드와 통합하여 반영 예정
+    #
+    # def _generate_chart(self, results: list, p20: float, avg: float) -> str:
+    #     fig, ax = plt.subplots(figsize=(8, 4))
+    #     n, bins, patches = ax.hist(results, bins=40, edgecolor="none")
+    #     for patch, left_edge in zip(patches, bins[:-1]):
+    #         if left_edge < 0:
+    #             patch.set_facecolor("#E24B4A")   # 손실
+    #         elif left_edge < p20:
+    #             patch.set_facecolor("#EF9F27")   # 하위 20%
+    #         else:
+    #             patch.set_facecolor("#378ADD")   # 수익
+    #     ax.axvline(x=0,   color="#E24B4A", linestyle="--", linewidth=1.2, alpha=0.8)
+    #     ax.axvline(x=avg, color="#378ADD", linestyle="--", linewidth=1.2, alpha=0.8)
+    #     ax.axvline(x=p20, color="#EF9F27", linestyle="--", linewidth=1.2, alpha=0.8)
+    #     legend_handles = [
+    #         mpatches.Patch(color="#E24B4A", label="손실 구간"),
+    #         mpatches.Patch(color="#EF9F27", label=f"하위 20% 기준: {round(p20/10000):,}만원"),
+    #         mpatches.Patch(color="#378ADD", label=f"평균: {round(avg/10000):,}만원"),
+    #     ]
+    #     ax.legend(handles=legend_handles, fontsize=9)
+    #     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x/10000):,}만"))
+    #     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x):,}"))
+    #     ax.set_xlabel("월 순이익 (만원)", fontsize=10)
+    #     ax.set_ylabel("빈도 (회)", fontsize=10)
+    #     plt.tight_layout()
+    #     buf = io.BytesIO()
+    #     fig.savefig(buf, format="png", dpi=120)
+    #     plt.close(fig)
+    #     buf.seek(0)
+    #     return base64.b64encode(buf.read()).decode("utf-8")
 
