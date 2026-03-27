@@ -149,11 +149,23 @@ async def query(req: QueryRequest):
             session["profile"] = req.founder_context
 
         # ── 도메인 분류 ───────────────────────────────────────
+        # 라우터는 항상 실행한다 (클라이언트 domain 지정 여부와 무관)
+        classification = await domain_router.classify(req.question)
+        router_domain = classification["domain"]
+        router_confidence = classification.get("confidence", 0.0)
+
         if req.domain in ("admin", "finance", "legal", "location"):
-            domain = req.domain
+            if router_domain != req.domain and router_confidence >= 0.8:
+                import logging
+                logging.getLogger("sohobi.security").warning(
+                    "DOMAIN_OVERRIDE client=%r router=%r confidence=%.2f question=%r",
+                    req.domain, router_domain, router_confidence, req.question[:100],
+                )
+                domain = router_domain   # 라우터 결과 우선
+            else:
+                domain = req.domain      # 라우터 확신 부족 → 클라이언트 지정 존중
         else:
-            classification = await domain_router.classify(req.question)
-            domain = classification["domain"]
+            domain = router_domain
 
         # ── 오케스트레이터 실행 ───────────────────────────────
         # current_params: 클라이언트 전달값 우선, 없으면 서버 세션 추출값 사용
