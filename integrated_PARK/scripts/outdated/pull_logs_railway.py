@@ -1,9 +1,9 @@
 """
-Azure Container Apps 백엔드 로그 → 로컬 동기화 스크립트
+Railway 볼륨 로그 → 로컬 동기화 스크립트
 
 사용법:
   python scripts/pull_logs.py                          # .env의 값 자동 사용
-  python scripts/pull_logs.py --host https://...       # 호스트 직접 지정
+  python scripts/pull_logs.py --host https://xxx.up.railway.app
   python scripts/pull_logs.py --type queries           # 특정 타입만
   python scripts/pull_logs.py --out logs/remote/       # 저장 경로 지정
 
@@ -54,11 +54,12 @@ def pull(host: str, secret: str, log_type: str, out_dir: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="백엔드 로그 로컬 동기화")
+    parser = argparse.ArgumentParser(description="Railway 로그 로컬 동기화")
     parser.add_argument(
         "--host",
-        default=os.getenv("BACKEND_HOST", ""),
-        help="백엔드 서비스 URL. 환경변수 BACKEND_HOST로도 설정 가능.",
+        default=os.getenv("RAILWAY_HOST", ""),
+        help="Railway 서비스 URL (예: https://xxx.up.railway.app). "
+             "환경변수 RAILWAY_HOST로도 설정 가능.",
     )
     parser.add_argument(
         "--secret",
@@ -79,7 +80,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if not args.host:
-        print("오류: --host 또는 환경변수 BACKEND_HOST 를 지정하십시오.")
+        print("오류: --host 또는 환경변수 RAILWAY_HOST 를 지정하십시오.")
         sys.exit(1)
     if not args.secret:
         print("오류: --secret 또는 .env의 EXPORT_SECRET 을 설정하십시오.")

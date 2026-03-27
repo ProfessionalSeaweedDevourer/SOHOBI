@@ -12,11 +12,14 @@ import openai
 
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
+_SECURITY_CODES  = {"SEC1", "SEC2", "SEC3"}
+_REJECTION_CODES = {"RJ1", "RJ2", "RJ3"}
+
 REQUIRED_CODES = {
-    "admin":    {"C1", "C2", "C3", "C4", "C5", "A1", "A2", "A3", "A4", "A5"},
-    "finance":  {"C1", "C2", "C3", "C4", "C5", "F1", "F2", "F3", "F4", "F5"},
-    "legal":    {"C1", "C2", "C3", "C4", "C5", "G1", "G2", "G3", "G4"},
-    "location": {"C1", "C2", "C3", "C4", "C5", "S1", "S2", "S3", "S4", "S5"},
+    "admin":    {"C1", "C2", "C3", "C4", "C5", "A1", "A2", "A3", "A4", "A5"} | _SECURITY_CODES | _REJECTION_CODES,
+    "finance":  {"C1", "C2", "C3", "C4", "C5", "F1", "F2", "F3", "F4", "F5"} | _SECURITY_CODES | _REJECTION_CODES,
+    "legal":    {"C1", "C2", "C3", "C4", "C5", "G1", "G2", "G3", "G4"}       | _SECURITY_CODES | _REJECTION_CODES,
+    "location": {"C1", "C2", "C3", "C4", "C5", "S1", "S2", "S3", "S4", "S5"} | _SECURITY_CODES | _REJECTION_CODES,
 }
 
 
@@ -62,11 +65,20 @@ async def run_signoff(client: openai.AsyncAzureOpenAI, domain: str, draft: str, 
             response_format={"type": "json_object"},
         )
         result_text = response.choices[0].message.content
-        verdict = json.loads(result_text)
+        m = re.search(r'\{.*\}', result_text, re.DOTALL)
+        try:
+            verdict = json.loads(m.group() if m else result_text)
+        except json.JSONDecodeError:
+            verdict = {
+                "approved": False, "grade": "C",
+                "passed": [], "warnings": [], "issues": [],
+                "retry_prompt": "응답을 JSON 형식으로만 출력하십시오",
+                "confidence_note": "",
+            }
 
         passed_set   = set(verdict.get("passed", []))
-        issues_set   = {i["code"] for i in verdict.get("issues", [])}
-        warnings_set = {w["code"] for w in verdict.get("warnings", [])}
+        issues_set   = {i["code"] if isinstance(i, dict) else i for i in verdict.get("issues", [])}
+        warnings_set = {w["code"] if isinstance(w, dict) else w for w in verdict.get("warnings", [])}
         missing = required_codes - (passed_set | issues_set | warnings_set)
 
         if not missing:

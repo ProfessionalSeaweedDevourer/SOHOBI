@@ -56,7 +56,7 @@ app.add_middleware(
 # ── 스키마 ────────────────────────────────────────────────────
 
 class QueryRequest(BaseModel):
-    question: str
+    question: str = Field(..., max_length=2000, description="최대 2,000자")
     session_id: str | None = Field(default=None, description="생략 시 서버가 새 UUID를 발급한다")
     founder_context: str | None = Field(
         default=None,
@@ -208,6 +208,12 @@ async def query(req: QueryRequest):
             ),
         }
     except Exception as e:
+        err_str = str(e).lower()
+        if "content_filter" in err_str or "content filter" in err_str:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "죄송합니다. 해당 질의는 처리할 수 없습니다."},
+            )
         log_error(
             request_id=str(uuid4()),
             session_id=req.session_id or "",
@@ -289,6 +295,10 @@ async def stream_query(req: QueryRequest):
                 yield f"event: {event_name}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n"
 
         except Exception as e:
+            err_str = str(e).lower()
+            if "content_filter" in err_str or "content filter" in err_str:
+                yield f"event: error\ndata: {json.dumps({'message': '죄송합니다. 해당 질의는 처리할 수 없습니다.'}, ensure_ascii=False)}\n\n"
+                return
             log_error(
                 request_id=str(uuid4()),
                 session_id=sid,
