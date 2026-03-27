@@ -3,6 +3,8 @@ import Home from "./pages/Home";
 import UserChat from "./pages/UserChat";
 import DevChat from "./pages/DevChat";
 import LogViewer from "./pages/LogViewer";
+import DevLogin from "./pages/DevLogin";
+import RequireDevAuth from "./components/RequireDevAuth";
 
 export default function App() {
   return (
@@ -10,8 +12,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/user" element={<UserChat />} />
-        <Route path="/dev" element={<DevChat />} />
-        <Route path="/dev/logs" element={<LogViewer />} />
+        <Route path="/dev/login" element={<DevLogin />} />
+        <Route path="/dev" element={<RequireDevAuth><DevChat /></RequireDevAuth>} />
+        <Route path="/dev/logs" element={<RequireDevAuth><LogViewer /></RequireDevAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

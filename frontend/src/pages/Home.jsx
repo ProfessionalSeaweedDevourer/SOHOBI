@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { isDevAuthenticated } from "../utils/devAuth";
 
 const modes = [
   {
@@ -24,6 +25,14 @@ const modes = [
 export default function Home() {
   const navigate = useNavigate();
 
+  function handleModeClick(path) {
+    if (path === "/dev" && !isDevAuthenticated()) {
+      navigate("/dev/login", { state: { from: { pathname: "/dev" } } });
+      return;
+    }
+    navigate(path);
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-slate-50">
       <div className="mb-10 text-center">
@@ -37,7 +46,7 @@ export default function Home() {
         {modes.map((m) => (
           <button
             key={m.path}
-            onClick={() => navigate(m.path)}
+            onClick={() => handleModeClick(m.path)}
             className={`
               flex-1 text-left border-2 border-slate-200 rounded-2xl p-8
               bg-white shadow-sm transition-all duration-150 cursor-pointer

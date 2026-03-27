@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { streamQuery } from "../api";
+import { clearDevAuth } from "../utils/devAuth";
 import ChatInput from "../components/ChatInput";
 import ResponseCard from "../components/ResponseCard";
 import SignoffPanel from "../components/SignoffPanel";
@@ -91,6 +92,12 @@ export default function DevChat() {
           className="text-xs text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-100 transition-colors"
         >
           📋 로그 뷰어
+        </button>
+        <button
+          onClick={() => { clearDevAuth(); navigate("/"); }}
+          className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          로그아웃
         </button>
       </header>
 
