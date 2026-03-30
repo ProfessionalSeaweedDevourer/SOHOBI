@@ -4,6 +4,7 @@ import { streamQuery } from "../api";
 import ChatInput from "../components/ChatInput";
 import ResponseCard from "../components/ResponseCard";
 import ProgressPanel from "../components/ProgressPanel";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 export default function UserChat() {
   const navigate = useNavigate();
@@ -66,23 +67,29 @@ export default function UserChat() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 py-3 flex items-center gap-3">
+      <header className="sticky top-0 z-10 glass border-b border-[var(--border)] px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate("/")}
-          className="text-slate-400 hover:text-slate-700 text-sm"
+          className="text-muted-foreground hover:text-foreground text-sm transition-colors"
         >
           ← 홈
         </button>
-        <span className="font-semibold text-slate-800">SOHOBI 상담</span>
-        <span className="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">사용자</span>
+        <span className="font-semibold text-foreground">SOHOBI 상담</span>
+        <span
+          className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium"
+          style={{ background: "rgba(8,145,178,0.15)", color: "var(--brand-blue)" }}
+        >
+          사용자
+        </span>
+        <ThemeToggle />
       </header>
 
       {/* 대화 영역 */}
       <main className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl mx-auto w-full">
         {messages.length === 0 && !loading && (
-          <div className="text-center mt-20 text-slate-400">
+          <div className="text-center mt-20 text-muted-foreground">
             <div className="text-4xl mb-3">💬</div>
             <p className="text-sm">창업 관련 질문을 입력해 보세요.</p>
             <div className="mt-4 flex flex-col gap-2 items-center">
@@ -94,7 +101,7 @@ export default function UserChat() {
                 <button
                   key={q}
                   onClick={() => handleSubmit(q)}
-                  className="text-xs text-slate-500 border border-slate-200 rounded-full px-4 py-1.5 hover:bg-slate-100 transition-colors max-w-xs text-left"
+                  className="text-xs text-muted-foreground glass rounded-full px-4 py-1.5 hover:shadow-elevated transition-glow max-w-xs text-left"
                 >
                   {q}
                 </button>
@@ -120,11 +127,11 @@ export default function UserChat() {
           ))}
 
           {loading && (
-            <div className="self-start bg-white border border-slate-100 rounded-xl px-4 py-3 text-sm w-full max-w-md">
+            <div className="self-start glass rounded-xl px-4 py-3 text-sm w-full max-w-md shadow-elevated">
               <ProgressPanel events={activeEvents} detailed={false} />
               {activeEvents.length === 0 && (
-                <div className="flex items-center gap-2 text-slate-400 text-xs">
-                  <span className="inline-block w-3 h-3 border-2 border-slate-200 border-t-blue-400 rounded-full animate-spin" />
+                <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                  <span className="inline-block w-3 h-3 border-2 border-[var(--border)] border-t-[var(--brand-blue)] rounded-full animate-spin" />
                   분석 준비 중…
                 </div>
               )}
@@ -132,7 +139,7 @@ export default function UserChat() {
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+            <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm rounded-xl px-4 py-3">
               오류: {error}
             </div>
           )}
@@ -142,7 +149,7 @@ export default function UserChat() {
       </main>
 
       {/* 입력창 */}
-      <footer className="sticky bottom-0 bg-slate-50 border-t border-slate-100 px-4 py-3 max-w-3xl mx-auto w-full">
+      <footer className="sticky bottom-0 bg-background border-t border-[var(--border)] px-4 py-3 max-w-3xl mx-auto w-full">
         <ChatInput ref={inputRef} onSubmit={handleSubmit} loading={loading} />
       </footer>
     </div>

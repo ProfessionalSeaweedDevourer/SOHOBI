@@ -213,3 +213,78 @@
   background: #94a3b8;
   cursor: not-allowed;
 }
+
+/* ── 디자인 시스템 오버라이드 (glass + CSS variables) ──── */
+.mv-chat-toggle {
+  background: var(--brand-blue);
+}
+.mv-chat-toggle:hover {
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+}
+.mv-chat-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+}
+.mv-chat-header {
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+}
+.mv-chat-context {
+  background: rgba(8, 145, 178, 0.08);
+  border-bottom-color: rgba(8, 145, 178, 0.2);
+}
+.mv-chat-context__label {
+  color: var(--brand-blue);
+}
+.mv-chat-context__clear {
+  border-color: rgba(8, 145, 178, 0.4);
+  color: var(--brand-teal);
+}
+.mv-chat-context__clear:hover {
+  background: rgba(8, 145, 178, 0.1);
+  color: var(--brand-blue);
+}
+.mv-chat-msg--user {
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+  color: #fff;
+}
+.mv-chat-msg--assistant {
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  color: var(--foreground);
+}
+.mv-chat-msg--system {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--foreground);
+}
+.mv-chat-loading {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--muted-foreground);
+}
+.mv-chat-dots span {
+  background: var(--brand-teal);
+}
+.mv-chat-input-area {
+  background: var(--card, #fff);
+  border-top-color: var(--border, #e2e8f0);
+}
+.mv-chat-input {
+  background: var(--input-background, #fff);
+  border-color: var(--border, #cbd5e1);
+  color: var(--foreground);
+}
+.mv-chat-input:focus {
+  border-color: var(--brand-teal);
+}
+.mv-chat-input::placeholder {
+  color: var(--muted-foreground);
+}
+.mv-chat-send {
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+}

@@ -184,8 +184,10 @@ function LayerRow({ label, desc, on, color, onClick }) {
 
 const S = {
    panel: {
-      background: "#fff",
-      border: "1px solid #ddd",
+      background: "var(--glass-bg)",
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      border: "1px solid var(--glass-border)",
       borderRadius: 10,
       padding: 16,
       minWidth: 220,
@@ -194,22 +196,22 @@ const S = {
    title: {
       fontSize: 13,
       fontWeight: 700,
-      color: "#111",
+      color: "var(--foreground)",
       marginBottom: 12,
       paddingBottom: 8,
-      borderBottom: "1px solid #f0f0f0",
+      borderBottom: "1px solid var(--border)",
    },
    row: {
       display: "flex",
       alignItems: "center",
       gap: 12,
       padding: 10,
-      background: "#f9f9f9",
+      background: "var(--accent)",
       borderRadius: 8,
       marginBottom: 8,
    },
-   layerName: { fontSize: 13, fontWeight: 600, color: "#333" },
-   layerDesc: { fontSize: 11, color: "#999", marginTop: 2 },
+   layerName: { fontSize: 13, fontWeight: 600, color: "var(--foreground)" },
+   layerDesc: { fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 },
    toggle: {
       border: "none",
       borderRadius: 6,
@@ -222,9 +224,9 @@ const S = {
    },
    notice: {
       fontSize: 11,
-      color: "#bbb",
+      color: "var(--muted-foreground)",
       padding: 8,
-      background: "#f9f9f9",
+      background: "var(--accent)",
       borderRadius: 6,
       textAlign: "center",
       marginBottom: 8,
