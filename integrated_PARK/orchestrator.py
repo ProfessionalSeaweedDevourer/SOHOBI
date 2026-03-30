@@ -115,17 +115,18 @@ async def run(
         if attempt > max_retries:
             break
 
+    actual_retries = len(rejection_history)
+    last_reason = rejection_history[-1]["verdict"].get("retry_prompt", "") if rejection_history else ""
     return {
         "status":           "escalated",
         "grade":            "C",
         "confidence_note":  "",
-        "retry_count":      max_retries,
+        "retry_count":      actual_retries,
         "request_id":       request_id,
         "session_id":       session_id,
         "agent_ms":         0,
         "signoff_ms":       0,
-        "message":          f"재시도 {max_retries}회 초과. 마지막 거부 이유: "
-                            f"{rejection_history[-1]['verdict'].get('retry_prompt', '')}",
+        "message":          f"재시도 {actual_retries}회 초과. 마지막 거부 이유: {last_reason}",
         "rejection_history": rejection_history,
         "draft":            draft,
         "chart":            chart,
@@ -246,17 +247,18 @@ async def run_stream(
         if attempt > max_retries:
             break
 
+    actual_retries = len(rejection_history)
     yield {
         "event":            "complete",
         "status":           "escalated",
         "grade":            "C",
         "confidence_note":  "",
-        "retry_count":      max_retries,
+        "retry_count":      actual_retries,
         "request_id":       request_id,
         "session_id":       session_id,
         "agent_ms":         0,
         "signoff_ms":       0,
-        "message":          f"재시도 {max_retries}회 초과.",
+        "message":          f"재시도 {actual_retries}회 초과.",
         "rejection_history": rejection_history,
         "draft":            draft,
         "chart":            chart,

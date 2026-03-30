@@ -86,6 +86,9 @@ async def run_signoff(client: openai.AsyncAzureOpenAI, domain: str, draft: str, 
             verdict["approved"] = len(issues_set) == 0
             if "grade" not in verdict:
                 verdict["grade"] = _derive_grade(verdict)
+            # approved=False인데 retry_prompt가 없으면 빈 문자열 방지
+            if not verdict["approved"] and not verdict.get("retry_prompt"):
+                verdict["retry_prompt"] = "응답 품질을 개선하십시오. 관련 법령 조항, 절차, 기관명을 구체적으로 포함하세요."
             return verdict
 
         if attempt < max_retries:
@@ -97,9 +100,13 @@ async def run_signoff(client: openai.AsyncAzureOpenAI, domain: str, draft: str, 
             })
 
     # 최대 재시도 후에도 커버리지 미달 시 가용 verdict 반환
-    verdict["approved"] = len({i["code"] for i in verdict.get("issues", [])}) == 0
+    issues_codes = {i["code"] if isinstance(i, dict) else i for i in verdict.get("issues", [])}
+    verdict["approved"] = len(issues_codes) == 0
     if "grade" not in verdict:
         verdict["grade"] = _derive_grade(verdict)
+    # approved=False인데 retry_prompt가 없으면 빈 문자열 방지
+    if not verdict["approved"] and not verdict.get("retry_prompt"):
+        verdict["retry_prompt"] = "응답 품질을 개선하십시오. 관련 법령 조항, 절차, 기관명을 구체적으로 포함하세요."
     return verdict
 
 

@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@turf/turf": "^7.3.4",
+    "axios": "^1.13.6",
+    "ol": "^10.8.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
