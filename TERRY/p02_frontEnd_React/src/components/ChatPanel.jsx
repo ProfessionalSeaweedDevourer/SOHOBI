@@ -18,16 +18,20 @@ const AREA_KEYWORDS = [
   "대학로", "을지로", "명동", "남대문", "북촌", "서촌", "익선동",
 ];
 
-export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, onClearContext }) {
+export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, onClearContext, onHighlightArea }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [sessionId, setSessionId] = useState(null);
+  const [lastLocation, setLastLocation] = useState(null);   // 직전 분석 지역 (UI 표시용)
+  const [lastBusiness, setLastBusiness] = useState(null);   // 직전 분석 업종 (UI 표시용)
 
   const messagesEndRef = useRef(null);
   const timerRef = useRef(null);
   const prevContextRef = useRef(null);
+  const lastLocationRef = useRef(null);    // 직전 분석 지역 (클로저 캡처용)
+  const lastBusinessRef = useRef(null);    // 직전 분석 업종 (클로저 캡처용)
 
   // 자동 스크롤
   useEffect(() => {
@@ -132,10 +136,26 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
       // 업종만 입력한 경우 → 컨텍스트 지역명 자동 추가
       const alreadyHasArea = text.includes(currentAreaName) || (mapContext.dongName && text.includes(mapContext.dongName));
       if (!alreadyHasArea) {
-        const simpleBusinessPattern = /^(카페|한식|중식|일식|양식|치킨|분식|호프|술집|베이커리|패스트푸드|미용실|네일|노래방|편의점|커피)\s*(창업|분석|상권)?/;
+        const simpleBusinessPattern = /^(카페|한식|중식|일식|양식|치킨|분식|호프|술집|베이커리|패스트푸드|미용실|네일|노래방|편의점|커피|빵집|치킨집|중국집|초밥|라멘|파스타|햄버거|떡볶이|포차|디저트|브런치)\s*(집|점|가게|창업|분석|상권)?/;
         if (simpleBusinessPattern.test(text)) {
           question = `${currentAreaName} ${text} 상권 분석해줘`;
         }
+      }
+    }
+
+    // ── 직전 대화 맥락으로 부족한 파라미터 자동 보완 ──────────
+    // 지역 없이 업종만 입력 → 직전 지역 보완
+    if (!useAdmCd && !userMentionedArea && lastLocationRef.current) {
+      const hasBizKeyword = /카페|한식|중식|일식|양식|치킨|분식|호프|술집|베이커리|패스트푸드|미용실|네일|노래방|편의점|커피|빵집|치킨집|중국집|초밥|라멘|파스타|햄버거|떡볶이|포차|디저트|브런치|헤어/.test(text);
+      if (hasBizKeyword) {
+        question = `${lastLocationRef.current} ${text} 상권 분석해줘`;
+      }
+    }
+    // 업종 없이 지역만 입력 → 직전 업종 보완
+    if (userMentionedArea && lastBusinessRef.current) {
+      const hasBizKeyword = /카페|한식|중식|일식|양식|치킨|분식|호프|술집|베이커리|패스트푸드|미용실|네일|노래방|편의점|커피|빵집|치킨집|중국집|초밥|라멘|파스타|햄버거|떡볶이|포차|디저트|브런치|헤어/.test(text);
+      if (!hasBizKeyword) {
+        question = `${text} ${lastBusinessRef.current} 상권 분석해줘`;
       }
     }
 
@@ -143,6 +163,16 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
     try {
       const res = await sendChatMessage(question, sessionId, useAdmCd ? mapContext.admCd : null);
       if (res.session_id) setSessionId(res.session_id);
+
+      // 분석 결과의 지역/업종 기억 (에러 시 부분 파라미터도 저장)
+      if (res.location) {
+        lastLocationRef.current = res.location;
+        setLastLocation(res.location);
+      }
+      if (res.business_type) {
+        lastBusinessRef.current = res.business_type;
+        setLastBusiness(res.business_type);
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -152,6 +182,21 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           content: res.analysis || "응답을 받지 못했습니다.",
         },
       ]);
+
+      // 단일 분석 결과 → 지도에 해당 행정동 하이라이트 + 이동
+      if (res.type === "analyze" && res.adm_codes?.length && onHighlightArea) {
+        onHighlightArea(res.adm_codes);
+      }
+
+      // 비교 분석이거나 다른 지역 분석 시 → 이전 하이라이트 초기화
+      if (res.type === "compare" && onHighlightArea) {
+        onHighlightArea([]);  // 빈 배열 → 하이라이트 초기화만
+      }
+
+      // 다른 지역 입력 시 컨텍스트 자동 해제
+      if (userMentionedArea && !mentionedCurrentArea && mapContext?.admCd) {
+        onClearContext?.();
+      }
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -177,9 +222,19 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
   const contextLabel = mapContext?.guName
     ? `${mapContext.guName} ${mapContext.dongName || ""}`.trim()
     : mapContext?.dongName || "";
-  const placeholder = contextLabel
-    ? `${contextLabel} 지역에 대해 질문하세요 (예: 카페 창업 분석)`
-    : "상권 분석 질문을 입력하세요 (예: 홍대 카페 상권 분석)";
+
+  let placeholder;
+  if (contextLabel) {
+    placeholder = `${contextLabel} 지역에 대해 질문하세요 (예: 카페 창업 분석)`;
+  } else if (lastLocation && lastBusiness) {
+    placeholder = `업종 또는 지역을 입력하세요 (예: 치킨, 잠실)`;
+  } else if (lastLocation) {
+    placeholder = `업종을 입력하세요 (예: 카페, 치킨, 한식)`;
+  } else if (lastBusiness) {
+    placeholder = `지역을 입력하세요 (예: 홍대, 강남, 잠실)`;
+  } else {
+    placeholder = "상권 분석 질문을 입력하세요 (예: 홍대 카페 상권 분석)";
+  }
 
   return (
     <>
@@ -199,7 +254,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           </button>
         </div>
 
-        {/* ── 현재 선택된 지역 컨텍스트 표시 ── */}
+        {/* ── 현재 선택된 지역 컨텍스트 표시 (지도 클릭) ── */}
         {mapContext?.dongName && (
           <div className="mv-chat-context">
             <span className="mv-chat-context__label">
@@ -209,6 +264,27 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
               className="mv-chat-context__clear"
               onClick={() => onClearContext?.()}
               title="선택 해제 (다른 지역 자유 입력)"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* ── 대화 맥락 표시 (직전 분석의 지역/업종 기억) ── */}
+        {!mapContext?.dongName && (lastLocation || lastBusiness) && (
+          <div className="mv-chat-context mv-chat-context--memory">
+            <span className="mv-chat-context__label">
+              🔄 {[lastLocation, lastBusiness].filter(Boolean).join(" · ")}
+            </span>
+            <button
+              className="mv-chat-context__clear"
+              onClick={() => {
+                lastLocationRef.current = null;
+                lastBusinessRef.current = null;
+                setLastLocation(null);
+                setLastBusiness(null);
+              }}
+              title="대화 맥락 초기화"
             >
               ✕
             </button>

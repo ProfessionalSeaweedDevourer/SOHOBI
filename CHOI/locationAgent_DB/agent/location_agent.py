@@ -198,8 +198,19 @@ class LocationAgent:
         )
 
         if not sales_data and not store_data:
+            year = quarter[:4]
+            q = quarter[4:]
             return {
-                "error": "데이터 없음",
+                "error": (
+                    f"'{location}' 지역의 '{business_type}' 업종 데이터를 찾을 수 없습니다.\n\n"
+                    f"📅 조회 기간: {year}년 {q}분기\n\n"
+                    "가능한 원인:\n"
+                    "• 서울시 외 지역 (서울시 행정동만 지원)\n"
+                    "• 해당 지역에 해당 업종 데이터가 없음\n"
+                    "• 지역명이 정확하지 않음\n\n"
+                    "💡 서울시 내 지역명으로 다시 시도해 보세요.\n"
+                    "예: 홍대, 강남, 잠실, 이태원, 서초, 건대 등"
+                ),
                 "location": location,
                 "business_type": business_type,
                 "quarter": quarter,
@@ -444,7 +455,13 @@ class LocationAgent:
             location_data.append(item)
 
         if not location_data:
-            return {"error": "데이터 없음"}
+            return {
+                "error": (
+                    "비교할 지역들의 데이터를 찾을 수 없습니다.\n\n"
+                    "💡 서울시 내 지역명으로 다시 시도해 보세요.\n"
+                    "예: '강남 vs 홍대 카페 비교'"
+                ),
+            }
 
         comparison = await self._run_compare_agent(
             location_data, business_type, year, q

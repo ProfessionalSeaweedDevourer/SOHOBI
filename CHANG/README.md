@@ -1,5 +1,9 @@
 0323 작업분 기준
 
+정리된 개발일지
+[chart 추가 관련](https://mssay2-2.slack.com/docs/T0AHB4Y9LNQ/F0AN0MUM2DR)
+[localstorage 기준 누적 state 구현 관련](https://mssay2-2.slack.com/docs/T0AHB4Y9LNQ/F0APHGCA7SL)
+
 # 0323 update
 - 사이사이 자질구레한 업데이트분(서술생략)
 - stateless 테스트를 위한 임시 front-end 
@@ -10,7 +14,7 @@ line 412~439 부분을 통해 localstorage에 저장/합니다
 
 폴더에서  python -m http.server 3000 실행 후
 http://localhost:3000/chat_test.html 로 접속 가능
-답변 출력 형식은 정돈하지 않았습니다.
+~답변 출력 형식은 정돈하지 않았습니다.~ 0325 일부 정리
 
 
 

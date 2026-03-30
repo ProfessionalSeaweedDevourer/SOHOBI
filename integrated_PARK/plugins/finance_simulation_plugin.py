@@ -10,10 +10,21 @@ import os
 import random
 from semantic_kernel.functions import kernel_function
 
+# [PR#51 수정] from CHANG.db_test import DBWork 제거
+#   CHANG/은 팀원 개인 폴더로 integrated_PARK에서 직접 임포트 불가
+#   (Azure 배포 환경에 CHANG 패키지 존재하지 않음 → ModuleNotFoundError)
+#   DB 연동은 integrated_PARK 내부 모듈로 분리 후 재통합 예정
+
+# [PR#51 수정] Windows 전용 폰트 하드코딩 3줄 제거
+#   fontF = "C:\Windows\Fonts\gulim.ttc" 는 Linux(Azure) 환경에서 크래시 발생
+#   commit 8a1daaa 에서 번들 폰트(nam/malgun.ttf) + fallback 방식으로 이미 수정됨
+#   아래 try 블록이 그 수정사항을 담당함
+
 try:
     import matplotlib
     matplotlib.use("Agg")  # 헤드리스 환경 (서버/컨테이너)
     import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
     import matplotlib.font_manager as fm
     import numpy as np
 
@@ -43,9 +54,6 @@ except ImportError:
 
 class FinanceSimulationPlugin:
     """몬테카를로 시뮬레이션 기반 재무 분석 플러그인"""
-    # def __init__(self):
-        # self.dbwork = DBWork()
-
     def _calculate_salary(self, salary: float, hours: float = None) -> float:
         return salary if hours is None else salary * hours
 
@@ -141,7 +149,8 @@ class FinanceSimulationPlugin:
         avg_loss = round(sum(loss_results) / len(loss_results)) if loss_results else 0
 
         p20 = sorted_results[int(iterations * 0.20)]
-
+        # [PR#51 수정] chart_b64 dead-code 호출 제거
+        #   아래의 chart = self._generate_chart(results, avg, p20, loss_prob) 가 실제 사용됨
         chart = self._generate_chart(results, avg, p20, loss_prob)
         return {
             "average_net_profit": round(avg),
@@ -171,15 +180,16 @@ class FinanceSimulationPlugin:
 
     # 누적 정보 반영을 위한 JSON 상태 관리용
     def load_initial(self, region: str = None, industry: str = None) -> dict:
+        # [PR#51 수정] DBWork(CHANG.db_test) 임포트 제거에 따라 DB 조회 임시 비활성화
+        #   DB 연동 로직은 integrated_PARK 내부 모듈 분리 후 재통합 예정
+        #   (PR#51 원본 의도: region/industry 코드 기반 매출 조회 → 통합 시 아래 주석 복원)
+        #
         # if region is None and industry is None:
-        #     # 지역/업종 입력 없는 경우 전체 평균
-        #     revenue = self.dbwork.get_average_sales()
+        #     revenue = dbwork.get_average_sales()
         # else:
-        #     # 하나라도 있으면 리스트 반환
-        #     sales_list = self.dbwork.get_sales(region, industry)
-        #     revenue = sales_list
-        
-        # DB 제외용 단순초기값
+        #     revenue = dbwork.get_sales(region, industry)
+
+        # DB 제외용 임시 기본값 (카페 기준, 업종별 평균치로 추후 수정 예정)
         revenue = [14000000]
 
         return {
@@ -194,7 +204,7 @@ class FinanceSimulationPlugin:
         }
     # DB에서 매출 값만 불러오게됩니다(.dbwork.get_sales(region, industry))
     # base_revenue는 카페 기준으로 추후 수정될 수 있습니다.(industry 기반 평균치)
-    # region and industry의 경우 부모 에이전트에게서 받을 임시 정보입니다(지역 및 업종). 필요 시 변수 명 및 구조 수정.
+    # region and industry의 경우 부모 에이전트에게서 받을 임시 정보입니다(지역 및 업종). 각 단일 코드 기반으로 변경
 
     def merge_json(self, previous: dict, current: dict) -> dict:
         """
@@ -208,85 +218,40 @@ class FinanceSimulationPlugin:
         return merged
 
 
+    # [PR#51 수정] 아래 _generate_chart 정의 주석 처리
+    #   이유: 클래스 상단(line ~52)에 이미 동일 메서드가 정의되어 있음
+    #   Python은 마지막 정의를 사용하므로 이 버전이 덮어쓰면
+    #   기존 4인수 호출 self._generate_chart(results, avg, p20, loss_prob) 이 TypeError 발생
+    #   인수 순서도 (results, p20, avg) vs 기존 (results, avg, p20, loss_prob) 로 불일치
+    #   색상·레전드 개선은 추후 상단 메서드와 통합하여 반영 예정
+    #
+    # def _generate_chart(self, results: list, p20: float, avg: float) -> str:
+    #     fig, ax = plt.subplots(figsize=(8, 4))
+    #     n, bins, patches = ax.hist(results, bins=40, edgecolor="none")
+    #     for patch, left_edge in zip(patches, bins[:-1]):
+    #         if left_edge < 0:
+    #             patch.set_facecolor("#E24B4A")   # 손실
+    #         elif left_edge < p20:
+    #             patch.set_facecolor("#EF9F27")   # 하위 20%
+    #         else:
+    #             patch.set_facecolor("#378ADD")   # 수익
+    #     ax.axvline(x=0,   color="#E24B4A", linestyle="--", linewidth=1.2, alpha=0.8)
+    #     ax.axvline(x=avg, color="#378ADD", linestyle="--", linewidth=1.2, alpha=0.8)
+    #     ax.axvline(x=p20, color="#EF9F27", linestyle="--", linewidth=1.2, alpha=0.8)
+    #     legend_handles = [
+    #         mpatches.Patch(color="#E24B4A", label="손실 구간"),
+    #         mpatches.Patch(color="#EF9F27", label=f"하위 20% 기준: {round(p20/10000):,}만원"),
+    #         mpatches.Patch(color="#378ADD", label=f"평균: {round(avg/10000):,}만원"),
+    #     ]
+    #     ax.legend(handles=legend_handles, fontsize=9)
+    #     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x/10000):,}만"))
+    #     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x):,}"))
+    #     ax.set_xlabel("월 순이익 (만원)", fontsize=10)
+    #     ax.set_ylabel("빈도 (회)", fontsize=10)
+    #     plt.tight_layout()
+    #     buf = io.BytesIO()
+    #     fig.savefig(buf, format="png", dpi=120)
+    #     plt.close(fig)
+    #     buf.seek(0)
+    #     return base64.b64encode(buf.read()).decode("utf-8")
 
-## DB파트 로컬기준 정상 작동되는것 확인하였으나 우선 주석처리 해둡니다(처리방안 고민중)
-
-# # 아래 class를 따로 파일분리하는 방안 혹은 상권분석쪽과 기준을 맞추는 방안도 고려중, 우선 같은 파일에 작엄.
-# import os
-# from dotenv import load_dotenv
-# from oracledb import connect
-# from difflib import get_close_matches
-
-# load_dotenv()  # .env 파일 로드
-
-# class DBWork:
-#     def __init__(self):
-#         self.industry_list = []
-#         self.region_list = []
-#         try:
-#             con = self._get_connection()
-#             cur = con.cursor()
-
-#             cur.execute("SELECT DISTINCT SVC_INDUTY_NM FROM SANGKWON_SALES")
-#             rows = cur.fetchall()
-#             self.industry_list = [row[0] for row in rows]
-
-#             cur.execute("SELECT DISTINCT ADM_NM FROM SANGKWON_SALES")
-#             rows = cur.fetchall()
-#             self.region_list = [row[0] for row in rows]
-#             print(self.industry_list[0], self.region_list[0])
-#         except Exception as e:
-#             print(f"DBWork 초기화 실패 (리스트 비어있음): {e}")
-#         finally:
-#             if 'cur' in locals():
-#                 cur.close()
-#             if 'con' in locals():
-#                 con.close()
-
-#     def _get_connection(self):
-#         dsn = os.getenv("DB_DSN")
-#         return connect(dsn)
-
-#     def get_sales(self, region, industry):
-#         try:
-#             con = self._get_connection()
-#             cur = con.cursor()
-
-#             # 해당 매칭 지금은 문자열 기반인데, 이후 벡터 임베딩 + LLM 선택 고려중
-#             # but 넘겨받는 두 요소에 따라 달라질 수 있음
-#             region = "%" if region is None else get_close_matches(region, self.region_list, n=1, cutoff=0.0)[0]
-#             industry = "%" if industry is None else get_close_matches(industry, self.industry_list, n=1, cutoff=0.0)[0]
-
-#             sql = """
-#                 SELECT TOT_SALES_AMT
-#                 FROM SANGKWON_SALES
-#                 WHERE ADM_NM LIKE :region
-#                 AND SVC_INDUTY_NM LIKE :industry
-#             """
-#             cur.execute(sql, {"region": region, "industry": industry})
-#             return [amt for (amt,) in cur]
-
-#         except Exception as e:
-#             print("DB 조회 실패:", e)
-#             return [17000000]
-#         finally:
-#             if 'cur' in locals():
-#                 cur.close()
-#             if 'con' in locals():
-#                 con.close()
-
-#     def get_average_sales(self) -> float:
-#         try:
-#             con = self._get_connection()
-#             cur = con.cursor()
-#             cur.execute("SELECT AVG(TOT_SALES_AMT) FROM SANGKWON_SALES")
-#             (avg,) = cur.fetchone()
-#             return [avg]
-#         except Exception as e:
-#             print("DB 평균 조회 실패:", e)
-#             return [17000000]
-#         finally:
-#             if 'cur' in locals():
-#                 cur.close()
-#             if 'con' in locals():
-#                 con.close()

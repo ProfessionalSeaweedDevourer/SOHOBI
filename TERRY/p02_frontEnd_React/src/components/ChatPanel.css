@@ -95,6 +95,23 @@
   color: #1d4ed8;
 }
 
+/* 대화 맥락 기억 표시 (직전 분석 지역/업종) */
+.mv-chat-context--memory {
+  background: #f0fdf4;
+  border-bottom: 1px solid #bbf7d0;
+}
+.mv-chat-context--memory .mv-chat-context__label {
+  color: #15803d;
+}
+.mv-chat-context--memory .mv-chat-context__clear {
+  border-color: #86efac;
+  color: #4ade80;
+}
+.mv-chat-context--memory .mv-chat-context__clear:hover {
+  background: #dcfce7;
+  color: #15803d;
+}
+
 /* ── 메시지 영역 ─────────────────────────────────── */
 .mv-chat-messages {
   flex: 1;

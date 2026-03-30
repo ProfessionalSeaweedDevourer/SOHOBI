@@ -36,7 +36,7 @@ _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 질문을 했습니다:
 
 이 질문을 기반으로 아래 변수들을 추정해 JSON으로 출력하세요.
 단, 숫자에 단위가 명시되지 않은 경우 기본적으로 '만원' 단위로 해석하세요.
-예: "매출 700" → 700만원 = 7,000,000원
+예: "매출 700" → 700만원 → 7,000,000원
 
 - revenue: 예상 월매출 데이터 리스트 (숫자 배열, 원 단위). 사용자가 단일 값만 언급한 경우 반드시 1개짜리 배열로 작성.
 - cost: 예상 월 원가 (숫자, 원 단위)
@@ -56,16 +56,19 @@ _EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다.
 
 [시뮬레이션 가정 조건]
 {assumptions}
-입력되지 않은 항목은 지역/업종/상권 평균치를 적용하였으며, 추가 입력 시 더 정확한 결과를 제공할 수 있습니다.
 
 [시뮬레이션 결과 — 10,000회 몬테카를로]
 ★ 손실 발생 확률: {loss_prob}  ← 핵심 지표
 - 평균 월 순이익: {avg_profit:,}원
-- 손실 발생 관측 여부: {loss_prob}
+- 손실(0원 미만의 순이익) 발생 관측 여부: {loss_prob}
 - 비관 시나리오 월 순이익: {p20:,}원
   (전체 시뮬레이션 중 하위 20%에 해당하는 케이스의 상단 기준값)
 
 위 수치를 그대로 사용하여 별도 계산 없이 아래 형식으로 작성하세요.
+
+[1. 가정 조건]과 [2. 시뮬레이션 결과], [안내]는 이미 작성되어 있으므로 수정하거나 내용을 추가하지 마세요.
+[3. 외부 리스크 경고] 섹션의 내용만 직접 작성하고,
+나머지 섹션은 아래 형식 그대로 출력하세요.
 
 [사용자 질문]
 {question}
@@ -73,15 +76,17 @@ _EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다.
 [에이전트 응답]
 
 [1. 가정 조건]
-(위 가정 조건을 항목별로 나열)
+{assumptions}\n
+입력되지 않은 항목은 지역/업종/상권 평균치를 적용하였으며, 추가 입력 시 더 정확한 결과를 제공할 수 있습니다.
 
 [2. 시뮬레이션 결과]
-(평균 순이익과 손실 발생 여부를 간결하게 서술.
-10명 중 2명꼴로 월 순이익이 {p20:,}원 이하에 그칠 수 있으며,
-이것이 지속될 경우 사업 운영에 부담이 될 수 있음을 언급하세요.)
+- 평균 월 순이익: {avg_profit:,}원
+- 손실(0원 미만의 순이익) 발생 관측 여부: 10,000회 중 {loss_prob}%
+- 비관 시나리오(하위 20%) 월 순이익: {p20:,}원.\n
+  이는 10명 중 2명꼴로 월 순이익이 {p20:,}원 이하에 그칠 수 있으며, 이것이 지속될 경우 사업 운영에 부담이 될 수 있음을 의미합니다.
 
-[3. 외부 리스크 경고]
-(시뮬레이션 가정 범위 밖의 외부 충격—경기 침체, 임대료 급등, 수요 급감 등—이
+[3. 외부 리스크 경고]\n
+(시뮬레이션을 기반으로 한 리스크 및 시뮬레이션 가정 범위 밖의 외부 충격—경기 침체, 임대료 급등, 수요 급감 등—이
 발생할 경우 실제 손실로 이어질 수 있음을 경고하세요.)
 
 [안내]
@@ -120,12 +125,6 @@ class FinanceAgent:
         settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=5000)
         try:
             result = await service.get_chat_message_content(history, settings=settings)
-            print(f"result: {result}")
-            print(f"result type: {type(result)}")
-            print(f"result.content: {result.content}")
-            print(f"result.items: {result.items}")
-            print(f"result.metadata: {result.metadata}")
-            print(f"result.finish_reason: {result.finish_reason}")
             return result.content or str(result)
         except Exception as e:
             err_str = str(e).lower()
@@ -138,7 +137,7 @@ class FinanceAgent:
                 f"AI 응답 생성 중 오류가 발생했습니다: {e}"
             ) from e
 
-    async def _extract_params(self, question: str, profile: str = "") -> dict:
+    async def _extract_params(self, question: str) -> dict:
         raw = await self._call_llm(_PARAM_EXTRACT_PROMPT.format(user_input=question))
         clean = re.sub(r"^```json\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
         try:
@@ -186,11 +185,10 @@ class FinanceAgent:
         # ── 1단계: 파라미터 추출 ─────────────────────────────
         # current_params 없으면 None 기반 초기값 사용
         base = current_params or self._sim.load_initial()
-        extracted = await self._extract_params(question, profile=profile)
+        extracted = await self._extract_params(question)
         variables = self._sim.merge_json(base, extracted)
         # state를 front-end에서 저장(브라우저별)하는 방식, current_params가 front에 저장된 변수들입니다.
-        # front 저장방식: 개인폴더 chat_test.html 의 line 408~부분 참조
-        
+        # front 저장방식: 개인폴더 chat_test.html 의 line 408~부분 or 개발일지 참조
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]
 

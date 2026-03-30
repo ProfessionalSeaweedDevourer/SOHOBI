@@ -566,7 +566,8 @@ async function sendMessage() {
     }
 
     // 답변 + 그래프 표시
-    addMessage('agent', data.result || data.answer || JSON.stringify(data), data.chart || null);
+    addMessage('agent', data.draft || data.result || data.answer || JSON.stringify(data), data.chart || null);
+    
 
   } catch (e) {
     removeTyping();
