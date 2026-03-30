@@ -39,7 +39,7 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 | `frontend/` | React + Vite + Tailwind 프론트엔드 |
 | `docs/session-reports/` | 세션 리포트 (날짜별) |
 | `docs/architecture/` | 아키텍처 다이어그램 (HTML) |
-| `docs/plans/` | 개선·테스트 플랜 문서 |
+| `docs/plans/` | 개선·테스트 플랜 문서 (`YYYY-MM-DD-이름.md` 형식) |
 | `CHANG/`, `CHOI/`, `NAM/`, `PARK/`, `TERRY/` | 팀원별 개발 폴더 |
 
 ## 코드 규칙
@@ -49,6 +49,12 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 - **백엔드**: FastAPI + Semantic Kernel + Azure AI Foundry (GPT-4o)
 - **프론트엔드**: React + Vite + Tailwind CSS
 - 에이전트 코드는 `integrated_PARK/agents/`에서만 수정
+
+## 플랜 문서 규칙
+
+- 구현 계획·분석·테스트 플랜 등 내부 플랜 문서를 작성할 때는 **반드시 `docs/plans/YYYY-MM-DD-이름.md`** 형식으로 저장한다.
+- Claude Code 내부 플랜(`~/.claude/plans/`)에 저장되는 경우에도 동시에 같은 내용을 `docs/plans/`에 날짜 파일명으로 기록한다.
+- 날짜는 문서 작성일 기준. 파일명은 영어 소문자 + 하이픈(kebab-case).
 
 ## PR / 커밋 규칙
 
