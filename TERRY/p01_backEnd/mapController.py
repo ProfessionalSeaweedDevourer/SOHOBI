@@ -12,6 +12,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from DAO.mapInfoDAO import MapInfoDAO, SIDO_BOUNDS, _get_df
 from DAO.landmarkDAO import LandmarkDAO
+from DAO.populationDAO import PopulationDAO
+from DAO.populationDAO import PopulationDAO
 
 # ── 서버 로그 설정 ───────────────────────────────────────────────
 # INFO 레벨 이상 로그를 터미널에 출력
@@ -21,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 mDAO = MapInfoDAO()
 lmDAO = LandmarkDAO()
+popDAO = PopulationDAO()
+popDAO = PopulationDAO()
 
 # ── 시도명 → 테이블명 ───────────────────────────────────────────
 SIDO_TABLE_MAP = {k.replace("STORE_", ""): k for k in SIDO_BOUNDS}
@@ -275,6 +279,38 @@ def getSchools(
     except Exception as e:
         logger.error(f"[schools] {e}")
         return {"count": 0, "schools": [], "error": str(e)}
+
+
+@app.get("/map/population/places")
+def getPopPlaces():
+    """유동인구 장소 목록 + 좌표"""
+    places = popDAO.get_places()
+    return {"count": len(places), "places": places}
+
+
+@app.get("/map/population/all")
+async def getAllPopulation():
+    """전체 장소 혼잡도 병렬 조회 (5분 캐시)"""
+    try:
+        data = await popDAO.fetch_all()
+        logger.info(f"[population/all] {len(data)}개 장소")
+        return {"count": len(data), "data": data}
+    except Exception as e:
+        logger.error(f"[population/all] {e}")
+        return {"count": 0, "data": [], "error": str(e)}
+
+
+@app.get("/map/population/place")
+async def getPlacePopulation(name: str):
+    """단일 장소 상세 조회 (예측 포함)"""
+    try:
+        result = await popDAO.fetch_one(name)
+        if not result:
+            return {"error": f"'{name}' 조회 실패"}
+        return result
+    except Exception as e:
+        logger.error(f"[population/place] {e}")
+        return {"error": str(e)}
 
 
 @app.get("/map/dong-density")
