@@ -157,7 +157,7 @@ class LandmarkDAO(BaseDAO):
             where_clause = "WHERE " + " AND ".join(where) if where else ""
             sql = f"""
                 SELECT SCHOOL_ID, SCHOOL_NM, SCHOOL_TYPE,
-                       SGG_NM, ROAD_ADDR, MAP_X, MAP_Y, TEL, HOMEPAGE
+                       ROAD_ADDR, ROAD_ADDR, MAP_X, MAP_Y, TEL, HOMEPAGE
                 FROM SCHOOL_SEOUL
                 {where_clause}
                 ORDER BY SCHOOL_TYPE, SCHOOL_NM

@@ -637,6 +637,15 @@ export default function MapView() {
          setWmsPopup(null);
 
          const feature = map.forEachFeatureAtPixel(e.pixel, (f) => f);
+
+         // 랜드마크/학교 마커 클릭
+         if (feature?.get("lmData")) {
+            selectLandmark(feature);
+            setLandmarkPopup(feature.get("lmData"));
+            setPopup(null);
+            return;
+         }
+
          if (feature?.get("store")) {
             const store = feature.get("store");
             selectMarker(feature); // 하이라이트

@@ -41,9 +41,9 @@ export default function LayerPanel({
 }) {
    const [cadastralOn, setCadastralOn] = useState(false);
    const [touristInfoOn, setTouristInfoOn] = useState(false);
-   const [landmarkOn, setLandmarkOn] = useState(false);
+   const [landmarkOn, setLandmarkOn] = useState(true);
    const [festivalOn, setFestivalOn] = useState(false);
-   const [schoolOn, setSchoolOn] = useState(false);
+   const [schoolOn, setSchoolOn] = useState(true);
 
    // ── 지적도 ──────────────────────────────────────────────────
    const toggleCadastral = () => {

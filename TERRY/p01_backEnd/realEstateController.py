@@ -1,5 +1,5 @@
 # 위치: p01_backEnd/realEstateController.py
-# 실행: uvicorn realEstateController:app --host=0.0.0.0 --port=8682 --reload
+# 실행: python -m uvicorn realEstateController:app --host=0.0.0.0 --port=8682 --reload
 
 import os, asyncio, logging
 from contextlib import asynccontextmanager

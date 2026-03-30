@@ -7,7 +7,7 @@ import VectorSource from "ol/source/Vector";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import { fromLonLat } from "ol/proj";
-import { Style, Circle as CircleStyle, Fill, Stroke, Text } from "ol/style";
+import { Style, Circle as CircleStyle, Fill, Stroke } from "ol/style";
 
 const MAP_URL = import.meta.env.VITE_MAP_URL || "http://localhost:8681";
 

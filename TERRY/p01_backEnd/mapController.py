@@ -1,5 +1,5 @@
 # 위치: p01_backEnd/mapController.py
-# 실행: uvicorn mapController:app --host=0.0.0.0 --port=8681 --reload
+# 실행: python -m uvicorn mapController:app --host=0.0.0.0 --port=8681 --reload
 
 import csv, os, sys, httpx, asyncio, logging
 from contextlib import asynccontextmanager
