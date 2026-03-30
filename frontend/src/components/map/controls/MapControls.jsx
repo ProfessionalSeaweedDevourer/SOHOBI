@@ -56,11 +56,14 @@ export default function MapControls({
             {currentGuNm && dongMode !== "none" && (
                <div
                   style={{
-                     background: "rgba(255,255,255,0.95)",
+                     background: "var(--glass-bg)",
+                     backdropFilter: "blur(12px)",
+                     WebkitBackdropFilter: "blur(12px)",
+                     border: "1px solid var(--glass-border)",
                      borderRadius: 8,
                      padding: "4px 10px",
                      fontSize: 11,
-                     color: "#555",
+                     color: "var(--foreground)",
                      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                      textAlign: "center",
                   }}
@@ -71,12 +74,12 @@ export default function MapControls({
             {!currentGuNm && dongMode !== "none" && (
                <div
                   style={{
-                     background: "#fffbeb",
-                     border: "1px solid #fbbf24",
+                     background: "rgba(245, 158, 11, 0.12)",
+                     border: "1px solid rgba(245, 158, 11, 0.4)",
                      borderRadius: 8,
                      padding: "5px 10px",
                      fontSize: 11,
-                     color: "#92400e",
+                     color: "var(--foreground)",
                      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                   }}
                >
@@ -86,11 +89,14 @@ export default function MapControls({
             {dongLoading && (
                <div
                   style={{
-                     background: "rgba(255,255,255,0.95)",
+                     background: "var(--glass-bg)",
+                     backdropFilter: "blur(12px)",
+                     WebkitBackdropFilter: "blur(12px)",
+                     border: "1px solid var(--glass-border)",
                      borderRadius: 8,
                      padding: "5px 12px",
                      fontSize: 11,
-                     color: "#555",
+                     color: "var(--muted-foreground)",
                      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                   }}
                >
@@ -114,14 +120,16 @@ export default function MapControls({
                         key={mode}
                         onClick={() => onDongMode(mode)}
                         style={{
-                           border: `2px solid ${isActive ? activeColor : "#e5e7eb"}`,
+                           border: `2px solid ${isActive ? activeColor : "var(--glass-border)"}`,
                            borderRadius: 10,
                            padding: "7px 12px",
                            fontSize: 12,
                            fontWeight: 700,
                            cursor: "pointer",
-                           background: isActive ? activeColor : "#fff",
-                           color: isActive ? "#fff" : "#555",
+                           background: isActive ? activeColor : "var(--glass-bg)",
+                           backdropFilter: isActive ? undefined : "blur(12px)",
+                           WebkitBackdropFilter: isActive ? undefined : "blur(12px)",
+                           color: isActive ? "#fff" : "var(--foreground)",
                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                            transition: "all 0.18s",
                            whiteSpace: "nowrap",

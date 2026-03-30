@@ -485,3 +485,109 @@
    color: #444;
    line-height: 1.4;
 }
+
+/* ── 디자인 시스템 오버라이드 (glass + CSS variables) ──── */
+.mv-ctrl-bar {
+   background: var(--glass-bg);
+   backdrop-filter: blur(20px);
+   -webkit-backdrop-filter: blur(20px);
+   border-color: var(--glass-border);
+   box-shadow: var(--shadow-elevated, 0 4px 24px rgba(0,0,0,0.12));
+}
+.mv-ctrl-btn--on {
+   background: var(--brand-blue);
+   color: #fff;
+}
+.mv-ctrl-btn--off {
+   background: var(--secondary, #e5e7eb);
+   color: var(--muted-foreground);
+}
+.mv-ctrl-badge {
+   background: rgba(8, 145, 178, 0.12);
+   border-color: rgba(8, 145, 178, 0.3);
+   color: var(--brand-blue);
+}
+.mv-ctrl-loading {
+   background: var(--glass-bg);
+   border-color: var(--glass-border);
+   color: var(--muted-foreground);
+}
+.mv-ctrl-clear {
+   background: var(--glass-bg);
+   border-color: var(--glass-border);
+   color: var(--muted-foreground);
+}
+.mv-ctrl-clear:hover {
+   background: var(--accent, rgba(255,255,255,0.1));
+}
+.mv-layer-btn {
+   background: var(--glass-bg);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border-color: var(--glass-border);
+   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.mv-dong-btn--off {
+   background: var(--glass-bg);
+   backdrop-filter: blur(12px);
+   -webkit-backdrop-filter: blur(12px);
+   border-color: var(--glass-border);
+   color: var(--foreground);
+}
+.mv-dong-btn--sales {
+   background: #059669;
+}
+.mv-dong-btn--re {
+   background: var(--brand-blue);
+   border-color: var(--brand-blue);
+}
+.mv-dong-loading {
+   background: var(--glass-bg);
+   backdrop-filter: blur(20px);
+   -webkit-backdrop-filter: blur(20px);
+   border: 1px solid var(--glass-border);
+   color: var(--muted-foreground);
+}
+.mv-dong-panel {
+   background: var(--card, #fff);
+   border-left: 1px solid var(--border, #e5e7eb);
+}
+.mv-dp-section {
+   background: var(--accent, #f8fafc);
+}
+.mv-dp-section__title {
+   color: var(--muted-foreground);
+}
+.mv-dp-bar-track {
+   background: var(--border, #e2e8f0);
+}
+.mv-dp-grid-item__label {
+   color: var(--muted-foreground);
+}
+.mv-dp-card__label {
+   color: var(--muted-foreground);
+}
+.mv-dp-card__sub {
+   color: var(--muted-foreground);
+}
+.mv-wms-popup {
+   background: var(--card, #fff);
+   border: 1px solid var(--glass-border);
+   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+.mv-wms-popup__title {
+   color: var(--foreground);
+}
+.mv-wms-popup__row-text {
+   color: var(--muted-foreground);
+}
+.mv-wms-popup__divider {
+   background: var(--border, #f0f0f0);
+}
+.coord-bar {
+   background: var(--glass-bg);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border-color: var(--glass-border);
+   color: var(--muted-foreground);
+}

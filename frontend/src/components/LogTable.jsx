@@ -1,12 +1,13 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { GradeBadge } from "./GradeBadge";
 
 const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석" };
-const DOMAIN_COLOR = {
-  finance: "bg-emerald-100 text-emerald-700",
-  admin: "bg-sky-100 text-sky-700",
-  legal: "bg-amber-100 text-amber-700",
-  location: "bg-violet-100 text-violet-700",
+const DOMAIN_STYLE = {
+  finance: { background: "rgba(16,185,129,0.12)", color: "var(--grade-a, #10b981)" },
+  admin: { background: "rgba(8,145,178,0.12)", color: "var(--brand-blue)" },
+  legal: { background: "rgba(245,158,11,0.12)", color: "var(--grade-b, #f59e0b)" },
+  location: { background: "rgba(139,92,246,0.12)", color: "#8b5cf6" },
 };
 const ITEM_LABELS = {
   C1: "질문 응답성", C2: "완결성", C3: "내부 일관성", C4: "톤 적절성", C5: "할루시네이션 징후",
@@ -16,19 +17,8 @@ const ITEM_LABELS = {
   S1: "수치 제시", S2: "데이터 기준", S3: "기회·리스크", S4: "지역·업종 명시", S5: "정보 제공 면책",
 };
 
-const GRADE_STYLE = {
-  A: "bg-green-100 text-green-700",
-  B: "bg-amber-100 text-amber-700",
-  C: "bg-red-100 text-red-600",
-};
-const GRADE_LABEL = {
-  A: "A",
-  B: "B",
-  C: "C",
-};
-
 function resolveGrade(entry) {
-  if (entry.grade && GRADE_LABEL[entry.grade]) return entry.grade;
+  if (entry.grade && ["A", "B", "C"].includes(entry.grade)) return entry.grade;
   return entry.status === "approved" ? "A" : "C";
 }
 
@@ -45,6 +35,15 @@ function fmtTs(ts) {
   }
 }
 
+function DomainBadge({ domain }) {
+  const style = DOMAIN_STYLE[domain] || { background: "var(--accent)", color: "var(--muted-foreground)" };
+  return (
+    <span className="px-1.5 py-0.5 rounded-full text-xs font-semibold" style={style}>
+      {DOMAIN_KR[domain] || domain}
+    </span>
+  );
+}
+
 /**
  * @param {{ entries: Array, loading: boolean }} props
  */
@@ -52,10 +51,10 @@ export default function LogTable({ entries, loading }) {
   const [selected, setSelected] = useState(null);
 
   if (loading) {
-    return <div className="text-center py-20 text-slate-400 text-sm">로그 불러오는 중…</div>;
+    return <div className="text-center py-20 text-muted-foreground text-sm">로그 불러오는 중…</div>;
   }
   if (!entries || entries.length === 0) {
-    return <div className="text-center py-20 text-slate-400 text-sm">로그가 없습니다.</div>;
+    return <div className="text-center py-20 text-muted-foreground text-sm">로그가 없습니다.</div>;
   }
 
   return (
@@ -70,25 +69,21 @@ export default function LogTable({ entries, loading }) {
               key={i}
               onClick={() => setSelected(isSelected ? null : i)}
               className={`
-                w-full text-left text-xs border rounded-xl px-3 py-2.5 transition-colors
+                w-full text-left text-xs border rounded-xl px-3 py-2.5 transition-all
                 ${isSelected
-                  ? "border-violet-400 bg-violet-50"
-                  : "border-slate-200 bg-white hover:bg-slate-50"}
+                  ? "border-[var(--brand-teal)] bg-[rgba(20,184,166,0.08)]"
+                  : "border-[var(--border)] glass hover:bg-white/10"}
               `}
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${GRADE_STYLE[grade] || "bg-slate-100 text-slate-600"}`}>
-                  {GRADE_LABEL[grade] || grade}
-                </span>
-                <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${DOMAIN_COLOR[entry.domain] || "bg-slate-100 text-slate-600"}`}>
-                  {DOMAIN_KR[entry.domain] || entry.domain}
-                </span>
-                <span className="text-slate-400">{fmtTs(entry.ts)}</span>
-                <span className="ml-auto text-slate-400">{(entry.latency_ms || 0).toFixed(0)}ms</span>
+                <GradeBadge grade={grade} size="sm" />
+                <DomainBadge domain={entry.domain} />
+                <span className="text-muted-foreground">{fmtTs(entry.ts)}</span>
+                <span className="ml-auto text-muted-foreground">{(entry.latency_ms || 0).toFixed(0)}ms</span>
               </div>
-              <div className="text-slate-700 truncate">{entry.question}</div>
+              <div className="text-foreground truncate">{entry.question}</div>
               {entry.retry_count > 0 && (
-                <div className="text-slate-400 mt-0.5">재시도 {entry.retry_count}회</div>
+                <div className="text-muted-foreground mt-0.5">재시도 {entry.retry_count}회</div>
               )}
             </button>
           );
@@ -96,9 +91,9 @@ export default function LogTable({ entries, loading }) {
       </div>
 
       {/* 상세 패널 */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col border border-slate-200 rounded-xl bg-white overflow-y-auto">
+      <div className="hidden lg:flex lg:w-1/2 flex-col border border-[var(--border)] rounded-xl glass overflow-y-auto">
         {selected === null ? (
-          <div className="flex-1 flex items-center justify-center text-slate-300 text-sm">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
             항목을 선택하면 상세 내용이 표시됩니다.
           </div>
         ) : (
@@ -109,10 +104,10 @@ export default function LogTable({ entries, loading }) {
       {/* 모바일: 선택 항목 상세 (모달 느낌) */}
       {selected !== null && (
         <div className="lg:hidden fixed inset-0 z-50 bg-black/30 flex items-end">
-          <div className="bg-white w-full rounded-t-2xl max-h-[80vh] overflow-y-auto p-4">
+          <div className="glass-card w-full rounded-t-2xl max-h-[80vh] overflow-y-auto p-4">
             <button
               onClick={() => setSelected(null)}
-              className="mb-3 text-sm text-slate-500"
+              className="mb-3 text-sm text-muted-foreground"
             >
               ✕ 닫기
             </button>
@@ -133,76 +128,74 @@ function EntryDetail({ entry }) {
     <div className="p-4 text-xs space-y-4">
       {/* 메타 */}
       <div className="flex flex-wrap gap-2 items-center">
-        <span className={`px-2 py-0.5 rounded-full font-semibold ${GRADE_STYLE[grade] || "bg-slate-100 text-slate-500"}`}>
-          {grade === "A" ? "A 통과" : grade === "B" ? "B 경고" : "C 반려"}
-          {entry.status === "escalated" && " (에스컬레이션)"}
-        </span>
-        <span className={`px-2 py-0.5 rounded-full ${DOMAIN_COLOR[entry.domain] || "bg-slate-100 text-slate-500"}`}>
-          {DOMAIN_KR[entry.domain] || entry.domain}
-        </span>
-        <span className="text-slate-400">{fmtTs(entry.ts)}</span>
-        <span className="text-slate-400">{(entry.latency_ms || 0).toFixed(0)}ms</span>
-        <span className="text-slate-400">재시도 {entry.retry_count}회</span>
+        <GradeBadge grade={grade} size="sm" />
+        <DomainBadge domain={entry.domain} />
+        <span className="text-muted-foreground">{fmtTs(entry.ts)}</span>
+        <span className="text-muted-foreground">{(entry.latency_ms || 0).toFixed(0)}ms</span>
+        <span className="text-muted-foreground">재시도 {entry.retry_count}회</span>
+        {entry.status === "escalated" && (
+          <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(245,158,11,0.12)", color: "var(--grade-b)" }}>에스컬레이션</span>
+        )}
       </div>
 
       {/* confidence_note */}
       {entry.confidence_note && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-700">
+        <div className="rounded-lg px-3 py-2" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", color: "var(--foreground)" }}>
           <span className="font-semibold">주의: </span>{entry.confidence_note}
         </div>
       )}
 
       {/* 질문 */}
       <div>
-        <div className="font-semibold text-slate-500 mb-1">질문</div>
-        <div className="text-slate-800 leading-relaxed">{entry.question}</div>
+        <div className="font-semibold text-muted-foreground mb-1">질문</div>
+        <div className="text-foreground leading-relaxed">{entry.question}</div>
       </div>
 
       {/* 거부 이력 */}
       {rejHist.length > 0 && (
         <div>
-          <div className="font-semibold text-slate-500 mb-2">거부 이력</div>
+          <div className="font-semibold text-muted-foreground mb-2">거부 이력</div>
           <div className="space-y-2">
             {rejHist.map((a, i) => (
-              <div key={i} className="border border-slate-100 rounded-lg overflow-hidden">
+              <div key={i} className="border border-[var(--border)] rounded-lg overflow-hidden">
                 <button
                   onClick={() => setOpenIdx(openIdx === i ? null : i)}
-                  className="w-full flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-left"
+                  className="w-full flex items-center gap-2 px-3 py-2 bg-[var(--accent)] hover:bg-white/10 text-left"
                 >
-                  <span className="font-semibold text-slate-600">시도 {a.attempt}</span>
+                  <span className="font-semibold text-foreground">시도 {a.attempt}</span>
                   <div className="flex gap-1 flex-wrap">
                     {(a.passed || []).map((c) => (
-                      <span key={c} className="bg-green-100 text-green-700 px-1 rounded font-mono">{c}</span>
+                      <span key={c} className="px-1 rounded font-mono" style={{ background: "rgba(16,185,129,0.15)", color: "var(--grade-a)" }}>{c}</span>
                     ))}
                     {(a.warnings || []).map((w) => (
-                      <span key={w.code} className="bg-amber-100 text-amber-700 px-1 rounded font-mono">{w.code}</span>
+                      <span key={w.code} className="px-1 rounded font-mono" style={{ background: "rgba(245,158,11,0.15)", color: "var(--grade-b)" }}>{w.code}</span>
                     ))}
                     {(a.issues || []).map((iss) => (
-                      <span key={iss.code} className="bg-red-100 text-red-600 px-1 rounded font-mono">{iss.code}</span>
+                      <span key={iss.code} className="px-1 rounded font-mono" style={{ background: "rgba(239,68,68,0.15)", color: "var(--grade-c)" }}>{iss.code}</span>
                     ))}
                   </div>
-                  <span className="ml-auto">{openIdx === i ? "▲" : "▼"}</span>
+                  <span className="ml-auto text-muted-foreground">{openIdx === i ? "▲" : "▼"}</span>
                 </button>
                 {openIdx === i && (
                   <div className="px-3 py-2 space-y-2">
                     {(a.warnings || []).map((w) => (
-                      <div key={w.code} className="bg-amber-50 rounded px-2 py-1.5">
-                        <span className="font-semibold text-amber-700">{w.code} {ITEM_LABELS[w.code] ? `— ${ITEM_LABELS[w.code]}` : ""}</span>
-                        <span className="text-amber-500 ml-1">(경고)</span>
-                        <div className="text-slate-600 mt-0.5">{w.reason}</div>
+                      <div key={w.code} className="rounded px-2 py-1.5" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                        <span className="font-semibold" style={{ color: "var(--grade-b)" }}>{w.code} {ITEM_LABELS[w.code] ? `— ${ITEM_LABELS[w.code]}` : ""}</span>
+                        <span className="ml-1 text-muted-foreground">(경고)</span>
+                        <div className="text-foreground mt-0.5">{w.reason}</div>
                       </div>
                     ))}
                     {(a.issues || []).map((iss) => (
-                      <div key={iss.code} className="bg-red-50 rounded px-2 py-1.5">
-                        <span className="font-semibold text-red-700">{iss.code} {ITEM_LABELS[iss.code] ? `— ${ITEM_LABELS[iss.code]}` : ""}</span>
-                        <span className="text-red-400 ml-1">(반려)</span>
-                        <div className="text-slate-600 mt-0.5">{iss.reason}</div>
+                      <div key={iss.code} className="rounded px-2 py-1.5" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                        <span className="font-semibold" style={{ color: "var(--grade-c)" }}>{iss.code} {ITEM_LABELS[iss.code] ? `— ${ITEM_LABELS[iss.code]}` : ""}</span>
+                        <span className="ml-1 text-muted-foreground">(반려)</span>
+                        <div className="text-foreground mt-0.5">{iss.reason}</div>
                       </div>
                     ))}
                     {a.retry_prompt && (
-                      <div className="bg-slate-50 rounded px-2 py-1.5">
-                        <div className="font-semibold text-slate-500 mb-1">수정 지시문</div>
-                        <div className="text-slate-600 whitespace-pre-wrap">{a.retry_prompt}</div>
+                      <div className="rounded px-2 py-1.5 bg-[var(--accent)]">
+                        <div className="font-semibold text-muted-foreground mb-1">수정 지시문</div>
+                        <div className="text-foreground whitespace-pre-wrap">{a.retry_prompt}</div>
                       </div>
                     )}
                   </div>
@@ -215,8 +208,8 @@ function EntryDetail({ entry }) {
 
       {/* 최종 draft */}
       <div>
-        <div className="font-semibold text-slate-500 mb-1">최종 응답 (draft)</div>
-        <div className="prose-response text-slate-700 border border-slate-100 rounded-lg p-3">
+        <div className="font-semibold text-muted-foreground mb-1">최종 응답 (draft)</div>
+        <div className="prose-response text-foreground border border-[var(--border)] rounded-lg p-3 glass">
           <ReactMarkdown>{entry.final_draft || entry.draft || "(없음)"}</ReactMarkdown>
         </div>
       </div>
