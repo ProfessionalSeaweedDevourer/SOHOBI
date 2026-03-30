@@ -234,6 +234,7 @@ async def chat(req: ChatRequest):
                 "business_type": business_type,
                 "quarter": quarter,
                 "adm_codes": [req.adm_cd],
+                "charts": result.get("charts", []),
             }
         finally:
             # 임시 키 정리
@@ -307,6 +308,7 @@ async def chat(req: ChatRequest):
                 "business_type": business_type,
                 "quarter": quarter,
                 "data": result.get("data", []),
+                "charts": result.get("charts", []),
             }
         else:
             location = locations[0]
@@ -333,6 +335,7 @@ async def chat(req: ChatRequest):
                 "business_type": business_type,
                 "quarter": quarter,
                 "adm_codes": adm_codes,
+                "charts": result.get("charts", []),
             }
     finally:
         # DB fallback 임시 키 정리
