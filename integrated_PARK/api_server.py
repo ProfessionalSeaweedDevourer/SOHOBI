@@ -15,14 +15,16 @@ from contextlib import asynccontextmanager
 import traceback
 from uuid import uuid4
 
-from fastapi import FastAPI, Query, Request
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
+from starlette.middleware.base import BaseHTTPMiddleware
 from dotenv import load_dotenv
 
 import domain_router
 import orchestrator
+from auth import verify_api_key
 from signoff.signoff_agent import run_signoff
 from kernel_setup import get_kernel, get_signoff_client, _TOKEN_PROVIDER
 from logger import log_query, log_error
@@ -46,13 +48,49 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SOHOBI Integrated API", version="1.1.0", lifespan=lifespan)
+
+# ── CORS: 허용 origin 명시적 화이트리스트 ─────────────────────
+_ALLOWED_ORIGINS = [
+    "https://sohobi.net",
+    "https://www.sohobi.net",
+    "https://delightful-rock-0de6c000f.6.azurestaticapps.net",
+]
+_extra_origins = os.getenv("CORS_EXTRA_ORIGINS", "")
+if _extra_origins:
+    _ALLOWED_ORIGINS.extend([o.strip() for o in _extra_origins.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Request-ID"],
+    max_age=600,
 )
+
+# ── IP 화이트리스트 미들웨어 (환경변수 미설정 시 비활성화) ────
+class _IPFilterMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, allowed_ips: set[str]):
+        super().__init__(app)
+        self.allowed_ips = allowed_ips
+
+    async def dispatch(self, request: Request, call_next):
+        forwarded = request.headers.get("X-Forwarded-For", "")
+        client_ip = forwarded.split(",")[0].strip() if forwarded else (
+            request.client.host if request.client else ""
+        )
+        if client_ip not in self.allowed_ips:
+            import logging
+            logging.getLogger("sohobi.security").warning(
+                "IP_BLOCKED ip=%r path=%r", client_ip, request.url.path
+            )
+            return JSONResponse(status_code=403, content={"error": "접근이 제한된 IP입니다."})
+        return await call_next(request)
+
+_allowed_ips_raw = os.getenv("ALLOWED_IPS", "")
+_allowed_ips = {ip.strip() for ip in _allowed_ips_raw.split(",") if ip.strip()}
+if _allowed_ips:
+    app.add_middleware(_IPFilterMiddleware, allowed_ips=_allowed_ips)
 
 
 # ── 스키마 ────────────────────────────────────────────────────
@@ -129,7 +167,7 @@ async def health():
     }
 
 
-@app.post("/api/v1/query")
+@app.post("/api/v1/query", dependencies=[Depends(verify_api_key)])
 async def query(req: QueryRequest):
     """Q&A 플로우: 질문 → 도메인 분류 → 에이전트(창업자 컨텍스트 주입) → Sign-off → 최종 응답"""
     t0 = time.monotonic()
@@ -240,7 +278,7 @@ async def query(req: QueryRequest):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-@app.post("/api/v1/stream")
+@app.post("/api/v1/stream", dependencies=[Depends(verify_api_key)])
 async def stream_query(req: QueryRequest):
     """Q&A 플로우: SSE로 실시간 진행 상황 전달.
     각 단계(에이전트 시작/완료, Sign-off 판정, 최종 결과)를 이벤트로 스트리밍한다.
@@ -331,7 +369,7 @@ async def stream_query(req: QueryRequest):
     )
 
 
-@app.post("/api/v1/signoff")
+@app.post("/api/v1/signoff", dependencies=[Depends(verify_api_key)])
 async def signoff(req: SignoffRequest):
     """기존 draft를 Sign-off Agent에 단독으로 검증한다."""
     try:
@@ -344,7 +382,7 @@ async def signoff(req: SignoffRequest):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-@app.post("/api/v1/doc/chat")
+@app.post("/api/v1/doc/chat", dependencies=[Depends(verify_api_key)])
 async def doc_chat(req: DocChatRequest):
     """
     문서 생성 플로우 (NAM):
@@ -445,7 +483,7 @@ async def export_logs(
     )
 
 
-@app.get("/api/v1/logs")
+@app.get("/api/v1/logs", dependencies=[Depends(verify_api_key)])
 async def get_logs(type: str = "queries", limit: int = 50):
     """JSONL 로그 파일을 파싱해 JSON 배열로 반환 (프론트엔드 로그 뷰어용)."""
     if type not in ("queries", "rejections", "errors"):

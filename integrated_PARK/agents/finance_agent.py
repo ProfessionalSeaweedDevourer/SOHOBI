@@ -191,9 +191,11 @@ class FinanceAgent:
         # front 저장방식: 개인폴더 chat_test.html 의 line 408~부분 or 개발일지 참조
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]
-        sim_input = {k: variables[k] for k in sim_keys if k in variables}
 
-        if not sim_input:
+        # 이번 질문에서 LLM이 실제로 추출한 재무 수치가 있는지 확인
+        # (extracted는 사용자가 언급한 항목만 non-null; load_initial() 기본값 제외)
+        has_user_financials = any(extracted.get(k) is not None for k in sim_keys)
+        if not has_user_financials and current_params is None:
             return {
                 "draft": (
                     "재무 시뮬레이션을 위한 수치(매출, 원가, 임대료 등)가 질문에 포함되어 있지 않습니다. "
@@ -202,6 +204,8 @@ class FinanceAgent:
                 "updated_params": None,
                 "chart": None,
             }
+
+        sim_input = {k: variables[k] for k in sim_keys if variables.get(k) is not None}
 
         sim_result = self._sim.monte_carlo_simulation(**sim_input)
 
