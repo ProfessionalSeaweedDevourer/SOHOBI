@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import SimulationChart from "./SimulationChart";  // ← 추가
 
 const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석" };
 const DOMAIN_COLOR = {
@@ -31,7 +32,8 @@ const GRADE_LABEL = {
  *   showMeta?: boolean        // dev 모드에서 true
  * }} props
  */
-export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, showMeta }) {
+export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, showMeta, chartData}) {
+  console.log('ResponseCard chartData:', chartData);  // ← 추가
   const isEscalated = status === "escalated";
   // grade가 없을 때는 status로 추론
   const effectiveGrade = grade || (isEscalated ? "C" : "A");
@@ -69,12 +71,16 @@ export default function ResponseCard({ question, domain, status, grade, confiden
                   <summary className="cursor-pointer text-xs text-slate-400">최종 draft 보기</summary>
                   <div className="mt-2 prose-response">
                     <ReactMarkdown>{draft}</ReactMarkdown>
+                    <SimulationChart chartData={chartData}/>
                   </div>
                 </details>
               )}
             </div>
           ) : (
+            <>
             <ReactMarkdown>{draft}</ReactMarkdown>
+            <SimulationChart chartData={chartData}/>
+            </>
           )}
         </div>
 

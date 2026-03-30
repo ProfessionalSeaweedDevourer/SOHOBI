@@ -88,7 +88,7 @@ class FinanceSimulationPlugin:
     def get_industry_ratio(self, industry: str = None) -> dict:
         return INDUSTRY_RATIO.get(industry, INDUSTRY_RATIO["default"])
 
-    def _generate_chart(self, results: list, avg: float, p20: float, loss_prob: float) -> str | None:
+    # def _generate_chart(self, results: list, avg: float, p20: float, loss_prob: float) -> str | None:
         """몬테카를로 결과 히스토그램을 base64 PNG로 반환. matplotlib 없으면 None."""
         if not _MATPLOTLIB_AVAILABLE:
             return None
@@ -121,6 +121,31 @@ class FinanceSimulationPlugin:
             return base64.b64encode(buf.read()).decode("utf-8")
         except Exception:
             return None
+
+    def _generate_chart(self, results: list, avg: float, p20: float) -> dict:
+        min_val, max_val = min(results), max(results)
+        bin_count = 40
+        bin_size = (max_val - min_val) / bin_count
+        
+        bins = []
+        for i in range(bin_count):
+            left = min_val + i * bin_size
+            right = left + bin_size
+            count = sum(1 for r in results if left <= r < right)
+            bins.append({
+                "left":  round(left),
+                "right": round(right),
+                "count": count,
+                "type":  "loss" if left < 0 else "p20" if left < p20 else "profit"
+            })
+        
+        return {
+            "bins":     bins,
+            "avg":      round(avg),
+            "p20":      round(p20),
+            "min":      round(min_val),
+            "max":      round(max_val),
+        }
 
     @kernel_function(
         name="monte_carlo_simulation",
@@ -179,7 +204,7 @@ class FinanceSimulationPlugin:
         p20 = sorted_results[int(iterations * 0.20)]
         # [PR#51 수정] chart_b64 dead-code 호출 제거
         #   아래의 chart = self._generate_chart(results, avg, p20, loss_prob) 가 실제 사용됨
-        chart = self._generate_chart(results, avg, p20, loss_prob)
+        chart = self._generate_chart(results, avg, p20)
         return {
             "average_net_profit": round(avg),
             "loss_probability":   round(loss_prob, 4),

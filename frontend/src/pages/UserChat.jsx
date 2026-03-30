@@ -53,6 +53,7 @@ export default function UserChat() {
           confidenceNote: finalResult.confidence_note,
           draft:          finalResult.draft,
           retryCount:     finalResult.retry_count,
+          chartData:      finalResult.chart || null,
         },
       ]);
     }
@@ -112,6 +113,7 @@ export default function UserChat() {
               draft={msg.draft}
               retryCount={msg.retryCount}
               showMeta={false}
+              chartData={msg.chartData}
             />
           ))}
 
