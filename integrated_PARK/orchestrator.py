@@ -48,6 +48,8 @@ async def run(
 
     chart = None
     updated_params = None
+    adm_codes: list = []
+    analysis_type: str = ""
 
     for attempt in range(1, max_retries + 2):
         # ── 에이전트 호출 (타이밍 측정) ─────────────────────
@@ -62,11 +64,13 @@ async def run(
         )
         agent_ms = round((time.monotonic() - t_agent) * 1000)
 
-        # finance 에이전트는 dict를 반환 (draft + chart + updated_params)
+        # finance/location 에이전트는 dict를 반환
         if isinstance(raw, dict):
             draft = raw.get("draft", "")
             chart = raw.get("chart")
             updated_params = raw.get("updated_params")
+            adm_codes = raw.get("adm_codes", [])
+            analysis_type = raw.get("type", "")
         else:
             draft = raw
 
@@ -102,6 +106,8 @@ async def run(
                 "draft":            draft,
                 "chart":            chart,
                 "updated_params":   updated_params,
+                "adm_codes":        adm_codes,
+                "analysis_type":    analysis_type,
             }
 
         rejection_history.append({
@@ -131,6 +137,8 @@ async def run(
         "draft":            draft,
         "chart":            chart,
         "updated_params":   updated_params,
+        "adm_codes":        adm_codes,
+        "analysis_type":    analysis_type,
     }
 
 
@@ -165,6 +173,8 @@ async def run_stream(
     prev_draft = None
     chart = None
     updated_params = None
+    adm_codes: list = []
+    analysis_type: str = ""
 
     for attempt in range(1, max_retries + 2):
         yield {"event": "agent_start", "attempt": attempt, "max_attempts": max_retries + 1}
@@ -184,6 +194,8 @@ async def run_stream(
             draft = raw.get("draft", "")
             chart = raw.get("chart")
             updated_params = raw.get("updated_params")
+            adm_codes = raw.get("adm_codes", [])
+            analysis_type = raw.get("type", "")
         else:
             draft = raw
 
@@ -233,6 +245,8 @@ async def run_stream(
                 "draft":            draft,
                 "chart":            chart,
                 "updated_params":   updated_params,
+                "adm_codes":        adm_codes,
+                "analysis_type":    analysis_type,
             }
             return
 
@@ -263,4 +277,6 @@ async def run_stream(
         "draft":            draft,
         "chart":            chart,
         "updated_params":   updated_params,
+        "adm_codes":        adm_codes,
+        "analysis_type":    analysis_type,
     }

@@ -18,7 +18,7 @@ const AREA_KEYWORDS = [
   "대학로", "을지로", "명동", "남대문", "북촌", "서촌", "익선동",
 ];
 
-export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, onClearContext }) {
+export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, onClearContext, onHighlightArea }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,6 +28,8 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
   const messagesEndRef = useRef(null);
   const timerRef = useRef(null);
   const prevContextRef = useRef(null);
+  const lastLocationRef = useRef(null);  // 직전 분석 지역 (대화 맥락 자동 보완)
+  const lastBusinessRef = useRef(null);  // 직전 분석 업종 (대화 맥락 자동 보완)
 
   // 자동 스크롤
   useEffect(() => {
@@ -117,26 +119,29 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
       }
     }
 
-    // ── 지역명 포함 여부 판별 ──────────────────────────────────
-    // 사용자가 직접 지역명을 입력했으면 → admCd 없이 텍스트 기반 분석
-    // 업종만 입력했으면 → 현재 컨텍스트의 admCd 사용
+    // ── 지역명 / 업종 포함 여부 판별 ──────────────────────────
     const userMentionedArea = AREA_KEYWORDS.some((kw) => text.includes(kw));
     const currentAreaName = mapContext?.guName?.replace(/구$/, "") || "";
     const mentionedCurrentArea = currentAreaName && text.includes(currentAreaName);
+    const bizPattern = /카페|한식|중식|일식|양식|치킨|분식|호프|술집|베이커리|패스트푸드|미용실|네일|노래방|편의점|커피/;
+    const hasBizKeyword = bizPattern.test(text);
 
-    // admCd 사용 조건: 컨텍스트가 있고, 사용자가 다른 지역을 언급하지 않았을 때
+    // admCd 사용 조건: 지도에서 동을 선택했고, 사용자가 다른 지역을 언급하지 않았을 때
     const useAdmCd = mapContext?.admCd && (!userMentionedArea || mentionedCurrentArea);
 
     let question = text;
     if (useAdmCd && mapContext?.guName) {
-      // 업종만 입력한 경우 → 컨텍스트 지역명 자동 추가
+      // 지도 컨텍스트: 업종만 입력하면 현재 선택 동 이름 자동 추가
       const alreadyHasArea = text.includes(currentAreaName) || (mapContext.dongName && text.includes(mapContext.dongName));
-      if (!alreadyHasArea) {
-        const simpleBusinessPattern = /^(카페|한식|중식|일식|양식|치킨|분식|호프|술집|베이커리|패스트푸드|미용실|네일|노래방|편의점|커피)\s*(창업|분석|상권)?/;
-        if (simpleBusinessPattern.test(text)) {
-          question = `${currentAreaName} ${text} 상권 분석해줘`;
-        }
+      if (!alreadyHasArea && hasBizKeyword) {
+        question = `${currentAreaName} ${text} 상권 분석해줘`;
       }
+    } else if (!userMentionedArea && hasBizKeyword && lastLocationRef.current) {
+      // 대화 맥락: 지역 없고 업종만 있으면 → 직전 분석 지역 자동 보완
+      question = `${lastLocationRef.current} ${text} 상권 분석해줘`;
+    } else if (userMentionedArea && !hasBizKeyword && lastBusinessRef.current) {
+      // 대화 맥락: 지역 있고 업종 없으면 → 직전 분석 업종 자동 보완
+      question = `${text} ${lastBusinessRef.current} 상권 분석해줘`;
     }
 
     setLoading(true);
@@ -163,6 +168,20 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
               m.id === streamMsgId ? { ...m, content: draft } : m,
             ),
           );
+          // 지도 하이라이트
+          const codes = data.adm_codes || [];
+          const atype = data.analysis_type || "";
+          if (codes.length > 0 && onHighlightArea) {
+            onHighlightArea(codes);
+          } else if (atype === "compare" && onHighlightArea) {
+            onHighlightArea([]);
+          }
+          // 대화 맥락 업데이트: question에서 지역/업종 추출
+          const foundArea = AREA_KEYWORDS.find((kw) => question.includes(kw));
+          if (foundArea) lastLocationRef.current = foundArea;
+          const BIZ_LIST = ["카페","한식","중식","일식","양식","치킨","분식","호프","술집","베이커리","패스트푸드","미용실","네일","노래방","편의점","커피"];
+          const foundBiz = BIZ_LIST.find((b) => question.includes(b));
+          if (foundBiz) lastBusinessRef.current = foundBiz;
         } else if (eventName === "error" || eventName === "rejected") {
           const msg = data.message || data.reason || "오류가 발생했습니다.";
           setMessages((prev) =>

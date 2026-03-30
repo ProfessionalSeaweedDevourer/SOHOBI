@@ -229,20 +229,28 @@ class LocationAgent:
 
     async def analyze(
         self, location: str, business_type: str, quarter: str = "20244"
-    ) -> str:
-        """단일 지역 상권 분석 → 마크다운 텍스트 반환"""
+    ) -> dict:
+        """단일 지역 상권 분석 → {draft, adm_codes, type} dict 반환"""
         supported = self._repo.get_supported_industries()
         if business_type not in supported:
-            return f"죄송합니다. '{business_type}' 업종은 현재 지원하지 않습니다.\n지원 업종: {', '.join(sorted(supported))}"
+            return {
+                "draft": f"죄송합니다. '{business_type}' 업종은 현재 지원하지 않습니다.\n지원 업종: {', '.join(sorted(supported))}",
+                "adm_codes": [],
+                "type": "analyze",
+            }
 
         sales_data = self._repo.get_sales(location, business_type, quarter)
         store_data = self._repo.get_store_count(location, business_type, quarter)
 
         if not sales_data and not store_data:
-            return (
-                f"'{location}' 지역의 '{business_type}' 업종 데이터를 찾을 수 없습니다.\n"
-                "지역명 또는 업종명을 확인해 주십시오."
-            )
+            return {
+                "draft": (
+                    f"'{location}' 지역의 '{business_type}' 업종 데이터를 찾을 수 없습니다.\n"
+                    "지역명 또는 업종명을 확인해 주십시오."
+                ),
+                "adm_codes": [],
+                "type": "analyze",
+            }
 
         # 점포당 평균 매출 계산
         monthly_sales = (
@@ -284,7 +292,8 @@ class LocationAgent:
             )
             analysis += similar_table
 
-        return analysis
+        adm_codes = self._repo._get_adm_codes(location)
+        return {"draft": analysis, "adm_codes": adm_codes, "type": "analyze"}
 
     # ── DB 조회 + LLM 복수 지역 비교 ───────────────────────────
 
@@ -302,11 +311,15 @@ class LocationAgent:
 
     async def compare(
         self, locations: list[str], business_type: str, quarter: str = "20244"
-    ) -> str:
-        """복수 지역 비교 → 마크다운 텍스트 반환"""
+    ) -> dict:
+        """복수 지역 비교 → {draft, adm_codes, type} dict 반환"""
         supported = self._repo.get_supported_industries()
         if business_type not in supported:
-            return f"죄송합니다. '{business_type}' 업종은 현재 지원하지 않습니다.\n지원 업종: {', '.join(sorted(supported))}"
+            return {
+                "draft": f"죄송합니다. '{business_type}' 업종은 현재 지원하지 않습니다.\n지원 업종: {', '.join(sorted(supported))}",
+                "adm_codes": [],
+                "type": "compare",
+            }
 
         year = quarter[:4]
         q = quarter[4]
@@ -338,9 +351,17 @@ class LocationAgent:
             })
 
         if not location_data:
-            return "요청하신 지역들의 데이터를 찾을 수 없습니다. 지역명을 확인해 주십시오."
+            return {
+                "draft": "요청하신 지역들의 데이터를 찾을 수 없습니다. 지역명을 확인해 주십시오.",
+                "adm_codes": [],
+                "type": "compare",
+            }
 
-        return await self._run_compare_agent(location_data, business_type, year, q)
+        analysis = await self._run_compare_agent(location_data, business_type, year, q)
+        all_adm_codes = []
+        for loc in locations:
+            all_adm_codes.extend(self._repo._get_adm_codes(loc))
+        return {"draft": analysis, "adm_codes": all_adm_codes, "type": "compare"}
 
     # ── 오케스트레이터 진입점 ───────────────────────────────────
 
@@ -351,7 +372,7 @@ class LocationAgent:
         retry_prompt: str = "",
         profile: str = "",
         prior_history: list[dict] | None = None,
-    ) -> str:
+    ) -> dict:
         params = await self._extract_params(question, prior_history=prior_history)
         mode = params["mode"]
         locations = params["locations"]
@@ -359,16 +380,23 @@ class LocationAgent:
         quarter = params["quarter"]
 
         if not locations or not business_type:
-            return (
-                "분석할 지역명과 업종을 명시해 주십시오.\n"
-                "예: '홍대 카페 상권 분석', '강남 vs 잠실 한식 비교'"
-            )
+            return {
+                "draft": (
+                    "분석할 지역명과 업종을 명시해 주십시오.\n"
+                    "예: '홍대 카페 상권 분석', '강남 vs 잠실 한식 비교'"
+                ),
+                "adm_codes": [],
+                "type": mode,
+            }
 
         # draft 생성
         if mode == "compare" and len(locations) >= 2:
-            draft = await self.compare(locations, business_type, quarter)
+            result = await self.compare(locations, business_type, quarter)
         else:
-            draft = await self.analyze(locations[0], business_type, quarter)
+            result = await self.analyze(locations[0], business_type, quarter)
+
+        draft = result["draft"]
+        adm_codes = result["adm_codes"]
 
         # retry_prompt 반영 (sign-off 재시도)
         # 데이터 부재·미지원 업종 응답은 재시도해도 달라지지 않으므로 건너뜀
@@ -407,4 +435,4 @@ class LocationAgent:
                 # 빈 응답 등 retry LLM 실패 시 이전 draft 유지
                 logger.warning("LocationAgent retry LLM 실패 — 이전 draft 유지")
 
-        return draft
+        return {"draft": draft, "adm_codes": adm_codes, "type": mode}
