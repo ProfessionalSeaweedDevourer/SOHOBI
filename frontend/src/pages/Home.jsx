@@ -12,6 +12,15 @@ const modes = [
     badgeColor: "bg-blue-100 text-blue-700",
   },
   {
+    path: "/map",
+    label: "지도 모드",
+    icon: "🗺️",
+    desc: "서울 행정동 지도에서 상권을 탐색하고 AI 채팅으로 분석합니다.",
+    color: "hover:border-emerald-400 hover:bg-emerald-50",
+    badge: "지도",
+    badgeColor: "bg-emerald-100 text-emerald-700",
+  },
+  {
     path: "/dev",
     label: "개발자 모드",
     icon: "🛠",
