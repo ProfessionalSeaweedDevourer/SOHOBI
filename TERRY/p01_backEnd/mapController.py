@@ -206,6 +206,11 @@ async def getFestivals(
     )
     sgg_cd = adm_cd[:5] if adm_cd else None
     try:
+        from datetime import datetime, timedelta
+
+        today = datetime.now()
+        date_from = today.strftime("%Y%m%d")
+        date_to = (today + timedelta(days=90)).strftime("%Y%m%d")
         params = {
             "serviceKey": KTO_KEY,
             "numOfRows": 100,
@@ -214,6 +219,8 @@ async def getFestivals(
             "MobileApp": "SOHOBI",
             "areaCode": "1",
             "contentTypeId": "15",
+            "eventStartDate": date_from,
+            "eventEndDate": date_to,
             "_type": "xml",
         }
         if sgg_cd:

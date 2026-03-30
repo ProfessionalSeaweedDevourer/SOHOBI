@@ -26,10 +26,15 @@ function getTypeStyle(typeKey) {
    return TYPE_STYLE[String(typeKey)] || TYPE_STYLE["12"];
 }
 
-export default function LandmarkPopup({ popup, onClose }) {
+export default function LandmarkPopup({
+   popup,
+   onClose,
+   kakaoDetail,
+   loadingDetail,
+}) {
    if (!popup) return null;
 
-   const isSchool = popup._type === "school";
+   const isSchool = !!(popup.school_nm || popup._type === "school");
    const typeKey = isSchool ? "school" : String(popup.content_type_id || "12");
    const ts = getTypeStyle(typeKey);
 
@@ -122,10 +127,25 @@ export default function LandmarkPopup({ popup, onClose }) {
             </div>
 
             {/* 학교 타입 */}
-            {isSchool && popup.school_type && (
-               <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>
-                  {popup.school_type}
-                  {popup.found_type && ` · ${popup.found_type}`}
+            {isSchool && (
+               <div
+                  style={{
+                     display: "flex",
+                     gap: 6,
+                     flexWrap: "wrap",
+                     marginBottom: 4,
+                  }}
+               >
+                  {popup.school_type && (
+                     <Tag text={popup.school_type} color="#10b981" />
+                  )}
+                  {popup.found_type && (
+                     <Tag text={popup.found_type} color="#6b7280" />
+                  )}
+                  {popup.coedu && <Tag text={popup.coedu} color="#6b7280" />}
+                  {popup.day_night && (
+                     <Tag text={popup.day_night} color="#6b7280" />
+                  )}
                </div>
             )}
 
@@ -138,8 +158,16 @@ export default function LandmarkPopup({ popup, onClose }) {
                {(popup.addr || popup.road_addr || popup.addr1) && (
                   <Row
                      icon="📍"
-                     text={popup.addr || popup.road_addr || popup.addr1}
+                     text={[
+                        popup.addr || popup.road_addr || popup.addr1,
+                        popup.addr2,
+                     ]
+                        .filter(Boolean)
+                        .join(" ")}
                   />
+               )}
+               {isSchool && popup.edu_office && (
+                  <Row icon="🏛️" text={popup.edu_office} />
                )}
                {popup.tel && (
                   <Row
@@ -188,7 +216,10 @@ export default function LandmarkPopup({ popup, onClose }) {
                   />
                )}
                {isSchool && popup.found_date && (
-                  <Row icon="📅" text={`개교: ${popup.found_date}`} />
+                  <Row
+                     icon="📅"
+                     text={`설립: ${popup.found_date}${popup.anniversary ? ` · 개교기념일: ${popup.anniversary}` : ""}`}
+                  />
                )}
             </div>
 
@@ -213,8 +244,106 @@ export default function LandmarkPopup({ popup, onClose }) {
                   {popup.overview}
                </div>
             )}
+
+            {/* 카카오맵 */}
+            {loadingDetail && (
+               <div
+                  style={{
+                     marginTop: 10,
+                     fontSize: 12,
+                     color: "#999",
+                     textAlign: "center",
+                     padding: "8px 0",
+                  }}
+               >
+                  📱 카카오맵 정보 조회 중...
+               </div>
+            )}
+            {!loadingDetail && kakaoDetail && (
+               <>
+                  <div
+                     style={{
+                        marginTop: 10,
+                        padding: "10px 12px",
+                        background: "#fffde7",
+                        borderRadius: 10,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                     }}
+                  >
+                     <div
+                        style={{
+                           fontSize: 11,
+                           fontWeight: 700,
+                           color: "#b8860b",
+                           marginBottom: 2,
+                        }}
+                     >
+                        📱 카카오맵 추가정보
+                     </div>
+                     {kakaoDetail.phone && (
+                        <Row
+                           icon="📞"
+                           text={
+                              <a
+                                 href={`tel:${kakaoDetail.phone}`}
+                                 style={{
+                                    color: "#2563eb",
+                                    textDecoration: "none",
+                                 }}
+                              >
+                                 {kakaoDetail.phone}
+                              </a>
+                           }
+                        />
+                     )}
+                     {kakaoDetail.category_name && (
+                        <Row icon="🏷️" text={kakaoDetail.category_name} />
+                     )}
+                  </div>
+                  <a
+                     href={kakaoDetail.place_url}
+                     target="_blank"
+                     rel="noreferrer"
+                     style={{
+                        marginTop: 12,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        background: "#fee500",
+                        borderRadius: 10,
+                        padding: "9px",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "#111",
+                        textDecoration: "none",
+                     }}
+                  >
+                     카카오맵에서 보기 →
+                  </a>
+               </>
+            )}
          </div>
       </div>
+   );
+}
+
+function Tag({ text, color }) {
+   return (
+      <span
+         style={{
+            fontSize: 11,
+            fontWeight: 700,
+            padding: "2px 8px",
+            borderRadius: 20,
+            background: `${color}22`,
+            color,
+            border: `1px solid ${color}55`,
+         }}
+      >
+         {text}
+      </span>
    );
 }
 

@@ -82,6 +82,8 @@ export default function MapView() {
    const [dongTooltip, setDongTooltip] = useState(null);
    const [landmarkLoaded, setLandmarkLoaded] = useState(false);
    const [landmarkPopup, setLandmarkPopup] = useState(null);
+   const [lmKakao, setLmKakao] = useState(null);
+   const [lmKakaoLoading, setLmKakaoLoading] = useState(false);
    const [festivalLoaded, setFestivalLoaded] = useState(false);
    const [schoolLoaded, setSchoolLoaded] = useState(false);
    const [quarters, setQuarters] = useState([]);
@@ -132,11 +134,14 @@ export default function MapView() {
          .catch(() => {});
    }, []);
 
-   // ── 초기 랜드마크·학교 전체 로드 (지도 준비 후) ───────────────
+   // ── 초기 랜드마크·학교 전체 로드 (지도 준비 후 1회) ───────────
+   const landmarkInitRef = useRef(false);
    useEffect(() => {
+      if (!mapInstance.current || landmarkInitRef.current) return;
+      landmarkInitRef.current = true;
       loadLandmarks().then(() => setLandmarkLoaded(true));
       loadSchools().then(() => setSchoolLoaded(true));
-   }, []); // eslint-disable-line
+   }, [mapInstance.current]); // eslint-disable-line
    useEffect(() => {
       clickModeRef.current = clickMode;
    }, [clickMode]);
@@ -641,14 +646,28 @@ export default function MapView() {
          // 랜드마크/학교 마커 클릭
          if (feature?.get("lmData")) {
             selectLandmark(feature);
-            setLandmarkPopup(feature.get("lmData"));
-            setPopup(null);
+            const lmData = feature.get("lmData");
+            setLandmarkPopup(lmData);
+            setPopup(null); // StorePopup 닫기
+            setKakaoDetail(null);
+            // 카카오맵 검색
+            setLmKakao(null);
+            setLmKakaoLoading(true);
+            fetchKakaoDetail(
+               lmData.title || lmData.school_nm,
+               lmData.addr || lmData.road_addr,
+            ).then((d) => {
+               setLmKakao(d);
+               setLmKakaoLoading(false);
+            });
             return;
          }
 
          if (feature?.get("store")) {
             const store = feature.get("store");
             selectMarker(feature); // 하이라이트
+            setLandmarkPopup(null); // LandmarkPopup 닫기
+            selectLandmark(null);
             setPopup(store);
             setKakaoDetail(null);
             setLoadingDetail(true);
@@ -752,8 +771,11 @@ export default function MapView() {
          )}
          <LandmarkPopup
             popup={landmarkPopup}
+            kakaoDetail={lmKakao}
+            loadingDetail={lmKakaoLoading}
             onClose={() => {
                setLandmarkPopup(null);
+               setLmKakao(null);
                selectLandmark(null);
             }}
          />

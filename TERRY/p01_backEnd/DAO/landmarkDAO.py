@@ -143,37 +143,43 @@ class LandmarkDAO(BaseDAO):
             return []
 
     def get_schools_by_sgg(self, sgg_nm: str, school_type: str = None) -> list:
-        """시군구명 기준 학교 조회"""
+        """시도/구 기준 학교 조회 (빈값이면 전체, 좌표 있는 것만)"""
         try:
             params = []
-            where = []
+            extra = []
             if sgg_nm:
-                # SGG_NM 없음 → ROAD_ADDR에서 구이름 검색
-                where.append("ROAD_ADDR LIKE '%' || :1 || '%'")
+                extra.append(
+                    "(LCTN_SC_NM LIKE '%' || :1 || '%' OR ORG_RDNMA LIKE '%' || :1 || '%')"
+                )
                 params.append(sgg_nm)
             if school_type:
-                where.append(f"SCHOOL_TYPE = :{len(params)+1}")
+                extra.append(f"SCHUL_KND_SC_NM = :{len(params)+1}")
                 params.append(school_type)
-            where_clause = "WHERE " + " AND ".join(where) if where else ""
+            where_clause = "WHERE MAP_X IS NOT NULL AND MAP_Y IS NOT NULL"
+            if extra:
+                where_clause += " AND " + " AND ".join(extra)
             sql = f"""
-                SELECT SCHOOL_ID, SCHOOL_NM, SCHOOL_TYPE,
-                       ROAD_ADDR, ROAD_ADDR, MAP_X, MAP_Y, TEL, HOMEPAGE
+                SELECT SD_SCHUL_CODE, SCHUL_NM, SCHUL_KND_SC_NM,
+                       LCTN_SC_NM, ORG_RDNMA, MAP_X, MAP_Y,
+                       ORG_TELNO, HMPG_ADRES, FOND_SC_NM
                 FROM SCHOOL_SEOUL
                 {where_clause}
-                ORDER BY SCHOOL_TYPE, SCHOOL_NM
+                ORDER BY SCHUL_KND_SC_NM, SCHUL_NM
             """
             rows = self._query(sql, params)
+            logger.info(f"[LandmarkDAO] get_schools → {len(rows)}건")
             return [
                 {
                     "school_id": r[0],
                     "school_nm": r[1],
                     "school_type": r[2],
-                    "sgg_nm": r[3],
+                    "sido_nm": r[3],
                     "addr": r[4],
                     "lng": float(r[5]) if r[5] else None,
                     "lat": float(r[6]) if r[6] else None,
                     "tel": r[7],
                     "homepage": r[8],
+                    "found_type": r[9],
                 }
                 for r in rows
             ]
