@@ -20,6 +20,7 @@ export default function LogViewer() {
   const [tab, setTab] = useState("queries");
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
 
@@ -27,13 +28,34 @@ export default function LogViewer() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchLogs(type, 100);
+      const data = await fetchLogs(type);
       setEntries(data.entries || []);
       setLastFetched(new Date().toLocaleTimeString("ko-KR"));
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      const data = await fetchLogs(tab, 0);
+      const blob = new Blob(
+        [JSON.stringify(data.entries, null, 2)],
+        { type: "application/json" }
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `sohobi-logs-${tab}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(`다운로드 실패: ${e.message}`);
+    } finally {
+      setDownloading(false);
     }
   }
 
@@ -67,6 +89,13 @@ export default function LogViewer() {
         <span className="ml-auto text-xs text-slate-400">
           {lastFetched ? `마지막 갱신: ${lastFetched}` : ""}
         </span>
+        <button
+          onClick={handleDownload}
+          disabled={downloading || loading}
+          className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+        >
+          {downloading ? "다운로드 중…" : "전체 다운로드"}
+        </button>
         <button
           onClick={() => load(tab)}
           disabled={loading}

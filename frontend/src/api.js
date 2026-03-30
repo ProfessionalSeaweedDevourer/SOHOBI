@@ -94,7 +94,7 @@ export async function streamQuery(question, maxRetries = 3, sessionId = null, on
  * @param {number} limit
  * @returns {Promise<{type, count, entries: Array}>}
  */
-export async function fetchLogs(type = "queries", limit = 50) {
+export async function fetchLogs(type = "queries", limit = 500) {
   const res = await fetch(
     `${BASE_URL}/api/v1/logs?type=${type}&limit=${limit}`,
     { headers: _AUTH_HEADERS }
