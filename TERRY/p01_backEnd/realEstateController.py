@@ -1,5 +1,5 @@
 # 위치: p01_backEnd/realEstateController.py
-# 실행: uvicorn realEstateController:app --host=0.0.0.0 --port=8682 --reload
+# 실행: python -m uvicorn realEstateController:app --host=0.0.0.0 --port=8682 --reload
 
 import os, asyncio, logging
 from contextlib import asynccontextmanager
@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse, Response
 
 from DAO.sangkwonDAO import SangkwonDAO
 from DAO.dongMappingDAO import DongMappingDAO
+from DAO.molitRtmsDAO import MolitRtmsDAO
 from DAO.seoulRtmsDAO import SeoulRtmsDAO
 from DAO.landValueDAO import LandValueDAO
 from DAO.wfsDAO import WfsDAO  # WFS 엔드포인트 하위호환용 유지
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 skDAO = SangkwonDAO()
 dmDAO = DongMappingDAO()
 rtmsDAO = SeoulRtmsDAO()
+molitDAO = MolitRtmsDAO()
 lvDAO = LandValueDAO()
 wfsDAO = WfsDAO(dmDAO)  # WFS 엔드포인트 하위호환용
 storeDAO = SangkwonStoreDAO()
@@ -57,53 +59,33 @@ app.add_middleware(
 
 @app.get("/realestate/seoul-rtms")
 async def getSeoulRtms(
-    adm_cd: str = Query(..., description="행정동코드 8자리 (lt_c_cademd)"),
-    years_back: int = Query(3),
-    rtms_type: Optional[str] = Query(None, description="1=매매 2=전세 3=월세"),
+    adm_cd: str = Query(..., description="행정동코드"),
 ):
-    """행정동(adm_cd) → 법정동(emd_cd) 변환 후 실거래 조회"""
+    """
+    서울시 부동산 실거래가 통합 조회
+    - 서울 열린데이터광장: 아파트/연립 매매·전세·월세
+    - 국토부 오피스텔 전월세
+    - 국토부 상업·업무용 매매
+    """
     logger.info(f"[seoul-rtms] adm_cd={adm_cd}")
-
-    # adm_cd → LAW_ADM_MAP → emd_cd 목록
-    emd_cds = rtmsDAO.get_emd_cd_by_adm_cd(adm_cd)
-    if not emd_cds:
-        logger.warning(f"[seoul-rtms] adm_cd={adm_cd} → emd_cd 매핑 없음")
+    try:
+        seoul = await rtmsDAO.fetch_by_emd_cd(adm_cd)  # 내부에서 adm_cd→emd_cd 변환
+        officetel = molitDAO.fetch_officetel_rent(adm_cd)
+        commercial = molitDAO.fetch_commercial_trade(adm_cd)
         return {
-            "has_data": False,
-            "매매": {"건수": 0, "목록": []},
-            "전세": {"건수": 0, "목록": []},
-            "월세": {"건수": 0, "목록": []},
+            "has_data": seoul.get("has_data")
+            or officetel.get("has_data")
+            or commercial.get("has_data"),
+            "매매": seoul.get("매매", {"건수": 0}),
+            "전세": seoul.get("전세", {"건수": 0}),
+            "월세": seoul.get("월세", {"건수": 0}),
+            "오피스텔전세": officetel.get("전세", {"건수": 0}),
+            "오피스텔월세": officetel.get("월세", {"건수": 0}),
+            "상업용매매": commercial.get("매매", {"건수": 0}),
         }
-
-    logger.info(f"[seoul-rtms] emd_cds={emd_cds}")
-    results = await asyncio.gather(
-        *[rtmsDAO.fetch_by_emd_cd(emd_cd, years_back, rtms_type) for emd_cd in emd_cds]
-    )
-
-    # 결과 합산
-    all_매매, all_전세, all_월세 = [], [], []
-    for res in results:
-        all_매매.extend(res.get("매매", {}).get("목록", []))
-        all_전세.extend(res.get("전세", {}).get("목록", []))
-        all_월세.extend(res.get("월세", {}).get("목록", []))
-
-    return {
-        "has_data": bool(all_매매 or all_전세 or all_월세),
-        "매매": rtmsDAO._stats(all_매매, "거래금액만원", "거래금액"),
-        "전세": rtmsDAO._stats(all_전세, "보증금만원", "보증금"),
-        "월세": {
-            "건수": len(all_월세),
-            "목록": sorted(all_월세, key=lambda x: x.get("계약일", ""), reverse=True)[
-                :10
-            ],
-        },
-    }
-
-
-# ════════════════════════════════════════════════════════════════
-# 2. 매출 - adm_cd(행정동코드) 기준
-#    MapView: p.adm_cd 전달
-# ════════════════════════════════════════════════════════════════
+    except Exception as e:
+        logger.error(f"[seoul-rtms] {e}")
+        return {"has_data": False, "error": str(e)}
 
 
 @app.get("/realestate/sangkwon")

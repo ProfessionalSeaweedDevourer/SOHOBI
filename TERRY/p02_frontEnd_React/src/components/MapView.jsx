@@ -12,9 +12,11 @@ import DongTooltip from "./controls/DongTooltip";
 import WmsPopup from "./popup/WmsPopup";
 import StorePopup from "./popup/StorePopup";
 import ChatPanel from "./ChatPanel";
+import LandmarkPopup from "./popup/LandmarkPopup";
 
 // ── 커스텀 훅 ──────────────────────────────────────────────────
 import { useMarkers } from "../hooks/useMarkers";
+import { useLandmarkLayer } from "../hooks/useLandmarkLayer";
 import {
    useDongLayer,
    DONG_STYLE_DEFAULT,
@@ -61,7 +63,7 @@ function getRadiusAndLimit(zoom) {
 export default function MapView() {
    const mapRef = useRef(null);
    const mapInstance = useMap(mapRef);
-   const clickModeRef = useRef(true);
+   const clickModeRef = useRef(false);
    const wmsLayerRef = useRef(null);
 
    const [coords, setCoords] = useState({ lat: "37.5665", lng: "126.9780" });
@@ -75,12 +77,16 @@ export default function MapView() {
    const [wmsPopup, setWmsPopup] = useState(null);
    const [landValue, setLandValue] = useState(null);
    const [showPanel, setShowPanel] = useState(false);
-   const [clickMode, setClickMode] = useState(true);
+   const [clickMode, setClickMode] = useState(false);
 
    const [dongMode, setDongMode] = useState("none");
    const [dongLoading, setDongLoading] = useState(false);
    const [dongPanel, setDongPanel] = useState(null);
    const [dongTooltip, setDongTooltip] = useState(null);
+   const [landmarkLoaded, setLandmarkLoaded] = useState(false);
+   const [landmarkPopup, setLandmarkPopup] = useState(null);
+   const [festivalLoaded, setFestivalLoaded] = useState(false);
+   const [schoolLoaded, setSchoolLoaded] = useState(false);
    const [quarters, setQuarters] = useState([]);
    const [selectedQtr, setSelectedQtr] = useState("");
    const dongModeRef = useRef("none");
@@ -128,6 +134,12 @@ export default function MapView() {
          })
          .catch(() => {});
    }, []);
+
+   // ── 초기 랜드마크·학교 전체 로드 (지도 준비 후) ───────────────
+   useEffect(() => {
+      loadLandmarks().then(() => setLandmarkLoaded(true));
+      loadSchools().then(() => setSchoolLoaded(true));
+   }, []); // eslint-disable-line
    useEffect(() => {
       clickModeRef.current = clickMode;
    }, [clickMode]);
@@ -139,10 +151,18 @@ export default function MapView() {
    const [svcData, setSvcData] = useState([]);
    const [selectedSvc, setSelectedSvc] = useState(""); // 업종 필터 선택값
 
-   const { allStoresRef, drawCircle, drawMarkers, clearMarkers } = useMarkers(
-      mapInstance,
-      visibleCats,
-   );
+   const { allStoresRef, drawCircle, drawMarkers, clearMarkers, selectMarker } =
+      useMarkers(mapInstance, visibleCats);
+
+   const {
+      landmarkLayerRef,
+      festivalLayerRef,
+      schoolLayerRef,
+      loadLandmarks,
+      loadFestivals,
+      loadSchools,
+      selectLandmark,
+   } = useLandmarkLayer(mapInstance);
    const {
       dongBoundaryLayerRef,
       dongHoverFeatRef,
@@ -361,6 +381,10 @@ export default function MapView() {
             const _guNm = p.gu_nm || currentGuNmRef.current || "";
             setDongLoading(true);
             setDongPanel(null);
+            // 축제만 동 클릭 시 로드 (실시간 API)
+            if (_admCd) {
+               loadFestivals(_admCd).then(() => setFestivalLoaded(true));
+            }
             try {
                if (next === "sales") {
                   const qtrParam = selectedQtr
@@ -678,14 +702,24 @@ export default function MapView() {
          setWmsPopup(null);
 
          const feature = map.forEachFeatureAtPixel(e.pixel, (f) => f);
+
+         // 랜드마크/학교 마커 클릭
+         if (feature?.get("lmData")) {
+            selectLandmark(feature);
+            setLandmarkPopup(feature.get("lmData"));
+            setPopup(null);
+            return;
+         }
+
          if (feature?.get("store")) {
             const store = feature.get("store");
+            selectMarker(feature); // 하이라이트
             setPopup(store);
             setKakaoDetail(null);
             setLoadingDetail(true);
             const detail = await fetchKakaoDetail(
-               store.상호명,
-               store.도로명주소,
+               store.STORE_NM,
+               store.ROAD_ADDR,
             );
             setKakaoDetail(detail);
             setLoadingDetail(false);
@@ -772,9 +806,22 @@ export default function MapView() {
                   map={mapInstance.current}
                   vworldKey={import.meta.env.VITE_VWORLD_API_KEY}
                   wmsLayerRef={wmsLayerRef}
+                  landmarkLayerRef={landmarkLayerRef}
+                  festivalLayerRef={festivalLayerRef}
+                  schoolLayerRef={schoolLayerRef}
+                  landmarkLoaded={landmarkLoaded}
+                  festivalLoaded={festivalLoaded}
+                  schoolLoaded={schoolLoaded}
                />
             </div>
          )}
+         <LandmarkPopup
+            popup={landmarkPopup}
+            onClose={() => {
+               setLandmarkPopup(null);
+               selectLandmark(null);
+            }}
+         />
          <WmsPopup
             wmsPopup={wmsPopup}
             landValue={landValue}

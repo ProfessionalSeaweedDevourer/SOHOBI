@@ -30,6 +30,7 @@ from semantic_kernel.connectors.ai.open_ai import (
 from semantic_kernel.functions import KernelArguments
 
 from db.repository import CommercialRepository
+from chart.location_chart import generate_analyze_charts, generate_compare_charts
 
 # ── Kernel 싱글턴 ──────────────────────────────────────────
 _shared_kernel = None
@@ -255,6 +256,13 @@ class LocationAgent:
             ),
         )
 
+        # ── 차트 생성 (sales_summary 기반) ──────────────────
+        chart_b64 = []
+        if sales_data:
+            chart_b64 = generate_analyze_charts(
+                sales_data["summary"], location, business_type,
+            )
+
         return {
             "location": location,
             "business_type": business_type,
@@ -263,6 +271,7 @@ class LocationAgent:
             "store_data": store_data,  # {summary, breakdown} — 원본 유지
             "analysis": analysis,
             "similar_locations": similar,  # 추천 상권
+            "charts": chart_b64,
         }
 
     async def _run_agent(
@@ -427,6 +436,7 @@ class LocationAgent:
                 item = {
                     "location": loc,
                     "monthly_sales": _format_krw(monthly),
+                    "monthly_sales_raw": monthly,
                     "weekday_pct": _calc_pct(ss.get("weekday_sales_krw", 0), monthly),
                     "weekend_pct": _calc_pct(ss.get("weekend_sales_krw", 0), monthly),
                     "peak_time": _find_peak_time(ss),
@@ -449,6 +459,7 @@ class LocationAgent:
             if store:
                 item["store_count"] = cnt
                 item["avg_sales_per_store"] = _format_krw(avg) if avg else "데이터 없음"
+                item["avg_per_store_raw"] = avg or 0
                 item["open_rate_pct"] = st.get("open_rate_pct", 0)
                 item["close_rate_pct"] = st.get("close_rate_pct", 0)
 
@@ -467,12 +478,16 @@ class LocationAgent:
             location_data, business_type, year, q
         )
 
+        # ── 비교 차트 생성 ────────────────────────────────────
+        charts = generate_compare_charts(location_data, business_type)
+
         return {
             "locations": locations,
             "business_type": business_type,
             "quarter": quarter,
             "data": location_data,
             "comparison": comparison,
+            "charts": charts,
         }
 
     async def _run_compare_agent(

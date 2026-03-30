@@ -26,6 +26,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
   const [sessionId, setSessionId] = useState(null);
   const [lastLocation, setLastLocation] = useState(null);   // 직전 분석 지역 (UI 표시용)
   const [lastBusiness, setLastBusiness] = useState(null);   // 직전 분석 업종 (UI 표시용)
+  const [lightboxSrc, setLightboxSrc] = useState(null);     // 팝업으로 크게 볼 이미지
 
   const messagesEndRef = useRef(null);
   const timerRef = useRef(null);
@@ -180,6 +181,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           id: crypto.randomUUID(),
           role: "assistant",
           content: res.analysis || "응답을 받지 못했습니다.",
+          charts: res.charts || [],
         },
       ]);
 
@@ -238,6 +240,55 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
 
   return (
     <>
+      {/* 차트 팝업 모달 */}
+      {lightboxSrc && (
+        <div
+          onClick={() => setLightboxSrc(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.82)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "zoom-out",
+          }}
+        >
+          <img
+            src={lightboxSrc}
+            alt="차트 크게 보기"
+            style={{
+              maxWidth: "92vw",
+              maxHeight: "92vh",
+              borderRadius: 10,
+              boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightboxSrc(null)}
+            style={{
+              position: "absolute",
+              top: 18,
+              right: 22,
+              background: "rgba(255,255,255,0.15)",
+              border: "none",
+              color: "#fff",
+              fontSize: 28,
+              lineHeight: 1,
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              cursor: "pointer",
+            }}
+            title="닫기"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* 토글 버튼 */}
       {!isOpen && (
         <button className="mv-chat-toggle" onClick={onToggle} title="상권분석 채팅">
@@ -305,6 +356,22 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           {messages.map((msg) => (
             <div key={msg.id} className={`mv-chat-msg mv-chat-msg--${msg.role}`}>
               {msg.content}
+              {msg.charts?.map((b64, i) => (
+                <img
+                  key={i}
+                  src={`data:image/png;base64,${b64}`}
+                  alt={`상권분석 차트 ${i + 1}`}
+                  style={{
+                    display: "block",
+                    marginTop: 8,
+                    borderRadius: 8,
+                    maxWidth: "100%",
+                    cursor: "zoom-in",
+                  }}
+                  onClick={() => setLightboxSrc(`data:image/png;base64,${b64}`)}
+                  title="클릭하면 크게 볼 수 있습니다"
+                />
+              ))}
             </div>
           ))}
 

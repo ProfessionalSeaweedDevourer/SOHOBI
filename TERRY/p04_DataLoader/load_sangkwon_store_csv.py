@@ -17,6 +17,7 @@
 #   FRC_STOR_CO        → FRC_STOR_CO     프랜차이즈수
 # =====================================================
 
+
 import os
 import sys
 import csv
@@ -28,7 +29,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 # ── 설정 ──────────────────────────────────────────────────────
-DB_INFO = "fable/1@//10.1.92.112:1521/xe"
+DB_INFO = "shobi/8680@//10.1.92.119:1521/xe"
 BATCH_SIZE = 1000
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

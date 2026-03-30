@@ -104,7 +104,7 @@ export default function MapControls({
                   { mode: "sales", label: "매출", activeColor: "#059669" },
                   {
                      mode: "realestate",
-                     label: "실거래가",
+                     label: "부동산",
                      activeColor: "#2563EB",
                   },
                ].map(({ mode, label, activeColor }) => {

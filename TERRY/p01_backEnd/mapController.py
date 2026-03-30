@@ -1,5 +1,5 @@
 # 위치: p01_backEnd/mapController.py
-# 실행: uvicorn mapController:app --host=0.0.0.0 --port=8681 --reload
+# 실행: python -m uvicorn mapController:app --host=0.0.0.0 --port=8681 --reload
 
 import csv, os, sys, httpx, asyncio, logging
 from contextlib import asynccontextmanager
@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(BASE_DIR, "DAO"))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from DAO.mapInfoDAO import MapInfoDAO, SIDO_BOUNDS, _get_df
+from DAO.landmarkDAO import LandmarkDAO
 
 # ── 서버 로그 설정 ───────────────────────────────────────────────
 # INFO 레벨 이상 로그를 터미널에 출력
@@ -19,6 +20,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 mDAO = MapInfoDAO()
+lmDAO = LandmarkDAO()
 
 # ── 시도명 → 테이블명 ───────────────────────────────────────────
 SIDO_TABLE_MAP = {k.replace("STORE_", ""): k for k in SIDO_BOUNDS}
@@ -139,10 +141,10 @@ def getNearbyInBbox(
         filtered = [
             s
             for s in result
-            if s.get("LNG")
-            and s.get("LAT")
-            and min_lng <= float(s["LNG"]) <= max_lng
-            and min_lat <= float(s["LAT"]) <= max_lat
+            if s.get("경도")
+            and s.get("위도")
+            and min_lng <= float(s["경도"]) <= max_lng
+            and min_lat <= float(s["위도"]) <= max_lat
         ]
         logger.info(
             f"[nearby-bbox] 반경={radius:.0f}m 전체={len(result)} bbox필터={len(filtered)}"
@@ -159,6 +161,113 @@ def getCategories():
         return {"categories": mDAO.getCategories()}
     except Exception as e:
         return {"error": str(e), "categories": []}
+
+
+@app.get("/map/landmarks")
+def getLandmarks(
+    lat: float = None,
+    lng: float = None,
+    adm_cd: str = None,
+    radius: float = 1.0,
+    types: str = "",  # "12,14" 형식
+):
+    """랜드마크 DB 조회 - 좌표/행정동코드/전체(서울)"""
+    try:
+        type_list = (
+            [t.strip() for t in types.split(",") if t.strip()] if types else None
+        )
+        if lat and lng:
+            result = lmDAO.get_nearby(lat, lng, radius)
+        elif adm_cd:
+            result = lmDAO.get_by_adm_cd(adm_cd, type_list)
+        else:
+            # adm_cd 없으면 서울 전체 조회
+            result = lmDAO.get_all(type_list)
+        if type_list and adm_cd:
+            result = [r for r in result if str(r["content_type_id"]) in type_list]
+        return {"count": len(result), "landmarks": result}
+    except Exception as e:
+        logger.error(f"[landmarks] {e}")
+        return {"count": 0, "landmarks": [], "error": str(e)}
+
+
+@app.get("/map/festivals")
+async def getFestivals(
+    adm_cd: str = None,
+    lat: float = None,
+    lng: float = None,
+):
+    """축제(15) 실시간 API 조회"""
+    import httpx as _httpx
+
+    KTO_KEY = os.getenv(
+        "KTO_GW_INFO_KEY",
+        "b7906dd729da8d6d4f67bd6bed484f032f9f586abc7b382b41b93a003949385e",
+    )
+    sgg_cd = adm_cd[:5] if adm_cd else None
+    try:
+        params = {
+            "serviceKey": KTO_KEY,
+            "numOfRows": 100,
+            "pageNo": 1,
+            "MobileOS": "ETC",
+            "MobileApp": "SOHOBI",
+            "areaCode": "1",
+            "contentTypeId": "15",
+            "_type": "xml",
+        }
+        if sgg_cd:
+            params["sigunguCode"] = sgg_cd
+        async with _httpx.AsyncClient() as client:
+            r = await client.get(
+                "https://apis.data.go.kr/B551011/KorService2/areaBasedList2",
+                params=params,
+                timeout=10,
+            )
+        import xml.etree.ElementTree as ET
+
+        root = ET.fromstring(r.text)
+        items = root.findall(".//item")
+        result = [
+            {
+                "content_id": (item.findtext("contentid") or "").strip(),
+                "title": (item.findtext("title") or "").strip(),
+                "addr": (item.findtext("addr1") or "").strip(),
+                "lng": float(item.findtext("mapx") or 0) or None,
+                "lat": float(item.findtext("mapy") or 0) or None,
+                "image": (item.findtext("firstimage") or "").strip() or None,
+                "start_date": (item.findtext("eventstartdate") or "").strip(),
+                "end_date": (item.findtext("eventenddate") or "").strip(),
+            }
+            for item in items
+        ]
+        return {"count": len(result), "festivals": result}
+    except Exception as e:
+        logger.error(f"[festivals] {e}")
+        return {"count": 0, "festivals": [], "error": str(e)}
+
+
+@app.get("/map/schools")
+def getSchools(
+    adm_cd: str = None,
+    sgg_nm: str = "",
+    school_type: str = "",
+):
+    """학교 정보 조회 - sgg_nm 없으면 전체"""
+    try:
+        if adm_cd and not sgg_nm:
+            # adm_cd → 구이름 변환
+            gu = (
+                mDAO.get_gu_nm_by_adm_cd(adm_cd)
+                if hasattr(mDAO, "get_gu_nm_by_adm_cd")
+                else ""
+            )
+            sgg_nm = gu or ""
+        result = lmDAO.get_schools_by_sgg(sgg_nm, school_type or None)
+        return {"count": len(result), "schools": result}
+    except Exception as e:
+        logger.error(f"[schools] {e}")
+        return {"count": 0, "schools": [], "error": str(e)}
 
 
 @app.get("/map/dong-density")
