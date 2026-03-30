@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useMap } from "../../hooks/map/useMap";
 import { toLonLat, fromLonLat } from "ol/proj";
-import { getCenter as getExtentCenter } from "ol/extent";
+import { getCenter as getExtentCenter, extend as extendExtent, createEmpty as createEmptyExtent } from "ol/extent";
 
 // ── UI 컴포넌트 ────────────────────────────────────────────────
 import Layerpanel from "./panel/Layerpanel";
@@ -180,6 +180,34 @@ export default function MapView() {
          zoom,
          duration: 800,
       });
+   };
+
+   // ── 상권 분석 결과 → 행정동 폴리곤 하이라이트 ──────────────────
+   // ChatPanel에서 onHighlightArea(admCodes) 형태로 호출
+   const handleHighlightArea = (admCodes) => {
+      const layer = dongBoundaryLayerRef.current;
+      if (!layer) return;
+      const admSet = new Set(admCodes.map((c) => String(c).trim()));
+      const features = layer.getSource().getFeatures();
+      features.forEach((f) => {
+         const cd = String(f.getProperties().adm_cd || "").trim();
+         f.setStyle(admSet.has(cd) ? DONG_STYLE_SELECTED : null);
+      });
+      if (admCodes.length === 0) return;
+      const matched = features.filter((f) =>
+         admSet.has(String(f.getProperties().adm_cd || "").trim()),
+      );
+      if (matched.length > 0) {
+         const extent = matched.reduce(
+            (acc, f) => extendExtent(acc, f.getGeometry().getExtent()),
+            createEmptyExtent(),
+         );
+         mapInstance.current?.getView().fit(extent, {
+            padding: [80, 480, 80, 80],
+            duration: 800,
+            maxZoom: 16,
+         });
+      }
    };
 
    const clearAll = () => {
@@ -760,6 +788,7 @@ export default function MapView() {
             onToggle={() => setChatOpen((prev) => !prev)}
             mapContext={chatContext}
             onNavigate={handleChatNavigate}
+            onHighlightArea={handleHighlightArea}
             onClearContext={() => setChatContext(null)}
          />
          <div className="coord-bar">
