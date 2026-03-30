@@ -412,9 +412,11 @@ if __name__ == "__main__":
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    # [PR#51 수정] traceback 클라이언트 응답에서 제거 (OWASP A05 보안 취약점)
+    #   내부 파일 경로·코드 구조가 외부에 노출되므로 콘솔 로깅만 유지
     error_detail = traceback.format_exc()
-    print(f"Unhandled error: {error_detail}")  # 콘솔 출력
+    print(f"Unhandled error: {error_detail}")  # 서버 콘솔에만 출력
     return JSONResponse(
         status_code=500,
-        content={"detail": str(exc), "traceback": error_detail}
+        content={"detail": str(exc)}
     )
