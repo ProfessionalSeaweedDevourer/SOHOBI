@@ -6,6 +6,7 @@ import ChatInput from "../components/ChatInput";
 import ResponseCard from "../components/ResponseCard";
 import SignoffPanel from "../components/SignoffPanel";
 import ProgressPanel from "../components/ProgressPanel";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 export default function DevChat() {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export default function DevChat() {
   const [sessionId, setSessionId] = useState(null);
   const [latestParams, setLatestParams] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [activeEvents, setActiveEvents] = useState([]); // 스트리밍 중인 이벤트 목록
+  const [activeEvents, setActiveEvents] = useState([]);
   const [error, setError] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -74,40 +75,44 @@ export default function DevChat() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 py-3 flex items-center gap-3">
+      <header className="sticky top-0 z-10 glass border-b border-[var(--border)] px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate("/")}
-          className="text-slate-400 hover:text-slate-700 text-sm"
+          className="text-muted-foreground hover:text-foreground text-sm transition-colors"
         >
           ← 홈
         </button>
-        <span className="font-semibold text-slate-800">SOHOBI 개발자</span>
-        <span className="ml-auto text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-medium">
+        <span className="font-semibold text-foreground">SOHOBI 개발자</span>
+        <span
+          className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium"
+          style={{ background: "rgba(249,115,22,0.15)", color: "var(--brand-orange)" }}
+        >
           개발자
         </span>
         <button
           onClick={() => navigate("/dev/logs")}
-          className="text-xs text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-100 transition-colors"
+          className="text-xs glass rounded-lg px-3 py-1.5 hover:shadow-elevated transition-glow text-foreground"
         >
           📋 로그 뷰어
         </button>
         <button
           onClick={() => { clearDevAuth(); navigate("/"); }}
-          className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           로그아웃
         </button>
+        <ThemeToggle />
       </header>
 
       {/* 대화 영역 */}
       <main className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl mx-auto w-full">
         {messages.length === 0 && !loading && (
-          <div className="text-center mt-20 text-slate-400">
+          <div className="text-center mt-20 text-muted-foreground">
             <div className="text-4xl mb-3">🛠</div>
             <p className="text-sm">질문 입력 시 실시간 진행 상황과 Sign-off 판정 결과가 표시됩니다.</p>
-            <p className="text-xs mt-1 text-slate-300">에이전트 단계, A/B/C 등급, 반려 이유, 수정 지시문을 실시간으로 확인할 수 있습니다.</p>
+            <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>에이전트 단계, A/B/C 등급, 반려 이유, 수정 지시문을 실시간으로 확인할 수 있습니다.</p>
           </div>
         )}
 
@@ -140,12 +145,12 @@ export default function DevChat() {
 
           {/* 스트리밍 진행 중 */}
           {loading && (
-            <div className="border border-slate-200 rounded-xl bg-white px-4 py-3">
-              <div className="text-xs text-slate-400 mb-2 font-medium">처리 중</div>
+            <div className="glass rounded-xl px-4 py-3 shadow-elevated">
+              <div className="text-xs text-muted-foreground mb-2 font-medium">처리 중</div>
               <ProgressPanel events={activeEvents} detailed={true} />
               {activeEvents.length === 0 && (
-                <div className="flex items-center gap-2 text-slate-400 text-xs">
-                  <span className="inline-block w-3 h-3 border-2 border-slate-200 border-t-blue-400 rounded-full animate-spin" />
+                <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                  <span className="inline-block w-3 h-3 border-2 border-[var(--border)] border-t-[var(--brand-blue)] rounded-full animate-spin" />
                   도메인 분류 중…
                 </div>
               )}
@@ -153,7 +158,7 @@ export default function DevChat() {
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+            <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm rounded-xl px-4 py-3">
               오류: {error}
             </div>
           )}
@@ -163,7 +168,7 @@ export default function DevChat() {
       </main>
 
       {/* 입력창 */}
-      <footer className="sticky bottom-0 bg-slate-50 border-t border-slate-100 px-4 py-3 max-w-3xl mx-auto w-full">
+      <footer className="sticky bottom-0 bg-background border-t border-[var(--border)] px-4 py-3 max-w-3xl mx-auto w-full">
         <ChatInput ref={inputRef} onSubmit={handleSubmit} loading={loading} />
       </footer>
     </div>

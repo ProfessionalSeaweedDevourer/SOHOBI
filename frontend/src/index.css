@@ -1,14 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-body {
-  margin: 0;
-  font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif;
-  background-color: #f8fafc;
-  color: #1e293b;
-  min-height: 100vh;
-}
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import './styles/fonts.css';
+@import './styles/theme.css';
+@import './styles/animations.css';
 
 /* 마크다운 응답 스타일 */
 .prose-response p { margin-bottom: 0.75rem; line-height: 1.7; }
