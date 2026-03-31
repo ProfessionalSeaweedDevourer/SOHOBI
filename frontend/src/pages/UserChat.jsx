@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { streamQuery } from "../api";
+import { interpretError } from "../utils/errorInterpreter";
 import ChatInput from "../components/ChatInput";
 import ResponseCard from "../components/ResponseCard";
 import ProgressPanel from "../components/ProgressPanel";
@@ -13,7 +14,7 @@ export default function UserChat() {
   const [latestParams, setLatestParams] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeEvents, setActiveEvents] = useState([]);
-  const [error, setError] = useState(null);
+  const [pendingQuestion, setPendingQuestion] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -22,7 +23,7 @@ export default function UserChat() {
   }, [messages, loading]);
 
   async function handleSubmit(question) {
-    setError(null);
+    setPendingQuestion(question);
     setLoading(true);
     setActiveEvents([]);
 
@@ -30,6 +31,14 @@ export default function UserChat() {
 
     try {
       await streamQuery(question, 3, sessionId, (eventName, data) => {
+        if (eventName === "error") {
+          setPendingQuestion(null);
+          setMessages(prev => [
+            ...prev,
+            { question, status: "error", draft: interpretError(data.message || data.error || "") },
+          ]);
+          return;
+        }
         setActiveEvents(prev => [...prev, { event: eventName, ...data }]);
         if (eventName === "domain_classified" && data.session_id) {
           setSessionId(data.session_id);
@@ -39,10 +48,18 @@ export default function UserChat() {
         }
       }, latestParams);
     } catch (e) {
-      setError(e.message);
+      setPendingQuestion(null);
+      setMessages(prev => [
+        ...prev,
+        { question, status: "error", draft: interpretError(e.message) },
+      ]);
+      setActiveEvents([]);
       setLoading(false);
+      inputRef.current?.clear();
       return;
     }
+
+    setPendingQuestion(null);
 
     if (finalResult) {
       setMessages(prev => [
@@ -88,7 +105,7 @@ export default function UserChat() {
 
       {/* 대화 영역 */}
       <main className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl mx-auto w-full">
-        {messages.length === 0 && !loading && (
+        {messages.length === 0 && !loading && !pendingQuestion && (
           <div className="text-center mt-20 text-muted-foreground">
             <div className="text-4xl mb-3">💬</div>
             <p className="text-sm">창업 관련 질문을 입력해 보세요.</p>
@@ -126,6 +143,15 @@ export default function UserChat() {
             />
           ))}
 
+          {pendingQuestion && (
+            <div
+              className="self-end max-w-[80%] text-white rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-relaxed"
+              style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
+            >
+              {pendingQuestion}
+            </div>
+          )}
+
           {loading && (
             <div className="self-start glass rounded-xl px-4 py-3 text-sm w-full max-w-md shadow-elevated">
               <ProgressPanel events={activeEvents} detailed={false} />
@@ -135,12 +161,6 @@ export default function UserChat() {
                   분석 준비 중…
                 </div>
               )}
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm rounded-xl px-4 py-3">
-              오류: {error}
             </div>
           )}
         </div>
