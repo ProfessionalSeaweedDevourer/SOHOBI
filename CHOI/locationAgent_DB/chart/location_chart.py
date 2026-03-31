@@ -83,14 +83,14 @@ def _chart_day(sales_summary: dict, title_prefix: str = "") -> str | None:
             "mon_sales_krw", "tue_sales_krw", "wed_sales_krw",
             "thu_sales_krw", "fri_sales_krw", "sat_sales_krw", "sun_sales_krw",
         ]
-        day_vals = [sales_summary.get(k, 0) for k in day_keys]
+        day_vals = [sales_summary.get(k, 0) / 4 for k in day_keys]
 
         bar_colors = [_BAR_COLOR] * 7
         if max(day_vals) > 0:
             bar_colors[day_vals.index(max(day_vals))] = _BAR_HIGHLIGHT
 
         bars = ax.bar(day_labels, day_vals, color=bar_colors, width=0.55, edgecolor="none")
-        ax.set_title("📅 요일별 매출", fontsize=13, fontweight="bold", pad=8)
+        ax.set_title("📅 요일별 평균 매출(일단위)", fontsize=13, fontweight="bold", pad=8)
         ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
         ax.spines[["top", "right"]].set_visible(False)
         ax.tick_params(axis="x", labelsize=12)
@@ -143,8 +143,8 @@ def _chart_time(sales_summary: dict, title_prefix: str = "") -> str | None:
             ax.set_title("⏰ 시간대별 매출", fontsize=13, fontweight="bold", pad=8)
             ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
         else:
-            wkday = sales_summary.get("weekday_sales_krw", 0)
-            wkend = sales_summary.get("weekend_sales_krw", 0)
+            wkday = sales_summary.get("weekday_sales_krw", 0) / 4
+            wkend = sales_summary.get("weekend_sales_krw", 0) / 4
             if wkday + wkend > 0:
                 wd_bars = ax.bar(
                     ["주중", "주말"], [wkday, wkend],
@@ -158,7 +158,7 @@ def _chart_time(sales_summary: dict, title_prefix: str = "") -> str | None:
                             fontsize=11, fontweight="bold", color="#475569",
                         )
                 ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
-                ax.set_title("📊 주중 / 주말 매출", fontsize=13, fontweight="bold", pad=8)
+                ax.set_title("📊 주중 / 주말 평균 매출(일단위)", fontsize=13, fontweight="bold", pad=8)
             else:
                 ax.text(0.5, 0.5, "시간대 / 주중주말 데이터 없음",
                         transform=ax.transAxes, ha="center", va="center",
@@ -272,7 +272,7 @@ def generate_analyze_charts(
     if not _MATPLOTLIB_AVAILABLE or not sales_summary:
         return []
 
-    title_prefix = f"{location} {business_type}".strip()
+    title_prefix = f"{location} 전체 {business_type} 기준".strip()
     charts = []
     for fn in [_chart_day, _chart_time, _chart_age, _chart_gender]:
         result = fn(sales_summary, title_prefix)
