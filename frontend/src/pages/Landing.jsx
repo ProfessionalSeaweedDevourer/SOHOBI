@@ -93,6 +93,13 @@ export default function Landing() {
                 </Button>
               </motion.div>
             </Link>
+            <Link to="/map">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button size="lg" variant="outline" className="px-10 py-6 text-lg glass border-2 shadow-elevated">
+                  지도·상권분석 보기
+                </Button>
+              </motion.div>
+            </Link>
             <Link to="/dev/logs">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button size="lg" variant="outline" className="px-10 py-6 text-lg glass border-2 shadow-elevated">

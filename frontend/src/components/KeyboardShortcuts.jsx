@@ -10,7 +10,7 @@ export function KeyboardShortcuts() {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
         e.preventDefault();
-        toast.info('단축키: ⌘/Ctrl+H (홈), ⌘/Ctrl+U (사용자 채팅), ⌘/Ctrl+L (로그)', { duration: 5000 });
+        toast.info('단축키: ⌘/Ctrl+H (홈), ⌘/Ctrl+U (사용자 채팅)', { duration: 5000 });
       }
 
       if (e.metaKey || e.ctrlKey) {
@@ -27,13 +27,7 @@ export function KeyboardShortcuts() {
               toast.success('사용자 채팅으로 이동');
             }
             break;
-          case 'l':
-            if (location.pathname !== '/dev/logs') {
-              e.preventDefault();
-              navigate('/dev/logs');
-              toast.success('로그 뷰어로 이동');
-            }
-            break;
+
         }
       }
 
