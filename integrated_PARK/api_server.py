@@ -142,6 +142,19 @@ def _detect_injection(text: str) -> bool:
     return any(_re.search(p, t) for p in _INJECTION_PATTERNS)
 
 
+# signoff 구분자 인젝션 제거 — 질문에 삽입된 <<<DRAFT_END>>> 등을 사전 차단
+_STRIP_PATTERNS = [
+    (r"<<<DRAFT_END>>>\s*\{.*?\}\s*<<<DRAFT_START>>>", ""),  # signoff 판정 삽입 패턴
+    (r"<<<[A-Z_]+>>>", ""),                                    # 구분자 일반
+]
+
+def _sanitize_question(text: str) -> str:
+    """질문에서 signoff 구분자 및 판정 삽입 패턴을 제거한다."""
+    for pattern, repl in _STRIP_PATTERNS:
+        text = _re.sub(pattern, repl, text, flags=_re.DOTALL)
+    return text.strip()
+
+
 # ── 내부 헬퍼 ─────────────────────────────────────────────────
 
 async def _extract_and_save(sid: str, session: dict, draft: str) -> None:
@@ -172,8 +185,11 @@ async def query(req: QueryRequest):
     """Q&A 플로우: 질문 → 도메인 분류 → 에이전트(창업자 컨텍스트 주입) → Sign-off → 최종 응답"""
     t0 = time.monotonic()
     try:
+        # ── 구분자 인젝션 사전 제거 ────────────────────────────
+        question = _sanitize_question(req.question)
+
         # ── 프롬프트 인젝션 의심 패턴 감지 (거부 없이 로깅만) ─
-        if _detect_injection(req.question):
+        if _detect_injection(question):
             import logging
             logging.getLogger("sohobi.security").warning(
                 "INJECTION_SUSPECT question=%r", req.question[:200]
@@ -189,7 +205,7 @@ async def query(req: QueryRequest):
 
         # ── 도메인 분류 ───────────────────────────────────────
         # 라우터는 항상 실행한다 (클라이언트 domain 지정 여부와 무관)
-        classification = await domain_router.classify(req.question)
+        classification = await domain_router.classify(question)
         router_domain = classification["domain"]
         router_confidence = classification.get("confidence", 0.0)
 
@@ -211,7 +227,7 @@ async def query(req: QueryRequest):
         params = req.current_params or (session["extracted"] if session["extracted"] else None)
         result = await orchestrator.run(
             domain=domain,
-            question=req.question,
+            question=question,
             profile=session["profile"],
             session_id=sid,
             prior_history=get_recent_history(session["history"]),
@@ -220,7 +236,7 @@ async def query(req: QueryRequest):
         )
 
         # 세션 대화 이력 누적
-        session["history"].add_user_message(req.question)
+        session["history"].add_user_message(question)
         session["history"].add_assistant_message(result["draft"])
 
         # 세션 저장 후, 재무 변수 추출은 백그라운드에서 처리 (사용자 응답 지연 없음)
