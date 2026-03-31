@@ -28,7 +28,7 @@ AGENT_MAP = {
 
 
 async def run(
-    domain: Literal["admin", "finance", "legal", "location"],
+    domain: Literal["admin", "finance", "legal", "location", "chat"],
     question: str,
     profile: str = "",
     session_id: str = "",
@@ -37,6 +37,34 @@ async def run(
     current_params: dict | None = None,
 ) -> dict:
     kernel = get_kernel()
+
+    # ── chat 도메인: SignOff 없이 즉시 반환 ──────────────────
+    if domain == "chat":
+        from agents.chat_agent import ChatAgent
+        t0 = time.monotonic()
+        draft = await ChatAgent(kernel).generate_draft(
+            question=question,
+            profile=profile,
+            prior_history=prior_history,
+        )
+        return {
+            "status":            "approved",
+            "grade":             "A",
+            "confidence_note":   "",
+            "retry_count":       0,
+            "request_id":        str(uuid.uuid4())[:8],
+            "session_id":        session_id,
+            "agent_ms":          round((time.monotonic() - t0) * 1000),
+            "signoff_ms":        0,
+            "message":           "",
+            "rejection_history": [],
+            "draft":             draft,
+            "chart":             None,
+            "updated_params":    None,
+            "adm_codes":         [],
+            "analysis_type":     "",
+        }
+
     signoff_client = get_signoff_client()
     agent = AGENT_MAP[domain](kernel)
 
@@ -143,7 +171,7 @@ async def run(
 
 
 async def run_stream(
-    domain: Literal["admin", "finance", "legal", "location"],
+    domain: Literal["admin", "finance", "legal", "location", "chat"],
     question: str,
     profile: str = "",
     session_id: str = "",
@@ -163,6 +191,40 @@ async def run_stream(
       error          — 예외 발생
     """
     kernel = get_kernel()
+
+    # ── chat 도메인: SignOff 없이 즉시 complete yield ────────
+    if domain == "chat":
+        from agents.chat_agent import ChatAgent
+        yield {"event": "agent_start", "attempt": 1, "max_attempts": 1}
+        t0 = time.monotonic()
+        draft = await ChatAgent(kernel).generate_draft(
+            question=question,
+            profile=profile,
+            prior_history=prior_history,
+        )
+        agent_ms = round((time.monotonic() - t0) * 1000)
+        rid = str(uuid.uuid4())[:8]
+        yield {"event": "agent_done", "attempt": 1, "agent_ms": agent_ms}
+        yield {
+            "event":             "complete",
+            "status":            "approved",
+            "grade":             "A",
+            "confidence_note":   "",
+            "retry_count":       0,
+            "request_id":        rid,
+            "session_id":        session_id,
+            "agent_ms":          agent_ms,
+            "signoff_ms":        0,
+            "message":           "",
+            "rejection_history": [],
+            "draft":             draft,
+            "chart":             None,
+            "updated_params":    None,
+            "adm_codes":         [],
+            "analysis_type":     "",
+        }
+        return
+
     signoff_client = get_signoff_client()
     agent = AGENT_MAP[domain](kernel)
 

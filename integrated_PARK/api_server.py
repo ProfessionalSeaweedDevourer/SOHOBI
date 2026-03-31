@@ -175,7 +175,7 @@ async def health():
     return {
         "status": "ok",
         "version": "1.1.0",
-        "domains": ["admin", "finance", "legal", "location"],
+        "domains": ["admin", "finance", "legal", "location", "chat"],
         "plugins": ["SeoulCommercial", "FinanceSim", "LegalSearch", "BusinessDoc"],
     }
 
@@ -209,7 +209,7 @@ async def query(req: QueryRequest):
         router_domain = classification["domain"]
         router_confidence = classification.get("confidence", 0.0)
 
-        if req.domain in ("admin", "finance", "legal", "location"):
+        if req.domain in ("admin", "finance", "legal", "location", "chat"):
             if router_domain != req.domain and router_confidence >= 0.8:
                 import logging
                 logging.getLogger("sohobi.security").warning(
@@ -308,7 +308,7 @@ async def stream_query(req: QueryRequest):
         t0 = time.monotonic()
         try:
             # ── 도메인 분류 ───────────────────────────────────
-            if req.domain in ("admin", "finance", "legal", "location"):
+            if req.domain in ("admin", "finance", "legal", "location", "chat"):
                 domain = req.domain
             else:
                 classification = await domain_router.classify(req.question)

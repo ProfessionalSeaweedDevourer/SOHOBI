@@ -1,12 +1,13 @@
 import ReactMarkdown from "react-markdown";
 import SimulationChart from "./SimulationChart";
 
-const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석" };
+const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석", chat: "안내" };
 const DOMAIN_COLOR = {
   finance: { background: "rgba(20,184,166,0.15)", color: "var(--brand-teal)" },
   admin:   { background: "rgba(8,145,178,0.15)",  color: "var(--brand-blue)" },
   legal:   { background: "rgba(249,115,22,0.15)", color: "var(--brand-orange)" },
   location:{ background: "rgba(20,184,166,0.15)", color: "var(--brand-teal)" },
+  chat:    { background: "rgba(139,92,246,0.15)", color: "#8b5cf6" },
 };
 
 const GRADE_STYLE = {
@@ -50,12 +51,14 @@ export default function ResponseCard({ question, domain, status, grade, confiden
             >
               {DOMAIN_KR[domain] || domain}
             </span>
-            <span
-              className="text-xs px-2 py-0.5 rounded-full font-semibold"
-              style={GRADE_STYLE[effectiveGrade] || { background: "var(--muted)", color: "var(--muted-foreground)" }}
-            >
-              {GRADE_LABEL[effectiveGrade] || effectiveGrade}
-            </span>
+            {domain !== "chat" && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                style={GRADE_STYLE[effectiveGrade] || { background: "var(--muted)", color: "var(--muted-foreground)" }}
+              >
+                {GRADE_LABEL[effectiveGrade] || effectiveGrade}
+              </span>
+            )}
             {retryCount !== undefined && retryCount > 0 && (
               <span className="text-xs text-muted-foreground">재시도 {retryCount}회</span>
             )}
