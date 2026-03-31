@@ -145,7 +145,7 @@ async def save_query_session(session_id: str, session: dict) -> None:
     })
 
 
-HISTORY_WINDOW = 6  # 에이전트에 주입할 최대 메시지 수 (user+assistant 쌍 3턴)
+HISTORY_WINDOW = 10  # 에이전트에 주입할 최대 메시지 수 (user+assistant 쌍 5턴)
 
 
 def get_recent_history(history: ChatHistory, n: int = HISTORY_WINDOW) -> list[dict]:

@@ -93,6 +93,13 @@ export default function Landing() {
                 </Button>
               </motion.div>
             </Link>
+            <Link to="/map">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button size="lg" variant="outline" className="px-10 py-6 text-lg glass border-2 shadow-elevated">
+                  지도·상권분석 보기
+                </Button>
+              </motion.div>
+            </Link>
             <Link to="/dev/logs">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button size="lg" variant="outline" className="px-10 py-6 text-lg glass border-2 shadow-elevated">
@@ -243,7 +250,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="glass border-t border-white/20 py-12 backdrop-blur-xl">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p className="mb-2">© 2026 SOHOBI. Built with React + FastAPI</p>
+          <p className="mb-2">© 2026 SOHOBI.</p>
           <p>소상공인을 위한 AI 컨설팅 플랫폼</p>
         </div>
       </footer>

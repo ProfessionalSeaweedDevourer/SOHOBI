@@ -15,7 +15,8 @@ KEYWORDS: dict[str, list[str]] = {
     "finance":  ["재무", "대출", "금리", "수익", "비용", "투자", "시뮬레이션", "자본"],
     "legal":    ["법", "계약", "소송", "보증금", "임대차", "조항", "권리", "의무", "판례"],
     "location": ["상권", "지역", "상권분석", "홍대", "강남", "잠실", "이태원", "합정", "vs", "비교"],
-    "chat":     ["안녕", "반가워", "뭐 할 수 있", "어떻게 써", "어떻게 사용", "도움말", "사용법", "소개해", "처음 써"],
+    "chat":     ["안녕", "반가워", "뭐 할 수 있", "어떻게 써", "어떻게 사용", "도움말", "사용법", "소개해", "처음 써",
+                 "뭐가 필요", "어떤 기능", "기능 안내", "어떻게 하면 돼"],
 }
 
 _SYSTEM_PROMPT = """You are a query classifier for a Korean small business assistant.
@@ -24,7 +25,7 @@ Classify the user query into exactly one of: admin, finance, legal, location, ch
 - finance: 재무, 대출, 수익, 비용, 투자 시뮬레이션 관련
 - legal: 법률, 계약, 권리 의무, 소송, 임대차 관련
 - location: 상권 분석, 지역 비교, 매출 지역 데이터, 창업 입지 분석 관련
-- chat: 인사, 잡담, 서비스 기능·사용법 문의, "뭐 할 수 있어?" 류의 안내 요청
+- chat: 인사, 잡담, 서비스 기능·사용법 문의, "뭐 할 수 있어?" 류의 안내 요청, 특정 에이전트의 입력값·사용법·필요 정보를 묻는 질문 (예: "재무 시뮬레이션 쓰려면 뭐가 필요해요?", "상권 분석 어떻게 해요?")
 Respond ONLY in JSON: {"domain": "...", "confidence": 0.0~1.0, "reasoning": "..."}"""
 
 _FALLBACK = {"domain": "admin", "confidence": 0.3, "reasoning": "LLM 파싱 실패 — 기본값 적용"}

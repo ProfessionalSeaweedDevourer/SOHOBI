@@ -1,7 +1,5 @@
 import { FileText, MapPin, Calculator } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 
 const iconMap = {
   FileText,
@@ -10,18 +8,12 @@ const iconMap = {
 };
 
 export function AgentCard({ agent, index = 0 }) {
-  const navigate = useNavigate();
   const Icon = iconMap[agent.icon];
 
   const glowClass =
     agent.id === 'admin' ? 'hover-glow-blue' :
     agent.id === 'commercial' ? 'hover-glow-teal' :
     'hover-glow-orange';
-
-  const handleClick = () => {
-    toast.success(`${agent.nameKo}와 상담을 시작합니다`);
-    navigate('/user', { state: { selectedAgent: agent.id } });
-  };
 
   return (
     <motion.div
@@ -30,8 +22,7 @@ export function AgentCard({ agent, index = 0 }) {
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
       whileHover={{ scale: 1.02, y: -8 }}
-      className="group cursor-pointer"
-      onClick={handleClick}
+      className="group"
     >
       <div className={`glass rounded-2xl p-6 border-2 border-white/20 transition-glow hover-lift shadow-elevated ${glowClass} relative overflow-hidden`}>
         <div
