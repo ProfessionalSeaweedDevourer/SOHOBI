@@ -15,6 +15,27 @@ from semantic_kernel.functions import kernel_function
 
 load_dotenv()
 
+
+def _safe_int(val, default: int = 0) -> int:
+    """콤마·공백 포함 문자열도 안전하게 int 변환."""
+    if val is None or val == "":
+        return default
+    try:
+        return int(str(val).replace(",", "").strip())
+    except (ValueError, TypeError):
+        return default
+
+
+def _safe_float(val, default: float = 0.0) -> float:
+    """콤마·공백 포함 문자열도 안전하게 float 변환."""
+    if val is None or val == "":
+        return default
+    try:
+        return float(str(val).replace(",", "").strip())
+    except (ValueError, TypeError):
+        return default
+
+
 DONG_CODE_MAP: dict[str, str] = {
     "홍대": "11440680", "홍대입구": "11440680",
     "강남": "11680640", "역삼": "11680640",
@@ -90,12 +111,12 @@ class SeoulCommercialPlugin:
                 "dong_name": row.get("ADSTRD_CD_NM", ""),
                 "business_type": row.get("SVC_INDUTY_CD_NM", business_type),
                 "quarter": row.get("STDR_YYQU_CD", quarter),
-                "monthly_sales_krw": int(row.get("THSMON_SELNG_AMT", 0)),
-                "monthly_tx_count": int(row.get("THSMON_SELNG_CO", 0)),
-                "weekday_sales_krw": int(row.get("MDWK_SELNG_AMT", 0)),
-                "weekend_sales_krw": int(row.get("WKEND_SELNG_AMT", 0)),
-                "age_20s_krw": int(row.get("AGRDE_20_SELNG_AMT", 0)),
-                "age_30s_krw": int(row.get("AGRDE_30_SELNG_AMT", 0)),
+                "monthly_sales_krw": _safe_int(row.get("THSMON_SELNG_AMT", 0)),
+                "monthly_tx_count": _safe_int(row.get("THSMON_SELNG_CO", 0)),
+                "weekday_sales_krw": _safe_int(row.get("MDWK_SELNG_AMT", 0)),
+                "weekend_sales_krw": _safe_int(row.get("WKEND_SELNG_AMT", 0)),
+                "age_20s_krw": _safe_int(row.get("AGRDE_20_SELNG_AMT", 0)),
+                "age_30s_krw": _safe_int(row.get("AGRDE_30_SELNG_AMT", 0)),
                 "source": "서울시 상권분석서비스 VwsmAdstrdSelngW (OA-22175)",
             }, ensure_ascii=False)
         except Exception as e:
@@ -141,9 +162,9 @@ class SeoulCommercialPlugin:
                 "dong_name": row.get("ADSTRD_CD_NM", ""),
                 "business_type": row.get("SVC_INDUTY_CD_NM", business_type),
                 "quarter": row.get("STDR_YYQU_CD", quarter),
-                "store_count": int(row.get("STOR_CO", 0)),
-                "open_rate_pct": float(row.get("OPBIZ_RATE", 0)),
-                "close_rate_pct": float(row.get("CLSBIZ_RATE", 0)),
+                "store_count": _safe_int(row.get("STOR_CO", 0)),
+                "open_rate_pct": _safe_float(row.get("OPBIZ_RATE", 0)),
+                "close_rate_pct": _safe_float(row.get("CLSBIZ_RATE", 0)),
                 "source": "서울시 상권분석서비스 VwsmAdstrdStorW (OA-22172)",
             }, ensure_ascii=False)
         except Exception as e:
