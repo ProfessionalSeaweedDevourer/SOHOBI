@@ -39,6 +39,8 @@ export default function SimulationChart({ chartData }) {
     const labels = bins.map((b) => fmt(b.left));
     const data = bins.map((b) => b.count);
     const colors = bins.map((b) => binColor(b.type));
+    const totalCost = chartData.total_cost;
+    const breakeven = chartData.total_cost;
 
     chartRef.current = new Chart(canvasRef.current, {
       type: "bar",
@@ -60,14 +62,44 @@ export default function SimulationChart({ chartData }) {
         plugins: {
           legend: { display: false },
           tooltip: {
-            callbacks: {
-              label: (ctx) => `${ctx.parsed.y}회`,
-              title: (items) => {
-                const b = bins[items[0].dataIndex];
-                return `${fmt(b.left)} ~ ${fmt(b.right)}`;
-              },
+                callbacks: {
+                    title: (items) => {
+                        const b = bins[items[0].dataIndex];
+                        return `순이익 ${fmt(b.left)} ~ ${fmt(b.right)} 구간`;
+                    },
+                    label: (ctx) => {
+                        const b = bins[ctx.dataIndex];
+                        const mid = (b.left + b.right) / 2;
+                        const midRevenue = mid + totalCost;
+                        const total = data.reduce((a,c) => a+c, 0);
+                        const cum   = data.slice(0, ctx.dataIndex+1).reduce((a,c) => a+c, 0);
+                        const pct   = (cum / total * 100).toFixed(1);
+                        const revLeft  = fmt(b.left  + totalCost);
+                        const revRight = fmt(b.right + totalCost);
+
+                        if (b.type === "loss") {
+                            const gap = fmt(Math.abs(midRevenue - breakeven));
+                            return [
+                                `월매출 ${revLeft} ~ ${revRight} 구간 (하위 ${pct}%)`,
+                                `매출 ${gap} 더 필요해야 손익 유지`,
+                            ];
+                        } else if (b.type === "p20") {
+                            const margin = ((midRevenue - breakeven) / midRevenue * 100).toFixed(1);
+                            return [
+                                `월매출 ${revLeft} ~ ${revRight} 구간 (하위 ${pct}%)`,
+                                `매출 ${margin}% 하락 시 손익 위험`,
+                            ];
+                        } else {
+                            const topPct = (100 - parseFloat(pct)).toFixed(1);
+                            const margin = ((midRevenue - breakeven) / midRevenue * 100).toFixed(1);
+                            return [
+                                `월매출 ${revLeft} ~ ${revRight} 구간 (상위 ${topPct}%)`,
+                                `매출 ${margin}% 하락해도 손익 유지`,
+                            ];
+                        }
+                    }
+                }
             },
-          },
         },
         scales: {
           x: {
