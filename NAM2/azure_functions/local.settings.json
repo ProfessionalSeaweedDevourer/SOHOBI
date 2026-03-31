@@ -18,6 +18,9 @@
     "AZURE_STORAGE_CONTAINER": "sohobi-docs",
     "GOV24_API_KEY": "",
     "KSTARTUP_API_KEY": "",
+    "KISED_SPACE_API_KEY": "",
+    "KISED_AGENCY_API_KEY": "",
+    "KISED_EDU_API_KEY": "",
     "SME24_API_KEY": "",
     "BIZINFO_API_KEY": ""
   }

@@ -4,10 +4,13 @@ data_collector.py
 
 지원 소스:
 1. 정부24 공공서비스 API (GOV24_API_KEY)
-2. K-Startup 창업지원사업 API (KSTARTUP_API_KEY) — 선택
-3. 중소벤처24 공고 API (SME24_API_KEY) — 선택
-4. 기업마당 API (BIZINFO_API_KEY) — 선택
-5. 소진공/신보/고용/외식업 큐레이션 데이터 — 키 불필요
+2. K-Startup 사업공고 조회 API (KSTARTUP_API_KEY) — 창업진흥원
+3. 창업공간플랫폼 조회 API (KISED_SPACE_API_KEY) — 창업진흥원
+4. 정부지원사업 주관기관 API (KISED_AGENCY_API_KEY) — 창업진흥원
+5. 창업에듀 교육과정 API (KISED_EDU_API_KEY) — 창업진흥원
+6. 중소벤처24 공고 API (SME24_API_KEY) — 선택
+7. 기업마당 API (BIZINFO_API_KEY) — 선택
+8. 소진공/신보/고용/외식업 큐레이션 데이터 — 키 불필요
 """
 
 import os
@@ -109,51 +112,284 @@ def collect_gov24() -> list[dict]:
     return filtered
 
 
-# ━━━ 2. K-Startup API ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━ 2. K-Startup 사업공고 조회 (창업진흥원) ━━━━━━━━
 
 def collect_kstartup() -> list[dict]:
-    """K-Startup 창업지원사업 API"""
+    """창업진흥원 K-Startup 사업소개/사업공고 조회 서비스 (data.go.kr #15125364)"""
     api_key = os.getenv("KSTARTUP_API_KEY", "")
     if not api_key:
         logging.info("[kstartup] API 키 없음, 스킵")
         return []
 
     results = []
-    try:
-        url = "https://apis.data.go.kr/B552735/k-startup/supportBizList"
-        resp = requests.get(url, params={
-            "serviceKey": api_key, "pageNo": 1, "numOfRows": 200,
-        }, timeout=15)
-        if resp.status_code == 200:
+    page = 1
+
+    while True:
+        try:
+            url = "https://apis.data.go.kr/B552735/kisedKstartupService01/getAnnouncementInformation"
+            resp = requests.get(url, params={
+                "serviceKey": api_key,
+                "pageNo": page,
+                "numOfRows": 100,
+                "type": "json",
+            }, timeout=20)
+
+            if resp.status_code != 200:
+                logging.warning(f"[kstartup] page {page} status {resp.status_code}")
+                break
+
             data = resp.json()
-            items = data.get("body", {}).get("items", [])
+            body = data.get("response", {}).get("body", data.get("body", {}))
+            items = body.get("items", [])
             if isinstance(items, dict):
                 items = items.get("item", [])
+            if not items:
+                break
+
             for item in items:
                 results.append({
-                    "service_id": f"kstartup_{item.get('bizPblancId', '')}",
-                    "program_name": item.get("bizPblancNm", ""),
-                    "summary": item.get("bizPblancCnts", ""),
+                    "service_id": f"kstartup_{item.get('pbancSn', item.get('bizPblancId', ''))}",
+                    "program_name": item.get("pbancNm", item.get("bizPblancNm", "")),
+                    "summary": item.get("pbancRcptPrdCn", item.get("bizPblancCnts", "")),
                     "field": "창업지원",
-                    "target": item.get("trgetNm", ""),
-                    "criteria": "",
-                    "support_content": item.get("sporCn", ""),
-                    "apply_method": "K-Startup 홈페이지",
-                    "apply_deadline": item.get("reqstEndDe", ""),
-                    "org_name": item.get("jrsdInsttNm", ""),
-                    "phone": "",
-                    "url": f"https://www.k-startup.go.kr",
-                    "support_type": item.get("sporTypeNm", ""),
+                    "target": item.get("trgetCn", item.get("trgetNm", "예비창업자, 초기창업자")),
+                    "criteria": item.get("slctnMthdCn", ""),
+                    "support_content": item.get("sporCn", item.get("pbancCn", "")),
+                    "apply_method": item.get("rcptMthdCn", "K-Startup 홈페이지"),
+                    "apply_deadline": item.get("pbancEndDt", item.get("reqstEndDe", "")),
+                    "org_name": item.get("excInsttNm", item.get("jrsdInsttNm", "창업진흥원")),
+                    "phone": item.get("cntctTelno", ""),
+                    "url": "https://www.k-startup.go.kr",
+                    "support_type": item.get("sporTypeNm", "창업지원"),
                     "source_name": "kstartup",
                 })
-            logging.info(f"[kstartup] {len(results)}건 수집")
-    except Exception as e:
-        logging.warning(f"[kstartup] error: {e}")
 
+            total_count = int(body.get("totalCount", 0))
+            if len(results) >= total_count or len(items) < 100:
+                break
+
+            page += 1
+            time.sleep(0.3)
+
+        except Exception as e:
+            logging.warning(f"[kstartup] page {page} error: {e}")
+            break
+
+    logging.info(f"[kstartup] {len(results)}건 수집")
     return results
 
 
-# ━━━ 3. 중소벤처24 API ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━ 3. 창업공간플랫폼 조회 (창업진흥원) ━━━━━━━━━━━
+
+def collect_kised_space() -> list[dict]:
+    """창업진흥원 창업공간플랫폼 조회 서비스 (data.go.kr #15125365)"""
+    api_key = os.getenv("KISED_SPACE_API_KEY", "")
+    if not api_key:
+        logging.info("[kised_space] API 키 없음, 스킵")
+        return []
+
+    results = []
+    page = 1
+
+    while True:
+        try:
+            url = "https://apis.data.go.kr/B552735/kisedKstartupService01/getStartupSpaceInformation"
+            resp = requests.get(url, params={
+                "serviceKey": api_key,
+                "pageNo": page,
+                "numOfRows": 100,
+                "type": "json",
+            }, timeout=20)
+
+            if resp.status_code != 200:
+                logging.warning(f"[kised_space] page {page} status {resp.status_code}")
+                break
+
+            data = resp.json()
+            body = data.get("response", {}).get("body", data.get("body", {}))
+            items = body.get("items", [])
+            if isinstance(items, dict):
+                items = items.get("item", [])
+            if not items:
+                break
+
+            for item in items:
+                space_name = item.get("spaceNm", item.get("centerNm", ""))
+                addr = item.get("rdnmadr", item.get("lnmadr", ""))
+                results.append({
+                    "service_id": f"kised_space_{item.get('spaceSn', item.get('centerSn', ''))}",
+                    "program_name": f"창업공간: {space_name}",
+                    "summary": f"{space_name} - {addr}. 창업자를 위한 사무공간/회의실/코워킹스페이스 제공",
+                    "field": "창업공간",
+                    "target": "예비창업자, 초기창업자, 스타트업",
+                    "criteria": item.get("entrnCndCn", "입주 심사"),
+                    "support_content": f"위치: {addr}. {item.get('spaceIntrcn', item.get('centerIntrcn', '사무공간 및 창업지원 서비스'))}",
+                    "apply_method": item.get("hmpgUrl", "창업공간플랫폼 홈페이지"),
+                    "apply_deadline": "연중 수시",
+                    "org_name": item.get("operInsttNm", "창업진흥원"),
+                    "phone": item.get("cntctTelno", item.get("telno", "")),
+                    "url": item.get("hmpgUrl", "https://spaces.k-startup.go.kr"),
+                    "support_type": "현물(공간)",
+                    "source_name": "kised_space",
+                })
+
+            total_count = int(body.get("totalCount", 0))
+            if len(results) >= total_count or len(items) < 100:
+                break
+
+            page += 1
+            time.sleep(0.3)
+
+        except Exception as e:
+            logging.warning(f"[kised_space] page {page} error: {e}")
+            break
+
+    logging.info(f"[kised_space] {len(results)}건 수집")
+    return results
+
+
+# ━━━ 4. 정부지원사업 주관기관 정보 (창업진흥원) ━━━━━
+
+def collect_kised_agency() -> list[dict]:
+    """창업진흥원 정부지원사업 주관기관 정보 (data.go.kr #15125366)"""
+    api_key = os.getenv("KISED_AGENCY_API_KEY", "")
+    if not api_key:
+        logging.info("[kised_agency] API 키 없음, 스킵")
+        return []
+
+    results = []
+    page = 1
+
+    while True:
+        try:
+            url = "https://apis.data.go.kr/B552735/kisedKstartupService01/getOperatingAgencyInformation"
+            resp = requests.get(url, params={
+                "serviceKey": api_key,
+                "pageNo": page,
+                "numOfRows": 100,
+                "type": "json",
+            }, timeout=20)
+
+            if resp.status_code != 200:
+                logging.warning(f"[kised_agency] page {page} status {resp.status_code}")
+                break
+
+            data = resp.json()
+            body = data.get("response", {}).get("body", data.get("body", {}))
+            items = body.get("items", [])
+            if isinstance(items, dict):
+                items = items.get("item", [])
+            if not items:
+                break
+
+            for item in items:
+                biz_name = item.get("pbancNm", item.get("bizNm", ""))
+                agency_name = item.get("operInsttNm", item.get("agencyNm", ""))
+                if not biz_name:
+                    continue
+                results.append({
+                    "service_id": f"kised_agency_{item.get('operInsttSn', item.get('agencySn', ''))}",
+                    "program_name": biz_name,
+                    "summary": f"{biz_name} — 주관기관: {agency_name}",
+                    "field": "창업지원",
+                    "target": item.get("trgetCn", "예비창업자, 초기창업자, 중소기업"),
+                    "criteria": "",
+                    "support_content": f"주관기관: {agency_name}. {item.get('bizCn', item.get('sporCn', ''))}",
+                    "apply_method": item.get("rcptMthdCn", "K-Startup 홈페이지"),
+                    "apply_deadline": item.get("pbancEndDt", ""),
+                    "org_name": agency_name or "창업진흥원",
+                    "phone": item.get("cntctTelno", ""),
+                    "url": "https://www.k-startup.go.kr",
+                    "support_type": item.get("sporTypeNm", "창업지원"),
+                    "source_name": "kised_agency",
+                })
+
+            total_count = int(body.get("totalCount", 0))
+            if len(results) >= total_count or len(items) < 100:
+                break
+
+            page += 1
+            time.sleep(0.3)
+
+        except Exception as e:
+            logging.warning(f"[kised_agency] page {page} error: {e}")
+            break
+
+    logging.info(f"[kised_agency] {len(results)}건 수집")
+    return results
+
+
+# ━━━ 5. 창업에듀 교육과정 조회 (창업진흥원) ━━━━━━━━━
+
+def collect_kised_edu() -> list[dict]:
+    """창업진흥원 창업에듀 교육과정 조회 서비스 (data.go.kr #15125358)"""
+    api_key = os.getenv("KISED_EDU_API_KEY", "")
+    if not api_key:
+        logging.info("[kised_edu] API 키 없음, 스킵")
+        return []
+
+    results = []
+    page = 1
+
+    while True:
+        try:
+            url = "https://apis.data.go.kr/B552735/kisedKstartupService01/getEducationCourseInformation"
+            resp = requests.get(url, params={
+                "serviceKey": api_key,
+                "pageNo": page,
+                "numOfRows": 100,
+                "type": "json",
+            }, timeout=20)
+
+            if resp.status_code != 200:
+                logging.warning(f"[kised_edu] page {page} status {resp.status_code}")
+                break
+
+            data = resp.json()
+            body = data.get("response", {}).get("body", data.get("body", {}))
+            items = body.get("items", [])
+            if isinstance(items, dict):
+                items = items.get("item", [])
+            if not items:
+                break
+
+            for item in items:
+                course_name = item.get("courseNm", item.get("eduNm", ""))
+                if not course_name:
+                    continue
+                results.append({
+                    "service_id": f"kised_edu_{item.get('courseSn', item.get('eduSn', ''))}",
+                    "program_name": f"창업교육: {course_name}",
+                    "summary": item.get("courseIntrcn", item.get("eduCn", f"{course_name} — 창업에듀 온라인 교육과정")),
+                    "field": "교육·컨설팅",
+                    "target": item.get("trgetCn", "예비창업자, 초기창업자"),
+                    "criteria": "누구나 수강 가능",
+                    "support_content": f"교육과정: {course_name}. {item.get('courseIntrcn', item.get('eduCn', '온라인 창업교육'))}",
+                    "apply_method": "창업에듀 홈페이지 (https://edu.k-startup.go.kr)",
+                    "apply_deadline": "연중 수시 (온라인)",
+                    "org_name": "창업진흥원",
+                    "phone": "",
+                    "url": "https://edu.k-startup.go.kr",
+                    "support_type": "교육",
+                    "source_name": "kised_edu",
+                })
+
+            total_count = int(body.get("totalCount", 0))
+            if len(results) >= total_count or len(items) < 100:
+                break
+
+            page += 1
+            time.sleep(0.3)
+
+        except Exception as e:
+            logging.warning(f"[kised_edu] page {page} error: {e}")
+            break
+
+    logging.info(f"[kised_edu] {len(results)}건 수집")
+    return results
+
+
+# ━━━ 6. 중소벤처24 API ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 def collect_sme24() -> list[dict]:
     """중소벤처24 지원사업 공고 API"""
@@ -197,7 +433,7 @@ def collect_sme24() -> list[dict]:
     return results
 
 
-# ━━━ 4. 기업마당 API ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━ 7. 기업마당 API ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 def collect_bizinfo() -> list[dict]:
     """기업마당(bizinfo) 지원사업 API"""
@@ -239,7 +475,7 @@ def collect_bizinfo() -> list[dict]:
     return results
 
 
-# ━━━ 5. 큐레이션 데이터 (API 키 불필요) ━━━━━━━━━━━━
+# ━━━ 8. 큐레이션 데이터 (API 키 불필요) ━━━━━━━━━━━━━
 
 def get_curated_data() -> list[dict]:
     """소진공 정책자금, 신용보증, 고용지원, 외식업 특화 등 수동 큐레이션 데이터"""
@@ -288,6 +524,9 @@ def collect_all_sources() -> dict:
     collectors = [
         ("gov24", collect_gov24),
         ("kstartup", collect_kstartup),
+        ("kised_space", collect_kised_space),
+        ("kised_agency", collect_kised_agency),
+        ("kised_edu", collect_kised_edu),
         ("sme24", collect_sme24),
         ("bizinfo", collect_bizinfo),
         ("curated", get_curated_data),
