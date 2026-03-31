@@ -281,6 +281,39 @@ def getSchools(
         return {"count": 0, "schools": [], "error": str(e)}
 
 
+@app.get("/map/sdot/sensors")
+def getSdotSensors():
+    """S-DoT 유동인구 센서 위치 목록"""
+    try:
+        from DAO.baseDAO import BaseDAO
+
+        class _DAO(BaseDAO):
+            pass
+
+        dao = _DAO()
+        rows = dao._query(
+            "SELECT SEQ, SENSOR_CD, SERIAL_NO, ADDR, MAP_Y, MAP_X FROM SDOT_SENSOR ORDER BY SEQ",
+            [],
+        )
+        data = [
+            {
+                "seq": r[0],
+                "sensor_cd": r[1],
+                "serial_no": r[2],
+                "addr": r[3],
+                "lat": float(r[4]) if r[4] else None,
+                "lng": float(r[5]) if r[5] else None,
+            }
+            for r in rows
+            if r[4] and r[5]
+        ]
+        logger.info(f"[sdot/sensors] {len(data)}건")
+        return {"count": len(data), "sensors": data}
+    except Exception as e:
+        logger.error(f"[sdot/sensors] {e}")
+        return {"count": 0, "sensors": [], "error": str(e)}
+
+
 @app.get("/map/population/places")
 def getPopPlaces():
     """유동인구 장소 목록 + 좌표"""

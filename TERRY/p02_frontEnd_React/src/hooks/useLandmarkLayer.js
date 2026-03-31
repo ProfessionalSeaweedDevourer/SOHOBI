@@ -17,6 +17,7 @@ const TYPE_STYLE = {
    14: { color: "#8b5cf6", label: "문화" }, // 문화시설 - 보라
    15: { color: "#ef4444", label: "축제" }, // 축제 - 빨강
    school: { color: "#10b981", label: "학교" }, // 학교 - 초록
+   sdot: { color: "#0ea5e9", label: "유동센서" }, // S-DoT - 하늘
 };
 
 function makeStyle(typeKey, selected = false) {
@@ -131,6 +132,25 @@ export function useLandmarkLayer(mapInstance) {
    const setFestivalVisible = (v) => festivalLayerRef.current?.setVisible(v);
    const setSchoolVisible = (v) => schoolLayerRef.current?.setVisible(v);
 
+   // ── S-DoT 센서 위치 (DB) ────────────────────────────────────
+   const sdotLayerRef = useRef(null);
+
+   const loadSdot = async () => {
+      try {
+         const res = await fetch(`${MAP_URL}/map/sdot/sensors`);
+         const json = await res.json();
+         const features = makeFeatures(json.sensors || [], "sdot");
+         if (sdotLayerRef.current) {
+            mapInstance.current?.removeLayer(sdotLayerRef.current);
+         }
+         sdotLayerRef.current = addLayer(features, 213);
+      } catch (e) {
+         console.error("[useLandmarkLayer] loadSdot:", e);
+      }
+   };
+
+   const setSdotVisible = (v) => sdotLayerRef.current?.setVisible(v);
+
    // ── 마커 하이라이트 ──────────────────────────────────────────
    const selectLandmark = (feature) => {
       if (selectedFeatRef.current) {
@@ -149,7 +169,12 @@ export function useLandmarkLayer(mapInstance) {
    const clearLandmarks = () => {
       const map = mapInstance.current;
       if (!map) return;
-      [landmarkLayerRef, festivalLayerRef, schoolLayerRef].forEach((ref) => {
+      [
+         landmarkLayerRef,
+         festivalLayerRef,
+         schoolLayerRef,
+         sdotLayerRef,
+      ].forEach((ref) => {
          if (ref.current) {
             map.removeLayer(ref.current);
             ref.current = null;
@@ -161,12 +186,15 @@ export function useLandmarkLayer(mapInstance) {
       landmarkLayerRef,
       festivalLayerRef,
       schoolLayerRef,
+      sdotLayerRef,
       loadLandmarks,
       loadFestivals,
       loadSchools,
+      loadSdot,
       setLandmarkVisible,
       setFestivalVisible,
       setSchoolVisible,
+      setSdotVisible,
       selectLandmark,
       clearLandmarks,
    };

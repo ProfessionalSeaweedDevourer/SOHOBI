@@ -13,8 +13,9 @@ git config --global user.email
 2) 작업 후 업로드 과정 (매번 반복)
 
 ⓐ 최신 코드 먼저 받기 (중요 ⭐)
-git checkout WOO
 git pull origin main
+
+git checkout WOO
 
 ⓑ (merge 메시지 화면 나오면)
 Merge branch 'main' ...
@@ -25,7 +26,7 @@ Merge branch 'main' ...
 
 
 ⓒ 변경 파일 등록
-git add p00_ReadMe
+git add TERRY
 ※ git add .(전체 변경시)
 
 ⓓ 상태 확인
@@ -34,9 +35,8 @@ git status
 ⓔ 커밋 메시지 작성
 git commit -m "메모"
 ex) 
-git commit -m "프론트엔드(MapView.jsx) 기능 정리(263016)"
-git commit -m "gitHub 메뉴얼 업데이트(260316)"
+git commit -m "백엔드 정리"
 
 
 ⓔ GitHub 업로드
-git push origin WOO
+git push origin main
