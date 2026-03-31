@@ -253,10 +253,10 @@ class LocationAgent:
             }
 
         # 점포당 평균 매출 계산
-        monthly_sales = (
+        monthly_sales = float(
             sales_data.get("summary", {}).get("monthly_sales_krw", 0) if sales_data else 0
         )
-        store_count = (
+        store_count = int(
             store_data.get("summary", {}).get("store_count", 0) if store_data else 0
         )
         avg_per_store = int(monthly_sales / store_count) if store_count > 0 else 0
@@ -265,8 +265,8 @@ class LocationAgent:
         if sales_data and store_data:
             store_map = {b["trdar_name"]: b for b in store_data.get("breakdown", [])}
             for s in sales_data.get("breakdown", []):
-                s_count = store_map.get(s["trdar_name"], {}).get("store_count", 0)
-                s_sales = s.get("monthly_sales_krw", 0)
+                s_count = int(store_map.get(s["trdar_name"], {}).get("store_count", 0))
+                s_sales = float(s.get("monthly_sales_krw", 0))
                 s["avg_sales_per_store_krw"] = int(s_sales / s_count) if s_count > 0 else 0
 
         analysis = await self._run_agent(location, business_type, quarter, sales_data, store_data)
@@ -333,8 +333,8 @@ class LocationAgent:
 
             ss = sales.get("summary", {}) if sales else {}
             st = store.get("summary", {}) if store else {}
-            monthly = ss.get("monthly_sales_krw", 0)
-            cnt = st.get("store_count", 0)
+            monthly = float(ss.get("monthly_sales_krw", 0))
+            cnt = int(st.get("store_count", 0))
             avg = int(monthly / cnt) if cnt > 0 else 0
 
             location_data.append({

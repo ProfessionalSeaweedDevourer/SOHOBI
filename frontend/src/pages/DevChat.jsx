@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { streamQuery } from "../api";
 import { clearDevAuth } from "../utils/devAuth";
+import { interpretError } from "../utils/errorInterpreter";
 import ChatInput from "../components/ChatInput";
 import ResponseCard from "../components/ResponseCard";
 import SignoffPanel from "../components/SignoffPanel";
@@ -15,7 +16,7 @@ export default function DevChat() {
   const [latestParams, setLatestParams] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeEvents, setActiveEvents] = useState([]);
-  const [error, setError] = useState(null);
+  const [pendingQuestion, setPendingQuestion] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -24,7 +25,7 @@ export default function DevChat() {
   }, [messages, activeEvents, loading]);
 
   async function handleSubmit(question) {
-    setError(null);
+    setPendingQuestion(question);
     setLoading(true);
     setActiveEvents([]);
 
@@ -33,6 +34,15 @@ export default function DevChat() {
 
     try {
       await streamQuery(question, 3, sessionId, (eventName, data) => {
+        if (eventName === "error") {
+          setPendingQuestion(null);
+          setMessages(prev => [
+            ...prev,
+            { question, status: "error", draft: interpretError(data.message || data.error || "") },
+          ]);
+          return;
+        }
+
         setActiveEvents(prev => [...prev, { event: eventName, ...data }]);
 
         if (eventName === "domain_classified" && data.session_id) {
@@ -44,10 +54,18 @@ export default function DevChat() {
         }
       }, latestParams);
     } catch (e) {
-      setError(e.message);
+      setPendingQuestion(null);
+      setMessages(prev => [
+        ...prev,
+        { question, status: "error", draft: interpretError(e.message) },
+      ]);
+      setActiveEvents([]);
       setLoading(false);
+      inputRef.current?.clear();
       return;
     }
+
+    setPendingQuestion(null);
 
     if (finalResult) {
       setMessages(prev => [
@@ -108,7 +126,7 @@ export default function DevChat() {
 
       {/* 대화 영역 */}
       <main className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl mx-auto w-full">
-        {messages.length === 0 && !loading && (
+        {messages.length === 0 && !loading && !pendingQuestion && (
           <div className="text-center mt-20 text-muted-foreground">
             <div className="text-4xl mb-3">🛠</div>
             <p className="text-sm">질문 입력 시 실시간 진행 상황과 Sign-off 판정 결과가 표시됩니다.</p>
@@ -130,18 +148,29 @@ export default function DevChat() {
                 chart={msg.chart}
                 showMeta={true}
               />
-              <SignoffPanel
-                status={msg.status}
-                grade={msg.grade}
-                confidenceNote={msg.confidenceNote}
-                retryCount={msg.retryCount}
-                domain={msg.domain}
-                agentMs={msg.agentMs}
-                signoffMs={msg.signoffMs}
-                rejectionHistory={msg.rejectionHistory}
-              />
+              {msg.status !== "error" && (
+                <SignoffPanel
+                  status={msg.status}
+                  grade={msg.grade}
+                  confidenceNote={msg.confidenceNote}
+                  retryCount={msg.retryCount}
+                  domain={msg.domain}
+                  agentMs={msg.agentMs}
+                  signoffMs={msg.signoffMs}
+                  rejectionHistory={msg.rejectionHistory}
+                />
+              )}
             </div>
           ))}
+
+          {pendingQuestion && (
+            <div
+              className="self-end max-w-[80%] text-white rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-relaxed"
+              style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
+            >
+              {pendingQuestion}
+            </div>
+          )}
 
           {/* 스트리밍 진행 중 */}
           {loading && (
@@ -154,12 +183,6 @@ export default function DevChat() {
                   도메인 분류 중…
                 </div>
               )}
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm rounded-xl px-4 py-3">
-              오류: {error}
             </div>
           )}
         </div>

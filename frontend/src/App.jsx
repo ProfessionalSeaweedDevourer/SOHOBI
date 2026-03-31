@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence } from "motion/react";
+import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import UserChat from "./pages/UserChat";
 import DevChat from "./pages/DevChat";
@@ -16,7 +17,8 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/user" element={<UserChat />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/dev/login" element={<DevLogin />} />
