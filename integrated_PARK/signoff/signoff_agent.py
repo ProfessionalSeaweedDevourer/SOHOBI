@@ -29,7 +29,9 @@ _DRAFT_END   = "<<<DRAFT_END>>>"
 
 def _build_messages(domain: str, draft: str) -> list[dict]:
     prompt_file = PROMPTS_DIR / f"signoff_{domain}" / "evaluate" / "skprompt.txt"
-    safe_draft = f"{_DRAFT_START}\n{draft}\n{_DRAFT_END}"
+    # draft 내 구분자 이스케이프 — 사용자 입력이 draft에 포함될 경우 signoff 판정 인젝션 방지
+    sanitized = draft.replace(_DRAFT_END, "[DRAFT_END]").replace(_DRAFT_START, "[DRAFT_START]")
+    safe_draft = f"{_DRAFT_START}\n{sanitized}\n{_DRAFT_END}"
     raw = prompt_file.read_text(encoding="utf-8").replace("{{$draft}}", safe_draft)
 
     messages = []
