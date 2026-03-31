@@ -81,7 +81,7 @@ def _append(local_path: Path, record: dict) -> None:
 # ── 공개 API ────────────────────────────────────────────────────
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 def log_query(

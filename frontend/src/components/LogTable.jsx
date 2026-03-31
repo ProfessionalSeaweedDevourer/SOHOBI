@@ -198,6 +198,13 @@ function EntryDetail({ entry }) {
                         <div className="text-foreground whitespace-pre-wrap">{a.retry_prompt}</div>
                       </div>
                     )}
+                    {(a.warnings || []).length === 0 &&
+                     (a.issues || []).length === 0 &&
+                     !a.retry_prompt && (
+                      <div className="text-muted-foreground text-center py-2">
+                        상세 정보가 없는 이력입니다.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

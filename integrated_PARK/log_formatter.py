@@ -42,6 +42,15 @@ def _parse_jsonl_text(text: str) -> list[dict]:
     return entries
 
 
+def _ts_sort_key(entry: dict):
+    """타임존 혼재 데이터를 올바르게 정렬하기 위한 키 함수."""
+    ts = entry.get("ts", "")
+    try:
+        return datetime.fromisoformat(ts)
+    except (ValueError, TypeError):
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+
 def _load_jsonl(path: Path) -> list[dict]:
     """로컬 파일 또는 Blob Storage에서 JSONL을 읽는다."""
     account = os.environ.get("BLOB_LOGS_ACCOUNT", "")
@@ -206,7 +215,7 @@ def format_logs(log_type: str = "queries", limit: int = 0) -> str:
     if not entries:
         return f"로그 파일이 없거나 비어 있습니다: {path}"
 
-    entries.sort(key=lambda e: e.get("ts", ""), reverse=True)
+    entries.sort(key=_ts_sort_key, reverse=True)
 
     if limit > 0:
         entries = entries[:limit]
@@ -232,7 +241,7 @@ def load_entries_json(log_type: str = "queries", limit: int = 50) -> list[dict]:
     """API 엔드포인트용 — 파싱된 엔트리 리스트 반환. log_type: queries | rejections | errors"""
     path = LOGS_DIR / f"{log_type}.jsonl"
     entries = _load_jsonl(path)
-    entries.sort(key=lambda e: e.get("ts", ""), reverse=True)
+    entries.sort(key=_ts_sort_key, reverse=True)
     if limit > 0:
         entries = entries[:limit]
     return entries
