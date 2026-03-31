@@ -141,6 +141,8 @@ class FinanceSimulationPlugin:
 
         p20 = sorted_results[int(iterations * 0.20)]
         chart = self._generate_chart(results, avg, p20)
+        chart["total_cost"]  = round(cost + salary_cost + rent + admin + fee)
+        chart["avg_revenue"] = round(avg_sales)
 
         return {
             "average_net_profit": round(avg),
