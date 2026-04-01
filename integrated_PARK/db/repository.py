@@ -1,21 +1,25 @@
 """
-repository.py (Oracle 버전)
+repository.py (PostgreSQL 버전)
 DB 조회 레이어 - LocationAgent가 이 클래스만 바라봄
 
 [연결 설정]
-- DB: Oracle (SANGKWON_SALES 테이블)
-- 지역 기준: 행정동 단위 (ADM_CD, ADM_NM)
-- 업종 기준: 서비스 업종 코드 (SVC_INDUTY_CD)
+- DB: Azure PostgreSQL Flexible Server
+- 지역 기준: 행정동 단위 (adm_cd, adm_nm)
+- 업종 기준: 서비스 업종 코드 (svc_induty_cd)
 
 [환경변수 필요]
-ORACLE_USER=...
-ORACLE_PASSWORD=...
-ORACLE_DSN=...   # host:port/service_name
+PG_HOST=...
+PG_PORT=5432
+PG_DB=...
+PG_USER=...
+PG_PASSWORD=...
 """
 
-import oracledb
 import os
 from typing import Optional
+
+import psycopg2
+from psycopg2 import pool
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -371,6 +375,19 @@ INDUSTRY_CODE_MAP = {
 }
 
 
+def _make_pool():
+    return pool.ThreadedConnectionPool(
+        minconn=2,
+        maxconn=5,
+        host=os.getenv("PG_HOST"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        dbname=os.getenv("PG_DB"),
+        user=os.getenv("PG_USER"),
+        password=os.getenv("PG_PASSWORD"),
+        sslmode=os.getenv("PG_SSLMODE", "require"),
+    )
+
+
 class CommercialRepository:
     _pool = None
 
@@ -378,20 +395,14 @@ class CommercialRepository:
     def _get_pool(cls):
         """커넥션 풀 싱글턴 — 매 쿼리마다 connect/close 오버헤드 제거"""
         if cls._pool is None:
-            cls._pool = oracledb.create_pool(
-                user=os.getenv("ORACLE_USER"),
-                password=os.getenv("ORACLE_PASSWORD"),
-                host=os.getenv("ORACLE_HOST"),
-                port=int(os.getenv("ORACLE_PORT", "1521")),
-                sid=os.getenv("ORACLE_SID"),
-                min=2,
-                max=5,
-                increment=1,
-            )
+            cls._pool = _make_pool()
         return cls._pool
 
     def _connect(self):
-        return self._get_pool().acquire()
+        return self._get_pool().getconn()
+
+    def _release(self, conn):
+        self._get_pool().putconn(conn)
 
     def _get_adm_codes(self, location: str) -> list:
         return AREA_MAP.get(location, [])
@@ -412,28 +423,31 @@ class CommercialRepository:
         if not adm_codes or not industry_code:
             return None
 
-        placeholders = ",".join(f":{i+1}" for i in range(len(adm_codes)))
+        placeholders = ",".join(["%s"] * len(adm_codes))
         sql = f"""
-            SELECT ADM_CD, ADM_NM, SVC_INDUTY_NM,
-                   TOT_SALES_AMT, TOT_SELNG_CO,
-                   MDWK_SALES_AMT, WKEND_SALES_AMT,
-                   MON_SALES_AMT, TUE_SALES_AMT, WED_SALES_AMT,
-                   THU_SALES_AMT, FRI_SALES_AMT, SAT_SALES_AMT, SUN_SALES_AMT,
-                   TM00_06_SALES_AMT, TM06_11_SALES_AMT, TM11_14_SALES_AMT,
-                   TM14_17_SALES_AMT, TM17_21_SALES_AMT, TM21_24_SALES_AMT,
-                   ML_SALES_AMT, FML_SALES_AMT,
-                   AGE10_AMT, AGE20_AMT, AGE30_AMT,
-                   AGE40_AMT, AGE50_AMT, AGE60_AMT
-            FROM SANGKWON_SALES
-            WHERE BASE_YR_QTR_CD = :qtr
-              AND ADM_CD IN ({placeholders})
-              AND SVC_INDUTY_CD = :induty
+            SELECT adm_cd, adm_nm, svc_induty_nm,
+                   tot_sales_amt, tot_selng_co,
+                   mdwk_sales_amt, wkend_sales_amt,
+                   mon_sales_amt, tue_sales_amt, wed_sales_amt,
+                   thu_sales_amt, fri_sales_amt, sat_sales_amt, sun_sales_amt,
+                   tm00_06_sales_amt, tm06_11_sales_amt, tm11_14_sales_amt,
+                   tm14_17_sales_amt, tm17_21_sales_amt, tm21_24_sales_amt,
+                   ml_sales_amt, fml_sales_amt,
+                   age10_amt, age20_amt, age30_amt,
+                   age40_amt, age50_amt, age60_amt
+            FROM sangkwon_sales
+            WHERE base_yr_qtr_cd = %s
+              AND adm_cd IN ({placeholders})
+              AND svc_induty_cd = %s
         """
-        with self._connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, [quarter] + adm_codes + [industry_code])
-            columns = [d[0].lower() for d in cursor.description]
-            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        conn = self._connect()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql, [quarter] + adm_codes + [industry_code])
+                columns = [d[0] for d in cursor.description]
+                rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        finally:
+            self._release(conn)
 
         if not rows:
             return None
@@ -504,7 +518,7 @@ class CommercialRepository:
             "age_40s_krw": _sum("age_40s_krw"),
             "age_50s_krw": _sum("age_50s_krw"),
             "age_60s_krw": _sum("age_60s_krw"),
-            "source": "상권분석 DB (SANGKWON_SALES)",
+            "source": "상권분석 DB (sangkwon_sales)",
         }
 
         return {"summary": summary, "breakdown": breakdown}
@@ -513,7 +527,7 @@ class CommercialRepository:
         self, location: str, business_type: str, quarter: str = "20244"
     ) -> Optional[dict]:
         """
-        점포수/개폐업률 조회 + 합산 (SANGKWON_STORE 테이블)
+        점포수/개폐업률 조회 + 합산 (sangkwon_store 테이블)
         """
         adm_codes = self._get_adm_codes(location)
         industry_code = self._get_industry_code(business_type)
@@ -521,23 +535,26 @@ class CommercialRepository:
         if not adm_codes or not industry_code:
             return None
 
-        placeholders = ",".join(f":{i+2}" for i in range(len(adm_codes)))
+        placeholders = ",".join(["%s"] * len(adm_codes))
         sql = f"""
-            SELECT ADM_CD, ADM_NM, SVC_INDUTY_NM,
-                   STOR_CO, SIMILR_INDUTY_STOR_CO,
-                   OPBIZ_RT, OPBIZ_STOR_CO,
-                   CLSBIZ_RT, CLSBIZ_STOR_CO,
-                   FRC_STOR_CO
-            FROM SANGKWON_STORE
-            WHERE BASE_YR_QTR_CD = :1
-              AND ADM_CD IN ({placeholders})
-              AND SVC_INDUTY_CD = :{len(adm_codes)+2}
+            SELECT adm_cd, adm_nm, svc_induty_nm,
+                   stor_co, similr_induty_stor_co,
+                   opbiz_rt, opbiz_stor_co,
+                   clsbiz_rt, clsbiz_stor_co,
+                   frc_stor_co
+            FROM sangkwon_store
+            WHERE base_yr_qtr_cd = %s
+              AND adm_cd IN ({placeholders})
+              AND svc_induty_cd = %s
         """
-        with self._connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, [quarter] + adm_codes + [industry_code])
-            columns = [d[0].lower() for d in cursor.description]
-            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        conn = self._connect()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql, [quarter] + adm_codes + [industry_code])
+                columns = [d[0] for d in cursor.description]
+                rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        finally:
+            self._release(conn)
 
         if not rows:
             return None
@@ -569,7 +586,7 @@ class CommercialRepository:
             "store_count": total_stores,
             "open_rate_pct": round(avg_open, 2),
             "close_rate_pct": round(avg_close, 2),
-            "source": "상권분석 DB (SANGKWON_STORE)",
+            "source": "상권분석 DB (sangkwon_store)",
         }
 
         return {"summary": summary, "breakdown": breakdown}
@@ -594,26 +611,29 @@ class CommercialRepository:
         )
 
         sql = """
-            SELECT s.ADM_CD, s.ADM_NM,
-                   SUM(s.TOT_SALES_AMT) AS monthly_sales,
-                   t.STOR_CO            AS store_count,
-                   AVG(t.OPBIZ_RT)      AS open_rate,
-                   AVG(t.CLSBIZ_RT)     AS close_rate
-            FROM SANGKWON_SALES s
-            JOIN SANGKWON_STORE t
-              ON s.ADM_CD          = t.ADM_CD
-             AND s.BASE_YR_QTR_CD  = t.BASE_YR_QTR_CD
-             AND s.SVC_INDUTY_CD   = t.SVC_INDUTY_CD
-            WHERE s.BASE_YR_QTR_CD = :1
-              AND s.SVC_INDUTY_CD  = :2
-              AND t.STOR_CO        > 2
-            GROUP BY s.ADM_CD, s.ADM_NM, t.STOR_CO
+            SELECT s.adm_cd, s.adm_nm,
+                   SUM(s.tot_sales_amt) AS monthly_sales,
+                   t.stor_co            AS store_count,
+                   AVG(t.opbiz_rt)      AS open_rate,
+                   AVG(t.clsbiz_rt)     AS close_rate
+            FROM sangkwon_sales s
+            JOIN sangkwon_store t
+              ON s.adm_cd          = t.adm_cd
+             AND s.base_yr_qtr_cd  = t.base_yr_qtr_cd
+             AND s.svc_induty_cd   = t.svc_induty_cd
+            WHERE s.base_yr_qtr_cd = %s
+              AND s.svc_induty_cd  = %s
+              AND t.stor_co        > 2
+            GROUP BY s.adm_cd, s.adm_nm, t.stor_co
         """
-        with self._connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, [quarter, industry_code])
-            columns = [d[0].lower() for d in cursor.description]
-            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        conn = self._connect()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql, [quarter, industry_code])
+                columns = [d[0] for d in cursor.description]
+                rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        finally:
+            self._release(conn)
 
         if not rows:
             return []

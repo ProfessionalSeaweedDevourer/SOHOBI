@@ -27,8 +27,8 @@ jinja2==3.1.6
 matplotlib==3.10.1
 numpy==2.2.3
 
-# Oracle DB (상권 에이전트)
-oracledb==2.5.0
+# PostgreSQL DB (상권 에이전트 — Azure PostgreSQL Flexible Server)
+psycopg2-binary==2.9.9
 
 # 유틸리티
 python-dotenv==1.2.2
