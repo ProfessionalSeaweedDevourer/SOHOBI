@@ -35,6 +35,7 @@ async def run(
     prior_history: list[dict] | None = None,
     max_retries: int = 3,
     current_params: dict | None = None,
+    context: dict | None = None,
 ) -> dict:
     kernel = get_kernel()
 
@@ -78,11 +79,16 @@ async def run(
     updated_params = None
     adm_codes: list = []
     analysis_type: str = ""
+    updated_context: dict | None = None
 
     for attempt in range(1, max_retries + 2):
         # ── 에이전트 호출 (타이밍 측정) ─────────────────────
         t_agent = time.monotonic()
-        extra = {"current_params": current_params} if domain == "finance" and current_params else {}
+        extra: dict = {}
+        if domain == "finance" and current_params:
+            extra["current_params"] = current_params
+        if context:
+            extra["context"] = context
         raw = await agent.generate_draft(
             question=question,
             retry_prompt=retry_prompt,
@@ -99,6 +105,12 @@ async def run(
             updated_params = raw.get("updated_params")
             adm_codes = raw.get("adm_codes", [])
             analysis_type = raw.get("type", "")
+            # location agent가 반환한 지역·업종으로 context 갱신
+            if domain == "location" and adm_codes:
+                updated_context = dict(context) if context else {}
+                updated_context["adm_codes"]     = adm_codes
+                updated_context["business_type"] = raw.get("business_type", updated_context.get("business_type", ""))
+                updated_context["location_name"] = raw.get("location_name", updated_context.get("location_name", ""))
         else:
             draft = raw
 
@@ -136,6 +148,7 @@ async def run(
                 "updated_params":   updated_params,
                 "adm_codes":        adm_codes,
                 "analysis_type":    analysis_type,
+                "updated_context":  updated_context,
             }
 
         rejection_history.append({
@@ -167,6 +180,7 @@ async def run(
         "updated_params":   updated_params,
         "adm_codes":        adm_codes,
         "analysis_type":    analysis_type,
+        "updated_context":  updated_context,
     }
 
 
@@ -178,6 +192,7 @@ async def run_stream(
     prior_history: list[dict] | None = None,
     max_retries: int = 3,
     current_params: dict | None = None,
+    context: dict | None = None,
 ) -> AsyncGenerator[dict, None]:
     """SSE 스트리밍용 async generator.
     각 단계마다 event dict를 yield한다.
@@ -237,12 +252,17 @@ async def run_stream(
     updated_params = None
     adm_codes: list = []
     analysis_type: str = ""
+    updated_context: dict | None = None
 
     for attempt in range(1, max_retries + 2):
         yield {"event": "agent_start", "attempt": attempt, "max_attempts": max_retries + 1}
 
         t_agent = time.monotonic()
-        extra = {"current_params": current_params} if domain == "finance" and current_params else {}
+        extra: dict = {}
+        if domain == "finance" and current_params:
+            extra["current_params"] = current_params
+        if context:
+            extra["context"] = context
         raw = await agent.generate_draft(
             question=question,
             retry_prompt=retry_prompt,
@@ -258,6 +278,11 @@ async def run_stream(
             updated_params = raw.get("updated_params")
             adm_codes = raw.get("adm_codes", [])
             analysis_type = raw.get("type", "")
+            if domain == "location" and adm_codes:
+                updated_context = dict(context) if context else {}
+                updated_context["adm_codes"]     = adm_codes
+                updated_context["business_type"] = raw.get("business_type", updated_context.get("business_type", ""))
+                updated_context["location_name"] = raw.get("location_name", updated_context.get("location_name", ""))
         else:
             draft = raw
 
@@ -309,6 +334,7 @@ async def run_stream(
                 "updated_params":   updated_params,
                 "adm_codes":        adm_codes,
                 "analysis_type":    analysis_type,
+                "updated_context":  updated_context,
             }
             return
 
@@ -341,4 +367,5 @@ async def run_stream(
         "updated_params":   updated_params,
         "adm_codes":        adm_codes,
         "analysis_type":    analysis_type,
+        "updated_context":  updated_context,
     }

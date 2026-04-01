@@ -233,11 +233,16 @@ async def query(req: QueryRequest):
             prior_history=get_recent_history(session["history"]),
             max_retries=req.max_retries,
             current_params=params,
+            context=session.get("context", {}),
         )
 
         # 세션 대화 이력 누적
         session["history"].add_user_message(question)
         session["history"].add_assistant_message(result["draft"])
+
+        # location agent가 context를 갱신했으면 세션에 반영
+        if result.get("updated_context"):
+            session.setdefault("context", {}).update(result["updated_context"])
 
         # 세션 저장 후, 재무 변수 추출은 백그라운드에서 처리 (사용자 응답 지연 없음)
         await save_query_session(sid, session)
@@ -326,6 +331,7 @@ async def stream_query(req: QueryRequest):
                 session_id=sid,
                 max_retries=req.max_retries,
                 current_params=params,
+                context=session.get("context", {}),
             ):
                 event_name = ev.get("event", "message")
 
@@ -338,6 +344,9 @@ async def stream_query(req: QueryRequest):
                         new_vars = await extract_financial_vars(ev["draft"])
                         if new_vars:
                             session["extracted"].update(new_vars)
+
+                    if ev.get("updated_context"):
+                        session.setdefault("context", {}).update(ev["updated_context"])
 
                     await save_query_session(sid, session)
 

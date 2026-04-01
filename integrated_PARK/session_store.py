@@ -100,8 +100,16 @@ def _deserialize_history(data: list[dict]) -> ChatHistory:
 _memory: dict[str, dict] = {}
 
 
+_EMPTY_CONTEXT = {"adm_codes": [], "business_type": "", "location_name": ""}
+
+
 def _empty_query_session() -> dict:
-    return {"profile": "", "history": ChatHistory(), "extracted": {}}
+    return {
+        "profile":   "",
+        "history":   ChatHistory(),
+        "extracted": {},
+        "context":   dict(_EMPTY_CONTEXT),
+    }
 
 
 # ── 공개 API ────────────────────────────────────────────────────
@@ -122,6 +130,7 @@ async def get_query_session(session_id: str) -> dict:
             "profile":   item.get("profile", ""),
             "history":   _deserialize_history(item.get("history", [])),
             "extracted": item.get("extracted", {}),
+            "context":   item.get("context", dict(_EMPTY_CONTEXT)),
         }
     except Exception:
         return _empty_query_session()
@@ -141,6 +150,7 @@ async def save_query_session(session_id: str, session: dict) -> None:
         "profile":   session.get("profile", ""),
         "history":   _serialize_history(session.get("history", ChatHistory())),
         "extracted": session.get("extracted", {}),
+        "context":   session.get("context", dict(_EMPTY_CONTEXT)),
         "ttl":       ttl,
     })
 
