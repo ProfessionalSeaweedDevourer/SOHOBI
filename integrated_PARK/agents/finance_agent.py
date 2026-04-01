@@ -54,25 +54,7 @@ _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 질문을 했습니다:
 
 출력은 JSON 형식으로만 하세요."""
 
-_EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다.
-
-[시뮬레이션 가정 조건]
-{assumptions}
-
-[시뮬레이션 결과 — 10,000회 몬테카를로]
-★ 손실 발생 확률: {loss_prob}  ← 핵심 지표
-- 평균 월 순이익: {avg_profit:,}원
-- 손실(0원 미만의 순이익) 발생 관측 여부: {loss_prob}
-- 비관 시나리오 월 순이익: {p20:,}원
-  (전체 시뮬레이션 중 하위 20%에 해당하는 케이스의 상단 기준값)
-
-위 수치를 그대로 사용하여 별도 계산 없이 아래 형식으로 작성하세요.
-
-[1. 가정 조건]과 [2. 시뮬레이션 결과], [안내]는 이미 작성되어 있으므로 수정하거나 내용을 추가하지 마세요.
-[3. 외부 리스크 경고] 섹션의 내용만 직접 작성하고,
-나머지 섹션은 아래 형식 그대로 출력하세요.
-
-[사용자 질문]
+_EXPLAIN_PROMPT = """[사용자 질문]
 {question}
 
 [에이전트 응답]
@@ -84,15 +66,23 @@ _EXPLAIN_PROMPT = """다음은 창업 재무 시뮬레이션 결과입니다.
 [2. 시뮬레이션 결과]
 - 평균 월 순이익: {avg_profit:,}원
 - 손실(0원 미만의 순이익) 발생 관측 여부: 10,000회 중 {loss_prob}
-- 비관 시나리오(하위 20%) 월 순이익: {p20:,}원.\n
+- 비관 시나리오(하위 20%) 월 순이익: {p20:,}원\n
   이는 10명 중 2명꼴로 월 순이익이 {p20:,}원 이하에 그칠 수 있으며, 이것이 지속될 경우 사업 운영에 부담이 될 수 있음을 의미합니다.
 
 [3. 외부 리스크 경고]\n
-(시뮬레이션을 기반으로 한 리스크 및 시뮬레이션 가정 범위 밖의 외부 충격—경기 침체, 임대료 급등, 수요 급감 등—이
-발생할 경우 실제 손실로 이어질 수 있음을 경고하세요.)
+- 손익분기 매출: {breakeven_revenue:,}원 (일 기준: {breakeven_daily:,}원)
+- 안전마진: {safety_margin:.1f}% (매출이 이 비율만큼 하락해도 손익 유지 가능)
+
+위 [2. 시뮬레이션 결과]와 손익분기/안전마진 수치를 기반으로,
+외부 충격(경기 침체, 임대료 급등, 수요 급감 등) 발생 시 실제 손실로 이어질 수 있음을 경고하고,
+현재 수치가 의미하는 리스크 수준과 대비 방안을 서술하세요.
+별도 계산 없이 위 수치만 사용하세요.
 
 [안내]
 본 결과는 투자 권유가 아닌 정보 제공을 목적으로 하며, 실제 사업 결과와 다를 수 있습니다.
+
+위 형식에서 [3. 외부 리스크 경고] 내용만 작성하고 나머지는 그대로 출력하세요.
+별도 계산 없이 위 수치를 그대로 사용하세요.
 """
 
 _RECOVERY_PROMPT = """초기 투자비용 회수 시뮬레이션 결과:
@@ -204,10 +194,15 @@ class FinanceAgent:
                 initial_investment=variables["initial_investment"],
                 avg_profit=sim_result["average_net_profit"],
             )
-
         # ── 3단계: 설명 draft 생성 ──────────────────────────
         # 가정 조건 문자열 구성
         rev = variables.get("revenue") or []
+        # 손익분기/안전마진 관련 연산 추가
+        breakeven = self._sim.breakeven_analysis_mc(
+            avg_revenue=sum(rev) / len(rev),
+            avg_net_profit=sim_result["average_net_profit"],
+            variable_cost=sim_result["actual_cost"],
+        )
         rev_str = f"{rev[0]:,}원" if len(rev) == 1 else f"{min(rev):,}~{max(rev):,}원 (복수 시나리오)"
         assumption_lines = [
             f"- 월매출: {rev_str}",
@@ -217,6 +212,8 @@ class FinanceAgent:
             f"- 관리비: {sim_result['actual_admin']:,}원",
             f"- 수수료: {sim_result['actual_fee']:,}원",
         ]
+        if variables.get("initial_investment"):
+            assumption_lines.append(f"- 초기 투자비용: {variables['initial_investment']:,}원")
         assumptions = "\n".join(assumption_lines)
 
         # 손실확률: 핵심 지표로 명시.
@@ -238,6 +235,9 @@ class FinanceAgent:
             avg_profit=sim_result["average_net_profit"],
             loss_prob=loss_prob_str,
             p20=sim_result["p20"],        # 추가
+            breakeven_revenue=breakeven["breakeven_revenue"],
+            breakeven_daily=breakeven["breakeven_daily"],
+            safety_margin=breakeven["safety_margin"] * 100,
             question=question,
         )
         if profile:
