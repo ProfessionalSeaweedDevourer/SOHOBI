@@ -84,10 +84,23 @@ class AdminAgent:
         retry_prompt: str = "",
         profile: str = "",
         prior_history: list[dict] | None = None,
+        context: dict | None = None,
     ) -> str:
         service: AzureChatCompletion = self._kernel.get_service("sign_off")
+
+        ctx = context or {}
+        context_note = ""
+        if ctx.get("location_name") or ctx.get("business_type"):
+            parts = []
+            if ctx.get("location_name"):
+                parts.append(f"지역: {ctx['location_name']}")
+            if ctx.get("business_type"):
+                parts.append(f"업종: {ctx['business_type']}")
+            context_note = "[창업자 현재 컨텍스트] " + ", ".join(parts) + "\n위 컨텍스트를 고려하여 해당 지역·업종에 적합한 행정 절차 정보를 제공하십시오. 플러그인 호출 시에도 이 지역·업종을 우선 사용하십시오.\n\n"
+
         system = (
             (PROFILE_PREFIX.format(profile=profile) if profile else "")
+            + context_note
             + (RETRY_PREFIX.format(retry_prompt=retry_prompt) if retry_prompt else "")
             + SYSTEM_PROMPT
         )

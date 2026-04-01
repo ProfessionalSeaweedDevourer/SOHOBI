@@ -60,21 +60,32 @@ class GovSupportPlugin:
     """사용자 상황 기반 정부지원사업·금융지원 맞춤 추천 플러그인"""
 
     def __init__(self):
-        openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-        openai_key = os.getenv("AZURE_OPENAI_API_KEY", "")
-        search_key = os.getenv("AZURE_SEARCH_API_KEY") or os.getenv("AZURE_SEARCH_KEY", "")
-        search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT", "")
-        search_index = os.getenv("AZURE_SEARCH_INDEX_NAME") or os.getenv("AZURE_SEARCH_INDEX", "gov-programs-index")
-        self._embedding_deployment = os.getenv(
-            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT",
-            os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-large")
+        # GOV_* 전용 자격증명 우선 — 프로덕션 AZURE_* 변수와 충돌 방지
+        # (gov-programs-index는 text-embedding-3-large 3072d로 구축됨)
+        openai_endpoint = os.getenv("GOV_OPENAI_ENDPOINT") or os.getenv("AZURE_OPENAI_ENDPOINT", "")
+        openai_key = os.getenv("GOV_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_API_KEY", "")
+        search_key = (
+            os.getenv("GOV_SEARCH_API_KEY")
+            or os.getenv("AZURE_SEARCH_API_KEY")
+            or os.getenv("AZURE_SEARCH_KEY", "")
+        )
+        search_endpoint = os.getenv("GOV_SEARCH_ENDPOINT") or os.getenv("AZURE_SEARCH_ENDPOINT", "")
+        search_index = (
+            os.getenv("GOV_SEARCH_INDEX_NAME")
+            or os.getenv("AZURE_SEARCH_INDEX_NAME")
+            or os.getenv("AZURE_SEARCH_INDEX", "gov-programs-index")
+        )
+        self._embedding_deployment = (
+            os.getenv("GOV_EMBEDDING_DEPLOYMENT")
+            or os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
+            or os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-large")
         )
 
         self._available = bool(search_key and search_endpoint and openai_endpoint and openai_key)
         if self._available:
             self._ai_client = AzureOpenAI(
                 api_key=openai_key,
-                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview"),
+                api_version=os.getenv("GOV_OPENAI_API_VERSION") or os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview"),
                 azure_endpoint=openai_endpoint,
             )
             self._search_client = SearchClient(
