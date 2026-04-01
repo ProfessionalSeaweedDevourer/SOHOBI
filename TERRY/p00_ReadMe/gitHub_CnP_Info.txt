@@ -14,7 +14,7 @@ git config --global user.email
 
 ⓐ 최신 코드 먼저 받기 (중요 ⭐)
 git checkout WOO
-git pull origin main
+git fetch origin main
 
 git checkout WOO
 
