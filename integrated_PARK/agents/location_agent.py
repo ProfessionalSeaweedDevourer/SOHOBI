@@ -372,12 +372,18 @@ class LocationAgent:
         retry_prompt: str = "",
         profile: str = "",
         prior_history: list[dict] | None = None,
+        context: dict | None = None,
     ) -> dict:
         params = await self._extract_params(question, prior_history=prior_history)
         mode = params["mode"]
-        locations = params["locations"]
-        business_type = params["business_type"]
         quarter = params["quarter"]
+
+        # context fallback: LLM이 추출 못한 경우 세션 저장값 사용
+        ctx = context or {}
+        locations = params["locations"] or (
+            [ctx["location_name"]] if ctx.get("location_name") else []
+        )
+        business_type = params["business_type"] or ctx.get("business_type") or ""
 
         if not locations or not business_type:
             return {
@@ -387,6 +393,8 @@ class LocationAgent:
                 ),
                 "adm_codes": [],
                 "type": mode,
+                "business_type": business_type,
+                "location_name": "",
             }
 
         # draft 생성
@@ -435,4 +443,10 @@ class LocationAgent:
                 # 빈 응답 등 retry LLM 실패 시 이전 draft 유지
                 logger.warning("LocationAgent retry LLM 실패 — 이전 draft 유지")
 
-        return {"draft": draft, "adm_codes": adm_codes, "type": mode}
+        return {
+            "draft":         draft,
+            "adm_codes":     adm_codes,
+            "type":          mode,
+            "business_type": business_type,
+            "location_name": locations[0] if locations else "",
+        }

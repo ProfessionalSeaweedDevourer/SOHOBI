@@ -173,6 +173,7 @@ class FinanceAgent:
         retry_prompt: str = "",
         profile: str = "",
         prior_history: list[dict] | None = None,
+        context: dict | None = None,
     ) -> str:
         # ── 1단계: 파라미터 추출 ─────────────────────────────
         # current_params 없으면 None 기반 초기값 사용
@@ -240,6 +241,16 @@ class FinanceAgent:
             safety_margin=breakeven["safety_margin"] * 100,
             question=question,
         )
+        # context 정보(지역·업종)를 프롬프트 앞에 주입
+        ctx = context or {}
+        if ctx.get("location_name") or ctx.get("business_type"):
+            parts = []
+            if ctx.get("location_name"):
+                parts.append(f"분석 지역: {ctx['location_name']}")
+            if ctx.get("business_type"):
+                parts.append(f"업종: {ctx['business_type']}")
+            context_prefix = "[현재 세션 컨텍스트] " + ", ".join(parts) + "\n\n"
+            explain_prompt = context_prefix + explain_prompt
         if profile:
             explain_prompt = _PROFILE_CONTEXT.format(profile=profile) + explain_prompt
         if retry_prompt:
