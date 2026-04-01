@@ -109,13 +109,25 @@ def getNearbyStores(
 
 
 @app.get("/map/stores-by-dong")
-def getStoresByDong(adm_cd: str, limit: int = 9999):
-    """행정동코드 기준 전체 스토어 조회 (폴리곤 클릭용)"""
+def getStoresByDong(adm_cd: str):
+    """행정동코드 기준 전체 스토어 조회 (폴리곤 클릭용, 제한 없음)"""
     try:
-        result = mDAO.getStoresByAdmCd(adm_cd, limit)
-        return {"count": len(result), "stores": result}
+        result = mDAO.getStoresByAdmCd(adm_cd)
+        logger.info(f"[stores-by-dong] adm_cd={adm_cd} → {len(result)}건")
+        return {"count": len(result), "stores": _clean(result)}
     except Exception as e:
         logger.error(f"[stores-by-dong] {e}")
+        return {"error": str(e), "count": 0, "stores": []}
+
+
+@app.get("/map/stores-by-building")
+def getStoresByBuilding(road_addr: str, exclude_id: str = ""):
+    """같은 건물 상가 조회 (도로명주소 기준)"""
+    try:
+        result = mDAO.getStoresByBuilding(road_addr, exclude_id or None)
+        return {"count": len(result), "stores": _clean(result)}
+    except Exception as e:
+        logger.error(f"[stores-by-building] {e}")
         return {"error": str(e), "count": 0, "stores": []}
 
 

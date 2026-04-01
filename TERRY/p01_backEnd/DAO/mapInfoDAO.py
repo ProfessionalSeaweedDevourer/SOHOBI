@@ -146,20 +146,40 @@ class MapInfoDAO(BaseDAO):
     def getNearbyByCategory(self, lat, lng, category, radius=500, limit=1000):
         return self._query_db(lat, lng, radius, limit, category=category)
 
-    # ── 행정동코드(adm_cd) 기준 전체 스토어 조회 ─────────────────
-    def getStoresByAdmCd(self, adm_cd: str, limit: int = 3000) -> list:
+    # ── ADM_CD(adm_cd) 기준 전체 스토어 조회 ─────────────────
+    def getStoresByAdmCd(self, adm_cd: str, limit: int = 99999) -> list:
         sql = """
             SELECT STORE_ID, STORE_NM,
                    CAT_CD, CAT_NM, MID_CAT_NM, SUB_CAT_NM,
                    SIDO_NM, SGG_NM, ADM_NM, ROAD_ADDR,
                    FLOOR_INFO, UNIT_INFO, LNG, LAT
             FROM STORE_SEOUL
-            WHERE 행정동코드 = :adm_cd
+            WHERE ADM_CD = :adm_cd
               AND LNG IS NOT NULL AND LAT IS NOT NULL
-            FETCH FIRST :limit ROWS ONLY
         """
-        rows = self._query(sql, {"adm_cd": adm_cd, "limit": limit})
+        rows = self._query(sql, {"adm_cd": adm_cd})
         return [dict(zip(self.COLS, r)) for r in rows]
+
+    # ── 같은 건물 상가 조회 (ROAD_ADDR 기준) ─────────────────────
+    def getStoresByBuilding(self, road_addr: str, exclude_store_id: str = None) -> list:
+        if not road_addr:
+            return []
+        # 건물 주소 핵심 부분 추출 (동/호 제외)
+        sql = """
+            SELECT STORE_ID, STORE_NM,
+                   CAT_CD, CAT_NM, MID_CAT_NM, SUB_CAT_NM,
+                   SIDO_NM, SGG_NM, ADM_NM, ROAD_ADDR,
+                   FLOOR_INFO, UNIT_INFO, LNG, LAT
+            FROM STORE_SEOUL
+            WHERE ROAD_ADDR = :road_addr
+              AND LNG IS NOT NULL AND LAT IS NOT NULL
+            FETCH FIRST 50 ROWS ONLY
+        """
+        rows = self._query(sql, {"road_addr": road_addr})
+        results = [dict(zip(self.COLS, r)) for r in rows]
+        if exclude_store_id:
+            results = [r for r in results if r.get("STORE_ID") != exclude_store_id]
+        return results
 
     # ── 업종 목록 ────────────────────────────────────────────────
 
@@ -226,7 +246,7 @@ class MapInfoDAO(BaseDAO):
                 :10 AS 표준산업분류코드, :11 AS 표준산업분류명,
                 :12 AS 시도코드, :13 AS SIDO_NM,
                 :14 AS 시군구코드, :15 AS SGG_NM,
-                :16 AS 행정동코드, :17 AS ADM_NM,
+                :16 AS ADM_CD, :17 AS ADM_NM,
                 :18 AS 법정동코드, :19 AS 법정동명,
                 :20 AS 지번코드, :21 AS 대지구분코드, :22 AS 대지구분명,
                 :23 AS 지번본번지, :24 AS 지번부번지, :25 AS 지번주소,
@@ -246,7 +266,7 @@ class MapInfoDAO(BaseDAO):
                 t.표준산업분류코드=s.표준산업분류코드, t.표준산업분류명=s.표준산업분류명,
                 t.시도코드=s.시도코드, t.SIDO_NM=s.SIDO_NM,
                 t.시군구코드=s.시군구코드, t.SGG_NM=s.SGG_NM,
-                t.행정동코드=s.행정동코드, t.ADM_NM=s.ADM_NM,
+                t.ADM_CD=s.ADM_CD, t.ADM_NM=s.ADM_NM,
                 t.법정동코드=s.법정동코드, t.법정동명=s.법정동명,
                 t.지번코드=s.지번코드, t.대지구분코드=s.대지구분코드, t.대지구분명=s.대지구분명,
                 t.지번본번지=s.지번본번지, t.지번부번지=s.지번부번지, t.지번주소=s.지번주소,
@@ -263,7 +283,7 @@ class MapInfoDAO(BaseDAO):
                 상권업종소분류코드, SUB_CAT_NM,
                 표준산업분류코드, 표준산업분류명,
                 시도코드, SIDO_NM, 시군구코드, SGG_NM,
-                행정동코드, ADM_NM, 법정동코드, 법정동명,
+                ADM_CD, ADM_NM, 법정동코드, 법정동명,
                 지번코드, 대지구분코드, 대지구분명,
                 지번본번지, 지번부번지, 지번주소,
                 도로명코드, 도로명, 건물본번지, 건물부번지,
@@ -277,7 +297,7 @@ class MapInfoDAO(BaseDAO):
                 s.상권업종소분류코드, s.SUB_CAT_NM,
                 s.표준산업분류코드, s.표준산업분류명,
                 s.시도코드, s.SIDO_NM, s.시군구코드, s.SGG_NM,
-                s.행정동코드, s.ADM_NM, s.법정동코드, s.법정동명,
+                s.ADM_CD, s.ADM_NM, s.법정동코드, s.법정동명,
                 s.지번코드, s.대지구분코드, s.대지구분명,
                 s.지번본번지, s.지번부번지, s.지번주소,
                 s.도로명코드, s.도로명, s.건물본번지, s.건물부번지,

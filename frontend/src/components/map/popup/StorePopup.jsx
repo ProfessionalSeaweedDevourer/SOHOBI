@@ -378,7 +378,7 @@ function StoreDetailView({
                      marginBottom: 6,
                   }}
                >
-                  같은 동 상가 ({nearbyStores.length}건)
+                  같은 건물 상가 ({nearbyStores.length}건)
                </div>
                <div style={{ maxHeight: 160, overflowY: "auto" }}>
                   {nearbyStores.slice(0, 20).map((s, i) => {
