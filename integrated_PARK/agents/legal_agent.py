@@ -71,7 +71,18 @@ class LegalAgent:
         prior_history: list[dict] | None = None,
         context: dict | None = None,
     ) -> str:
-        service: AzureChatCompletion = self._kernel.get_service("sign_off")
+        try:
+            service: AzureChatCompletion = self._kernel.get_service("sign_off")
+        except Exception as e:
+            raise ValueError(
+                f"'sign_off' 서비스가 kernel에 등록되지 않았습니다. "
+                f"kernel_setup.get_kernel()으로 초기화해 주세요. (원인: {e})"
+            ) from e
+        if service is None:
+            raise ValueError(
+                "'sign_off' 서비스가 kernel에 등록되지 않았습니다. "
+                "kernel_setup.get_kernel()으로 초기화해 주세요."
+            )
 
         ctx = context or {}
         context_note = ""
@@ -93,14 +104,16 @@ class LegalAgent:
         history = ChatHistory()
         history.add_system_message(system)
         for msg in (prior_history or []):
-            if msg["role"] == "user":
-                history.add_user_message(msg["content"])
-            elif msg["role"] == "assistant":
-                history.add_assistant_message(msg["content"])
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role == "user" and content:
+                history.add_user_message(content)
+            elif role == "assistant" and content:
+                history.add_assistant_message(content)
         history.add_user_message(question)
 
         settings = OpenAIChatPromptExecutionSettings(
-            function_choice_behavior=FunctionChoiceBehavior.Auto(),
+            function_choice_behavior=FunctionChoiceBehavior.Required(),
         )
         response = await service.get_chat_message_content(
             history, settings=settings, kernel=self._kernel
