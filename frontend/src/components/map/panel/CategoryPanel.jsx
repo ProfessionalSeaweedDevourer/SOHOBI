@@ -1,4 +1,6 @@
-// 위치: src/components/panel/CategoryPanel.jsx
+// 개발 프론트 위치: TERRY\p02_frontEnd_React\src\panel\CategoryPanel.jsx
+// 공식 프론트 위치: frontend\src\components\map\panel\CategoryPanel.jsx
+
 import { useState } from "react";
 import { CATEGORIES } from "../../../constants/categories";
 
@@ -90,7 +92,7 @@ export default function CategoryPanel({
                               <span
                                  style={{
                                     ...S.catName,
-                                    color: isOn ? "var(--foreground)" : "var(--muted-foreground)",
+                                    color: isOn ? "#111" : "#aaa",
                                  }}
                               >
                                  {cat.label || cat.key}
@@ -132,10 +134,8 @@ const S = {
    sidebar: {
       position: "relative",
       height: "100%",
-      background: "var(--glass-bg)",
-      backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)",
-      borderRight: "1px solid var(--glass-border)",
+      background: "rgba(255,255,255,0.97)",
+      borderRight: "1px solid #e5e7eb",
       borderRadius: "0 12px 12px 0",
       boxShadow: "2px 0 12px rgba(0,0,0,0.08)",
       zIndex: 200,
@@ -152,16 +152,16 @@ const S = {
       alignItems: "center",
       justifyContent: "space-between",
       padding: "14px 12px 10px",
-      borderBottom: "1px solid var(--border)",
+      borderBottom: "1px solid #f0f0f0",
       flexShrink: 0,
    },
-   headerTitle: { fontSize: 13, fontWeight: 700, color: "var(--foreground)" },
+   headerTitle: { fontSize: 13, fontWeight: 700, color: "#111" },
    collapseBtn: {
       background: "transparent",
       border: "none",
       cursor: "pointer",
       fontSize: 12,
-      color: "var(--muted-foreground)",
+      color: "#888",
       padding: "2px 4px",
       marginLeft: "auto",
    },
@@ -177,18 +177,17 @@ const S = {
    searchInput: {
       flex: 1,
       padding: "5px 8px",
-      border: "1px solid var(--border)",
+      border: "1px solid #ddd",
       borderRadius: 8,
       fontSize: 12,
       outline: "none",
-      color: "var(--foreground)",
-      background: "var(--input-background)",
+      color: "#111",
       minWidth: 0, // flex 자식 넘침 방지
       boxSizing: "border-box",
    },
    searchBtn: {
       padding: "5px 8px",
-      background: "var(--brand-blue)",
+      background: "#2563EB",
       border: "none",
       borderRadius: 8,
       cursor: "pointer",
@@ -199,28 +198,28 @@ const S = {
    totalBadge: {
       margin: "10px 12px 0",
       padding: "7px 10px",
-      background: "rgba(8, 145, 178, 0.1)",
+      background: "#EFF6FF",
       borderRadius: 8,
       fontSize: 12,
-      color: "var(--brand-blue)",
+      color: "#1971C2",
       textAlign: "center",
    },
    allBtns: { display: "flex", gap: 6, padding: "10px 12px 0" },
    hideAllBtn: {
       flex: 1,
       padding: "5px 0",
-      background: "var(--accent)",
-      border: "1px solid var(--border)",
+      background: "#f5f5f5",
+      border: "1px solid #ddd",
       borderRadius: 6,
       fontSize: 11,
       fontWeight: 600,
-      color: "var(--muted-foreground)",
+      color: "#666",
       cursor: "pointer",
    },
    showAllBtn: {
       flex: 1,
       padding: "5px 0",
-      background: "var(--brand-blue)",
+      background: "#2563EB",
       border: "none",
       borderRadius: 6,
       fontSize: 11,
@@ -230,7 +229,7 @@ const S = {
    },
    divider: {
       height: 1,
-      background: "var(--border)",
+      background: "#f0f0f0",
       margin: "10px 0 4px",
       flexShrink: 0,
    },

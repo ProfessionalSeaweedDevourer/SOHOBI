@@ -1,4 +1,5 @@
-// components/MapControls.jsx
+// 개발 프론트 위치: TERRY\p02_frontEnd_React\src\controls\MapControls.jsx
+// 공식 프론트 위치: frontend\src\components\map\controls\MapControls.jsx
 
 // ── 메인 컴포넌트: 상단 컨트롤 바 + 동 모드 버튼 ────────────
 export default function MapControls({
@@ -11,6 +12,9 @@ export default function MapControls({
    onDongMode,
    dongLoading,
    currentGuNm,
+   roadviewMode,
+   onRoadviewToggle,
+   onPopPanel,
 }) {
    return (
       <>
@@ -30,6 +34,20 @@ export default function MapControls({
                   반경 500m · {nearbyCount}건
                </span>
             )}
+            <button
+               className={`mv-ctrl-btn ${roadviewMode ? "mv-ctrl-btn--on" : "mv-ctrl-btn--off"}`}
+               onClick={onRoadviewToggle}
+               title="로드뷰 모드 ON/OFF"
+            >
+               {roadviewMode ? "🚶 로드뷰 ON" : "🚶 로드뷰 OFF"}
+            </button>
+            <button
+               className="mv-ctrl-btn mv-ctrl-btn--off"
+               onClick={onPopPanel}
+               title="유동인구 패널"
+            >
+               👥 유동인구
+            </button>
             {loading && <span className="mv-ctrl-loading">DB 조회 중...</span>}
             {nearbyCount !== null && (
                <button className="mv-ctrl-clear" onClick={onClear}>
@@ -56,14 +74,11 @@ export default function MapControls({
             {currentGuNm && dongMode !== "none" && (
                <div
                   style={{
-                     background: "var(--glass-bg)",
-                     backdropFilter: "blur(12px)",
-                     WebkitBackdropFilter: "blur(12px)",
-                     border: "1px solid var(--glass-border)",
+                     background: "rgba(255,255,255,0.95)",
                      borderRadius: 8,
                      padding: "4px 10px",
                      fontSize: 11,
-                     color: "var(--foreground)",
+                     color: "#555",
                      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                      textAlign: "center",
                   }}
@@ -74,12 +89,12 @@ export default function MapControls({
             {!currentGuNm && dongMode !== "none" && (
                <div
                   style={{
-                     background: "rgba(245, 158, 11, 0.12)",
-                     border: "1px solid rgba(245, 158, 11, 0.4)",
+                     background: "#fffbeb",
+                     border: "1px solid #fbbf24",
                      borderRadius: 8,
                      padding: "5px 10px",
                      fontSize: 11,
-                     color: "var(--foreground)",
+                     color: "#92400e",
                      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                   }}
                >
@@ -89,14 +104,11 @@ export default function MapControls({
             {dongLoading && (
                <div
                   style={{
-                     background: "var(--glass-bg)",
-                     backdropFilter: "blur(12px)",
-                     WebkitBackdropFilter: "blur(12px)",
-                     border: "1px solid var(--glass-border)",
+                     background: "rgba(255,255,255,0.95)",
                      borderRadius: 8,
                      padding: "5px 12px",
                      fontSize: 11,
-                     color: "var(--muted-foreground)",
+                     color: "#555",
                      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                   }}
                >
@@ -110,7 +122,7 @@ export default function MapControls({
                   { mode: "sales", label: "매출", activeColor: "#059669" },
                   {
                      mode: "realestate",
-                     label: "실거래가",
+                     label: "부동산",
                      activeColor: "#2563EB",
                   },
                ].map(({ mode, label, activeColor }) => {
@@ -120,16 +132,14 @@ export default function MapControls({
                         key={mode}
                         onClick={() => onDongMode(mode)}
                         style={{
-                           border: `2px solid ${isActive ? activeColor : "var(--glass-border)"}`,
+                           border: `2px solid ${isActive ? activeColor : "#e5e7eb"}`,
                            borderRadius: 10,
                            padding: "7px 12px",
                            fontSize: 12,
                            fontWeight: 700,
                            cursor: "pointer",
-                           background: isActive ? activeColor : "var(--glass-bg)",
-                           backdropFilter: isActive ? undefined : "blur(12px)",
-                           WebkitBackdropFilter: isActive ? undefined : "blur(12px)",
-                           color: isActive ? "#fff" : "var(--foreground)",
+                           background: isActive ? activeColor : "#fff",
+                           color: isActive ? "#fff" : "#555",
                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                            transition: "all 0.18s",
                            whiteSpace: "nowrap",

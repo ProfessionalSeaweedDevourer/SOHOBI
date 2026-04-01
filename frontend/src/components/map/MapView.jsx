@@ -1,7 +1,11 @@
 import { useRef, useState, useEffect } from "react";
 import { useMap } from "../../hooks/map/useMap";
 import { toLonLat, fromLonLat } from "ol/proj";
-import { getCenter as getExtentCenter, extend as extendExtent, createEmpty as createEmptyExtent } from "ol/extent";
+import {
+   getCenter as getExtentCenter,
+   extend as extendExtent,
+   createEmpty as createEmptyExtent,
+} from "ol/extent";
 
 // ── UI 컴포넌트 ────────────────────────────────────────────────
 import Layerpanel from "./panel/Layerpanel";
@@ -12,6 +16,11 @@ import DongTooltip from "./controls/DongTooltip";
 import WmsPopup from "./popup/WmsPopup";
 import StorePopup from "./popup/StorePopup";
 import ChatPanel from "./ChatPanel";
+import LandmarkPopup from "./popup/LandmarkPopup";
+import PopulationPanel from "./panel/PopulationPanel";
+import RoadviewPanel from "./panel/RoadviewPanel";
+import { usePopulationLayer } from "../../hooks/map/usePopulationLayer";
+import { useLandmarkLayer } from "../../hooks/map/useLandmarkLayer";
 
 // ── 커스텀 훅 ──────────────────────────────────────────────────
 import { useMarkers } from "../../hooks/map/useMarkers";
@@ -67,6 +76,18 @@ export default function MapView() {
    const [coords, setCoords] = useState({ lat: "37.5665", lng: "126.9780" });
    const [chatOpen, setChatOpen] = useState(false);
    const [chatContext, setChatContext] = useState(null);
+   const [landmarkLoaded, setLandmarkLoaded] = useState(false);
+   const [showPopPanel, setShowPopPanel] = useState(false);
+   const [popVisible, setPopVisible] = useState(true);
+   const [popCount, setPopCount] = useState(0);
+   const [roadviewMode, setRoadviewMode] = useState(false);
+   const [roadviewPos, setRoadviewPos] = useState(null);
+   const [landmarkPopup, setLandmarkPopup] = useState(null);
+   const [lmKakao, setLmKakao] = useState(null);
+   const [lmKakaoLoading, setLmKakaoLoading] = useState(false);
+   const [festivalLoaded, setFestivalLoaded] = useState(false);
+   const [schoolLoaded, setSchoolLoaded] = useState(false);
+   const [sdotLoaded, setSdotLoaded] = useState(false);
    const [popup, setPopup] = useState(null);
    const [kakaoDetail, setKakaoDetail] = useState(null);
    const [loadingDetail, setLoadingDetail] = useState(false);
@@ -139,10 +160,34 @@ export default function MapView() {
    const [svcData, setSvcData] = useState([]);
    const [selectedSvc, setSelectedSvc] = useState(""); // 업종 필터 선택값
 
-   const { allStoresRef, drawCircle, drawMarkers, clearMarkers } = useMarkers(
-      mapInstance,
-      visibleCats,
-   );
+   const { allStoresRef, drawCircle, drawMarkers, clearMarkers, selectMarker } =
+      useMarkers(mapInstance, visibleCats);
+
+   const { loadPopulation, setPopVisible: _setPopVis } =
+      usePopulationLayer(mapInstance);
+
+   const {
+      landmarkLayerRef,
+      festivalLayerRef,
+      schoolLayerRef,
+      sdotLayerRef,
+      loadLandmarks,
+      loadFestivals,
+      loadSchools,
+      loadSdot,
+      selectLandmark,
+   } = useLandmarkLayer(mapInstance);
+
+   // ── 초기 랜드마크·학교·유동인구 전체 로드 (지도 준비 후 1회) ──
+   const landmarkInitRef = useRef(false);
+   useEffect(() => {
+      if (!mapInstance.current || landmarkInitRef.current) return;
+      landmarkInitRef.current = true;
+      loadLandmarks().then(() => setLandmarkLoaded(true));
+      loadSchools().then(() => setSchoolLoaded(true));
+      loadSdot().then(() => setSdotLoaded(true));
+      loadPopulation().then((n) => setPopCount(n || 0));
+   }, [mapInstance.current]); // eslint-disable-line
    const {
       dongBoundaryLayerRef,
       dongHoverFeatRef,
@@ -350,15 +395,22 @@ export default function MapView() {
                   const rr = await fetch(url);
                   const jj = await rr.json();
                   if (jj.data)
-                     setDongPanel({
-                        mode: next,
-                        dongNm: _dongNm,
-                        admNm: _admNm,
-                        guNm: _guNm,
-                        admCd: _admCd,
-                        apiData: jj.data,
-                        avg: jj.avg,
-                     });
+                     if (_admCd) {
+                        // 축제만 동 클릭 시 로드 (실시간 API)
+                        loadFestivals(_admCd).then(() =>
+                           setFestivalLoaded(true),
+                        );
+                     }
+
+                  setDongPanel({
+                     mode: next,
+                     dongNm: _dongNm,
+                     admNm: _admNm,
+                     guNm: _guNm,
+                     admCd: _admCd,
+                     apiData: jj.data,
+                     avg: jj.avg,
+                  });
                } else if (next === "realestate") {
                   const rr = await fetch(
                      `${REALESTATE_URL}/realestate/seoul-rtms?adm_cd=${encodeURIComponent(_admCd || _emdCd)}`,
@@ -655,9 +707,38 @@ export default function MapView() {
          }
          setWmsPopup(null);
 
+         // 로드뷰 모드: 클릭 좌표로 로드뷰 열기
+         if (roadviewMode) {
+            const [lng, lat] = toLonLat(e.coordinate);
+            setRoadviewPos({ lat, lng });
+            return;
+         }
+
          const feature = map.forEachFeatureAtPixel(e.pixel, (f) => f);
+
+         // 랜드마크/학교 마커 클릭
+         if (feature?.get("lmData")) {
+            selectLandmark(feature);
+            const lmData = feature.get("lmData");
+            setLandmarkPopup(lmData);
+            setPopup(null);
+            setKakaoDetail(null);
+            setLmKakao(null);
+            setLmKakaoLoading(true);
+            fetchKakaoDetail(
+               lmData.title || lmData.school_nm,
+               lmData.addr || lmData.road_addr,
+            ).then((d) => {
+               setLmKakao(d);
+               setLmKakaoLoading(false);
+            });
+            return;
+         }
          if (feature?.get("store")) {
             const store = feature.get("store");
+            selectMarker(feature);
+            setLandmarkPopup(null);
+            selectLandmark(null);
             setPopup(store);
             setKakaoDetail(null);
             setLoadingDetail(true);
@@ -737,6 +818,9 @@ export default function MapView() {
             onDongMode={handleDongMode}
             dongLoading={dongLoading}
             currentGuNm={currentGuNmRef.current}
+            roadviewMode={roadviewMode}
+            onRoadviewToggle={() => setRoadviewMode((v) => !v)}
+            onPopPanel={() => setShowPopPanel((v) => !v)}
          />
          <button
             className="mv-layer-btn"
@@ -750,6 +834,15 @@ export default function MapView() {
                   map={mapInstance.current}
                   vworldKey={import.meta.env.VITE_VWORLD_API_KEY}
                   wmsLayerRef={wmsLayerRef}
+                  dongModeOn={dongMode}
+                  landmarkLayerRef={landmarkLayerRef}
+                  festivalLayerRef={festivalLayerRef}
+                  schoolLayerRef={schoolLayerRef}
+                  sdotLayerRef={sdotLayerRef}
+                  landmarkLoaded={landmarkLoaded}
+                  festivalLoaded={festivalLoaded}
+                  schoolLoaded={schoolLoaded}
+                  sdotLoaded={sdotLoaded}
                />
             </div>
          )}
@@ -781,6 +874,38 @@ export default function MapView() {
                setChatContext(ctx);
                setChatOpen(true);
                setDongPanel(null);
+            }}
+         />
+         {showPopPanel && (
+            <PopulationPanel
+               onClose={() => setShowPopPanel(false)}
+               visible={popVisible}
+               onToggle={() => {
+                  const next = !popVisible;
+                  setPopVisible(next);
+                  _setPopVis(next);
+               }}
+               count={popCount}
+            />
+         )}
+         {roadviewPos && (
+            <RoadviewPanel
+               lat={roadviewPos.lat}
+               lng={roadviewPos.lng}
+               onClose={() => {
+                  setRoadviewPos(null);
+                  setRoadviewMode(false);
+               }}
+            />
+         )}
+         <LandmarkPopup
+            popup={landmarkPopup}
+            kakaoDetail={lmKakao}
+            loadingDetail={lmKakaoLoading}
+            onClose={() => {
+               setLandmarkPopup(null);
+               setLmKakao(null);
+               selectLandmark(null);
             }}
          />
          <ChatPanel

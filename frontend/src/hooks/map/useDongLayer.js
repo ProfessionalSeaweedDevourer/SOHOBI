@@ -1,4 +1,6 @@
-// hooks/useDongLayer.js
+// 개발 프론트 위치: TERRY\p02_frontEnd_React\src\hooks\useDongLayer.js
+// 공식 프론트 위치: frontend\src\hooks\map\useDongLayer.js
+
 import { useRef } from "react";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";

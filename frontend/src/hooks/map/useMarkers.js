@@ -1,4 +1,6 @@
-// hooks/useMarkers.js
+// 개발 프론트 위치: TERRY\p02_frontEnd_React\src\hooks\useMarkers.js
+// 공식 프론트 위치: frontend\src\hooks\map\useLandmarkLayer.js
+
 import { useRef, useEffect } from "react";
 import { fromLonLat } from "ol/proj";
 import { circular } from "ol/geom/Polygon";
@@ -24,13 +26,15 @@ const CAT_COLORS = {
 };
 
 function makeMarkerStyle(category, selected = false) {
-   let color = "#999";
-   color = CAT_COLORS[category] || "#999";
+   const color = CAT_COLORS[category] || "#999";
    return new Style({
       image: new CircleStyle({
-         radius: selected ? 10 : 7,
-         fill: new Fill({ color }),
-         stroke: new Stroke({ color: "#fff", width: selected ? 3 : 2 }),
+         radius: selected ? 11 : 7,
+         fill: new Fill({ color: selected ? "#fff" : color }),
+         stroke: new Stroke({
+            color: selected ? color : "#fff",
+            width: selected ? 3 : 2,
+         }),
       }),
    });
 }
@@ -95,6 +99,28 @@ export function useMarkers(mapInstance, visibleCats) {
       markerLayerRef.current = layer;
    };
 
+   // ── 마커 선택 하이라이트 ────────────────────────────────────
+   const selectedFeatRef = useRef(null);
+
+   const selectMarker = (feature) => {
+      const map = mapInstance.current;
+      if (!map) return;
+      // 이전 선택 해제
+      if (selectedFeatRef.current) {
+         const prev = selectedFeatRef.current;
+         const prevStore = prev.get("store");
+         prev.setStyle(makeMarkerStyle(prevStore?.CAT_CD));
+      }
+      if (!feature) {
+         selectedFeatRef.current = null;
+         return;
+      }
+      // 새 선택 하이라이트
+      const store = feature.get("store");
+      feature.setStyle(makeMarkerStyle(store?.CAT_CD, true));
+      selectedFeatRef.current = feature;
+   };
+
    // ── 마커/원 제거 ────────────────────────────────────────────
    const clearMarkers = () => {
       const map = mapInstance.current;
@@ -124,5 +150,6 @@ export function useMarkers(mapInstance, visibleCats) {
       drawCircle,
       drawMarkers,
       clearMarkers,
+      selectMarker,
    };
 }

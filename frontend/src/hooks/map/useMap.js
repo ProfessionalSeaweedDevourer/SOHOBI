@@ -1,3 +1,6 @@
+// 개발 프론트 위치: TERRY\p02_frontEnd_React\src\hooks\useLandmarkLayer.js
+// 공식 프론트 위치: frontend\src\hooks\map\useLandmarkLayer.js
+
 import { useEffect, useRef } from "react";
 import Map from "ol/Map";
 import View from "ol/View";

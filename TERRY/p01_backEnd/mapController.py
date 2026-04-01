@@ -13,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from DAO.mapInfoDAO import MapInfoDAO, SIDO_BOUNDS, _get_df
 from DAO.landmarkDAO import LandmarkDAO
 from DAO.populationDAO import PopulationDAO
-from DAO.populationDAO import PopulationDAO
 
 # ── 서버 로그 설정 ───────────────────────────────────────────────
 # INFO 레벨 이상 로그를 터미널에 출력
@@ -23,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 mDAO = MapInfoDAO()
 lmDAO = LandmarkDAO()
-popDAO = PopulationDAO()
 popDAO = PopulationDAO()
 
 # ── 시도명 → 테이블명 ───────────────────────────────────────────
@@ -64,7 +62,9 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:3000",
         "http://localhost:5173",
+        "http://10.1.92.100:3000",
         "http://192.168.9.4:5173",
         "http://195.168.9.5:5173",
     ],

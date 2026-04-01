@@ -1,4 +1,5 @@
-// components/StorePopup.jsx
+// 개발 프론트 위치: TERRY\p02_frontEnd_React\src\popup\StorePopup.jsx
+// 공식 프론트 위치: frontend\src\components\map\popup\StorePopup.jsx
 
 // ── 업종 색상 헬퍼 ─────────────────────────────────────────────
 // CAT_CD(I2,G2...) 기반 색상
