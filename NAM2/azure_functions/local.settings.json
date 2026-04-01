@@ -1,0 +1,27 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AZURE_OPENAI_ENDPOINT": "",
+    "AZURE_OPENAI_API_KEY": "",
+    "AZURE_OPENAI_EMBEDDING_DEPLOYMENT": "text-embedding-3-large",
+    "AZURE_OPENAI_EMBEDDING_DIMS": "3072",
+    "AZURE_OPENAI_API_VERSION": "2024-08-01-preview",
+    "COSMOS_ENDPOINT": "",
+    "COSMOS_KEY": "",
+    "COSMOS_DATABASE_NAME": "sohobidb",
+    "AZURE_SEARCH_ENDPOINT": "",
+    "AZURE_SEARCH_API_KEY": "",
+    "AZURE_SEARCH_INDEX_NAME": "gov-programs-index",
+    "AZURE_STORAGE_CONNECTION_STRING": "",
+    "AZURE_STORAGE_CONTAINER": "sohobi-docs",
+    "GOV24_API_KEY": "",
+    "KSTARTUP_API_KEY": "",
+    "KISED_SPACE_API_KEY": "",
+    "KISED_AGENCY_API_KEY": "",
+    "KISED_EDU_API_KEY": "",
+    "SME24_API_KEY": "",
+    "BIZINFO_API_KEY": ""
+  }
+}

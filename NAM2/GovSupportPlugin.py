@@ -1,24 +1,32 @@
 """
 정부지원사업 & 소상공인 금융지원 맞춤 추천 플러그인 (RAG)
 - Azure AI Search 인덱스: gov-programs-index
-- 데이터: 5,600건+ (정부24 + 창업진흥원 4종 + 중소벤처24 + 기업마당 + 큐레이션)
+- 데이터: 1,887건 (정부24 API + 중기부 공고 + 소진공 정책자금 + 신용보증 + 외식업 특화 + 지역 지자체)
 - 검색: 하이브리드 (BM25 키워드 + 벡터) + 시맨틱 랭커
 - 임베딩: text-embedding-3-large (3072차원)
 - 핵심: 단순 검색이 아닌 사용자 상황 기반 다중 카테고리 맞춤 추천
-- 행정 에이전트(AdminAgent)에서 사용
 """
 
-import os
+from semantic_kernel.functions import kernel_function
 from typing import Annotated
-
-from azure.core.credentials import AzureKeyCredential
+import os
+from dotenv import load_dotenv
 from azure.search.documents import SearchClient
 from azure.search.documents.models import VectorizedQuery
-from dotenv import load_dotenv
+from azure.core.credentials import AzureKeyCredential
 from openai import AzureOpenAI
-from semantic_kernel.functions import kernel_function
 
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../sohobi-azure/.env"))
+
+SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
+SEARCH_API_KEY = os.getenv("AZURE_SEARCH_API_KEY") or os.getenv("AZURE_SEARCH_KEY", "")
+SEARCH_INDEX = os.getenv("AZURE_SEARCH_INDEX_NAME", "gov-programs-index")
+OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+EMBEDDING_DEPLOYMENT = os.getenv(
+    "AZURE_OPENAI_EMBEDDING_DEPLOYMENT",
+    os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-large")
+)
 
 REGION_MAP = {
     "서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천",
@@ -28,6 +36,7 @@ REGION_MAP = {
     "제주": "제주",
 }
 
+# 추천을 위한 다중 검색 카테고리
 RECOMMEND_CATEGORIES = [
     {
         "name": "보조금/창업패키지",
@@ -60,28 +69,22 @@ class GovSupportPlugin:
     """사용자 상황 기반 정부지원사업·금융지원 맞춤 추천 플러그인"""
 
     def __init__(self):
-        openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-        openai_key = os.getenv("AZURE_OPENAI_API_KEY", "")
-        search_key = os.getenv("AZURE_SEARCH_API_KEY") or os.getenv("AZURE_SEARCH_KEY", "")
-        search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT", "")
-        search_index = os.getenv("AZURE_SEARCH_INDEX_NAME") or os.getenv("AZURE_SEARCH_INDEX", "gov-programs-index")
-        self._embedding_deployment = os.getenv(
-            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT",
-            os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-large")
-        )
-
-        self._available = bool(search_key and search_endpoint and openai_endpoint and openai_key)
+        self._available = bool(SEARCH_API_KEY and SEARCH_ENDPOINT and OPENAI_ENDPOINT and OPENAI_API_KEY)
         if self._available:
             self._ai_client = AzureOpenAI(
-                api_key=openai_key,
-                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview"),
-                azure_endpoint=openai_endpoint,
+                azure_endpoint=OPENAI_ENDPOINT,
+                api_key=OPENAI_API_KEY,
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
             )
             self._search_client = SearchClient(
-                endpoint=search_endpoint,
-                index_name=search_index,
-                credential=AzureKeyCredential(search_key),
+                endpoint=SEARCH_ENDPOINT,
+                index_name=SEARCH_INDEX,
+                credential=AzureKeyCredential(SEARCH_API_KEY)
             )
+
+    def _get_embedding(self, text: str) -> list[float]:
+        response = self._ai_client.embeddings.create(input=text, model=EMBEDDING_DEPLOYMENT)
+        return response.data[0].embedding
 
     @staticmethod
     def _extract_region(text: str) -> str:
@@ -92,10 +95,7 @@ class GovSupportPlugin:
 
     def _search_one(self, query: str, region: str, top_k: int = 5) -> list[dict]:
         """단일 쿼리 검색 실행, 결과를 dict 리스트로 반환"""
-        resp = self._ai_client.embeddings.create(
-            input=query, model=self._embedding_deployment
-        )
-        vector = resp.data[0].embedding
+        vector = self._get_embedding(query)
         vector_query = VectorizedQuery(
             vector=vector, k_nearest_neighbors=20, fields="embedding"
         )
@@ -115,7 +115,7 @@ class GovSupportPlugin:
                 "apply_method", "org_name", "phone", "url",
                 "support_type", "target_region"
             ],
-            top=top_k,
+            top=top_k
         )
         return [dict(r) for r in results]
 
@@ -146,6 +146,7 @@ class GovSupportPlugin:
                 region = ""
             extracted_region = self._extract_region(region) if region else ""
 
+            # 사용자 프로필 구성
             profile = {
                 "업종": business_type if business_type != "미정" else "소상공인",
                 "지역": region or "전국",
@@ -162,6 +163,7 @@ class GovSupportPlugin:
             if additional_info:
                 profile_summary += f", 기타: {additional_info}"
 
+            # 다중 카테고리 검색 실행
             all_results = {}
             seen_names = set()
 
@@ -180,6 +182,7 @@ class GovSupportPlugin:
                 if cat_results:
                     all_results[cat["name"]] = cat_results
 
+            # 결과 포맷팅
             if not all_results:
                 return f"{profile_summary}\n\n조건에 맞는 지원사업을 찾을 수 없습니다."
 

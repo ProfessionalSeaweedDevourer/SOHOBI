@@ -1,87 +1,180 @@
-BizAgent AI: 1인 창업자용 행정 서류 자동화 시스템
+# GovSupportPlugin — 정부지원사업 & 소상공인 금융지원 통합 검색
 
-BizAgent AI는 소상공인 및 예비 창업자가 직면하는 행정 서류 작성의 복잡성을 해결하기 위해 개발된 도메인 특화 에이전트(Domain-Specific Agent)입니다.
+소상공인/F&B 창업자가 받을 수 있는 **정부 보조금, 창업패키지, 정책자금 대출, 신용보증, 고용지원, 교육/컨설팅** 정보를 AI 기반으로 통합 검색하는 Semantic Kernel 플러그인입니다.
 
-Microsoft Semantic Kernel 기반의 오케스트레이션 구조를 통해 사용자의 자연어 입력에서 필수 파라미터를 추출하며, 관공서 규격을 준수하는 Pixel-Perfect PDF 문서를 자동 생성합니다.
+SOHOBI 프로젝트의 **행정 에이전트(AdminAgent)** 플러그인으로 동작하며, `integrated_PARK` 오케스트레이션 파이프라인에 바로 연결됩니다.
 
-🌐 라이브 데모 (Live Demo)
+---
 
-본 서비스는 Azure App Service(Linux) 환경에 배포되어 있으며, 아래 링크를 통해 실시간으로 확인할 수 있습니다.
+## 핵심 기능
 
-https://biz-helper-agent-2026-bxb8epbyejawfgck.koreacentral-01.azurewebsites.net/
+### 1. 정부지원사업 검색
+- 정부24 공공서비스 API 기반 데이터 (1,400건+)
+- 업종/지역/창업단계에 맞는 지원사업 자동 매칭
+- 보조금, 창업패키지, 사업화 자금, 교육 프로그램 등
 
-(Azure 무료 티어 특성상 초기 접속 시 약 10~15초의 콜드 스타트 지연이 발생할 수 있습니다.)
+### 2. 소상공인 금융지원 검색
+- 소상공인 정책자금 (융자/대출)
+- 신용보증/기술보증 지원
+- 긴급경영안정자금, 재기지원자금
+- 운전자금, 시설자금, 전환자금
 
-✨ 핵심 기능 (Key Features)
+### 3. 고용/교육 지원 검색
+- 채용장려금, 고용안정지원금
+- 두루누리 사회보험료 지원
+- 경영 컨설팅, 역량강화 교육
 
-상호작용형 정보 수집 (Interactive Slot Filling): 서류 생성에 필요한 필수 정보(상호명, 사업장 면적 등) 누락 시, AI가 대화를 통해 추가 정보를 식별하고 보완합니다.
+---
 
-관공서 규격 PDF 생성: 수집된 데이터를 바탕으로 PyPDF2 및 ReportLab을 활용하여 정규 서류 양식 위에 데이터를 정확히 매핑(Overlay)합니다.
+## 기술 스택
 
-확장 가능한 에이전트 아키텍처: FoodBusinessPlugin 등 모듈형 플러그인 구조를 채택하여 향후 정책 자금 추천, 상권 분석 등 타 도메인 에이전트와의 통합이 용이합니다.
+| 구성 요소 | 기술 |
+|-----------|------|
+| AI 오케스트레이션 | Microsoft Semantic Kernel (Python) |
+| LLM | Azure OpenAI GPT-4o |
+| 임베딩 | Azure OpenAI text-embedding-3-large (3,072차원) |
+| 검색 엔진 | Azure AI Search (하이브리드 + 시맨틱 랭커) |
+| 데이터 저장 | Azure Cosmos DB (NoSQL, Serverless) |
+| 원본 저장 | Azure Blob Storage |
+| 데이터 소스 | 정부24 공공서비스 API (data.go.kr) |
+| API 서버 | FastAPI + Uvicorn |
 
-🛠 기술 스택 (Tech Stack)
+---
 
-Backend & AI Orchestration
+## 검색 아키텍처
 
-Language: Python 3.11
+```
+사용자 질문
+    │
+    ▼
+[쿼리 분석] — 지역 자동 추출 (17개 시/도)
+    │
+    ▼
+[Azure OpenAI] — text-embedding-3-large로 쿼리 벡터화
+    │
+    ▼
+[Azure AI Search] — 3중 검색
+    ├── BM25 키워드 검색
+    ├── 벡터 유사도 검색 (k=20)
+    └── 시맨틱 랭커 재순위화
+    │
+    ├── OData 필터: target_region = '{지역}' OR '전국'
+    │
+    ▼
+[결과 반환] — 상위 15건 → GPT가 분석/필터링 후 사용자에게 안내
+```
 
-Framework: FastAPI
+---
 
-Orchestration: Microsoft Semantic Kernel
+## 데이터 파이프라인
 
-LLM: Azure OpenAI (GPT-4o)
+데이터 수집부터 검색 인덱싱까지 4단계 자동화 파이프라인:
 
-Document Processing: PyPDF2, ReportLab
+```
+[Step 0] 정부24 API 수집 → CSV
+  - 10,000건+ 전체 서비스 → F&B/금융 키워드 필터링
+  - 35개 키워드: 소상공인, 창업, 대출, 융자, 보증, 고용지원 등
+  - 출력: data/raw/gov24_programs.csv
 
-Frontend & Infrastructure
+[Step 1] CSV → Azure Blob Storage 업로드
+  - sohobi-docs 컨테이너, raw/ 경로
 
-Frontend: HTML5, Tailwind CSS, Vanilla JavaScript
+[Step 2] Blob → Azure Cosmos DB 적재
+  - 지역 자동 태깅 (REGION_MAP: 17개 시/도)
+  - 메타 태그 임베딩 텍스트 생성:
+    [지역: 서울] [분야: 창업] [유형: 현금] 사업명: ...
+  - service_id 기반 중복 방지
 
-Cloud: Azure App Service (Linux)
+[Step 3] Cosmos DB → Azure AI Search 인덱싱
+  - text-embedding-3-large 벡터 생성 (3,072차원)
+  - 시맨틱 검색 설정 (sohobi-semantic)
+  - target_region 필터/패싯 필드 설정
+  - 배치 업로드: 100건/배치, 0.5초 쓰로틀
+```
 
-🏗 시스템 아키텍처 (Architecture)
+파이프라인 스크립트 위치: `sohobi-azure/scripts/pipeline/`
 
-사용자 인터페이스(UI): Tailwind CSS 기반 웹 인터페이스를 통해 자연어 요청을 수신합니다.
+---
 
-백엔드 서버(API): FastAPI 비동기 엔드포인트를 통해 요청을 처리합니다.
+## integrated_PARK 연동
 
-AI 오케스트레이터: * ChatHistory를 통한 대화 맥락 유지
+### AdminAgent 등록 구조
 
-Auto Function Calling으로 서류 생성 의도 파악 및 해당 플러그인 트리거
+```python
+# integrated_PARK/agents/admin_agent.py
+from plugins.gov_support_plugin import GovSupportPlugin
+kernel.add_plugin(GovSupportPlugin(), plugin_name="GovSupport")
+```
 
-플러그인 실행: overlay_main.py 모듈이 original.pdf 템플릿에 수집된 데이터를 병합하여 최종 결과물을 생성합니다.
+### 필요 환경변수
 
-📄 Use Case 명세서
+```env
+AZURE_OPENAI_ENDPOINT=...
+AZURE_OPENAI_API_KEY=...
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-3-large
+AZURE_SEARCH_ENDPOINT=...
+AZURE_SEARCH_API_KEY=...
+AZURE_SEARCH_INDEX_NAME=gov-programs-index
+```
 
-상세한 기획 및 기능 정의는 아래 문서를 참조하십시오.
+### SignOff 연동
 
-행정 에이전트 Use Case 명세서 (admin_agent_usecase.md)
+AdminAgent의 응답은 SignOff Agent가 품질 검증합니다:
+- **A1**: 법령/조항 인용 여부
+- **A2**: 서비스 양식명 언급
+- **A3**: 절차 단계 설명
+- **A4**: 담당 기관명 안내
+- **A5**: 처리 기한 정보
 
-💻 로컬 개발 환경 구성 (For Developers)
+---
 
-1. 환경 설정 및 패키지 설치
+## 로컬 개발
 
-# 가상환경 구성
+```bash
+# 1. 가상환경 & 의존성
 python -m venv .venv
 source .venv/bin/activate  # Windows: .\.venv\Scripts\activate
-
-# 의존성 설치
 pip install -r requirements.txt
 
+# 2. 환경변수 설정
+# sohobi-azure/.env 파일에 Azure 키 설정
 
-2. 환경 변수 설정
+# 3. 독립 서버 실행 (테스트용)
+uvicorn app:app --reload --port 8001
 
-app.py 내의 Azure OpenAI 관련 설정 값을 해당 리소스 정보로 수정해야 합니다.
+# 4. API 테스트
+curl -X POST http://localhost:8001/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "서울에서 카페 창업하려는데 지원금 있어?"}'
+```
 
-AZURE_ENDPOINT = "YOUR_ENDPOINT"
-AZURE_API_KEY = "YOUR_API_KEY"
-AZURE_DEPLOYMENT_NAME = "gpt-4o"
+---
 
+## 파일 구조
 
-3. 애플리케이션 실행
+```
+NAM/
+├── GovSupportPlugin.py    ← 핵심 플러그인 (Semantic Kernel)
+├── app.py                 ← 독립 테스트 서버 (FastAPI)
+├── requirements.txt       ← 의존성 목록
+└── readme.md              ← 이 문서
+```
 
-uvicorn app:app --reload
+---
 
+## 향후 확장 계획
 
-실행 후 http://127.0.0.1:8000에서 로컬 개발 테스트가 가능합니다.
+| 플러그인 | 설명 | 상태 |
+|----------|------|------|
+| 정부지원사업 검색 | 보조금, 창업패키지, 정책자금 | 완료 |
+| 소상공인 금융지원 | 대출, 융자, 보증 | 완료 (데이터 통합) |
+| 고용/교육 지원 | 채용장려금, 컨설팅 | 완료 (데이터 통합) |
+| 인허가 체크리스트 | 업종별 필요 허가/신고 목록 | 예정 |
+| 소상공인 대출 비교 | 금리/한도/자격 실시간 비교 | 예정 |
+| 세금 캘린더 | 부가세/종소세 신고 일정 알림 | 예정 |
+
+---
+
+## 담당
+
+**남대은 (NAM)** — 데이터 파이프라인, RAG 검색 플러그인, 행정 에이전트 플러그인 개발
