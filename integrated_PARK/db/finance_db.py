@@ -6,8 +6,13 @@ load_dotenv()  # .env 파일 로드
 
 class DBWork:
     def _get_connection(self):
-        dsn = os.getenv("DB_DSN")
-        return connect(dsn)
+        return connect(
+            user=os.getenv("ORACLE_USER"),
+            password=os.getenv("ORACLE_PASSWORD"),
+            host=os.getenv("ORACLE_HOST"),
+            port=int(os.getenv("ORACLE_PORT", "1521")),
+            sid=os.getenv("ORACLE_SID"),
+        )
 
     def get_sales(self, region, industry):
         try:
