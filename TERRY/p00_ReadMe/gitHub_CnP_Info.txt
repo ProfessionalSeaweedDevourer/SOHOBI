@@ -14,7 +14,9 @@ git config --global user.email
 
 ⓐ 최신 코드 먼저 받기 (중요 ⭐)
 git checkout WOO
-git pull origin main
+git fetch origin main
+
+git checkout WOO
 
 ⓑ (merge 메시지 화면 나오면)
 Merge branch 'main' ...
@@ -34,8 +36,7 @@ git status
 ⓔ 커밋 메시지 작성
 git commit -m "메모"
 ex) 
-git commit -m "프론트엔드(MapView.jsx) 기능 정리(263016)"
-git commit -m "gitHub 메뉴얼 업데이트(260316)"
+git commit -m "백엔드 정리"
 
 
 ⓔ GitHub 업로드

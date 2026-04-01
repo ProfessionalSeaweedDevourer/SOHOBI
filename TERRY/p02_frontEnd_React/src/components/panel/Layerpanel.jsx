@@ -35,15 +35,18 @@ export default function LayerPanel({
    landmarkLayerRef,
    festivalLayerRef,
    schoolLayerRef,
+   sdotLayerRef,
    landmarkLoaded,
    festivalLoaded,
    schoolLoaded,
+   sdotLoaded,
 }) {
    const [cadastralOn, setCadastralOn] = useState(false);
    const [touristInfoOn, setTouristInfoOn] = useState(false);
    const [landmarkOn, setLandmarkOn] = useState(true);
    const [festivalOn, setFestivalOn] = useState(false);
    const [schoolOn, setSchoolOn] = useState(true);
+   const [sdotOn, setSdotOn] = useState(false); // ✅ 추가: S-DoT 상태값 정의
 
    // ── 지적도 ──────────────────────────────────────────────────
    const toggleCadastral = () => {
@@ -118,6 +121,13 @@ export default function LayerPanel({
       setSchoolOn(next);
    };
 
+   const toggleSdot = () => {
+      if (!sdotLoaded || !sdotLayerRef?.current) return;
+      const next = !sdotOn;
+      sdotLayerRef.current.setVisible(next);
+      setSdotOn(next);
+   };
+
    return (
       <div style={S.panel}>
          <div style={S.title}>🗂️ 레이어 관리</div>
@@ -164,6 +174,15 @@ export default function LayerPanel({
             color="#10b981"
             onClick={toggleSchool}
             disabled={!schoolLoaded}
+         />
+
+         <LayerRow
+            label="📡 S-DoT 센서"
+            desc="유동인구 센서 위치 (134개)"
+            on={sdotOn}
+            color="#0ea5e9"
+            onClick={toggleSdot}
+            disabled={!sdotLoaded}
          />
 
          <div style={S.notice}>💡 동 클릭 시 해당 구역 마커 자동 로드</div>

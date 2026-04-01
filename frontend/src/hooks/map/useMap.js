@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
@@ -6,47 +6,44 @@ import XYZ from "ol/source/XYZ";
 import { fromLonLat } from "ol/proj";
 import "ol/ol.css";
 
-const VWORLD_KEY = import.meta.env.VITE_VWORLD_API_KEY;
-
 export function useMap(targetRef) {
    const mapInstance = useRef(null);
+   const [mapReady, setMapReady] = useState(false);
 
    useEffect(() => {
       if (!targetRef.current || mapInstance.current) return;
 
-      const baseLayer = new TileLayer({
-         source: new XYZ({
-            url: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`,
-            crossOrigin: "anonymous",
-         }),
-         zIndex: 0,
-      });
-      baseLayer.set("name", "base");
+      const initMap = (center) => {
+         const apiKey = import.meta.env.VITE_VWORLD_API_KEY;
 
-      mapInstance.current = new Map({
-         target: targetRef.current,
-         layers: [baseLayer],
-         view: new View({
-            center: fromLonLat([126.978, 37.5665]),
-            zoom: 14,
-            minZoom: 6,
-            maxZoom: 19,
-         }),
-      });
+         // VWorld 기본 지도 (Base 타일)
+         const baseLayer = new TileLayer({
+            source: new XYZ({
+               url: `https://api.vworld.kr/req/wmts/1.0.0/${apiKey}/Base/{z}/{y}/{x}.png`,
+               crossOrigin: "anonymous",
+            }),
+         });
+         baseLayer.set("name", "base");
 
-      // 사이드바 등 레이아웃 변경 후 지도 크기 재계산
-      setTimeout(() => {
-         mapInstance.current?.updateSize();
-      }, 300);
+         mapInstance.current = new Map({
+            target: targetRef.current,
+            layers: [baseLayer],
+            view: new View({
+               center: center,
+               zoom: 16,
+               minZoom: 5,
+               maxZoom: 19,
+            }),
+         });
 
-      // ResizeObserver로 크기 변화 감지 → updateSize 자동 호출
-      const ro = new ResizeObserver(() => {
-         mapInstance.current?.updateSize();
-      });
-      ro.observe(targetRef.current);
+         // 지도 준비 완료 알림
+         setTimeout(() => setMapReady(true), 100);
+      };
+
+      // 서울 종로구 종로코아빌딩 기준
+      initMap(fromLonLat([126.9784, 37.5713]));
 
       return () => {
-         ro.disconnect();
          if (mapInstance.current) {
             mapInstance.current.setTarget(null);
             mapInstance.current = null;
@@ -54,5 +51,5 @@ export function useMap(targetRef) {
       };
    }, [targetRef]);
 
-   return mapInstance;
+   return { mapInstance, mapReady };
 }

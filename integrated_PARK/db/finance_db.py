@@ -1,17 +1,20 @@
 import os
-from dotenv import load_dotenv
-from oracledb import connect
 
-load_dotenv()  # .env 파일 로드
+import psycopg2
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class DBWork:
     def _get_connection(self):
-        return connect(
-            user=os.getenv("ORACLE_USER"),
-            password=os.getenv("ORACLE_PASSWORD"),
-            host=os.getenv("ORACLE_HOST"),
-            port=int(os.getenv("ORACLE_PORT", "1521")),
-            sid=os.getenv("ORACLE_SID"),
+        return psycopg2.connect(
+            host=os.getenv("PG_HOST"),
+            port=int(os.getenv("PG_PORT", "5432")),
+            dbname=os.getenv("PG_DB"),
+            user=os.getenv("PG_USER"),
+            password=os.getenv("PG_PASSWORD"),
+            sslmode=os.getenv("PG_SSLMODE", "require"),
         )
 
     def get_sales(self, region, industry):
@@ -23,10 +26,10 @@ class DBWork:
             industry = "%" if industry is None else industry
 
             sql = """
-                SELECT TOT_SALES_AMT
-                FROM SANGKWON_SALES
-                WHERE ADM_CD LIKE :region
-                AND SVC_INDUTY_CD LIKE :industry
+                SELECT tot_sales_amt
+                FROM sangkwon_sales
+                WHERE adm_cd LIKE %(region)s
+                AND svc_induty_cd LIKE %(industry)s
             """
             cur.execute(sql, {"region": region, "industry": industry})
             return [amt for (amt,) in cur]
@@ -44,7 +47,7 @@ class DBWork:
         try:
             con = self._get_connection()
             cur = con.cursor()
-            cur.execute("SELECT AVG(TOT_SALES_AMT) FROM SANGKWON_SALES")
+            cur.execute("SELECT AVG(tot_sales_amt) FROM sangkwon_sales")
             (avg,) = cur.fetchone()
             return [avg]
         except Exception as e:

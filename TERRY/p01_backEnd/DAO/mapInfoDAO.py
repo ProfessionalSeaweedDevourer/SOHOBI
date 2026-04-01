@@ -85,9 +85,26 @@ class MapInfoDAO(BaseDAO):
                 results[t] = f"실패: {e}"
         return {"reloaded": results}
 
-    # ── 반경 조회 (캐시 우선, 캐시 미스 시 DB 직접) ──────────────
+    # ── 반경 조회 (DB 직접, IDX_SEOUL_LATLON 인덱스 활용) ──────────
 
-    def _query_cache(self, lat, lng, radius, limit, category=None):
+    COLS = [
+        "STORE_ID",
+        "STORE_NM",
+        "CAT_CD",
+        "CAT_NM",
+        "MID_CAT_NM",
+        "SUB_CAT_NM",
+        "SIDO_NM",
+        "SGG_NM",
+        "ADM_NM",
+        "ROAD_ADDR",
+        "FLOOR_INFO",
+        "UNIT_INFO",
+        "LNG",
+        "LAT",
+    ]
+
+    def _query_db(self, lat, lng, radius, limit, category=None):
         tables = getTableByCoord(lat, lng)
         lat_delta = radius / 111000.0
         lng_delta = radius / (111000.0 * abs(math.cos(math.radians(lat))) or 1)
@@ -96,50 +113,73 @@ class MapInfoDAO(BaseDAO):
 
         all_rows = []
         for table in tables:
-            if table in _DF_CACHE:
-                df = _DF_CACHE[table]
-                mask = (
-                    (df["LAT"] >= la_min)
-                    & (df["LAT"] <= la_max)
-                    & (df["LNG"] >= ln_min)
-                    & (df["LNG"] <= ln_max)
-                )
-                if category:
-                    mask &= df["CAT_NM"] == category
-                all_rows.extend(df[mask].head(limit).to_dict(orient="records"))
-            else:
-                where_cat = "AND CAT_NM = :category" if category else ""
-                sql = f"""
-                    SELECT STORE_ID, STORE_NM,
-                           CAT_CD, CAT_NM, MID_CAT_NM, SUB_CAT_NM,
-                           SIDO_NM, SGG_NM, ADM_NM, ROAD_ADDR,
-                           FLOOR_INFO, UNIT_INFO, LNG, LAT
-                    FROM {table}
-                    WHERE LAT BETWEEN :lat_min AND :lat_max
-                      AND LNG BETWEEN :lng_min AND :lng_max
-                      AND LAT IS NOT NULL AND LNG IS NOT NULL
-                      {where_cat}
-                    FETCH FIRST :limit ROWS ONLY
-                """
-                params = dict(
-                    lat_min=la_min,
-                    lat_max=la_max,
-                    lng_min=ln_min,
-                    lng_max=ln_max,
-                    limit=limit,
-                )
-                if category:
-                    params["category"] = category
-                rows = self._query(sql, params)
-                all_rows.extend(rows)
+            where_cat = "AND CAT_CD = :category" if category else ""
+            sql = f"""
+                SELECT STORE_ID, STORE_NM,
+                       CAT_CD, CAT_NM, MID_CAT_NM, SUB_CAT_NM,
+                       SIDO_NM, SGG_NM, ADM_NM, ROAD_ADDR,
+                       FLOOR_INFO, UNIT_INFO, LNG, LAT
+                FROM {table}
+                WHERE LAT BETWEEN :lat_min AND :lat_max
+                  AND LNG BETWEEN :lng_min AND :lng_max
+                  {where_cat}
+                FETCH FIRST :limit ROWS ONLY
+            """
+            params = dict(
+                lat_min=la_min,
+                lat_max=la_max,
+                lng_min=ln_min,
+                lng_max=ln_max,
+                limit=limit,
+            )
+            if category:
+                params["category"] = category
+            rows = self._query(sql, params)
+            # tuple → dict 변환
+            all_rows.extend([dict(zip(self.COLS, r)) for r in rows])
 
         return all_rows[:limit]
 
     def getNearbyStores(self, lat, lng, radius=500, limit=500):
-        return self._query_cache(lat, lng, radius, limit)
+        return self._query_db(lat, lng, radius, limit)
 
     def getNearbyByCategory(self, lat, lng, category, radius=500, limit=1000):
-        return self._query_cache(lat, lng, radius, limit, category=category)
+        return self._query_db(lat, lng, radius, limit, category=category)
+
+    # ── ADM_CD(adm_cd) 기준 전체 스토어 조회 ─────────────────
+    def getStoresByAdmCd(self, adm_cd: str, limit: int = 99999) -> list:
+        sql = """
+            SELECT STORE_ID, STORE_NM,
+                   CAT_CD, CAT_NM, MID_CAT_NM, SUB_CAT_NM,
+                   SIDO_NM, SGG_NM, ADM_NM, ROAD_ADDR,
+                   FLOOR_INFO, UNIT_INFO, LNG, LAT
+            FROM STORE_SEOUL
+            WHERE ADM_CD = :adm_cd
+              AND LNG IS NOT NULL AND LAT IS NOT NULL
+        """
+        rows = self._query(sql, {"adm_cd": adm_cd})
+        return [dict(zip(self.COLS, r)) for r in rows]
+
+    # ── 같은 건물 상가 조회 (ROAD_ADDR 기준) ─────────────────────
+    def getStoresByBuilding(self, road_addr: str, exclude_store_id: str = None) -> list:
+        if not road_addr:
+            return []
+        # 건물 주소 핵심 부분 추출 (동/호 제외)
+        sql = """
+            SELECT STORE_ID, STORE_NM,
+                   CAT_CD, CAT_NM, MID_CAT_NM, SUB_CAT_NM,
+                   SIDO_NM, SGG_NM, ADM_NM, ROAD_ADDR,
+                   FLOOR_INFO, UNIT_INFO, LNG, LAT
+            FROM STORE_SEOUL
+            WHERE ROAD_ADDR = :road_addr
+              AND LNG IS NOT NULL AND LAT IS NOT NULL
+            FETCH FIRST 50 ROWS ONLY
+        """
+        rows = self._query(sql, {"road_addr": road_addr})
+        results = [dict(zip(self.COLS, r)) for r in rows]
+        if exclude_store_id:
+            results = [r for r in results if r.get("STORE_ID") != exclude_store_id]
+        return results
 
     # ── 업종 목록 ────────────────────────────────────────────────
 
@@ -206,7 +246,7 @@ class MapInfoDAO(BaseDAO):
                 :10 AS 표준산업분류코드, :11 AS 표준산업분류명,
                 :12 AS 시도코드, :13 AS SIDO_NM,
                 :14 AS 시군구코드, :15 AS SGG_NM,
-                :16 AS 행정동코드, :17 AS ADM_NM,
+                :16 AS ADM_CD, :17 AS ADM_NM,
                 :18 AS 법정동코드, :19 AS 법정동명,
                 :20 AS 지번코드, :21 AS 대지구분코드, :22 AS 대지구분명,
                 :23 AS 지번본번지, :24 AS 지번부번지, :25 AS 지번주소,
@@ -226,7 +266,7 @@ class MapInfoDAO(BaseDAO):
                 t.표준산업분류코드=s.표준산업분류코드, t.표준산업분류명=s.표준산업분류명,
                 t.시도코드=s.시도코드, t.SIDO_NM=s.SIDO_NM,
                 t.시군구코드=s.시군구코드, t.SGG_NM=s.SGG_NM,
-                t.행정동코드=s.행정동코드, t.ADM_NM=s.ADM_NM,
+                t.ADM_CD=s.ADM_CD, t.ADM_NM=s.ADM_NM,
                 t.법정동코드=s.법정동코드, t.법정동명=s.법정동명,
                 t.지번코드=s.지번코드, t.대지구분코드=s.대지구분코드, t.대지구분명=s.대지구분명,
                 t.지번본번지=s.지번본번지, t.지번부번지=s.지번부번지, t.지번주소=s.지번주소,
@@ -243,7 +283,7 @@ class MapInfoDAO(BaseDAO):
                 상권업종소분류코드, SUB_CAT_NM,
                 표준산업분류코드, 표준산업분류명,
                 시도코드, SIDO_NM, 시군구코드, SGG_NM,
-                행정동코드, ADM_NM, 법정동코드, 법정동명,
+                ADM_CD, ADM_NM, 법정동코드, 법정동명,
                 지번코드, 대지구분코드, 대지구분명,
                 지번본번지, 지번부번지, 지번주소,
                 도로명코드, 도로명, 건물본번지, 건물부번지,
@@ -257,7 +297,7 @@ class MapInfoDAO(BaseDAO):
                 s.상권업종소분류코드, s.SUB_CAT_NM,
                 s.표준산업분류코드, s.표준산업분류명,
                 s.시도코드, s.SIDO_NM, s.시군구코드, s.SGG_NM,
-                s.행정동코드, s.ADM_NM, s.법정동코드, s.법정동명,
+                s.ADM_CD, s.ADM_NM, s.법정동코드, s.법정동명,
                 s.지번코드, s.대지구분코드, s.대지구분명,
                 s.지번본번지, s.지번부번지, s.지번주소,
                 s.도로명코드, s.도로명, s.건물본번지, s.건물부번지,

@@ -10,10 +10,8 @@ sys.path.insert(0, os.path.join(BASE_DIR, "DAO"))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from DAO.mapInfoDAO import MapInfoDAO, SIDO_BOUNDS, _get_df
+from DAO.mapInfoDAO import MapInfoDAO, SIDO_BOUNDS
 from DAO.landmarkDAO import LandmarkDAO
-from DAO.populationDAO import PopulationDAO
-from DAO.populationDAO import PopulationDAO
 
 # ── 서버 로그 설정 ───────────────────────────────────────────────
 # INFO 레벨 이상 로그를 터미널에 출력
@@ -21,41 +19,29 @@ from DAO.populationDAO import PopulationDAO
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+import math as _math
+
+
+def _clean(obj):
+    """NaN/Inf → None 변환 (JSON 직렬화 오류 방지)"""
+    if isinstance(obj, float) and (_math.isnan(obj) or _math.isinf(obj)):
+        return None
+    if isinstance(obj, dict):
+        return {k: _clean(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_clean(v) for v in obj]
+    return obj
+
+
 mDAO = MapInfoDAO()
 lmDAO = LandmarkDAO()
-popDAO = PopulationDAO()
-popDAO = PopulationDAO()
 
 # ── 시도명 → 테이블명 ───────────────────────────────────────────
 SIDO_TABLE_MAP = {k.replace("STORE_", ""): k for k in SIDO_BOUNDS}
 
-PRELOAD_TABLES = [
-    "STORE_SEOUL",
-    "STORE_GYEONGGI",
-    "STORE_INCHEON",
-    "STORE_BUSAN",
-    "STORE_DAEGU",
-]
-
-
-async def _preload_caches():
-    for table in PRELOAD_TABLES:
-        try:
-            await asyncio.get_event_loop().run_in_executor(None, _get_df, table)
-            logger.info(f"[startup] 캐시 완료: {table}")
-        except Exception as e:
-            logger.warning(f"[startup] 캐시 실패 ({table}): {e}")
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("[startup] STORE_SEOUL 캐시 로드...")
-    try:
-        await asyncio.get_event_loop().run_in_executor(None, _get_df, "STORE_SEOUL")
-        logger.info("[startup] STORE_SEOUL ✓")
-    except Exception as e:
-        logger.warning(f"[startup] 서울 캐시 실패: {e}")
-    asyncio.create_task(_preload_caches())
     yield
     logger.info("[shutdown] 서버 종료")
 
@@ -64,7 +50,9 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:3000",
         "http://localhost:5173",
+        "http://10.1.92.100:3000",
         "http://192.168.9.4:5173",
         "http://195.168.9.5:5173",
     ],
@@ -115,8 +103,31 @@ def getNearbyStores(
             if category
             else mDAO.getNearbyStores(lat, lng, radius, limit)
         )
-        return {"count": len(result), "stores": result}
+        return {"count": len(result), "stores": _clean(result)}
     except Exception as e:
+        return {"error": str(e), "count": 0, "stores": []}
+
+
+@app.get("/map/stores-by-dong")
+def getStoresByDong(adm_cd: str):
+    """행정동코드 기준 전체 스토어 조회 (폴리곤 클릭용, 제한 없음)"""
+    try:
+        result = mDAO.getStoresByAdmCd(adm_cd)
+        logger.info(f"[stores-by-dong] adm_cd={adm_cd} → {len(result)}건")
+        return {"count": len(result), "stores": _clean(result)}
+    except Exception as e:
+        logger.error(f"[stores-by-dong] {e}")
+        return {"error": str(e), "count": 0, "stores": []}
+
+
+@app.get("/map/stores-by-building")
+def getStoresByBuilding(road_addr: str, exclude_id: str = ""):
+    """같은 건물 상가 조회 (도로명주소 기준)"""
+    try:
+        result = mDAO.getStoresByBuilding(road_addr, exclude_id or None)
+        return {"count": len(result), "stores": _clean(result)}
+    except Exception as e:
+        logger.error(f"[stores-by-building] {e}")
         return {"error": str(e), "count": 0, "stores": []}
 
 
@@ -281,36 +292,38 @@ def getSchools(
         return {"count": 0, "schools": [], "error": str(e)}
 
 
-@app.get("/map/population/places")
-def getPopPlaces():
-    """유동인구 장소 목록 + 좌표"""
-    places = popDAO.get_places()
-    return {"count": len(places), "places": places}
-
-
-@app.get("/map/population/all")
-async def getAllPopulation():
-    """전체 장소 혼잡도 병렬 조회 (5분 캐시)"""
+@app.get("/map/sdot/sensors")
+def getSdotSensors():
+    """S-DoT 유동인구 센서 위치 목록"""
     try:
-        data = await popDAO.fetch_all()
-        logger.info(f"[population/all] {len(data)}개 장소")
-        return {"count": len(data), "data": data}
-    except Exception as e:
-        logger.error(f"[population/all] {e}")
-        return {"count": 0, "data": [], "error": str(e)}
+        from DAO.baseDAO import BaseDAO
 
+        class _DAO(BaseDAO):
+            pass
 
-@app.get("/map/population/place")
-async def getPlacePopulation(name: str):
-    """단일 장소 상세 조회 (예측 포함)"""
-    try:
-        result = await popDAO.fetch_one(name)
-        if not result:
-            return {"error": f"'{name}' 조회 실패"}
-        return result
+        dao = _DAO()
+        rows = dao._query(
+            "SELECT SEQ, SENSOR_CD, SERIAL_NO, ADDR, LAT, LNG FROM SDOT_SENSOR ORDER BY SEQ",
+            [],
+        )
+        data = [
+            {
+                "seq": r[0],
+                "sensor_cd": r[1],
+                "serial_no": r[2],
+                "addr": r[3],
+                "lat": float(r[4]) if r[4] else None,
+                "lng": float(r[5]) if r[5] else None,
+            }
+            for r in rows
+            if r[4] and r[5]
+        ]
+        logger.info(f"[sdot/sensors] {len(data)}건")
+        return {"count": len(data), "sensors": data}
     except Exception as e:
-        logger.error(f"[population/place] {e}")
-        return {"error": str(e)}
+        logger.error(f"[sdot/sensors] {e}")
+        # 컬럼명 오류 시 빈 배열 반환 (지도 로드 차단 방지)
+        return {"count": 0, "sensors": []}
 
 
 @app.get("/map/dong-density")
