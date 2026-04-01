@@ -14,6 +14,7 @@ export default defineConfig({
          "/health": "http://localhost:8000",
 
          // 지도: 소상공인 DB (포트 8681, TERRY FASTAPI_URL)
+         
          "/map-api": {
             target: "http://localhost:8681",
             changeOrigin: true,

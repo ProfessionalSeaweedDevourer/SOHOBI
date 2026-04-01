@@ -34,6 +34,28 @@ SIDO_NAME_MAP = {
 _DF_CACHE: dict = {}  # { table_name: pd.DataFrame }
 
 
+# ── Pickle 캐시 경로 ─────────────────────────────────────────────
+import os, pickle
+
+CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cache")
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+
+def _pkl_path(table: str) -> str:
+    return os.path.join(CACHE_DIR, f"{table}.pkl")
+
+
+# ── Pickle 캐시 경로 ─────────────────────────────────────────────
+import os, pickle
+
+CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cache")
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+
+def _pkl_path(table: str) -> str:
+    return os.path.join(CACHE_DIR, f"{table}.pkl")
+
+
 def getTableByCoord(lat: float, lng: float) -> list:
     matched = [
         t
@@ -48,9 +70,19 @@ class MapInfoDAO(BaseDAO):
     # ── DataFrame 캐시 로드 ───────────────────────────────────────
 
     def loadCache(self, table: str, force: bool = False) -> pd.DataFrame:
-        """Oracle 테이블 → pandas DataFrame 캐시 (메모리 상주)"""
+        """Oracle 테이블 → pandas DataFrame 캐시 (pickle 우선, 메모리 상주)"""
         if not force and table in _DF_CACHE:
             return _DF_CACHE[table]
+
+        pkl = _pkl_path(table)
+        if not force and os.path.exists(pkl):
+            try:
+                df = pickle.load(open(pkl, "rb"))
+                _DF_CACHE[table] = df
+                logger.info(f"[MapInfoDAO] {table} → {len(df):,}행 (pickle 로드)")
+                return df
+            except Exception as e:
+                logger.warning(f"[MapInfoDAO] pickle 로드 실패, DB 재로드: {e}")
 
         con, cur = self._db_con()
         try:
@@ -71,7 +103,12 @@ class MapInfoDAO(BaseDAO):
 
         df = pd.DataFrame(rows, columns=cols)
         _DF_CACHE[table] = df
-        logger.info(f"[MapInfoDAO] {table} → {len(df):,}행 캐시")
+        # pickle 저장
+        try:
+            pickle.dump(df, open(pkl, "wb"))
+            logger.info(f"[MapInfoDAO] {table} → {len(df):,}행 캐시 (pickle 저장)")
+        except Exception as e:
+            logger.warning(f"[MapInfoDAO] pickle 저장 실패: {e}")
         return df
 
     def reloadCache(self, table: str = None) -> dict:

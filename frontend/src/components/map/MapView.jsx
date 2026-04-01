@@ -1,3 +1,6 @@
+// 개발 프론트 위치: TERRY\p02_frontEnd_React\src\components\MapView.jsx
+// 공식 프론트 위치: frontend\src\components\map\MapView.jsx
+
 import { useRef, useState, useEffect } from "react";
 import { useMap } from "../../hooks/map/useMap";
 import { toLonLat, fromLonLat } from "ol/proj";
@@ -36,7 +39,7 @@ import { CATEGORIES } from "../../constants/categories";
 import "./MapView.css";
 
 // ── API 엔드포인트 (vite proxy: /map-api → 8681, /realestate → 8682) ──
-const FASTAPI_URL = import.meta.env.VITE_MAP_API_URL || "/map-api";
+const FASTAPI_URL = import.meta.env.VITE_MAP_URL || "http://localhost:8681";
 const REALESTATE_URL = import.meta.env.VITE_REALESTATE_URL || "";
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
 

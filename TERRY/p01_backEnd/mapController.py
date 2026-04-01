@@ -20,6 +20,20 @@ from DAO.populationDAO import PopulationDAO
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+import math as _math
+
+
+def _clean(obj):
+    """NaN/Inf → None 변환 (JSON 직렬화 오류 방지)"""
+    if isinstance(obj, float) and (_math.isnan(obj) or _math.isinf(obj)):
+        return None
+    if isinstance(obj, dict):
+        return {k: _clean(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_clean(v) for v in obj]
+    return obj
+
+
 mDAO = MapInfoDAO()
 lmDAO = LandmarkDAO()
 popDAO = PopulationDAO()
@@ -27,33 +41,23 @@ popDAO = PopulationDAO()
 # ── 시도명 → 테이블명 ───────────────────────────────────────────
 SIDO_TABLE_MAP = {k.replace("STORE_", ""): k for k in SIDO_BOUNDS}
 
-PRELOAD_TABLES = [
-    "STORE_SEOUL",
-    "STORE_GYEONGGI",
-    "STORE_INCHEON",
-    "STORE_BUSAN",
-    "STORE_DAEGU",
-]
-
-
-async def _preload_caches():
-    for table in PRELOAD_TABLES:
-        try:
-            await asyncio.get_event_loop().run_in_executor(None, _get_df, table)
-            logger.info(f"[startup] 캐시 완료: {table}")
-        except Exception as e:
-            logger.warning(f"[startup] 캐시 실패 ({table}): {e}")
+# 서울만 로드 (현재 서울 상권 분석에 집중)
+PRELOAD_TABLES = ["STORE_SEOUL"]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("[startup] STORE_SEOUL 캐시 로드...")
-    try:
-        await asyncio.get_event_loop().run_in_executor(None, _get_df, "STORE_SEOUL")
-        logger.info("[startup] STORE_SEOUL ✓")
-    except Exception as e:
-        logger.warning(f"[startup] 서울 캐시 실패: {e}")
-    asyncio.create_task(_preload_caches())
+    # 서버 먼저 띄우고 백그라운드에서 캐시 로드
+    async def _load():
+        for table in PRELOAD_TABLES:
+            try:
+                logger.info(f"[startup] {table} 캐시 로드...")
+                await asyncio.get_event_loop().run_in_executor(None, _get_df, table)
+                logger.info(f"[startup] {table} ✓")
+            except Exception as e:
+                logger.warning(f"[startup] 캐시 실패 ({table}): {e}")
+
+    asyncio.create_task(_load())
     yield
     logger.info("[shutdown] 서버 종료")
 
@@ -115,7 +119,7 @@ def getNearbyStores(
             if category
             else mDAO.getNearbyStores(lat, lng, radius, limit)
         )
-        return {"count": len(result), "stores": result}
+        return {"count": len(result), "stores": _clean(result)}
     except Exception as e:
         return {"error": str(e), "count": 0, "stores": []}
 
@@ -292,7 +296,7 @@ def getSdotSensors():
 
         dao = _DAO()
         rows = dao._query(
-            "SELECT SEQ, SENSOR_CD, SERIAL_NO, ADDR, MAP_Y, MAP_X FROM SDOT_SENSOR ORDER BY SEQ",
+            "SELECT SEQ, SENSOR_CD, SERIAL_NO, ADDR, LAT, LNG FROM SDOT_SENSOR ORDER BY SEQ",
             [],
         )
         data = [
@@ -311,7 +315,8 @@ def getSdotSensors():
         return {"count": len(data), "sensors": data}
     except Exception as e:
         logger.error(f"[sdot/sensors] {e}")
-        return {"count": 0, "sensors": [], "error": str(e)}
+        # 컬럼명 오류 시 빈 배열 반환 (지도 로드 차단 방지)
+        return {"count": 0, "sensors": []}
 
 
 @app.get("/map/population/places")

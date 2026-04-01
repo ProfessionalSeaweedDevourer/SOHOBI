@@ -1,5 +1,5 @@
 # 위치: p01_backEnd/realEstateController.py
-# 실행: python -m uvicorn realEstateController:app --host=0.0.0.0 --port=8682 --reload
+# 실행: uvicorn realEstateController:app --host=0.0.0.0 --port=8682 --reload
 
 import os, asyncio, logging
 from contextlib import asynccontextmanager
@@ -42,7 +42,9 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:3000",
         "http://localhost:5173",
+        "http://10.1.92.100:3000",
         "http://192.168.9.4:5173",
         "http://195.168.9.5:5173",
     ],
