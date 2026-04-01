@@ -69,6 +69,8 @@ export default function MapView() {
    const wmsLayerRef = useRef(null);
 
    const [coords, setCoords] = useState({ lat: "37.5665", lng: "126.9780" });
+   const [chatOpen, setChatOpen] = useState(false);
+   const [chatContext, setChatContext] = useState(null);
    const [popup, setPopup] = useState(null);
    const [kakaoDetail, setKakaoDetail] = useState(null);
    const [loadingDetail, setLoadingDetail] = useState(false);

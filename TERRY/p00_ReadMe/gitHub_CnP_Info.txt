@@ -13,6 +13,7 @@ git config --global user.email
 2) 작업 후 업로드 과정 (매번 반복)
 
 ⓐ 최신 코드 먼저 받기 (중요 ⭐)
+git checkout WOO
 git pull origin main
 
 git checkout WOO
@@ -26,7 +27,7 @@ Merge branch 'main' ...
 
 
 ⓒ 변경 파일 등록
-git add TERRY
+git add p00_ReadMe
 ※ git add .(전체 변경시)
 
 ⓓ 상태 확인
@@ -39,4 +40,4 @@ git commit -m "백엔드 정리"
 
 
 ⓔ GitHub 업로드
-git push origin main
+git push origin WOO
