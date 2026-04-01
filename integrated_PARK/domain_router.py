@@ -11,8 +11,10 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettin
 from kernel_setup import get_kernel
 
 KEYWORDS: dict[str, list[str]] = {
-    "admin":    ["신고", "허가", "인허가", "서류", "관청", "위생", "영업신고", "등록", "행정"],
-    "finance":  ["재무", "대출", "금리", "수익", "비용", "투자", "시뮬레이션", "자본"],
+    "admin":    ["신고", "허가", "인허가", "서류", "관청", "위생", "영업신고", "등록", "행정",
+                 "지원사업", "보조금", "지원금", "창업패키지", "정책자금", "창업지원",
+                 "소상공인 지원", "정부지원", "고용지원", "채용장려금", "신용보증"],
+    "finance":  ["재무", "금리", "수익", "비용", "투자", "시뮬레이션", "자본"],
     "legal":    ["법", "계약", "소송", "보증금", "임대차", "조항", "권리", "의무", "판례"],
     "location": ["상권", "지역", "상권분석", "홍대", "강남", "잠실", "이태원", "합정", "vs", "비교"],
     "chat":     ["안녕", "반가워", "뭐 할 수 있", "어떻게 써", "어떻게 사용", "도움말", "사용법", "소개해", "처음 써",
@@ -21,8 +23,8 @@ KEYWORDS: dict[str, list[str]] = {
 
 _SYSTEM_PROMPT = """You are a query classifier for a Korean small business assistant.
 Classify the user query into exactly one of: admin, finance, legal, location, chat.
-- admin: 행정 절차, 영업 신고, 허가, 서류, 관청 관련
-- finance: 재무, 대출, 수익, 비용, 투자 시뮬레이션 관련
+- admin: 행정 절차, 영업 신고, 허가, 서류, 관청 관련, 정부지원사업, 보조금, 지원금, 창업패키지, 정책자금 대출, 소상공인 융자, 신용보증, 고용지원, 채용장려금
+- finance: 재무 시뮬레이션, 수익/비용 분석, 투자 수익률, 손익분기점, 자본금 계산 관련 (정부지원사업·정책자금 대출은 admin)
 - legal: 법률, 계약, 권리 의무, 소송, 임대차 관련
 - location: 상권 분석, 지역 비교, 매출 지역 데이터, 창업 입지 분석 관련
 - chat: 인사, 잡담, 서비스 기능·사용법 문의, "뭐 할 수 있어?" 류의 안내 요청, 특정 에이전트의 입력값·사용법·필요 정보를 묻는 질문 (예: "재무 시뮬레이션 쓰려면 뭐가 필요해요?", "상권 분석 어떻게 해요?")

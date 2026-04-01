@@ -32,26 +32,32 @@ RECOMMEND_CATEGORIES = [
     {
         "name": "보조금/창업패키지",
         "query_template": "{업종} {지역} {창업단계} 창업 지원사업 보조금 패키지",
+        "trigger_keywords": ["보조금", "지원금", "패키지", "창업지원", "지원사업", "창업"],
     },
     {
         "name": "대출/융자",
         "query_template": "{업종} 소상공인 정책자금 대출 융자 {자금용도}",
+        "trigger_keywords": ["대출", "융자", "정책자금", "자금", "운전자금", "시설자금"],
     },
     {
         "name": "신용보증",
         "query_template": "{업종} 소상공인 신용보증 기술보증 보증서 {지역}",
+        "trigger_keywords": ["보증", "신용보증", "기술보증", "보증서", "신보"],
     },
     {
         "name": "고용지원",
         "query_template": "소상공인 고용지원 채용장려금 사회보험 인건비 {직원수}",
+        "trigger_keywords": ["고용", "채용", "직원", "인건비", "사회보험", "두루누리", "일자리"],
     },
     {
         "name": "교육/컨설팅",
         "query_template": "{업종} 소상공인 창업 교육 컨설팅 멘토링 {창업단계}",
+        "trigger_keywords": ["교육", "컨설팅", "멘토링", "아카데미", "강의", "연수"],
     },
     {
         "name": "외식업/F&B 특화",
         "query_template": "{업종} 외식업 위생 HACCP 배달 공유주방 식품",
+        "trigger_keywords": ["위생", "HACCP", "배달", "공유주방", "외식", "식품", "음식점", "카페"],
     },
 ]
 
@@ -130,12 +136,26 @@ class GovSupportPlugin:
         )
         return [dict(r) for r in results]
 
+    @staticmethod
+    def _select_categories(business_type: str, funding_purpose: str, additional_info: str) -> list[dict]:
+        """사용자 입력에서 관련 카테고리만 선택. 매칭 없으면 보조금+대출 기본 제공."""
+        context = f"{business_type} {funding_purpose} {additional_info}".lower()
+        matched = [
+            cat for cat in RECOMMEND_CATEGORIES
+            if any(kw in context for kw in cat["trigger_keywords"])
+        ]
+        if not matched:
+            # 기본: 보조금 + 대출 (가장 범용적인 2개)
+            matched = [c for c in RECOMMEND_CATEGORIES if c["name"] in ("보조금/창업패키지", "대출/융자")]
+        # 최대 3개 카테고리로 제한 (속도 + 품질)
+        return matched[:3]
+
     @kernel_function(
         name="recommend_programs",
         description=(
             "사용자의 업종, 지역, 창업단계, 직원수, 필요자금 등 상황 정보를 받아 "
-            "보조금, 대출, 보증, 고용지원, 교육 등 모든 카테고리에서 "
-            "가장 적합한 정부지원사업과 금융상품을 종합 추천합니다. "
+            "가장 적합한 정부지원사업과 금융상품을 추천합니다. "
+            "사용자 질문과 관련된 카테고리만 선택적으로 검색합니다. "
             "반드시 사용자 상황을 먼저 파악한 뒤 이 함수를 호출하세요."
         ),
     )
@@ -173,10 +193,13 @@ class GovSupportPlugin:
             if additional_info:
                 profile_summary += f", 기타: {additional_info}"
 
+            # 관련 카테고리만 선택 (최대 3개)
+            selected_cats = self._select_categories(business_type, funding_purpose, additional_info)
+
             all_results = {}
             seen_names = set()
 
-            for cat in RECOMMEND_CATEGORIES:
+            for cat in selected_cats:
                 query = cat["query_template"].format(**profile)
                 results = self._search_one(query, extracted_region, top_k=5)
 
