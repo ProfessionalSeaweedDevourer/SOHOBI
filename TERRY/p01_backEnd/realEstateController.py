@@ -1,5 +1,5 @@
 # 위치: p01_backEnd/realEstateController.py
-# 실행: python -m uvicorn realEstateController:app --host=0.0.0.0 --port=8682 --reload
+# 실행: uvicorn realEstateController:app --host=0.0.0.0 --port=8682 --reload
 
 import os, asyncio, logging
 from contextlib import asynccontextmanager
@@ -72,7 +72,7 @@ async def getSeoulRtms(
     logger.info(f"[seoul-rtms] adm_cd={adm_cd}")
     try:
         seoul = await rtmsDAO.fetch_by_emd_cd(adm_cd)  # 내부에서 adm_cd→emd_cd 변환
-        officetel = molitDAO.fetch_officetel_rent(adm_cd)
+        officetel  = molitDAO.fetch_officetel_rent(adm_cd)
         commercial = molitDAO.fetch_commercial_trade(adm_cd)
         return {
             "has_data": seoul.get("has_data")
@@ -176,6 +176,22 @@ async def getSangkwonByInduty(
 ):
     rows = skDAO.getSalesByInduty(code, induty)
     return {"code": code, "count": len(rows), "data": rows}
+
+
+@app.get("/realestate/sangkwon-svc-by-cat")
+async def getSangkwonSvcByCat(
+    adm_cd: str = Query(..., description="행정동코드"),
+    cat_cd: str = Query(..., description="대분류코드 (I2, G2 등)"),
+    quarter: str = Query("", description="분기코드"),
+):
+    """CategoryPanel CAT_CD 선택 시 해당 대분류 소분류별 매출"""
+    logger.info(f"[sangkwon-svc-by-cat] adm_cd={adm_cd} cat_cd={cat_cd}")
+    try:
+        rows = skDAO.getSalesByCatCd(adm_cd, cat_cd, quarter)
+        return {"adm_cd": adm_cd, "cat_cd": cat_cd, "count": len(rows), "data": rows}
+    except Exception as e:
+        logger.error(f"[sangkwon-svc-by-cat] {e}")
+        return {"adm_cd": adm_cd, "cat_cd": cat_cd, "count": 0, "data": []}
 
 
 @app.get("/realestate/sangkwon-quarters")
