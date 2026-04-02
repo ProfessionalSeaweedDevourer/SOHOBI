@@ -2,12 +2,13 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { GradeBadge } from "./GradeBadge";
 
-const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석" };
+const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석", chat: "안내" };
 const DOMAIN_STYLE = {
   finance: { background: "rgba(16,185,129,0.12)", color: "var(--grade-a, #10b981)" },
   admin: { background: "rgba(8,145,178,0.12)", color: "var(--brand-blue)" },
   legal: { background: "rgba(245,158,11,0.12)", color: "var(--grade-b, #f59e0b)" },
   location: { background: "rgba(139,92,246,0.12)", color: "#8b5cf6" },
+  chat: { background: "rgba(139,92,246,0.12)", color: "#8b5cf6" },
 };
 const ITEM_LABELS = {
   C1: "질문 응답성", C2: "완결성", C3: "내부 일관성", C4: "톤 적절성", C5: "할루시네이션 징후",
