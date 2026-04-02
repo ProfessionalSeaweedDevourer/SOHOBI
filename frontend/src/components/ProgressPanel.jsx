@@ -7,6 +7,7 @@ const DOMAIN_LABEL = {
   finance:  "재무·시뮬레이션",
   legal:    "법률·세무",
   location: "상권 분석",
+  chat:     "안내",
 };
 
 const GRADE_COLOR = {
