@@ -288,3 +288,15 @@
 .mv-chat-send {
   background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
 }
+
+/* ── escalated 경고 배너 ──────────────────────────── */
+.mv-chat-escalated-warning {
+  margin-bottom: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.35rem;
+  background: rgba(234, 88, 12, 0.12);
+  border: 1px solid rgba(234, 88, 12, 0.35);
+  color: #c2410c;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { streamQuery } from "../../api";
+import ProgressPanel from "../ProgressPanel";
 import "./ChatPanel.css";
 
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
@@ -24,6 +25,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [sessionId, setSessionId] = useState(null);
+  const [progressEvents, setProgressEvents] = useState([]);
 
   const messagesEndRef = useRef(null);
   const timerRef = useRef(null);
@@ -145,6 +147,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
     }
 
     setLoading(true);
+    setProgressEvents([]);
     const streamMsgId = crypto.randomUUID();
     setMessages((prev) => [
       ...prev,
@@ -153,6 +156,12 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
     let accumulated = "";
     try {
       await streamQuery(question, 3, sessionId, (eventName, data) => {
+        // 진행 이벤트 수집 (ProgressPanel 표시용)
+        const PROGRESS_EVENTS = ["domain_classified", "agent_start", "agent_done", "signoff_start", "signoff_result", "complete", "error"];
+        if (PROGRESS_EVENTS.includes(eventName)) {
+          setProgressEvents((prev) => [...prev, { event: eventName, ...data }]);
+        }
+
         if (eventName === "chunk") {
           accumulated += data.text || data.content || "";
           setMessages((prev) =>
@@ -163,9 +172,10 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
         } else if (eventName === "complete") {
           if (data.session_id) setSessionId(data.session_id);
           const draft = data.draft || accumulated || "응답을 받지 못했습니다.";
+          const isEscalated = data.status === "escalated";
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === streamMsgId ? { ...m, content: draft } : m,
+              m.id === streamMsgId ? { ...m, content: draft, escalated: isEscalated } : m,
             ),
           );
           // 지도 하이라이트
@@ -266,18 +276,30 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
 
           {messages.map((msg) => (
             <div key={msg.id} className={`mv-chat-msg mv-chat-msg--${msg.role}`}>
+              {msg.escalated && (
+                <div className="mv-chat-escalated-warning">
+                  ⚠️ 이 답변은 내부 검증을 통과하지 못했습니다. (C등급) 참고용으로만 활용하시고, 중요한 결정에는 사용하지 마세요.
+                </div>
+              )}
               {msg.content}
             </div>
           ))}
 
           {loading && (
             <div className="mv-chat-loading">
-              <div className="mv-chat-dots">
-                <span />
-                <span />
-                <span />
-              </div>
-              <span>분석 중... ({elapsed}초)</span>
+              {progressEvents.length > 0
+                ? <ProgressPanel events={progressEvents} />
+                : (
+                  <>
+                    <div className="mv-chat-dots">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                    <span>분석 중... ({elapsed}초)</span>
+                  </>
+                )
+              }
             </div>
           )}
 

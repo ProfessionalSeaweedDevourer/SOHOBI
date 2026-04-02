@@ -250,10 +250,14 @@ class LocationAgent:
         )
 
         if not sales_data and not store_data:
+            supported_locs = self._repo.get_supported_locations()
+            examples = ["강남", "홍대", "역삼", "마포", "잠실", "종로"]
             return {
                 "draft": (
                     f"'{location}' 지역의 '{business_type}' 업종 데이터를 찾을 수 없습니다.\n"
-                    "지역명 또는 업종명을 확인해 주십시오."
+                    f"서울 주요 구·동 이름으로 질문해 주세요 (총 {len(supported_locs)}개 지역 지원).\n"
+                    f"예: {', '.join(examples)} 등\n"
+                    "지원 업종: " + ", ".join(sorted(supported))
                 ),
                 "adm_codes": [],
                 "type": "analyze",
@@ -277,7 +281,7 @@ class LocationAgent:
                 s["avg_sales_per_store_krw"] = int(s_sales / s_count) if s_count > 0 else 0
 
         # _run_agent(LLM 호출)과 유사 상권 조회(동기 DB)를 병렬 실행
-        analysis, similar = await asyncio.gather(
+        results = await asyncio.gather(
             self._run_agent(location, business_type, quarter, sales_data, store_data),
             asyncio.to_thread(
                 self._repo.get_similar_locations,
@@ -286,7 +290,13 @@ class LocationAgent:
                 exclude_location=location,
                 top_n=3,
             ),
+            return_exceptions=True,
         )
+        analysis = results[0] if not isinstance(results[0], Exception) else ""
+        similar_raw = results[1]
+        similar = similar_raw if not isinstance(similar_raw, Exception) else []
+        similar_failed = isinstance(similar_raw, Exception)
+
         if similar:
             rows = "\n".join(
                 f"| {i+1} | {s['adm_name']} | {s['monthly_sales_krw']:,}원 | "
@@ -300,6 +310,8 @@ class LocationAgent:
                 + rows
             )
             analysis += similar_table
+        elif similar_failed:
+            analysis += "\n\n> 유사 상권 추천 조회에 실패했습니다."
 
         adm_codes = self._repo._get_adm_codes(location)
         return {"draft": analysis, "adm_codes": adm_codes, "type": "analyze"}
