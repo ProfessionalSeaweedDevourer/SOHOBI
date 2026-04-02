@@ -106,7 +106,7 @@ _PROFILE_CONTEXT = """[창업자 상황]
 
 
 class FinanceAgent:
-    def __init__(self, kernel: Kernel, region: str = None, industry: str = None):
+    def __init__(self, kernel: Kernel):
         self._kernel = kernel
         self._sim = FinanceSimulationPlugin()
 
@@ -177,11 +177,10 @@ class FinanceAgent:
     ) -> str:
         # ── 1단계: 파라미터 추출 ─────────────────────────────
         # current_params 없으면 None 기반 초기값 사용
-        base = current_params or self._sim.load_initial()
+        ctx = context or {} # 지역/업종 정보 데이터 반영을 위해 선호출
+        base = current_params or self._sim.load_initial(ctx.get("adm_codes"), ctx.get("business_type"))
         extracted = await self._extract_params(question)
         variables = self._sim.merge_json(base, extracted)
-        # state를 front-end에서 저장(브라우저별)하는 방식, current_params가 front에 저장된 변수들입니다.
-        # front 저장방식: 개인폴더 chat_test.html 의 line 408~부분 or 개발일지 참조
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]
 
@@ -235,14 +234,13 @@ class FinanceAgent:
             assumptions=assumptions,
             avg_profit=sim_result["average_net_profit"],
             loss_prob=loss_prob_str,
-            p20=sim_result["p20"],        # 추가
+            p20=sim_result["p20"],
             breakeven_revenue=breakeven["breakeven_revenue"],
             breakeven_daily=breakeven["breakeven_daily"],
             safety_margin=breakeven["safety_margin"] * 100,
             question=question,
         )
         # context 정보(지역·업종)를 프롬프트 앞에 주입
-        ctx = context or {}
         if ctx.get("location_name") or ctx.get("business_type"):
             parts = []
             if ctx.get("location_name"):

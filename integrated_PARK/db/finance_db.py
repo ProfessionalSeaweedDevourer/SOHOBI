@@ -47,12 +47,12 @@ class DBWork:
         try:
             con = self._get_connection()
             cur = con.cursor()
-            cur.execute("SELECT AVG(tot_sales_amt) FROM sangkwon_sales")
+            cur.execute("SELECT ROUND(AVG(tot_sales_amt)) FROM sangkwon_sales WHERE svc_induty_cd LIKE 'CS10%'")
             (avg,) = cur.fetchone()
             return [avg]
         except Exception as e:
             print("DB 평균 조회 실패:", e)
-            return [17000000]
+            return [170000000]
         finally:
             if 'cur' in locals():
                 cur.close()
