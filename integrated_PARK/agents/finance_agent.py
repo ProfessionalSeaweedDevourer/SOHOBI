@@ -111,7 +111,7 @@ class FinanceAgent:
         self._sim = FinanceSimulationPlugin()
 
     async def _call_llm(self, prompt: str, _retry: bool = False) -> str:
-        service: AzureChatCompletion = self._kernel.get_service("sign_off")
+        service: AzureChatCompletion = self._kernel.get_service("finance")
         history = ChatHistory()
         history.add_user_message(prompt)
         settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=5000)
@@ -142,7 +142,7 @@ class FinanceAgent:
         self, prompt: str, prior_history: list[dict] | None = None
     ) -> str:
         """explanation 단계 전용: prior_history를 ChatHistory에 주입 후 LLM 호출."""
-        service: AzureChatCompletion = self._kernel.get_service("sign_off")
+        service: AzureChatCompletion = self._kernel.get_service("finance")
         history = ChatHistory()
         for msg in (prior_history or []):
             if msg["role"] == "user":

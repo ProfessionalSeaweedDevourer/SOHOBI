@@ -96,7 +96,20 @@ function CadastralContent({ wmsPopup, landValue }) {
             <div style={{ fontSize: 11, color: "#bbb", textAlign: "center" }}>
                공시지가 정보 없음
             </div>
-         ) : null}
+         ) : (
+            <div
+               style={{
+                  fontSize: 11,
+                  color: "#bbb",
+                  textAlign: "center",
+                  padding: "8px 0",
+               }}
+            >
+               지적도 레이어를 활성화하면
+               <br />
+               공시지가를 조회할 수 있습니다
+            </div>
+         )}
       </>
    );
 }
@@ -174,7 +187,7 @@ function PlaceContent({ wmsPopup }) {
 }
 
 // ── 메인 컴포넌트: WMS 레이어 클릭 팝업 ──────────────────────
-export default function WmsPopup({ wmsPopup, landValue, onClose }) {
+export default function WmsPopup({ wmsPopup, landValue, onClose, onBack }) {
    if (!wmsPopup) return null;
    const meta = LAYER_META[wmsPopup.type] || LAYER_META.cadastral;
 
@@ -190,18 +203,35 @@ export default function WmsPopup({ wmsPopup, landValue, onClose }) {
                   marginBottom: 8,
                }}
             >
-               <div
-                  style={{
-                     borderRadius: 20,
-                     padding: "3px 10px",
-                     fontSize: 11,
-                     fontWeight: 700,
-                     background: meta.bg,
-                     color: meta.color,
-                     border: `1px solid ${meta.color}`,
-                  }}
-               >
-                  {meta.icon} {meta.label}
+               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {onBack && (
+                     <button
+                        onClick={onBack}
+                        style={{
+                           background: "none",
+                           border: "none",
+                           cursor: "pointer",
+                           fontSize: 16,
+                           color: "#888",
+                           padding: 0,
+                        }}
+                     >
+                        ←
+                     </button>
+                  )}
+                  <div
+                     style={{
+                        borderRadius: 20,
+                        padding: "3px 10px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        background: meta.bg,
+                        color: meta.color,
+                        border: `1px solid ${meta.color}`,
+                     }}
+                  >
+                     {meta.icon} {meta.label}
+                  </div>
                </div>
                <button
                   onClick={onClose}

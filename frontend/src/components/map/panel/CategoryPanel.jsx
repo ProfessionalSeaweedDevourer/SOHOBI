@@ -11,7 +11,9 @@ export default function CategoryPanel({
    onHideAll,
    totalCount,
    catCounts,
-   onSearch, // (query: string) => void  MapView에서 주입
+   onSearch,
+   selectedCatCd,
+   onCatSelect,
 }) {
    const [collapsed, setCollapsed] = useState(false); // false = 확장 상태로 시작
    const [searchQuery, setSearchQuery] = useState("");
@@ -40,7 +42,7 @@ export default function CategoryPanel({
                <div style={S.searchBox}>
                   <input
                      type="text"
-                     placeholder="구/동 검색..."
+                     placeholder="행정동/법정동 검색..."
                      value={searchQuery}
                      autoComplete="off"
                      onChange={(e) => setSearchQuery(e.target.value)}
@@ -77,7 +79,20 @@ export default function CategoryPanel({
                      const isOn = visibleCats.has(cat.key);
                      const count = catCounts?.[cat.key] || 0;
                      return (
-                        <div key={cat.label || cat.key} style={S.catRow}>
+                        <div
+                           key={cat.label || cat.key}
+                           style={{
+                              ...S.catRow,
+                              background:
+                                 selectedCatCd === cat.key
+                                    ? `${cat.color}18`
+                                    : "transparent",
+                              border:
+                                 selectedCatCd === cat.key
+                                    ? `1px solid ${cat.color}`
+                                    : "1px solid transparent",
+                           }}
+                        >
                            <div style={S.catLeft}>
                               <div
                                  style={{
@@ -90,12 +105,23 @@ export default function CategoryPanel({
                                  </span>
                               </div>
                               <span
+                                 onClick={() =>
+                                    onCatSelect?.(
+                                       selectedCatCd === cat.key ? "" : cat.key,
+                                    )
+                                 }
                                  style={{
                                     ...S.catName,
                                     color: isOn ? "#111" : "#aaa",
+                                    cursor: "pointer",
+                                    textDecoration:
+                                       selectedCatCd === cat.key
+                                          ? "underline"
+                                          : "none",
                                  }}
                               >
                                  {cat.label || cat.key}
+                                 {selectedCatCd === cat.key && " 📊"}
                               </span>
                               {count > 0 && (
                                  <span

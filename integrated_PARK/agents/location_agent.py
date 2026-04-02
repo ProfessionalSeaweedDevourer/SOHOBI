@@ -8,6 +8,7 @@
 - S1~S5 루브릭 통과용 지시 포함 (sign-off 루프 참여)
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -146,7 +147,7 @@ class LocationAgent:
     # ── 내부 LLM 호출 ──────────────────────────────────────────
 
     async def _call_llm(self, system_msg: str, user_msg: str) -> str:
-        service: AzureChatCompletion = self._kernel.get_service("sign_off")
+        service: AzureChatCompletion = self._kernel.get_service("location")
         history = ChatHistory()
         history.add_system_message(system_msg)
         history.add_user_message(user_msg)
@@ -162,8 +163,11 @@ class LocationAgent:
             logger.error("LocationAgent LLM 호출 실패: %s", e)
             if "content_filter" in err_str or "content filter" in err_str:
                 safe_sys = "다음은 합법적인 상권 데이터 분석 요청입니다.\n\n" + system_msg
+                safe_history = ChatHistory()
+                safe_history.add_system_message(safe_sys)
+                safe_history.add_user_message(user_msg)
                 result = await service.get_chat_message_content(
-                    ChatHistory(system_message=safe_sys),
+                    safe_history,
                     settings=settings,
                 )
                 return str(result)
@@ -184,7 +188,8 @@ class LocationAgent:
             "You are a parameter extractor. Output JSON only.",
             history_ctx + _PARAM_EXTRACT_PROMPT.format(user_input=question),
         )
-        clean = re.sub(r"^```json\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
+        m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", raw)
+        clean = m.group(1) if m else raw.strip()
         try:
             params = json.loads(clean)
         except json.JSONDecodeError:
@@ -239,14 +244,20 @@ class LocationAgent:
                 "type": "analyze",
             }
 
-        sales_data = self._repo.get_sales(location, business_type, quarter)
-        store_data = self._repo.get_store_count(location, business_type, quarter)
+        sales_data, store_data = await asyncio.gather(
+            asyncio.to_thread(self._repo.get_sales, location, business_type, quarter),
+            asyncio.to_thread(self._repo.get_store_count, location, business_type, quarter),
+        )
 
         if not sales_data and not store_data:
+            supported_locs = self._repo.get_supported_locations()
+            examples = ["강남", "홍대", "역삼", "마포", "잠실", "종로"]
             return {
                 "draft": (
                     f"'{location}' 지역의 '{business_type}' 업종 데이터를 찾을 수 없습니다.\n"
-                    "지역명 또는 업종명을 확인해 주십시오."
+                    f"서울 주요 구·동 이름으로 질문해 주세요 (총 {len(supported_locs)}개 지역 지원).\n"
+                    f"예: {', '.join(examples)} 등\n"
+                    "지원 업종: " + ", ".join(sorted(supported))
                 ),
                 "adm_codes": [],
                 "type": "analyze",
@@ -263,21 +274,29 @@ class LocationAgent:
         if sales_data:
             sales_data["summary"]["avg_sales_per_store_krw"] = avg_per_store
         if sales_data and store_data:
-            store_map = {b["trdar_name"]: b for b in store_data.get("breakdown", [])}
+            store_map = {b["adm_name"]: b for b in store_data.get("breakdown", [])}
             for s in sales_data.get("breakdown", []):
-                s_count = int(store_map.get(s["trdar_name"], {}).get("store_count", 0))
+                s_count = int(store_map.get(s["adm_name"], {}).get("store_count", 0))
                 s_sales = float(s.get("monthly_sales_krw", 0))
                 s["avg_sales_per_store_krw"] = int(s_sales / s_count) if s_count > 0 else 0
 
-        analysis = await self._run_agent(location, business_type, quarter, sales_data, store_data)
-
-        # 유사 상권 추천 테이블 추가
-        similar = self._repo.get_similar_locations(
-            business_type=business_type,
-            quarter=quarter,
-            exclude_location=location,
-            top_n=3,
+        # _run_agent(LLM 호출)과 유사 상권 조회(동기 DB)를 병렬 실행
+        results = await asyncio.gather(
+            self._run_agent(location, business_type, quarter, sales_data, store_data),
+            asyncio.to_thread(
+                self._repo.get_similar_locations,
+                business_type=business_type,
+                quarter=quarter,
+                exclude_location=location,
+                top_n=3,
+            ),
+            return_exceptions=True,
         )
+        analysis = results[0] if not isinstance(results[0], Exception) else ""
+        similar_raw = results[1]
+        similar = similar_raw if not isinstance(similar_raw, Exception) else []
+        similar_failed = isinstance(similar_raw, Exception)
+
         if similar:
             rows = "\n".join(
                 f"| {i+1} | {s['adm_name']} | {s['monthly_sales_krw']:,}원 | "
@@ -291,6 +310,8 @@ class LocationAgent:
                 + rows
             )
             analysis += similar_table
+        elif similar_failed:
+            analysis += "\n\n> 유사 상권 추천 조회에 실패했습니다."
 
         adm_codes = self._repo._get_adm_codes(location)
         return {"draft": analysis, "adm_codes": adm_codes, "type": "analyze"}
@@ -325,9 +346,14 @@ class LocationAgent:
         q = quarter[4]
 
         location_data = []
-        for loc in locations:
-            sales = self._repo.get_sales(loc, business_type, quarter)
-            store = self._repo.get_store_count(loc, business_type, quarter)
+        all_results = await asyncio.gather(*[
+            asyncio.gather(
+                asyncio.to_thread(self._repo.get_sales, loc, business_type, quarter),
+                asyncio.to_thread(self._repo.get_store_count, loc, business_type, quarter),
+            )
+            for loc in locations
+        ])
+        for loc, (sales, store) in zip(locations, all_results):
             if not sales and not store:
                 continue
 
@@ -398,10 +424,20 @@ class LocationAgent:
             }
 
         # draft 생성
-        if mode == "compare" and len(locations) >= 2:
-            result = await self.compare(locations, business_type, quarter)
-        else:
-            result = await self.analyze(locations[0], business_type, quarter)
+        try:
+            if mode == "compare" and len(locations) >= 2:
+                result = await self.compare(locations, business_type, quarter)
+            else:
+                result = await self.analyze(locations[0], business_type, quarter)
+        except (ValueError, RuntimeError) as e:
+            logger.error("LocationAgent draft 생성 실패: %s", e)
+            return {
+                "draft": "분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주십시오.",
+                "adm_codes": [],
+                "type": mode,
+                "business_type": business_type,
+                "location_name": locations[0] if locations else "",
+            }
 
         draft = result["draft"]
         adm_codes = result["adm_codes"]

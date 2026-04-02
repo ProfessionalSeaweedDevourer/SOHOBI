@@ -1,7 +1,7 @@
 // 개발 프론트 위치: TERRY\p02_frontEnd_React\src\panel\Layerpanel.jsx
 // 공식 프론트 위치: frontend\src\components\map\panel\Layerpanel.jsx
 
-import { useState } from "react";
+import React, { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
 
@@ -40,11 +40,45 @@ export default function LayerPanel({
    festivalLoaded,
    schoolLoaded,
 }) {
-   const [cadastralOn, setCadastralOn] = useState(false);
-   const [touristInfoOn, setTouristInfoOn] = useState(false);
+   const [cadastralOn, setCadastralOn] = useState(true);
+   const [touristInfoOn, setTouristInfoOn] = useState(true);
    const [landmarkOn, setLandmarkOn] = useState(true);
-   const [festivalOn, setFestivalOn] = useState(false);
+   const [festivalOn, setFestivalOn] = useState(true);
    const [schoolOn, setSchoolOn] = useState(true);
+
+   // 초기 레이어 자동 추가
+   const initDoneRef = React.useRef(false);
+   React.useEffect(() => {
+      if (!map || initDoneRef.current) return;
+      initDoneRef.current = true;
+      // 지적도 초기 ON
+      const layer = new TileLayer({
+         source: new TileWMS({
+            url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
+            params: {
+               SERVICE: "WMS",
+               VERSION: "1.3.0",
+               REQUEST: "GetMap",
+               LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+               STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+               FORMAT: "image/png",
+               TRANSPARENT: "TRUE",
+               CRS: "EPSG:3857",
+            },
+            crossOrigin: "anonymous",
+            transition: 0,
+         }),
+         opacity: 0.7,
+         zIndex: 200,
+      });
+      layer.set("name", "cadastral");
+      map.addLayer(layer);
+      wmsLayerRef.current = layer;
+      // 관광안내소 초기 ON
+      map.addLayer(
+         makeWmsLayer("lt_p_dgtouristinfo", "tourist_info", 215, vworldKey),
+      );
+   }, [map]); // eslint-disable-line
 
    // ── 지적도 ──────────────────────────────────────────────────
    const toggleCadastral = () => {
@@ -91,7 +125,7 @@ export default function LayerPanel({
          setTouristInfoOn(false);
       } else {
          map.addLayer(
-            makeWmsLayer("lt_p_dgtouristinfo", "tourist_info", 201, vworldKey),
+            makeWmsLayer("lt_p_dgtouristinfo", "tourist_info", 215, vworldKey),
          );
          setTouristInfoOn(true);
       }

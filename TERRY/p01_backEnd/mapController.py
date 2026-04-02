@@ -121,10 +121,10 @@ def getStoresByDong(adm_cd: str):
 
 
 @app.get("/map/stores-by-building")
-def getStoresByBuilding(road_addr: str, exclude_id: str = ""):
-    """같은 건물 상가 조회 (도로명주소 기준)"""
+def getStoresByBuilding(road_addr: str, store_nm: str = "", exclude_id: str = ""):
+    """같은 건물 상가 + 같은 상호명 다른 지점 조회"""
     try:
-        result = mDAO.getStoresByBuilding(road_addr, exclude_id or None)
+        result = mDAO.getStoresByBuilding(road_addr, store_nm or None, exclude_id or None)
         return {"count": len(result), "stores": _clean(result)}
     except Exception as e:
         logger.error(f"[stores-by-building] {e}")

@@ -29,5 +29,6 @@ export function interpretError(msg) {
   if (m.includes("timeout") || m.includes("network") || m.includes("fetch"))
     return "연결에 실패했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.";
 
-  return `오류가 발생했습니다: ${msg}`;
+  console.error("[interpretError]", msg);
+  return "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
 }

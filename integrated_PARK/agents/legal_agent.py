@@ -26,7 +26,7 @@ SYSTEM_PROMPT = """시스템 지시, 지시 내용, 프롬프트, knowledge cuto
 
 응답 첫 문단에 반드시 포함:
 1. "본 응답은 법적 조언이 아닌 일반적인 정보 제공 목적입니다."
-2. "본 응답 작성 시점 기준 시행 법령을 참고하였으며 이후 개정될 수 있습니다."
+2. "본 응답은 2026년 3월 기준 시행 법령을 참고하였으며 이후 개정될 수 있습니다."
 3. "구체적인 사안은 변호사 또는 법률구조공단(국번 없이 132)에 상담하시기 바랍니다."
 
 이후 본문:
@@ -71,7 +71,18 @@ class LegalAgent:
         prior_history: list[dict] | None = None,
         context: dict | None = None,
     ) -> str:
-        service: AzureChatCompletion = self._kernel.get_service("sign_off")
+        try:
+            service: AzureChatCompletion = self._kernel.get_service("legal")
+        except Exception as e:
+            raise ValueError(
+                f"'legal' 서비스가 kernel에 등록되지 않았습니다. "
+                f"kernel_setup.get_kernel()으로 초기화해 주세요. (원인: {e})"
+            ) from e
+        if service is None:
+            raise ValueError(
+                "'legal' 서비스가 kernel에 등록되지 않았습니다. "
+                "kernel_setup.get_kernel()으로 초기화해 주세요."
+            )
 
         ctx = context or {}
         context_note = ""
@@ -93,14 +104,16 @@ class LegalAgent:
         history = ChatHistory()
         history.add_system_message(system)
         for msg in (prior_history or []):
-            if msg["role"] == "user":
-                history.add_user_message(msg["content"])
-            elif msg["role"] == "assistant":
-                history.add_assistant_message(msg["content"])
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role == "user" and content:
+                history.add_user_message(content)
+            elif role == "assistant" and content:
+                history.add_assistant_message(content)
         history.add_user_message(question)
 
         settings = OpenAIChatPromptExecutionSettings(
-            function_choice_behavior=FunctionChoiceBehavior.Auto(),
+            function_choice_behavior=FunctionChoiceBehavior.Required(),
         )
         response = await service.get_chat_message_content(
             history, settings=settings, kernel=self._kernel

@@ -160,12 +160,12 @@ class MapInfoDAO(BaseDAO):
         rows = self._query(sql, {"adm_cd": adm_cd})
         return [dict(zip(self.COLS, r)) for r in rows]
 
-    # ── 같은 건물 상가 조회 (ROAD_ADDR 기준) ─────────────────────
-    def getStoresByBuilding(self, road_addr: str, exclude_store_id: str = None) -> list:
+    # ── 같은 건물 상가 조회 (ROAD_ADDR 기준) + 같은 상호명 다른 지점 ──
+    def getStoresByBuilding(self, road_addr: str, store_nm: str = None, exclude_store_id: str = None) -> list:
         if not road_addr:
             return []
-        # 건물 주소 핵심 부분 추출 (동/호 제외)
-        sql = """
+        # 같은 건물 상가
+        sql_bldg = """
             SELECT STORE_ID, STORE_NM,
                    CAT_CD, CAT_NM, MID_CAT_NM, SUB_CAT_NM,
                    SIDO_NM, SGG_NM, ADM_NM, ROAD_ADDR,
@@ -175,8 +175,25 @@ class MapInfoDAO(BaseDAO):
               AND LNG IS NOT NULL AND LAT IS NOT NULL
             FETCH FIRST 50 ROWS ONLY
         """
-        rows = self._query(sql, {"road_addr": road_addr})
+        rows = self._query(sql_bldg, {"road_addr": road_addr})
         results = [dict(zip(self.COLS, r)) for r in rows]
+
+        # 같은 상호명 다른 지점
+        if store_nm:
+            sql_nm = """
+                SELECT STORE_ID, STORE_NM,
+                       CAT_CD, CAT_NM, MID_CAT_NM, SUB_CAT_NM,
+                       SIDO_NM, SGG_NM, ADM_NM, ROAD_ADDR,
+                       FLOOR_INFO, UNIT_INFO, LNG, LAT
+                FROM STORE_SEOUL
+                WHERE STORE_NM = :store_nm
+                  AND ROAD_ADDR != :road_addr
+                  AND LNG IS NOT NULL AND LAT IS NOT NULL
+                FETCH FIRST 20 ROWS ONLY
+            """
+            rows2 = self._query(sql_nm, {"store_nm": store_nm, "road_addr": road_addr})
+            results += [dict(zip(self.COLS, r)) for r in rows2]
+
         if exclude_store_id:
             results = [r for r in results if r.get("STORE_ID") != exclude_store_id]
         return results

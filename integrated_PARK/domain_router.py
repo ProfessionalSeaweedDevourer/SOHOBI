@@ -46,7 +46,7 @@ def _keyword_classify(question: str) -> dict | None:
 
 async def _llm_classify(question: str) -> dict:
     kernel = get_kernel()
-    chat_service = kernel.get_service("sign_off")
+    chat_service = kernel.get_service("router")
     settings = AzureChatPromptExecutionSettings(response_format={"type": "json_object"})
     history = ChatHistory()
     history.add_system_message(_SYSTEM_PROMPT)
