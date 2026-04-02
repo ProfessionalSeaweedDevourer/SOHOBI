@@ -71,7 +71,18 @@ class LegalAgent:
         prior_history: list[dict] | None = None,
         context: dict | None = None,
     ) -> str:
-        service: AzureChatCompletion = self._kernel.get_service("legal")
+        try:
+            service: AzureChatCompletion = self._kernel.get_service("legal")
+        except Exception as e:
+            raise ValueError(
+                f"'legal' 서비스가 kernel에 등록되지 않았습니다. "
+                f"kernel_setup.get_kernel()으로 초기화해 주세요. (원인: {e})"
+            ) from e
+        if service is None:
+            raise ValueError(
+                "'legal' 서비스가 kernel에 등록되지 않았습니다. "
+                "kernel_setup.get_kernel()으로 초기화해 주세요."
+            )
 
         ctx = context or {}
         context_note = ""
