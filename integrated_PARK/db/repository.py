@@ -684,10 +684,10 @@ class CommercialRepository:
             else:
                 return max(0, 1 - (rate - 5) / 10)
 
-        norm_avg = normalize([r["avg_sales_per_store"] for r in rows])
-        norm_close = normalize([r["close_rate"] or 0 for r in rows], inverse=True)
-        norm_sales = normalize([r["monthly_sales"] or 0 for r in rows])
-        norm_open = [open_rate_score(r["open_rate"] or 0) for r in rows]
+        norm_avg = normalize([float(r["avg_sales_per_store"]) for r in rows])
+        norm_close = normalize([float(r["close_rate"] or 0) for r in rows], inverse=True)
+        norm_sales = normalize([float(r["monthly_sales"] or 0) for r in rows])
+        norm_open = [open_rate_score(float(r["open_rate"] or 0)) for r in rows]
 
         scored = []
         for i, r in enumerate(rows):
