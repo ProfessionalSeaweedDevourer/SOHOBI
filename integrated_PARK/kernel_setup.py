@@ -13,19 +13,36 @@ _TOKEN_PROVIDER = get_bearer_token_provider(
 )
 
 
+def _deployment(specific_var: str) -> str:
+    """에이전트별 env var → 없으면 공통 AZURE_DEPLOYMENT_NAME으로 fallback"""
+    return os.getenv(specific_var) or os.getenv("AZURE_DEPLOYMENT_NAME")
+
+
 def get_kernel() -> sk.Kernel:
     kernel = sk.Kernel()
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
-    kernel.add_service(
-        AzureChatCompletion(
-            service_id="sign_off",
-            deployment_name=os.getenv("AZURE_DEPLOYMENT_NAME"),
-            endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=api_key if api_key else None,
-            ad_token_provider=None if api_key else _TOKEN_PROVIDER,
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"),
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview")
+
+    agent_services = [
+        ("admin",    "AZURE_ADMIN_DEPLOYMENT"),
+        ("finance",  "AZURE_FINANCE_DEPLOYMENT"),
+        ("legal",    "AZURE_LEGAL_DEPLOYMENT"),
+        ("location", "AZURE_LOCATION_DEPLOYMENT"),
+        ("chat",     "AZURE_CHAT_DEPLOYMENT"),
+        ("router",   "AZURE_ROUTER_DEPLOYMENT"),
+    ]
+    for service_id, env_var in agent_services:
+        kernel.add_service(
+            AzureChatCompletion(
+                service_id=service_id,
+                deployment_name=_deployment(env_var),
+                endpoint=endpoint,
+                api_key=api_key if api_key else None,
+                ad_token_provider=None if api_key else _TOKEN_PROVIDER,
+                api_version=api_version,
+            )
         )
-    )
     return kernel
 
 

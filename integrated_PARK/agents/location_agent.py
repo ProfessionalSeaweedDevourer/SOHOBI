@@ -146,7 +146,7 @@ class LocationAgent:
     # ── 내부 LLM 호출 ──────────────────────────────────────────
 
     async def _call_llm(self, system_msg: str, user_msg: str) -> str:
-        service: AzureChatCompletion = self._kernel.get_service("sign_off")
+        service: AzureChatCompletion = self._kernel.get_service("location")
         history = ChatHistory()
         history.add_system_message(system_msg)
         history.add_user_message(user_msg)
