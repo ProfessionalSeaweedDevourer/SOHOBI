@@ -72,15 +72,15 @@ class LegalAgent:
         context: dict | None = None,
     ) -> str:
         try:
-            service: AzureChatCompletion = self._kernel.get_service("sign_off")
+            service: AzureChatCompletion = self._kernel.get_service("legal")
         except Exception as e:
             raise ValueError(
-                f"'sign_off' 서비스가 kernel에 등록되지 않았습니다. "
+                f"'legal' 서비스가 kernel에 등록되지 않았습니다. "
                 f"kernel_setup.get_kernel()으로 초기화해 주세요. (원인: {e})"
             ) from e
         if service is None:
             raise ValueError(
-                "'sign_off' 서비스가 kernel에 등록되지 않았습니다. "
+                "'legal' 서비스가 kernel에 등록되지 않았습니다. "
                 "kernel_setup.get_kernel()으로 초기화해 주세요."
             )
 

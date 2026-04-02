@@ -59,7 +59,7 @@ class ChatAgent:
         profile: str = "",
         prior_history: list[dict] | None = None,
     ) -> str:
-        service: AzureChatCompletion = self._kernel.get_service("sign_off")
+        service: AzureChatCompletion = self._kernel.get_service("chat")
         history = ChatHistory()
         system = SYSTEM_PROMPT
         if profile:

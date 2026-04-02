@@ -86,7 +86,7 @@ class AdminAgent:
         prior_history: list[dict] | None = None,
         context: dict | None = None,
     ) -> str:
-        service: AzureChatCompletion = self._kernel.get_service("sign_off")
+        service: AzureChatCompletion = self._kernel.get_service("admin")
 
         ctx = context or {}
         context_note = ""
