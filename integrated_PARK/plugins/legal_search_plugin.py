@@ -32,16 +32,19 @@ class LegalSearchPlugin:
 
         self._available = bool(search_key and search_endpoint and openai_endpoint and openai_key)
         if self._available:
-            self._ai_client = AzureOpenAI(
-                api_key=openai_key,
-                api_version=os.getenv("AZURE_EMBEDDING_API_VERSION", "2024-02-01"),
-                azure_endpoint=openai_endpoint,
-            )
-            self._search_client = SearchClient(
-                endpoint=search_endpoint,
-                index_name=index_name,
-                credential=AzureKeyCredential(search_key),
-            )
+            try:
+                self._ai_client = AzureOpenAI(
+                    api_key=openai_key,
+                    api_version=os.getenv("AZURE_EMBEDDING_API_VERSION", "2024-02-01"),
+                    azure_endpoint=openai_endpoint,
+                )
+                self._search_client = SearchClient(
+                    endpoint=search_endpoint,
+                    index_name=index_name,
+                    credential=AzureKeyCredential(search_key),
+                )
+            except Exception:
+                self._available = False
 
     @kernel_function(
         name="search_legal_docs",
@@ -57,6 +60,9 @@ class LegalSearchPlugin:
     ) -> str:
         if not self._available:
             return "법령 검색 서비스가 설정되지 않았습니다. (AZURE_SEARCH_KEY, AZURE_SEARCH_ENDPOINT 확인)"
+
+        if not isinstance(top_k, int) or top_k < 1:
+            raise ValueError(f"top_k는 1 이상의 정수여야 합니다. (전달값: {top_k!r})")
 
         try:
             resp = self._ai_client.embeddings.create(

@@ -34,6 +34,13 @@ app.add_middleware(
 _agent = LocationAgent()
 _repo = CommercialRepository()
 
+# 업종 코드 → 대표명 (INDUSTRY_CODE_MAP 순서상 첫 번째 키)
+# 예: CS100010 → "카페"  (커피숍, 커피 등이 동일 코드여도 항상 "카페"로 통일)
+_BIZ_CANONICAL: dict[str, str] = {}
+for _k, _v in INDUSTRY_CODE_MAP.items():
+    if _v not in _BIZ_CANONICAL:
+        _BIZ_CANONICAL[_v] = _k
+
 
 # ── 파라미터 추출 프롬프트 ─────────────────────────────────
 _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 상권 분석 질문을 했습니다:
@@ -53,6 +60,15 @@ _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 상권 분석 질문을
 - 업종명은 한국어 원문 그대로 (예: "카페", "한식", "치킨")
 - 분기가 언급되지 않으면 "20253" 사용
 - JSON 외 다른 텍스트 절대 출력 금지"""
+
+
+def _clean_location_for_display(loc: str) -> str:
+    """임시 키(__)를 사람이 읽기 좋은 이름으로 변환"""
+    if loc.startswith("__nm_"):
+        return loc[5:]   # "__nm_역삼1동" → "역삼1동"
+    if loc.startswith("__adm_"):
+        return loc[6:]   # "__adm_11680640" → "11680640" (fallback, 실제론 location_agent에서 처리)
+    return loc
 
 
 def _normalize_location(raw: str) -> str | None:
@@ -161,14 +177,19 @@ async def _extract_params(question: str) -> dict:
         else:
             normalized.append(loc)  # 정규화 실패 시 원본 유지 (에이전트가 에러 처리)
 
-    # 추출된 업종명을 INDUSTRY_CODE_MAP 키로 정규화
+    # 추출된 업종명을 INDUSTRY_CODE_MAP 키로 정규화 후 대표명으로 통일
     raw_biz = params.get("business_type", "")
     normed_biz = _normalize_business_type(raw_biz)
+    resolved_biz = normed_biz or raw_biz
+    # 동일 DB 코드를 가진 업종명은 대표명으로 통일 (예: 커피숍 → 카페)
+    biz_code = INDUSTRY_CODE_MAP.get(resolved_biz)
+    if biz_code:
+        resolved_biz = _BIZ_CANONICAL.get(biz_code, resolved_biz)
 
     return {
         "mode": params.get("mode", "analyze"),
         "locations": normalized,
-        "business_type": normed_biz or raw_biz,
+        "business_type": resolved_biz,
         "quarter": params.get("quarter", "20253"),
     }
 
@@ -296,7 +317,7 @@ async def chat(req: ChatRequest):
                     "session_id": session_id,
                     "type": "error",
                     "analysis": result.get("error", "오류가 발생했습니다."),
-                    "location": ", ".join(locations),
+                    "location": ", ".join(_clean_location_for_display(l) for l in locations),
                     "business_type": business_type,
                 }
 
@@ -304,7 +325,7 @@ async def chat(req: ChatRequest):
                 "session_id": session_id,
                 "type": "compare",
                 "analysis": result.get("comparison", ""),
-                "locations": locations,
+                "locations": [_clean_location_for_display(l) for l in locations],
                 "business_type": business_type,
                 "quarter": quarter,
                 "data": result.get("data", []),
@@ -319,7 +340,7 @@ async def chat(req: ChatRequest):
                     "session_id": session_id,
                     "type": "error",
                     "analysis": result.get("error", "오류가 발생했습니다."),
-                    "location": location,
+                    "location": _clean_location_for_display(location),
                     "business_type": business_type,
                 }
 
@@ -331,7 +352,7 @@ async def chat(req: ChatRequest):
                 "type": "analyze",
                 "analysis": result.get("analysis", ""),
                 "similar_locations": result.get("similar_locations", []),
-                "location": location,
+                "location": _clean_location_for_display(location),
                 "business_type": business_type,
                 "quarter": quarter,
                 "adm_codes": adm_codes,

@@ -46,7 +46,8 @@ class LocationPlugin:
             str, "분기코드 YYYYQ (예: 20244). 언급 없으면 20244 사용"
         ] = "20244",
     ) -> str:
-        return await self._agent.analyze(location, business_type, quarter)
+        result = await self._agent.analyze(location, business_type, quarter)
+        return json.dumps(result, ensure_ascii=False)
 
     @kernel_function(
         name="compare_commercial_areas",
@@ -67,4 +68,5 @@ class LocationPlugin:
         ] = "20244",
     ) -> str:
         location_list = [loc.strip() for loc in locations.split(",")]
-        return await self._agent.compare(location_list, business_type, quarter)
+        result = await self._agent.compare(location_list, business_type, quarter)
+        return json.dumps(result, ensure_ascii=False)

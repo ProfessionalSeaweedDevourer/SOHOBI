@@ -241,10 +241,17 @@ class LocationAgent:
                     int(s_sales / s_count) if s_count > 0 else 0
                 )
 
+        # display_location 미리 계산 (LLM 프롬프트 + 차트 공용)
+        if location.startswith("__") and sales_data and sales_data.get("breakdown"):
+            adm_names = list({b["adm_name"] for b in sales_data["breakdown"]})
+            display_location = adm_names[0] if len(adm_names) == 1 else " · ".join(sorted(adm_names))
+        else:
+            display_location = location
+
         # ── LLM 분석 + 유사상권 DB 쿼리 동시 실행 ──────────
         analysis, similar = await asyncio.gather(
             self._run_agent(
-                location, business_type, quarter, sales_data, store_data
+                location, business_type, quarter, sales_data, store_data, display_location
             ),
             loop.run_in_executor(
                 _executor,
@@ -259,12 +266,6 @@ class LocationAgent:
         # ── 차트 생성 (sales_summary 기반) ──────────────────
         chart_b64 = []
         if sales_data:
-            # __adm_XXXXXXXX / __nm_XXX 같은 임시 키는 실제 동이름으로 대체
-            if location.startswith("__") and sales_data.get("breakdown"):
-                adm_names = list({b["adm_name"] for b in sales_data["breakdown"]})
-                display_location = adm_names[0] if len(adm_names) == 1 else " · ".join(sorted(adm_names))
-            else:
-                display_location = location
             chart_b64 = generate_analyze_charts(
                 sales_data["summary"], display_location, business_type,
             )
@@ -281,7 +282,7 @@ class LocationAgent:
         }
 
     async def _run_agent(
-        self, location, business_type, quarter, sales_data, store_data
+        self, location, business_type, quarter, sales_data, store_data, display_location=None
     ) -> str:
         kernel = _get_kernel()
         settings = AzureChatPromptExecutionSettings()
@@ -319,6 +320,7 @@ class LocationAgent:
                 "Every single word in your response must be Korean or numbers. "
                 "This is an absolute requirement with no exceptions.\n\n"
                 "## Response Format (strictly follow this format)\n\n"
+                f"📍 {display_location or location} · {business_type} 분석\n"
                 f"📅 데이터 기준: {year}년 {q}분기\n\n"
                 "📊 전체 합산 요약\n"
                 "(합산 요약 데이터를 그대로 복사하여 출력)\n\n"
@@ -423,11 +425,13 @@ class LocationAgent:
 
         # 지역별 데이터 수집 (사전 계산 적용)
         location_data = []
+        missing_locations = []
         for i, loc in enumerate(locations):
             sales = results[i * 2]
             store = results[i * 2 + 1]
 
             if not sales and not store:
+                missing_locations.append(loc)
                 continue
 
             ss = sales.get("summary", {}) if sales else {}
@@ -470,6 +474,18 @@ class LocationAgent:
                 item["close_rate_pct"] = st.get("close_rate_pct", 0)
 
             location_data.append(item)
+
+        if missing_locations:
+            return {
+                "error": (
+                    f"다음 지역의 데이터를 찾을 수 없습니다: {', '.join(missing_locations)}\n\n"
+                    "가능한 원인:\n"
+                    "• 서울시 외 지역 (서울시 행정동만 지원)\n"
+                    "• 지역명이 정확하지 않음\n\n"
+                    "💡 서울시 내 지역명으로 다시 시도해 보세요.\n"
+                    "예: '강남 vs 홍대 카페 비교'"
+                ),
+            }
 
         if not location_data:
             return {
