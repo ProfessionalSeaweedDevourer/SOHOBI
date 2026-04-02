@@ -7,7 +7,7 @@ import math
 import random
 from semantic_kernel.functions import kernel_function
 
-from integrated_PARK.db.repository import INDUSTRY_CODE_MAP
+from db.repository import INDUSTRY_CODE_MAP
 
 try:
     from db.finance_db import DBWork
