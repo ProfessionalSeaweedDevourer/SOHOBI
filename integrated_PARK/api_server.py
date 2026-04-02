@@ -283,11 +283,17 @@ async def query(req: QueryRequest):
         }
     except Exception as e:
         err_str = str(e).lower()
-        if "content_filter" in err_str or "content filter" in err_str:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "죄송합니다. 해당 질의는 처리할 수 없습니다."},
-            )
+        is_content_filter = (
+            "content_filter" in err_str
+            or "content filter" in err_str
+            or "responsibleai" in err_str
+            or "content_management_policy" in err_str
+        )
+        safe_draft = (
+            "죄송합니다. 해당 질의는 처리할 수 없습니다."
+            if is_content_filter
+            else "죄송합니다. 요청을 처리하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+        )
         log_error(
             request_id=str(uuid4()),
             session_id=req.session_id or "",
@@ -296,7 +302,24 @@ async def query(req: QueryRequest):
             error=str(e),
             latency_ms=(time.monotonic() - t0) * 1000,
         )
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        # 사용자 질의에서 500을 반환하지 않는다 — 내부 오류를 외부에 노출하지 않기 위해
+        # 에러 메시지는 서버 로그에만 기록되고, 클라이언트에는 안전한 메시지만 반환한다
+        return {
+            "session_id":        req.session_id or "",
+            "request_id":        str(uuid4()),
+            "status":            "error",
+            "domain":            req.domain or "unknown",
+            "grade":             "",
+            "confidence_note":   "",
+            "draft":             safe_draft,
+            "chart":             None,
+            "updated_params":    None,
+            "retry_count":       0,
+            "agent_ms":          0,
+            "signoff_ms":        0,
+            "message":           "",
+            "rejection_history": [],
+        }
 
 
 @app.post("/api/v1/stream", dependencies=[Depends(verify_api_key)])

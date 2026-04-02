@@ -15,12 +15,17 @@ PG_USER=...
 PG_PASSWORD=...
 """
 
+import logging
 import os
+import threading
 from typing import Optional
 
 import psycopg2
 from psycopg2 import pool
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
+_pool_lock = threading.Lock()
 
 load_dotenv()
 
@@ -393,13 +398,21 @@ class CommercialRepository:
 
     @classmethod
     def _get_pool(cls):
-        """커넥션 풀 싱글턴 — 매 쿼리마다 connect/close 오버헤드 제거"""
+        """커넥션 풀 싱글턴 — double-checked locking으로 멀티스레드 초기화 레이스 방지"""
         if cls._pool is None:
-            cls._pool = _make_pool()
+            with _pool_lock:
+                if cls._pool is None:
+                    cls._pool = _make_pool()
         return cls._pool
 
     def _connect(self):
-        return self._get_pool().getconn()
+        try:
+            return self._get_pool().getconn()
+        except pool.PoolError as e:
+            logger.error("DB 연결 풀 고갈: %s", e)
+            raise RuntimeError(
+                "DB 연결을 확보할 수 없습니다. 잠시 후 다시 시도해 주십시오."
+            ) from e
 
     def _release(self, conn):
         self._get_pool().putconn(conn)
@@ -640,6 +653,8 @@ class CommercialRepository:
 
         # 제외 코드 필터링
         rows = [r for r in rows if r["adm_cd"] not in exclude_codes]
+        if not rows:
+            return []
 
         # 점포당 평균매출 계산
         for r in rows:

@@ -104,14 +104,16 @@ class LegalAgent:
         history = ChatHistory()
         history.add_system_message(system)
         for msg in (prior_history or []):
-            if msg["role"] == "user":
-                history.add_user_message(msg["content"])
-            elif msg["role"] == "assistant":
-                history.add_assistant_message(msg["content"])
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role == "user" and content:
+                history.add_user_message(content)
+            elif role == "assistant" and content:
+                history.add_assistant_message(content)
         history.add_user_message(question)
 
         settings = OpenAIChatPromptExecutionSettings(
-            function_choice_behavior=FunctionChoiceBehavior.Auto(),
+            function_choice_behavior=FunctionChoiceBehavior.Required(),
         )
         response = await service.get_chat_message_content(
             history, settings=settings, kernel=self._kernel
