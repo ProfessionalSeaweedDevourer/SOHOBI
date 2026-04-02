@@ -29,6 +29,9 @@ from semantic_kernel.functions import kernel_function
 
 from plugins.finance_simulation_plugin import FinanceSimulationPlugin
 
+from difflib import get_close_matches
+from db.repository import AREA_MAP, INDUSTRY_CODE_MAP
+
 # ── 워크플로우 프롬프트 (CHANG/skills/investment-simulation.yaml 인라인) ──
 
 _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 질문을 했습니다:
@@ -134,9 +137,6 @@ class FinanceAgent:
             ) from e
 
     async def _extract_params(self, question: str) -> tuple[dict, dict]:
-        from difflib import get_close_matches
-        from db.repository import AREA_MAP, INDUSTRY_CODE_MAP
-
         raw = await self._call_llm(_PARAM_EXTRACT_PROMPT.format(user_input=question))
         clean = re.sub(r"^```json\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
         try:
@@ -154,7 +154,7 @@ class FinanceAgent:
         else:
             adm_codes = None
 
-        # 업종 자연어 → INDUSTRY_CODE_MAP 키값
+        # 업종 자연어 → INDUSTRY_CODE_MAP 키값, prompt로 작성되었으나 추가 확인방안
         raw_business = result.pop("business_type", None)
         if raw_business:
             business_type = raw_business if raw_business in INDUSTRY_CODE_MAP else (
