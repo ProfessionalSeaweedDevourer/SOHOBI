@@ -24,6 +24,9 @@ __pycache__/
 # 생성된 PDF
 *.pdf
 
+# 매출 데이터 CSV
+sangkwon_sales.csv
+
 # Jupyter 체크포인트
 .ipynb_checkpoints/
 
