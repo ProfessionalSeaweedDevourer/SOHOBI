@@ -98,6 +98,14 @@ export default function MapView() {
    const [selectedQtr, setSelectedQtr] = useState("");
    const dongModeRef = useRef("sales");
    const currentGuNmRef = useRef("");
+   const [toastMsg, setToastMsg] = useState("");
+   const toastTimerRef = useRef(null);
+
+   const showToast = (msg) => {
+      setToastMsg(msg);
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setToastMsg(""), 3000);
+   };
 
    useEffect(() => {
       dongModeRef.current = dongMode;
@@ -139,7 +147,7 @@ export default function MapView() {
                setSelectedQtr(sorted[0]); // 최신 분기 기본 선택
             }
          })
-         .catch(() => {});
+         .catch(() => { showToast("상권 분기 목록을 불러오지 못했습니다."); });
    }, []);
 
    const allCatKeys = new Set(CATEGORIES.map((c) => c.key));
@@ -345,7 +353,7 @@ export default function MapView() {
             setCatCounts(counts);
             drawMarkers(stores, visibleCatsRef.current);
          })
-         .catch(() => {})
+         .catch(() => { showToast("주변 검색에 실패했습니다. 다시 시도해 주세요."); })
          .finally(() => setLoading(false));
    };
 
@@ -791,6 +799,7 @@ export default function MapView() {
                   : Promise.resolve(),
             ]);
             setKakaoDetail(detail);
+            if (!detail) showToast("점포 위치 정보를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.");
             setLoadingDetail(false);
             return;
          }
@@ -893,6 +902,7 @@ export default function MapView() {
                setLoadingDetail(true);
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
                   setKakaoDetail(d);
+                  if (!d) showToast("점포 위치 정보를 가져오지 못했습니다.");
                   setLoadingDetail(false);
                });
             }}
@@ -904,6 +914,7 @@ export default function MapView() {
                setLoadingDetail(true);
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
                   setKakaoDetail(d);
+                  if (!d) showToast("점포 위치 정보를 가져오지 못했습니다.");
                   setLoadingDetail(false);
                });
             }}
@@ -948,6 +959,16 @@ export default function MapView() {
          <div className="coord-bar">
             📍 위도: {coords.lat} | 경도: {coords.lng}
          </div>
+         {toastMsg && (
+            <div style={{
+               position: "absolute", bottom: "2.5rem", left: "50%", transform: "translateX(-50%)",
+               background: "rgba(30,30,30,0.88)", color: "#fff", borderRadius: "0.5rem",
+               padding: "0.5rem 1.2rem", fontSize: "0.85rem", zIndex: 9999, pointerEvents: "none",
+               whiteSpace: "nowrap",
+            }}>
+               {toastMsg}
+            </div>
+         )}
       </div>
    );
 }
