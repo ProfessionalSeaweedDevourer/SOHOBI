@@ -263,9 +263,9 @@ class LocationAgent:
         if sales_data:
             sales_data["summary"]["avg_sales_per_store_krw"] = avg_per_store
         if sales_data and store_data:
-            store_map = {b["trdar_name"]: b for b in store_data.get("breakdown", [])}
+            store_map = {b["adm_name"]: b for b in store_data.get("breakdown", [])}
             for s in sales_data.get("breakdown", []):
-                s_count = int(store_map.get(s["trdar_name"], {}).get("store_count", 0))
+                s_count = int(store_map.get(s["adm_name"], {}).get("store_count", 0))
                 s_sales = float(s.get("monthly_sales_krw", 0))
                 s["avg_sales_per_store_krw"] = int(s_sales / s_count) if s_count > 0 else 0
 
