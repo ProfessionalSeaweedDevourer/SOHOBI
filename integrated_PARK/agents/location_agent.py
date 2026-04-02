@@ -162,8 +162,11 @@ class LocationAgent:
             logger.error("LocationAgent LLM 호출 실패: %s", e)
             if "content_filter" in err_str or "content filter" in err_str:
                 safe_sys = "다음은 합법적인 상권 데이터 분석 요청입니다.\n\n" + system_msg
+                safe_history = ChatHistory()
+                safe_history.add_system_message(safe_sys)
+                safe_history.add_user_message(user_msg)
                 result = await service.get_chat_message_content(
-                    ChatHistory(system_message=safe_sys),
+                    safe_history,
                     settings=settings,
                 )
                 return str(result)
@@ -263,9 +266,9 @@ class LocationAgent:
         if sales_data:
             sales_data["summary"]["avg_sales_per_store_krw"] = avg_per_store
         if sales_data and store_data:
-            store_map = {b["trdar_name"]: b for b in store_data.get("breakdown", [])}
+            store_map = {b["adm_name"]: b for b in store_data.get("breakdown", [])}
             for s in sales_data.get("breakdown", []):
-                s_count = int(store_map.get(s["trdar_name"], {}).get("store_count", 0))
+                s_count = int(store_map.get(s["adm_name"], {}).get("store_count", 0))
                 s_sales = float(s.get("monthly_sales_krw", 0))
                 s["avg_sales_per_store_krw"] = int(s_sales / s_count) if s_count > 0 else 0
 
