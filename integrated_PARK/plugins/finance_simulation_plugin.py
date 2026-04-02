@@ -196,21 +196,14 @@ class FinanceSimulationPlugin:
 
     def load_initial(self, region: str = None, industry: str = None) -> dict:
         """지역/업종 코드를 받아 매출 데이터를 불러옵니다."""
-        industry_cd = INDUSTRY_CODE_MAP.get(industry, "")
+        industry_cd = INDUSTRY_CODE_MAP.get(industry)
         if _DBWORK_AVAILABLE:
             try:
                 dbwork = DBWork()
-<<<<<<< HEAD
-                if region is None and industry_cd is None:
-                    revenue = dbwork.get_average_sales()
-                else:
-                    revenue = dbwork.get_sales(region, industry_cd)
-=======
                 if region is None and industry is None:
                     revenue = [float(v) for v in dbwork.get_average_sales()]
                 else:
-                    revenue = [float(v) for v in dbwork.get_sales(region, industry)]
->>>>>>> fbca4f0944c61b265e9e743bc372ba16d8e2a51b
+                    revenue = [float(v) for v in dbwork.get_sales(region, industry_cd)]
             except Exception:
                 revenue = [14000000]
         else:
