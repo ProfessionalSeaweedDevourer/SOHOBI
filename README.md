@@ -26,7 +26,7 @@
 
 ## 시스템 아키텍처
 
-```
+```text
 사용자 자연어 입력
         │
         ▼
@@ -35,7 +35,7 @@
 │                                     │
 │  POST /api/v1/query   ─┐            │
 │  POST /api/v1/doc/chat  ├── 진입점  │
-│  POST /api/v1/signoff  ─┘            │
+│  POST /api/v1/signoff  ─┘           │
 │  GET  /api/v1/logs                  │
 └──────────────┬──────────────────────┘
                │
@@ -45,7 +45,8 @@
 │                                     │
 │  1단계: 키워드 매칭 (2개 이상 일치)   │
 │  2단계: LLM 분류 (JSON 응답)         │
-│  → admin / finance / legal / location│
+│  → admin / finance / legal          │
+│    / location / chat                │
 └──────────────┬──────────────────────┘
                │
                ▼
@@ -56,13 +57,14 @@
 │  세션 컨텍스트(profile) 전달          │
 │  에이전트 호출 + 타이밍 측정          │
 │  SSE 스트리밍 지원 (run_stream)      │
-└──┬──────────┬──────────┬────────┬───┘
-   │          │          │        │
-   ▼          ▼          ▼        ▼
-법률·세무   상권 분석   재무 엔진  행정 서류
-에이전트    에이전트    에이전트   에이전트
-   │          │          │        │
-   └──────────┴──────────┴────────┘
+│  chat 도메인은 Sign-off 바이패스     │
+└──┬──────────┬──────────┬──────┬───┬─┘
+   │          │          │      │   │
+   ▼          ▼          ▼      ▼   ▼
+법률·세무   상권 분석   재무 엔진  행정  안내
+에이전트    에이전트    에이전트  에이전트 에이전트
+   │          │          │      │
+   └──────────┴──────────┴──────┘
                     │  draft
                     ▼
    ┌──────────────────────────────────┐
@@ -86,10 +88,11 @@
 
 | 도메인 | 분류 기준 키워드 예시 |
 | ------ | -------------------- |
-| `admin` | 신고, 허가, 인허가, 서류, 위생, 영업신고 |
+| `admin` | 신고, 허가, 인허가, 서류, 위생, 영업신고, 지원금, 보조금 |
 | `finance` | 재무, 대출, 수익, 비용, 투자, 시뮬레이션 |
 | `legal` | 법, 계약, 소송, 보증금, 임대차, 판례 |
 | `location` | 상권, 지역, 홍대, 강남, 잠실, 비교 |
+| `chat` | 안녕, 사용법, 어떻게 사용, 기능 설명 (Sign-off 바이패스) |
 
 ### Sign-off 루브릭
 
@@ -101,38 +104,49 @@
 | `finance` | C1~C5 (공통) + F1~F5 (재무) |
 | `legal` | C1~C5 (공통) + G1~G4 (법무) |
 | `location` | C1~C5 (공통) + S1~S5 (상권) |
+| `chat` | Sign-off 없음 (즉시 반환) |
 
 ### 하위 에이전트 상세
 
+#### 안내 에이전트 (`agents/chat_agent.py`)
+
+- **플러그인**: 없음 (Sign-off 바이패스, 즉시 반환)
+- **동작**: 서비스 안내, 에이전트 사용법 설명, 일상 대화 처리
+- **출력 기준**: 4가지 전문 에이전트의 기능·입력값·예시 질문을 친절하게 안내
+
 #### 법률·세무 에이전트 (`agents/legal_agent.py`)
 
-- **플러그인**: `LegalSearchPlugin` — Azure AI Search로 법령 문서 벡터 검색
+- **플러그인**: `LegalSearchPlugin` — Azure AI Search로 법령 문서 벡터 검색 (top-3)
 - **동작**: 질문 수신 → `LegalSearch-search_legal_docs` 자동 호출 → 검색 결과 인용 후 응답
 - **출력 기준**: 법령명·조항 번호 필수 인용, 면책 문구 3줄 포함, 단정 표현 금지
 - **재처리**: Sign-off C 판정 시 `retry_prompt` 반영하여 전체 응답 재작성
 
 #### 상권 분석 에이전트 (`agents/location_agent.py`)
 
-- **데이터**: Oracle DB (외부 서버, `CommercialRepository`)
+- **데이터**: Azure PostgreSQL Flexible Server (`CommercialRepository`)
 - **동작 2단계**:
   1. LLM으로 질문에서 `{mode, locations, business_type, quarter}` JSON 추출
   2. DB 조회 결과를 LLM에 전달 → 한국어 분석 리포트 생성
-- **모드**: `analyze` (단일 지역) / `compare` (2개 이상 지역 비교)
+- **모드**: `analyze` (단일 지역, 시간대·성별·연령대·유사상권 포함) / `compare` (2개 이상 비교)
 - **기본 분기**: 언급 없으면 서울 2024년 4분기 데이터 사용
 
 #### 재무 엔진 에이전트 (`agents/finance_agent.py`)
 
-- **플러그인**: `FinanceSimulationPlugin` — 몬테카를로 시뮬레이션 Python 실행
-- **동작 3단계 파이프라인**:
+- **플러그인**: `FinanceSimulationPlugin` — 몬테카를로 10,000회 시뮬레이션
+- **동작 4단계 파이프라인**:
   1. LLM으로 질문에서 시뮬레이션 파라미터 JSON 추출 (revenue, cost, rent, initial_investment 등)
-  2. `FinanceSimulationPlugin` 실행 → 수치 결과 + base64 PNG 차트 반환
+  2. `FinanceSimulationPlugin` 실행 → 수치 결과 (P5·P20·P95·손실확률·안전마진) + base64 히스토그램 차트
   3. LLM으로 결과 해설 draft 생성
+  4. 초기 투자 입력 시 투자 회수 시나리오 병합
 - **특이사항**: 미입력 항목은 지역·업종 평균치 적용, 단위 미명시 시 만원 기준 해석
 
 #### 행정 서류 에이전트 (`agents/admin_agent.py`)
 
-- **플러그인**: `SeoulCommercialPlugin` — 지역·업종별 상권 데이터 조회
-- **동작**: 식품위생법 제37조 기반 영업신고 절차 단계별 안내, 서울 상권 데이터 응답에 반영
+- **플러그인**:
+  - `AdminProcedurePlugin` — 법령 검증된 5대 절차 KB (영업신고·위생교육·사업자등록·보건증·소방)
+  - `GovSupportPlugin` — 정부지원사업 하이브리드 검색 RAG (5,600건+, 보조금·대출·신용보증·고용지원·교육컨설팅)
+  - `SeoulCommercialPlugin` — 지역·업종별 상권 데이터 조회
+- **동작**: 식품위생법 기반 영업신고 절차 단계별 안내 + 창업자 상황 맞춤 정부지원사업 추천
 - **출력 기준**: 관할 기관(시·군·구청 위생과) 명시, 처리 기한(3~7영업일) 포함
 - **문서 생성**: `/api/v1/doc/chat` 엔드포인트에서 대화형으로 정보 수집 후 식품영업신고서 PDF 출력
 
@@ -150,10 +164,10 @@
 | RAG 파이프라인 | Azure AI Search |
 | 세션 저장소 | Azure Cosmos DB |
 | 로그 저장소 | Azure Blob Storage |
-| 상권 DB | Oracle DB (외부 서버) |
+| 상권 DB | Azure PostgreSQL Flexible Server |
 | PDF 생성 | ReportLab + pdfkit + Jinja2 |
 | 재무 시각화 | Matplotlib + NumPy |
-| 배포 | Railway (Nixpacks) |
+| 배포 | Azure Container Apps |
 
 ### 프론트엔드 (`frontend/`)
 
@@ -169,30 +183,33 @@
 ## 주요 기능
 
 - **법령 RAG** — 생활법령정보 기반 검색 증강 생성으로 최신 법규 정확 인용
-- **상권 분석** — 서울 2024 Q4 데이터 기반 매출 현황, 유동인구, 실거래가 분석
-- **재무 시뮬레이션** — 몬테카를로 기반 창업 리스크 수치 분석 및 PNG 차트 반환
+- **상권 분석** — 서울 2024 Q4 데이터 기반 매출 현황, 시간대·성별·연령대별 분석, 유사 상권 추천
+- **재무 시뮬레이션** — 몬테카를로 10,000회 기반 창업 리스크 수치 분석 및 히스토그램 차트 반환
+- **정부지원사업 추천** — 창업자 상황 맞춤 보조금·대출·신용보증·고용지원 하이브리드 검색
 - **행정 서류 자동 생성** — 대화형 정보 수집 후 식품영업신고서 PDF 출력
-- **Sign-off 검증** — 응답 품질 사후 평가, 기준 미달 시 최대 3회 재처리
+- **Sign-off 검증** — 응답 품질 사후 평가 (grade A/B/C), 기준 미달 시 최대 3회 재처리
 - **로그 뷰어** — 에이전트 처리 과정 JSONL 로그 실시간 조회
 
 ---
 
 ## 디렉토리 구조
 
-```
+```text
 SOHOBI/
 ├── integrated_PARK/          # 메인 통합 백엔드
 │   ├── api_server.py         # FastAPI 진입점
 │   ├── orchestrator.py       # Semantic Kernel 오케스트레이션
 │   ├── domain_router.py      # 질문 → 에이전트 라우팅
+│   ├── map_router.py         # 지도 데이터 API (행정동 매출·점포수)
 │   ├── agents/               # 하위 에이전트
+│   │   ├── chat_agent.py     # 안내 (Sign-off 바이패스)
 │   │   ├── legal_agent.py    # 법률·세무
 │   │   ├── location_agent.py # 상권 분석
 │   │   ├── finance_agent.py  # 재무 시뮬레이션
 │   │   └── admin_agent.py    # 행정 서류
 │   ├── signoff/              # Sign-off 검증 에이전트
-│   ├── db/                   # SQLite 상권 DB (서울 2024 Q4)
-│   ├── prompts/              # 에이전트 시스템 프롬프트
+│   ├── db/                   # CommercialRepository (Azure PostgreSQL)
+│   ├── prompts/              # 도메인별 Sign-off 루브릭
 │   ├── plugins/              # Semantic Kernel 플러그인
 │   └── requirements.txt
 ├── frontend/                 # React + Vite 프론트엔드
@@ -267,7 +284,7 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 ## 개발 환경
 
 - Azure 테넌트: `soldeskms.onmicrosoft.com`
-- 배포: Railway (`integrated_PARK/railway.json`)
+- 배포: Azure Container Apps
 - 협업: Slack (`mssay2-2.slack.com`), GitHub, Trello
 
 ---
