@@ -141,6 +141,7 @@ function StoreDetailView({
    nearbyStores,
    onStoreSelect,
    onBack,
+   onLandValue,
 }) {
    const cat = getCatStyle(popup.CAT_CD);
    return (
@@ -180,7 +181,7 @@ function StoreDetailView({
                      border: `1px solid ${cat.color}`,
                   }}
                >
-                  {cat.label || popup.CAT_NM}
+                  {popup.MID_CAT_NM || cat.label || popup.CAT_NM}
                </div>
             </div>
             <button
@@ -327,37 +328,76 @@ function StoreDetailView({
                      </div>
                   )}
                </div>
-               <a
-                  href={kakaoDetail.place_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                     marginTop: 12,
-                     display: "inline-flex",
-                     alignItems: "center",
-                     background: "#fee500",
-                     borderRadius: 10,
-                     padding: "7px 14px",
-                     fontSize: 12,
-                     fontWeight: 700,
-                     color: "#111",
-                     textDecoration: "none",
-                  }}
-               >
-                  카카오맵 →
-               </a>
+               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <a
+                     href={kakaoDetail.place_url}
+                     target="_blank"
+                     rel="noreferrer"
+                     style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        background: "#fee500",
+                        borderRadius: 10,
+                        padding: "7px 14px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#111",
+                        textDecoration: "none",
+                     }}
+                  >
+                     카카오맵 →
+                  </a>
+                  {onLandValue && (
+                     <button
+                        onClick={onLandValue}
+                        style={{
+                           display: "inline-flex",
+                           alignItems: "center",
+                           background: "#f0fdf4",
+                           border: "1px solid #86efac",
+                           borderRadius: 10,
+                           padding: "7px 14px",
+                           fontSize: 12,
+                           fontWeight: 700,
+                           color: "#166534",
+                           cursor: "pointer",
+                        }}
+                     >
+                        🏷️ 공시지가
+                     </button>
+                  )}
+               </div>
             </>
          )}
          {!loadingDetail && !kakaoDetail && (
             <div
                style={{
                   marginTop: 10,
-                  fontSize: 11,
-                  color: "#bbb",
-                  textAlign: "center",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                }}
             >
-               카카오맵 정보를 찾을 수 없습니다
+               <span style={{ fontSize: 11, color: "#bbb" }}>
+                  카카오맵 정보 없음
+               </span>
+               {onLandValue && (
+                  <button
+                     onClick={onLandValue}
+                     style={{
+                        background: "#f0fdf4",
+                        border: "1px solid #86efac",
+                        borderRadius: 10,
+                        padding: "6px 12px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#166534",
+                        cursor: "pointer",
+                     }}
+                  >
+                     🏷️ 공시지가
+                  </button>
+               )}
             </div>
          )}
 
@@ -441,9 +481,10 @@ export default function StorePopup({
    onClose,
    nearbyStores = [],
    onStoreSelect,
-   // 클러스터 목록 모드
    clusterStores = null,
    onClusterSelect,
+   onLandValue,
+   hasDongPanel = false,
 }) {
    const [showList, setShowList] = useState(false);
 
@@ -453,11 +494,10 @@ export default function StorePopup({
          <div
             style={{
                position: "absolute",
-               bottom: 50,
-               left: "50%",
-               transform: "translateX(-50%)",
+               bottom: 20,
+               ...(hasDongPanel ? { left: 16 } : { right: 16 }),
                zIndex: 300,
-               width: 320,
+               width: 300,
                background: "#fff",
                borderRadius: 16,
                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
@@ -482,11 +522,10 @@ export default function StorePopup({
          <div
             style={{
                position: "absolute",
-               bottom: 50,
-               left: "50%",
-               transform: "translateX(-50%)",
+               bottom: 20,
+               ...(hasDongPanel ? { left: 16 } : { right: 16 }),
                zIndex: 300,
-               width: 320,
+               width: 300,
                background: "#fff",
                borderRadius: 16,
                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
@@ -511,11 +550,10 @@ export default function StorePopup({
       <div
          style={{
             position: "absolute",
-            bottom: 50,
-            left: "50%",
-            transform: "translateX(-50%)",
+            bottom: 20,
+            ...(hasDongPanel ? { left: 16 } : { right: 16 }),
             zIndex: 300,
-            width: 320,
+            width: 300,
             background: "#fff",
             borderRadius: 16,
             boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
@@ -531,6 +569,7 @@ export default function StorePopup({
             nearbyStores={nearbyStores}
             onStoreSelect={onStoreSelect}
             onBack={clusterStores?.length > 0 ? () => setShowList(true) : null}
+            onLandValue={onLandValue}
          />
       </div>
    );

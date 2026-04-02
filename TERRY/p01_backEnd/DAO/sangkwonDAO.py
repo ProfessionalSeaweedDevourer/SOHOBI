@@ -10,18 +10,6 @@
 #    추후 구현
 # ────────────────────────────────────────────────────────────────
 
-# 위치: p01_backEnd/DAO/sangkwonDAO.py
-#
-# ── 전략 ────────────────────────────────────────────────────────
-#  매출 (SANGKWON_SALES 테이블):
-#    19~25년 CSV를 DBeaver로 Oracle import
-#    서버 시작 시 V_SANGKWON_LATEST 뷰 → pandas DataFrame 메모리 로드
-#    조회: DataFrame 필터링 (1~5ms)
-#
-#  유동인구:
-#    추후 구현
-# ────────────────────────────────────────────────────────────────
-
 import os
 import logging
 import pandas as pd
@@ -29,8 +17,8 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-from .baseDAO import BaseDAO
 
+from .baseDAO import BaseDAO
 
 class SangkwonDAO(BaseDAO):
 
@@ -124,7 +112,9 @@ class SangkwonDAO(BaseDAO):
         if not code_prefix:
             return []
 
-        df_gu = self._df[self._df["adm_cd"].astype(str).str.startswith(code_prefix)]
+        df_gu = self._df[
+            self._df["adm_cd"].astype(str).str.startswith(code_prefix)
+        ]
         return df_gu.to_dict("records")
 
     def getSalesByDong(self, dong: str, gu: str = "") -> dict:
@@ -182,7 +172,7 @@ class SangkwonDAO(BaseDAO):
         adstrd_cd = str(adstrd_cd).strip()
         # Oracle NUMBER → float → '1115051000.0' 형태 정리
         db_codes = self._df["adm_cd"].apply(
-            lambda x: str(int(float(x))) if str(x).endswith(".0") else str(x)
+            lambda x: str(int(float(x))) if str(x).endswith('.0') else str(x)
         )
         df = self._df[db_codes == adstrd_cd]
         if df.empty and len(adstrd_cd) == 8:
@@ -190,12 +180,11 @@ class SangkwonDAO(BaseDAO):
         if df.empty and len(adstrd_cd) == 10:
             df = self._df[db_codes == adstrd_cd[:8]]
         sample = db_codes.unique()[:5].tolist()
-        logger.info(
-            f"[SangkwonDAO] getSalesByCode: adstrd_cd={adstrd_cd} → {'있음' if not df.empty else '없음'} / DB코드샘플={sample}"
-        )
+        logger.info(f"[SangkwonDAO] getSalesByCode: adstrd_cd={adstrd_cd} → {'있음' if not df.empty else '없음'} / DB코드샘플={sample}")
         if df.empty:
             return None
         return df.iloc[0].to_dict()
+
 
     def getSalesByCodeAndQuarter(self, adstrd_cd: str, quarter: str) -> dict:
         """특정 분기 단건 조회 (DB 직접)"""
@@ -222,7 +211,7 @@ class SangkwonDAO(BaseDAO):
             try:
                 cur.execute(sql, {"cd": adstrd_cd, "qtr": quarter})
                 cols = [d[0].lower() for d in cur.description]
-                row = cur.fetchone()
+                row  = cur.fetchone()
                 return dict(zip(cols, row)) if row else None
             finally:
                 self._close(con, cur)
@@ -253,26 +242,26 @@ class SangkwonDAO(BaseDAO):
             try:
                 cur.execute(sql, {"cd": adstrd_cd})
                 cols = [d[0].lower() for d in cur.description]
-                row = cur.fetchone()
+                row  = cur.fetchone()
                 if not row:
                     return None
-                d = dict(zip(cols, row))
-                cnt = d["qtr_cnt"] or 1
+                d    = dict(zip(cols, row))
+                cnt  = d["qtr_cnt"] or 1
                 # 분기 수로 나눠서 평균
                 return {
-                    "adm_cd": adstrd_cd,
-                    "quarter": "avg",
-                    "qtr_cnt": cnt,
-                    "tot_sales_amt": round((d["tot_sales_sum"] or 0) / cnt),
-                    "tot_selng_co": round((d["tot_selng_sum"] or 0) / cnt),
-                    "ml_sales_amt": round((d["ml_sales_sum"] or 0) / cnt),
-                    "fml_sales_amt": round((d["fml_sales_sum"] or 0) / cnt),
+                    "adm_cd":         adstrd_cd,
+                    "quarter":        "avg",
+                    "qtr_cnt":        cnt,
+                    "tot_sales_amt":  round((d["tot_sales_sum"]  or 0) / cnt),
+                    "tot_selng_co":   round((d["tot_selng_sum"]  or 0) / cnt),
+                    "ml_sales_amt":   round((d["ml_sales_sum"]   or 0) / cnt),
+                    "fml_sales_amt":  round((d["fml_sales_sum"]  or 0) / cnt),
                     "mdwk_sales_amt": round((d["mdwk_sales_sum"] or 0) / cnt),
-                    "wkend_sales_amt": round((d["wkend_sales_sum"] or 0) / cnt),
-                    "age20_amt": round((d["age20_sum"] or 0) / cnt),
-                    "age30_amt": round((d["age30_sum"] or 0) / cnt),
-                    "age40_amt": round((d["age40_sum"] or 0) / cnt),
-                    "age50_amt": round((d["age50_sum"] or 0) / cnt),
+                    "wkend_sales_amt":round((d["wkend_sales_sum"]or 0) / cnt),
+                    "age20_amt":      round((d["age20_sum"]      or 0) / cnt),
+                    "age30_amt":      round((d["age30_sum"]      or 0) / cnt),
+                    "age40_amt":      round((d["age40_sum"]      or 0) / cnt),
+                    "age50_amt":      round((d["age50_sum"]      or 0) / cnt),
                 }
             finally:
                 self._close(con, cur)
@@ -321,17 +310,54 @@ class SangkwonDAO(BaseDAO):
             logger.error(f"[SangkwonDAO] 업종별 조회 실패: {e}")
             return []
 
+
+    def getSalesByCatCd(self, adstrd_cd: str, cat_cd: str, quarter: str = "") -> list:
+        """CAT_CD(대분류) 기준 소분류별 매출 조회 - CategoryPanel 연동용"""
+        qtr_cond = "AND ss.base_yr_qtr_cd = :qtr" if quarter else                    "AND ss.base_yr_qtr_cd = (SELECT MAX(base_yr_qtr_cd) FROM SANGKWON_SALES)"
+        sql = f"""
+            SELECT
+                ss.svc_induty_cd,
+                m.svc_nm        AS svc_induty_nm,
+                SUM(ss.tot_sales_amt)  AS tot_sales_amt,
+                SUM(ss.ml_sales_amt)   AS ml_sales_amt,
+                SUM(ss.fml_sales_amt)  AS fml_sales_amt,
+                SUM(ss.mdwk_sales_amt) AS mdwk_sales_amt,
+                SUM(ss.wkend_sales_amt) AS wkend_sales_amt,
+                SUM(ss.age20_amt) AS age20_amt,
+                SUM(ss.age30_amt) AS age30_amt,
+                SUM(ss.age40_amt) AS age40_amt,
+                SUM(ss.age50_amt) AS age50_amt
+            FROM SANGKWON_SALES ss
+            JOIN SVC_INDUTY_MAP m ON ss.svc_induty_cd = m.svc_induty_cd
+            WHERE ss.adm_cd = :cd
+              AND m.cat_cd = :cat_cd
+              {qtr_cond}
+            GROUP BY ss.svc_induty_cd, m.svc_nm
+            ORDER BY tot_sales_amt DESC NULLS LAST
+        """
+        try:
+            con, cur = self._db_con()
+            try:
+                params = {"cd": adstrd_cd, "cat_cd": cat_cd}
+                if quarter:
+                    params["qtr"] = quarter
+                cur.execute(sql, params)
+                cols = [d[0].lower() for d in cur.description]
+                rows = cur.fetchall()
+                return [dict(zip(cols, r)) for r in rows]
+            finally:
+                self._close(con, cur)
+        except Exception as e:
+            logger.error(f"[SangkwonDAO] getCatCd 조회 실패: {e}")
+            return []
+
     def getSalesBySvcCd(self, adstrd_cd: str, quarter: str = "") -> list:
         """
         행정동 SVC_CD(대분류) 기준 매출 합산
         - SVC_INDUTY_MAP JOIN → SVC_CD 그룹핑
         - quarter 없으면 최신 분기
         """
-        qtr_cond = (
-            "= :qtr"
-            if quarter
-            else "= (SELECT MAX(base_yr_qtr_cd) FROM SANGKWON_SALES)"
-        )
+        qtr_cond = "= :qtr" if quarter else "= (SELECT MAX(base_yr_qtr_cd) FROM SANGKWON_SALES)"
         sql = f"""
             SELECT
                 m.svc_cd,
@@ -363,9 +389,7 @@ class SangkwonDAO(BaseDAO):
                 cols = [d[0].lower() for d in cur.description]
                 rows = cur.fetchall()
                 result = [dict(zip(cols, r)) for r in rows]
-                logger.info(
-                    f"[SangkwonDAO] getSalesBySvcCd: adm_cd={adstrd_cd} → {len(result)}개 업종"
-                )
+                logger.info(f"[SangkwonDAO] getSalesBySvcCd: adm_cd={adstrd_cd} → {len(result)}개 업종")
                 return result
             finally:
                 self._close(con, cur)
@@ -373,21 +397,40 @@ class SangkwonDAO(BaseDAO):
             logger.error(f"[SangkwonDAO] getSalesBySvcCd 실패: {e}")
             return []
 
+
     def searchDong(self, q: str) -> list:
         """
-        행정동 이름 LIKE 검색
-        - SANGKWON_SALES에서 adm_cd, adm_nm 검색
-        - q: 검색어 (부분 일치)
+        행정동/법정동 이름 LIKE 검색
+        - 행정동명(adm_nm) + 법정동명(STORE_SEOUL.법정동명) 모두 검색
+        - 법정동 검색 시 해당 행정동 코드로 매핑
         """
         try:
-            sql = """
-                SELECT DISTINCT adm_cd, adm_nm
+            # 1. 행정동 검색 (SANGKWON_SALES 기준)
+            sql_adm = """
+                SELECT DISTINCT adm_cd, adm_nm, NULL AS legal_nm
                 FROM SANGKWON_SALES
                 WHERE adm_nm LIKE :q
                 ORDER BY adm_nm
             """
-            rows = self._query(sql, {"q": f"%{q}%"})
-            result = [{"adm_cd": r[0], "adm_nm": r[1]} for r in rows]
+            rows_adm = self._query(sql_adm, {"q": f"%{q}%"})
+            result = [{"adm_cd": r[0], "adm_nm": r[1], "legal_nm": None, "type": "행정동"} for r in rows_adm]
+
+            # 2. 법정동 검색 (STORE_SEOUL 기준 → ADM_CD 매핑)
+            sql_legal = """
+                SELECT DISTINCT ADM_CD, ADM_NM, 법정동명
+                FROM STORE_SEOUL
+                WHERE 법정동명 LIKE :q
+                  AND ADM_CD IS NOT NULL
+                ORDER BY ADM_NM
+                FETCH FIRST 20 ROWS ONLY
+            """
+            rows_legal = self._query(sql_legal, {"q": f"%{q}%"})
+            existing_cds = {r["adm_cd"] for r in result}
+            for r in rows_legal:
+                if r[0] not in existing_cds:
+                    result.append({"adm_cd": r[0], "adm_nm": r[1], "legal_nm": r[2], "type": "법정동"})
+                    existing_cds.add(r[0])
+
             logger.info(f"[SangkwonDAO] searchDong: '{q}' → {len(result)}개")
             return result
         except Exception as e:
