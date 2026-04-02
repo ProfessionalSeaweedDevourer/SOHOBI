@@ -22,16 +22,17 @@ class DBWork:
             con = self._get_connection()
             cur = con.cursor()
 
-            region = "%" if region is None else region
-            industry = "%" if industry is None else industry
+            if not region or not industry:
+                return [17000000]
 
-            sql = """
+            placeholders = ",".join(["%s"] * len(region))
+            sql = f"""
                 SELECT tot_sales_amt
                 FROM sangkwon_sales
-                WHERE adm_cd LIKE %(region)s
-                AND svc_induty_cd LIKE %(industry)s
+                WHERE adm_cd IN ({placeholders})
+                AND svc_induty_cd = %s
             """
-            cur.execute(sql, {"region": region, "industry": industry})
+            cur.execute(sql, region + [industry])
             return [amt for (amt,) in cur]
 
         except Exception as e:
