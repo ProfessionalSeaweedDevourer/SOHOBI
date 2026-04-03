@@ -3,6 +3,7 @@
 출처: PARK/Code_EJP/domain_router.py (변경 없음)
 """
 
+import asyncio
 import json
 
 from semantic_kernel.contents import ChatHistory
@@ -54,7 +55,10 @@ async def _llm_classify(question: str) -> dict:
     history.add_system_message(_SYSTEM_PROMPT)
     history.add_user_message(question)
     try:
-        result = await chat_service.get_chat_message_content(chat_history=history, settings=settings)
+        result = await asyncio.wait_for(
+            chat_service.get_chat_message_content(chat_history=history, settings=settings),
+            timeout=30.0,
+        )
         parsed = json.loads(str(result))
         return parsed if parsed.get("domain") in ("admin", "finance", "legal", "location", "chat") else _FALLBACK
     except Exception:
