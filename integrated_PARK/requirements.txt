@@ -2,36 +2,36 @@
 # Python 3.12
 
 # AI orchestration
-semantic-kernel==1.40.0
-openai==2.26.0
+semantic-kernel==1.41.1
+openai==2.30.0
 
 # API server
-fastapi==0.115.12
-uvicorn[standard]==0.34.2
+fastapi==0.135.3
+uvicorn[standard]==0.42.0
 pydantic==2.11.5
 
 # Azure
-azure-identity==1.25.2
+azure-identity==1.25.3
 azure-search-documents==11.6.0
-azure-core==1.33.0
-azure-cosmos==4.9.0              # 세션 Stateless 저장소
+azure-core==1.39.0
+azure-cosmos==4.15.0              # 세션 Stateless 저장소
 azure-storage-blob==12.25.1      # 로그 영구 저장소
 
 # PDF generation
-reportlab==4.2.5
-pypdf==5.4.0
+reportlab==4.4.10
+pypdf==6.9.2
 pdfkit==1.0.0
 jinja2==3.1.6
 
 # Finance visualization
-matplotlib==3.10.1
-numpy==2.2.3
+matplotlib==3.10.8
+numpy==2.4.4
 
 # PostgreSQL DB (상권 에이전트 — Azure PostgreSQL Flexible Server)
 psycopg2-binary==2.9.9
 
 # 유틸리티
 python-dotenv==1.2.2
-requests==2.32.3
-chardet==5.2.0
-aiohttp==3.13.3
+requests==2.33.1
+chardet==7.4.0.post2
+aiohttp==3.13.5
