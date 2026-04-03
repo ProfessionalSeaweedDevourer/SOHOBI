@@ -32,6 +32,8 @@ Respond ONLY in JSON: {"domain": "...", "confidence": 0.0~1.0, "reasoning": "...
 
 _FALLBACK = {"domain": "admin", "confidence": 0.3, "reasoning": "LLM 파싱 실패 — 기본값 적용"}
 
+_PRIVACY_KEYWORDS = ["개인정보"]
+
 
 def _keyword_classify(question: str) -> dict | None:
     counts = {d: sum(kw in question for kw in kws) for d, kws in KEYWORDS.items()}
@@ -60,5 +62,7 @@ async def _llm_classify(question: str) -> dict:
 
 
 async def classify(question: str) -> dict:
+    if any(kw in question for kw in _PRIVACY_KEYWORDS):
+        return {"domain": "chat", "confidence": 1.0, "reasoning": "개인정보처리방침 질문 — 안내 에이전트로 라우팅"}
     result = _keyword_classify(question)
     return result if result else await _llm_classify(question)
