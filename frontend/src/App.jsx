@@ -8,6 +8,7 @@ import LogViewer from "./pages/LogViewer";
 import DevLogin from "./pages/DevLogin";
 import MapPage from "./pages/MapPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Features from "./pages/Features";
 import RequireDevAuth from "./components/RequireDevAuth";
 import { CursorGlow } from "./components/CursorGlow";
 import { ToastProvider } from "./components/ToastProvider";
@@ -23,6 +24,7 @@ function AnimatedRoutes() {
         <Route path="/user" element={<UserChat />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/features" element={<Features />} />
         <Route path="/dev/login" element={<DevLogin />} />
         <Route path="/dev" element={<RequireDevAuth><DevChat /></RequireDevAuth>} />
         <Route path="/dev/logs" element={<RequireDevAuth><LogViewer /></RequireDevAuth>} />

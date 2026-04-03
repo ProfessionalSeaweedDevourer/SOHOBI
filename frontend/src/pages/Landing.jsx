@@ -100,10 +100,10 @@ export default function Landing() {
                 </Button>
               </motion.div>
             </Link>
-            <Link to="/dev/logs">
+            <Link to="/features">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button size="lg" variant="outline" className="px-10 py-6 text-lg glass border-2 shadow-elevated">
-                  데모 로그 보기
+                  기능 둘러보기
                 </Button>
               </motion.div>
             </Link>
