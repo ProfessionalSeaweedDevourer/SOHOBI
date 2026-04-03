@@ -469,13 +469,15 @@ INDUSTRY_CODE_MAP = {
 def _make_pool():
     return pool.ThreadedConnectionPool(
         minconn=2,
-        maxconn=5,
+        maxconn=20,
         host=os.getenv("PG_HOST"),
         port=int(os.getenv("PG_PORT", "5432")),
         dbname=os.getenv("PG_DB"),
         user=os.getenv("PG_USER"),
         password=os.getenv("PG_PASSWORD"),
         sslmode=os.getenv("PG_SSLMODE", "require"),
+        connect_timeout=10,
+        options="-c statement_timeout=15000",
     )
 
 
