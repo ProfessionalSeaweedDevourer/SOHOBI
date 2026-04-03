@@ -54,7 +54,7 @@ async def extract_financial_vars(text: str) -> dict:
         from semantic_kernel.contents import ChatHistory
 
         kernel = get_kernel()
-        service: AzureChatCompletion = kernel.get_service("sign_off")
+        service: AzureChatCompletion = kernel.get_service("finance")
         history = ChatHistory()
         history.add_user_message(_EXTRACT_PROMPT.format(text=text))
         settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=300)
