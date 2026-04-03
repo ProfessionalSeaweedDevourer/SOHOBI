@@ -31,6 +31,7 @@ function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
 
 export default function LayerPanel({
    map,
+   mapReady,
    vworldKey,
    wmsLayerRef,
    landmarkLayerRef,
@@ -49,7 +50,7 @@ export default function LayerPanel({
    // 초기 레이어 자동 추가
    const initDoneRef = React.useRef(false);
    React.useEffect(() => {
-      if (!map || initDoneRef.current) return;
+      if (!map || !mapReady || initDoneRef.current) return;
       initDoneRef.current = true;
       // 지적도 초기 ON
       const layer = new TileLayer({
@@ -69,7 +70,7 @@ export default function LayerPanel({
             transition: 0,
          }),
          opacity: 0.7,
-         zIndex: 200,
+         zIndex: 50,
       });
       layer.set("name", "cadastral");
       map.addLayer(layer);
@@ -78,7 +79,7 @@ export default function LayerPanel({
       map.addLayer(
          makeWmsLayer("lt_p_dgtouristinfo", "tourist_info", 215, vworldKey),
       );
-   }, [map]); // eslint-disable-line
+   }, [map, mapReady]); // eslint-disable-line
 
    // ── 지적도 ──────────────────────────────────────────────────
    const toggleCadastral = () => {
@@ -106,7 +107,7 @@ export default function LayerPanel({
                transition: 0,
             }),
             opacity: 0.7,
-            zIndex: 200,
+            zIndex: 50,
          });
          layer.set("name", "cadastral");
          map.addLayer(layer);

@@ -7,7 +7,7 @@ import VectorSource from "ol/source/Vector";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import { fromLonLat } from "ol/proj";
-import { Style, Circle as CircleStyle, Fill, Stroke } from "ol/style";
+import { Style, Circle as CircleStyle, Fill, Stroke, Text } from "ol/style";
 
 const MAP_URL = import.meta.env.VITE_MAP_URL || "/map-api";
 
@@ -19,8 +19,8 @@ const TYPE_STYLE = {
    school: { color: "#10b981", label: "학교" }, // 학교 - 초록
 };
 
-function makeStyle(typeKey, selected = false) {
-   const { color } = TYPE_STYLE[typeKey] || { color: "#999" };
+function makeStyle(typeKey, selected = false, showLabel = true) {
+   const { color, label } = TYPE_STYLE[typeKey] || { color: "#999", label: "" };
    return new Style({
       image: new CircleStyle({
          radius: selected ? 10 : 7,
@@ -30,6 +30,16 @@ function makeStyle(typeKey, selected = false) {
             width: selected ? 3 : 2,
          }),
       }),
+      text:
+         showLabel && label
+            ? new Text({
+                 text: label,
+                 offsetY: -16,
+                 font: "bold 10px sans-serif",
+                 fill: new Fill({ color }),
+                 stroke: new Stroke({ color: "#fff", width: 3 }),
+              })
+            : null,
    });
 }
 
@@ -61,6 +71,7 @@ export function useLandmarkLayer(mapInstance) {
       const layer = new VectorLayer({
          source: new VectorSource({ features }),
          zIndex,
+         minZoom: 15, // 줌 15 미만이면 랜드마크 숨김
       });
       map.addLayer(layer);
       return layer;
@@ -74,16 +85,22 @@ export function useLandmarkLayer(mapInstance) {
             ? `${MAP_URL}/map/landmarks?adm_cd=${adm_cd}&types=12,14`
             : `${MAP_URL}/map/landmarks?types=12,14`;
          const json = await (await fetch(url)).json();
-         const features = makeFeatures(json.landmarks || [], "12");
-         // 타입별 스타일 적용
-         features.forEach((f) => {
-            const d = f.get("lmData");
-            f.setStyle(makeStyle(String(d.content_type_id)));
-         });
+         const features = (json.landmarks || [])
+            .filter((d) => d.lng && d.lat)
+            .map((d) => {
+               const typeKey = String(d.content_type_id);
+               const f = new Feature({
+                  geometry: new Point(fromLonLat([d.lng, d.lat])),
+               });
+               f.set("lmData", d);
+               f.set("lmType", typeKey); // 올바른 타입 저장
+               f.setStyle(makeStyle(typeKey));
+               return f;
+            });
          if (landmarkLayerRef.current) {
             mapInstance.current?.removeLayer(landmarkLayerRef.current);
          }
-         landmarkLayerRef.current = addLayer(features, 210);
+         landmarkLayerRef.current = addLayer(features, 100);
       } catch (e) {
          console.error("[useLandmarkLayer] loadLandmarks:", e);
       }
@@ -98,7 +115,7 @@ export function useLandmarkLayer(mapInstance) {
          if (festivalLayerRef.current) {
             mapInstance.current?.removeLayer(festivalLayerRef.current);
          }
-         festivalLayerRef.current = addLayer(features, 211);
+         festivalLayerRef.current = addLayer(features, 101);
       } catch (e) {
          console.error("[useLandmarkLayer] loadFestivals:", e);
       }
@@ -120,7 +137,7 @@ export function useLandmarkLayer(mapInstance) {
          if (schoolLayerRef.current) {
             mapInstance.current?.removeLayer(schoolLayerRef.current);
          }
-         schoolLayerRef.current = addLayer(features, 212);
+         schoolLayerRef.current = addLayer(features, 102);
       } catch (e) {
          console.error("[useLandmarkLayer] loadSchools:", e);
       }
