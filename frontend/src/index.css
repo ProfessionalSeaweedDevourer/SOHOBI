@@ -13,3 +13,16 @@
 .prose-response h1, .prose-response h2, .prose-response h3 {
   font-weight: 700; margin: 1rem 0 0.5rem;
 }
+.prose-response table {
+  border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.82rem;
+}
+.prose-response table th,
+.prose-response table td {
+  border: 1px solid var(--border); padding: 0.4rem 0.65rem; text-align: left;
+}
+.prose-response table th {
+  background: rgba(8,145,178,0.08); font-weight: 600;
+}
+.prose-response table tbody tr:nth-child(even) {
+  background: rgba(0,0,0,0.025);
+}

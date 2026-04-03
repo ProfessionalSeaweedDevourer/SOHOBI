@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import SimulationChart from "./SimulationChart";
 
 const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석", chat: "안내" };
@@ -83,14 +84,14 @@ export default function ResponseCard({ question, domain, status, grade, confiden
                     <details className="mt-3">
                       <summary className="cursor-pointer text-xs text-muted-foreground">최종 draft 보기</summary>
                       <div className="mt-2 prose-response">
-                        <ReactMarkdown>{draft}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{draft}</ReactMarkdown>
                       </div>
                     </details>
                   )}
                 </div>
               ) : (
                 <>
-                  <ReactMarkdown>{draft}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{draft}</ReactMarkdown>
                   {chart && typeof chart === "object" && (
                     <SimulationChart chartData={chart} />
                   )}
