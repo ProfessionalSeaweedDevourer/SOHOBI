@@ -1,4 +1,5 @@
 import os
+import threading
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
@@ -12,13 +13,16 @@ _TOKEN_PROVIDER = get_bearer_token_provider(
     "https://cognitiveservices.azure.com/.default",
 )
 
+_kernel: sk.Kernel | None = None
+_kernel_lock = threading.Lock()
+
 
 def _deployment(specific_var: str) -> str:
     """에이전트별 env var → 없으면 공통 AZURE_DEPLOYMENT_NAME으로 fallback"""
     return os.getenv(specific_var) or os.getenv("AZURE_DEPLOYMENT_NAME")
 
 
-def get_kernel() -> sk.Kernel:
+def _build_kernel() -> sk.Kernel:
     kernel = sk.Kernel()
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -44,6 +48,15 @@ def get_kernel() -> sk.Kernel:
             )
         )
     return kernel
+
+
+def get_kernel() -> sk.Kernel:
+    global _kernel
+    if _kernel is None:
+        with _kernel_lock:
+            if _kernel is None:
+                _kernel = _build_kernel()
+    return _kernel
 
 
 def get_signoff_client() -> openai.AsyncAzureOpenAI:
