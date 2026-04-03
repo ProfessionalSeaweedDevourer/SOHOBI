@@ -753,10 +753,13 @@ export default function MapView() {
                      // 다른 동 - 마커 초기화 후 새로 조회
                      clearMarkers();
                      setNearbyCount(null);
-                     fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`)
+                     const _url = `${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`;
+                     console.log("[stores-by-dong] 요청:", _url);
+                     fetch(_url)
                         .then((r) => r.json())
                         .then((d) => {
                            const stores = d.stores || [];
+                           console.log(`[stores-by-dong] 응답: count=${stores.length}, adm_cd=${_admCd}`);
                            allStoresRef.current = stores;
                            setNearbyCount(stores.length);
                            const counts = {};
@@ -767,7 +770,7 @@ export default function MapView() {
                            setCatCounts(counts);
                            drawMarkers(stores, visibleCatsRef.current);
                         })
-                        .catch(() => {});
+                        .catch((e) => console.error("[stores-by-dong] 오류:", e));
                   }
                   // none 모드면 패널 조회 스킵
                   if (_mode === "none") {
