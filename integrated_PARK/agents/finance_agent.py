@@ -29,6 +29,9 @@ from semantic_kernel.functions import kernel_function
 
 from plugins.finance_simulation_plugin import FinanceSimulationPlugin
 
+from difflib import get_close_matches
+from db.repository import AREA_MAP, INDUSTRY_CODE_MAP
+
 # ── 워크플로우 프롬프트 (CHANG/skills/investment-simulation.yaml 인라인) ──
 
 _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 질문을 했습니다:
@@ -38,6 +41,10 @@ _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 질문을 했습니다:
 단, 숫자에 단위가 명시되지 않은 경우 기본적으로 '만원' 단위로 해석하세요.
 예: "매출 700" → 700만원 → 7,000,000원
 
+- location: 지역명 (예: "홍대", "강남", "신촌").
+- business_type: 업종명. 반드시 아래 목록 중 하나로 정규화해서 출력하세요.
+  ["한식", "중식", "일식", "양식", "제과점", "패스트푸드", "치킨", "분식", "호프", "카페", "편의점"]
+  목록에 없는 업종이거나 언급이 없으면 null.
 - revenue: 예상 월매출 데이터 리스트 (숫자 배열, 원 단위). 사용자가 단일 값만 언급한 경우 반드시 1개짜리 배열로 작성.
 - cost: 예상 월 원가 (숫자, 원 단위)
 - salary: 직원 급여 (숫자, 원 단위). 시급인 경우 시급 금액만 입력.
@@ -129,14 +136,38 @@ class FinanceAgent:
                 f"AI 응답 생성 중 오류가 발생했습니다: {e}"
             ) from e
 
-    async def _extract_params(self, question: str) -> dict:
+    async def _extract_params(self, question: str) -> tuple[dict, dict]:
         raw = await self._call_llm(_PARAM_EXTRACT_PROMPT.format(user_input=question))
         clean = re.sub(r"^```json\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
         try:
-            current = json.loads(clean)
+            result = json.loads(clean)
         except json.JSONDecodeError:
-            current = {}
-        return current  # ← LLM 추출값만 반환
+            result = {}
+
+        # 지역 자연어 → 행정코드 배열
+        raw_location = result.pop("location", None)
+        if raw_location:
+            key = raw_location if raw_location in AREA_MAP else (
+                get_close_matches(raw_location, AREA_MAP.keys(), n=1, cutoff=0.6) or [None]
+            )[0]
+            adm_codes = AREA_MAP.get(key)
+        else:
+            adm_codes = None
+
+        # 업종 자연어 → INDUSTRY_CODE_MAP 키값, prompt로 작성되었으나 추가 확인방안
+        raw_business = result.pop("business_type", None)
+        if raw_business:
+            business_type = raw_business if raw_business in INDUSTRY_CODE_MAP else (
+                get_close_matches(raw_business, INDUSTRY_CODE_MAP.keys(), n=1, cutoff=0.5) or [None]
+            )[0]
+        else:
+            business_type = None
+
+        context = {
+            "adm_codes": adm_codes,       # ["11440660"] 또는 None
+            "business_type": business_type, # "카페" 또는 None
+        }
+        return result, context
 
     async def _call_llm_with_history(
         self, prompt: str, prior_history: list[dict] | None = None
@@ -177,9 +208,13 @@ class FinanceAgent:
     ) -> str:
         # ── 1단계: 파라미터 추출 ─────────────────────────────
         # current_params 없으면 None 기반 초기값 사용
-        ctx = context or {} # 지역/업종 정보 데이터 반영을 위해 선호출
+        ctx = context or {}
+        extracted, extracted_ctx = await self._extract_params(question)
+        if extracted_ctx.get("adm_codes"):
+            ctx["adm_codes"] = extracted_ctx["adm_codes"]
+        if extracted_ctx.get("business_type"):
+            ctx["business_type"] = extracted_ctx["business_type"]
         base = current_params or self._sim.load_initial(ctx.get("adm_codes"), ctx.get("business_type"))
-        extracted = await self._extract_params(question)
         variables = self._sim.merge_json(base, extracted)
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]

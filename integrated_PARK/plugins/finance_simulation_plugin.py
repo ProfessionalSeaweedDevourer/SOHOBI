@@ -194,7 +194,7 @@ class FinanceSimulationPlugin:
             "safety_margin":     round(safety_margin, 4),
         }
 
-    def load_initial(self, region: str = None, industry: str = None) -> dict:
+    def load_initial(self, region: list = None, industry: str = None) -> dict:
         """지역/업종 코드를 받아 매출 데이터를 불러옵니다."""
         industry_cd = INDUSTRY_CODE_MAP.get(industry)
         if _DBWORK_AVAILABLE:
