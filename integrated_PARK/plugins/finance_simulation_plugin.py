@@ -65,7 +65,7 @@ class FinanceSimulationPlugin:
         """몬테카를로 결과를 프론트엔드 chart.js용 JSON bins로 반환."""
         min_val, max_val = min(results), max(results)
         bin_count = 40
-        bin_size = (max_val - min_val) / bin_count
+        bin_size = (max_val - min_val) / bin_count if max_val != min_val else 1
 
         bins = []
         for i in range(bin_count):
