@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { isDevAuthenticated } from "../utils/devAuth";
 import { AnimatedBackground } from "../components/AnimatedBackground";
@@ -86,6 +86,22 @@ export default function Home() {
           </ScrollReveal>
         ))}
       </div>
+
+      <p className="mt-10 text-xs text-muted-foreground text-center relative z-10">
+        <Link
+          to="/changelog"
+          className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2"
+        >
+          업데이트 로그
+        </Link>
+        <span className="mx-2 opacity-30">·</span>
+        <Link
+          to="/privacy"
+          className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2"
+        >
+          개인정보처리방침
+        </Link>
+      </p>
     </div>
   );
 }
