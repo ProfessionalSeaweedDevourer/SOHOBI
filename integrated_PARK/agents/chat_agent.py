@@ -1,7 +1,7 @@
 """
 ChatAgent: 일상 대화·서비스 안내 전용 에이전트
 - SignOff 없이 즉시 반환 (orchestrator에서 바이패스)
-- 플러그인 없음, 기존 "sign_off" AzureChatCompletion 서비스 재사용
+- 플러그인 없음, "chat" AzureChatCompletion 서비스 사용
 """
 
 from semantic_kernel import Kernel
