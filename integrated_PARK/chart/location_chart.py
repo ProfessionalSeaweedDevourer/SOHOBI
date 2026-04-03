@@ -18,9 +18,9 @@ try:
     from matplotlib.ticker import FuncFormatter
     import numpy as np
 
-    # 한글 폰트 설정 (NAM/malgun.ttf 번들 폰트 또는 시스템 폰트)
+    # 한글 폰트 설정 (integrated_PARK/nam/malgun.ttf 번들 폰트 또는 시스템 폰트)
     _BUNDLED_FONT = os.path.join(
-        os.path.dirname(__file__), "..", "..", "NAM", "malgun.ttf"
+        os.path.dirname(__file__), "..", "nam", "malgun.ttf"
     )
     if os.path.exists(_BUNDLED_FONT):
         fm.fontManager.addfont(_BUNDLED_FONT)

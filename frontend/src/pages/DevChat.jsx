@@ -80,6 +80,7 @@ export default function DevChat() {
           signoffMs:        finalResult.signoff_ms,
           rejectionHistory: finalResult.rejection_history || [],
           chart:            finalResult.chart || null,
+          charts:           finalResult.charts || [],
         },
       ]);
       if (finalResult.updated_params) setLatestParams(finalResult.updated_params);
@@ -144,6 +145,7 @@ export default function DevChat() {
                 draft={msg.draft}
                 retryCount={msg.retryCount}
                 chart={msg.chart}
+                charts={msg.charts || []}
                 displayMode="full"
               />
               {msg.status !== "error" && (

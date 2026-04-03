@@ -65,7 +65,7 @@ class FinanceSimulationPlugin:
         """몬테카를로 결과를 프론트엔드 chart.js용 JSON bins로 반환."""
         min_val, max_val = min(results), max(results)
         bin_count = 40
-        bin_size = (max_val - min_val) / bin_count
+        bin_size = (max_val - min_val) / bin_count if max_val != min_val else 1
 
         bins = []
         for i in range(bin_count):
@@ -170,22 +170,34 @@ class FinanceSimulationPlugin:
         months = math.ceil(initial_investment / avg_profit)
         return {"recoverable": True, "months": months}
 
-    def breakeven_analysis(self, fixed_cost: float, variable_cost_ratio: float) -> dict:
-        breakeven_revenue = fixed_cost / (1 - variable_cost_ratio)
-        return {
-            "breakeven_revenue": round(breakeven_revenue),
-            "breakeven_daily":   round(breakeven_revenue / 30),
-        }
-
     def breakeven_analysis_mc(
         self,
         avg_revenue: float,
         avg_net_profit: float,
         variable_cost: float,
     ) -> dict:
+        """
+        MC시뮬레이션 결과를 토대로 손익분기 및 안전마진 역산 
+        평균매출(avg_revenue)이 0 이하 및 매출보다 변동비가 큰 경우 None 반환
+        """
+        if avg_revenue <= 0:
+            return {
+                "breakeven_revenue": None,
+                "breakeven_daily": None,
+                "safety_margin": None,
+            }
+
         avg_total_cost = avg_revenue - avg_net_profit
         variable_cost_ratio = variable_cost / avg_revenue
         fixed_cost = avg_total_cost - variable_cost
+
+        if variable_cost_ratio >= 1:
+            return {
+                "breakeven_revenue": None,
+                "breakeven_daily": None,
+                "safety_margin": None,
+            }
+
         breakeven_revenue = fixed_cost / (1 - variable_cost_ratio)
         safety_margin = (avg_revenue - breakeven_revenue) / avg_revenue
         return {
@@ -205,9 +217,9 @@ class FinanceSimulationPlugin:
                 else:
                     revenue = [float(v) for v in dbwork.get_sales(region, industry_cd)]
             except Exception:
-                revenue = [14000000]
+                revenue = [170000000]
         else:
-            revenue = [14000000]
+            revenue = [170000000]
 
         return {
             "revenue": revenue,
