@@ -17,7 +17,7 @@ const GRADE_STYLE = {
 };
 const GRADE_LABEL = { A: "A 통과", B: "B 경고", C: "C 반려" };
 
-export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, showMeta }) {
+export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, charts, showMeta }) {
   const isEscalated = status === "escalated";
   const isError = status === "error";
   const effectiveGrade = grade || (isEscalated ? "C" : "A");
@@ -86,6 +86,19 @@ export default function ResponseCard({ question, domain, status, grade, confiden
                   <ReactMarkdown>{draft}</ReactMarkdown>
                   {chart && typeof chart === "object" && (
                     <SimulationChart chartData={chart} />
+                  )}
+                  {charts && charts.length > 0 && (
+                    <div className="mt-4 flex flex-col gap-3">
+                      {charts.map((b64, idx) => (
+                        <img
+                          key={idx}
+                          src={`data:image/png;base64,${b64}`}
+                          alt={`상권 분석 차트 ${idx + 1}`}
+                          className="w-full rounded-xl border border-[var(--border)]"
+                          style={{ maxWidth: "100%" }}
+                        />
+                      ))}
+                    </div>
                   )}
                 </>
               )}

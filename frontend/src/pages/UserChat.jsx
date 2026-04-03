@@ -73,6 +73,7 @@ export default function UserChat() {
           draft:          finalResult.draft,
           retryCount:     finalResult.retry_count,
           chart:          finalResult.chart || null,
+          charts:         finalResult.charts || [],
         },
       ]);
       if (finalResult.updated_params) setLatestParams(finalResult.updated_params);
@@ -139,6 +140,7 @@ export default function UserChat() {
               draft={msg.draft}
               retryCount={msg.retryCount}
               chart={msg.chart}
+              charts={msg.charts || []}
               showMeta={false}
             />
           ))}
