@@ -49,8 +49,10 @@ class DBWork:
             con = self._get_connection()
             cur = con.cursor()
             cur.execute("SELECT ROUND(AVG(tot_sales_amt)) FROM sangkwon_sales WHERE svc_induty_cd LIKE 'CS10%'")
-            (avg,) = cur.fetchone()
-            return [avg]
+            # fetchone() 자체가 None이거나 AVG() 결과가 NULL인 경우 모두 fallback으로 처리
+            row = cur.fetchone()
+            avg = row[0] if row and row[0] is not None else None
+            return [avg] if avg is not None else [170000000]
         except Exception as e:
             print("DB 평균 조회 실패:", e)
             return [170000000]
