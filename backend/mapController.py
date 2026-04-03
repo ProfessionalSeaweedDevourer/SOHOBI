@@ -1,7 +1,9 @@
-# 위치: backend/mapController.py
+# 위치: p01_backEnd/mapController.py
 # 실행: python -m uvicorn mapController:app --host=0.0.0.0 --port=8681 --reload
 
 import csv, os, sys, httpx, asyncio, logging
+from dotenv import load_dotenv
+load_dotenv()
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -10,7 +12,9 @@ sys.path.insert(0, os.path.join(BASE_DIR, "DAO"))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from DAO.mapInfoDAO import MapInfoDAO, SIDO_BOUNDS
+from DAO.mapInfoDAO import MapInfoDAO
+# PostgreSQL - 단일 테이블 store_seoul 사용
+SIDO_BOUNDS = {"store_seoul": (33.0, 38.7, 124.5, 132.0)}
 from DAO.landmarkDAO import LandmarkDAO
 
 # ── 서버 로그 설정 ───────────────────────────────────────────────
@@ -23,7 +27,9 @@ import math as _math
 
 
 def _clean(obj):
-    """NaN/Inf → None 변환 (JSON 직렬화 오류 방지)"""
+    """NaN/Inf/NULL 문자열 → None 변환"""
+    if isinstance(obj, str) and obj.strip().upper() == "NULL":
+        return None
     if isinstance(obj, float) and (_math.isnan(obj) or _math.isinf(obj)):
         return None
     if isinstance(obj, dict):
@@ -42,6 +48,18 @@ SIDO_TABLE_MAP = {k.replace("STORE_", ""): k for k in SIDO_BOUNDS}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("[startup] PostgreSQL 연결 확인...")
+    try:
+        rows = mDAO.getCategories()
+        logger.info(f"[startup] DB 연결 정상 - 업종 {len(rows)}개 확인")
+        # 랜드마크 건수 확인
+        lm = lmDAO.get_all([12, 14])
+        logger.info(f"[startup] 랜드마크 {len(lm)}건 확인")
+        # 학교 건수 확인
+        sc = lmDAO.get_schools()
+        logger.info(f"[startup] 학교 {len(sc)}건 확인")
+    except Exception as e:
+        logger.warning(f"[startup] DB 연결 확인 실패: {e}")
     yield
     logger.info("[shutdown] 서버 종료")
 

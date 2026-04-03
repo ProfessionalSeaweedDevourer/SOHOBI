@@ -1,4 +1,4 @@
-# 위치: backend/DAO/landmarkDAO.py
+# 위치: p01_backEnd/DAO/landmarkDAO.py
 # PostgreSQL (Azure) 버전
 
 import logging
@@ -16,19 +16,28 @@ SELECT_LANDMARK = """
            addr1, map_x, map_y, first_image, tel, homepage
 """
 
+def _clean(v):
+    """NULL 문자열/빈값 → None"""
+    if v is None:
+        return None
+    if isinstance(v, str) and v.strip().upper() in ("NULL", ""):
+        return None
+    return v
+
+
 def _row_to_dict(r: dict) -> dict:
-    return {
-        "content_id":      r["content_id"],
-        "content_type_id": r["content_type_id"],
+    return {k: v for k, v in {
+        "content_id":      _clean(r["content_id"]),
+        "content_type_id": _clean(r["content_type_id"]),
         "type_name":       TYPE_NAME.get(str(r["content_type_id"]), "기타"),
-        "title":           r["title"],
-        "addr":            r["addr1"],
+        "title":           _clean(r["title"]),
+        "addr":            _clean(r["addr1"]),
         "lng":             float(r["map_x"]) if r["map_x"] else None,
         "lat":             float(r["map_y"]) if r["map_y"] else None,
-        "image":           r["first_image"],
-        "tel":             r["tel"],
-        "homepage":        r["homepage"],
-    }
+        "image":           _clean(r["first_image"]),
+        "tel":             _clean(r["tel"]),
+        "homepage":        _clean(r["homepage"]),
+    }.items() if v is not None}
 
 
 class LandmarkDAO(BaseDAO):
@@ -71,8 +80,9 @@ class LandmarkDAO(BaseDAO):
         """서울 전체 랜드마크 조회"""
         try:
             if content_types:
+                # content_type_id는 varchar → 문자열로 캐스트
                 placeholders = ",".join([f"%(t{i})s" for i in range(len(content_types))])
-                params = {f"t{i}": v for i, v in enumerate(content_types)}
+                params = {f"t{i}": str(v) for i, v in enumerate(content_types)}
                 sql = f"""
                     {SELECT_LANDMARK}
                     FROM landmark

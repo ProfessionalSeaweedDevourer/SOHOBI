@@ -1,4 +1,4 @@
-# 위치: backend/DAO/mapInfoDAO.py
+# 위치: p01_backEnd/DAO/mapInfoDAO.py
 # PostgreSQL (Azure) 버전
 
 import math
@@ -15,11 +15,26 @@ STORE_COLS = [
     "floor_info", "unit_info", "lng", "lat",
 ]
 
+def _clean_store(row: dict) -> dict:
+    """None 값 제거 - CSV NULL로 적재된 경우 대비"""
+    return {k: v for k, v in row.items() if v is not None and v != "NULL"}
+
+
 SELECT_STORE = """
-    SELECT store_id, store_nm,
-           cat_cd, cat_nm, mid_cat_nm, sub_cat_nm,
-           sido_nm, sgg_nm, adm_nm, road_addr,
-           floor_info, unit_info, lng, lat
+    SELECT store_id   AS "STORE_ID",
+           store_nm   AS "STORE_NM",
+           cat_cd     AS "CAT_CD",
+           cat_nm     AS "CAT_NM",
+           mid_cat_nm AS "MID_CAT_NM",
+           sub_cat_nm AS "SUB_CAT_NM",
+           sido_nm    AS "SIDO_NM",
+           sgg_nm     AS "SGG_NM",
+           adm_nm     AS "ADM_NM",
+           road_addr  AS "ROAD_ADDR",
+           floor_info AS "FLOOR_INFO",
+           unit_info  AS "UNIT_INFO",
+           lng        AS "LNG",
+           lat        AS "LAT"
 """
 
 
@@ -37,11 +52,11 @@ class MapInfoDAO(BaseDAO):
               AND lat IS NOT NULL AND lng IS NOT NULL
             LIMIT %(limit)s
         """
-        return self._query(sql, {
+        return [_clean_store(r) for r in self._query(sql, {
             "lat_min": lat - lat_delta, "lat_max": lat + lat_delta,
             "lng_min": lng - lng_delta, "lng_max": lng + lng_delta,
             "limit": limit,
-        })
+        })]
 
     def getNearbyByCategory(self, lat: float, lng: float, category: str,
                              radius: float = 500, limit: int = 1000) -> list:
@@ -56,11 +71,11 @@ class MapInfoDAO(BaseDAO):
               AND lat IS NOT NULL AND lng IS NOT NULL
             LIMIT %(limit)s
         """
-        return self._query(sql, {
+        return [_clean_store(r) for r in self._query(sql, {
             "lat_min": lat - lat_delta, "lat_max": lat + lat_delta,
             "lng_min": lng - lng_delta, "lng_max": lng + lng_delta,
             "cat_cd": category, "limit": limit,
-        })
+        })]
 
     # ── 행정동코드(adm_cd) 기준 전체 스토어 ──────────────────────
     def getStoresByAdmCd(self, adm_cd: str) -> list:
@@ -71,8 +86,9 @@ class MapInfoDAO(BaseDAO):
               AND lng IS NOT NULL AND lat IS NOT NULL
         """
         rows = self._query(sql, {"adm_cd": adm_cd})
-        logger.info(f"[MapInfoDAO] getStoresByAdmCd: adm_cd={adm_cd} → {len(rows)}건")
-        return rows
+        result = [_clean_store(r) for r in rows]
+        logger.info(f"[MapInfoDAO] getStoresByAdmCd: adm_cd={adm_cd} → {len(result)}건")
+        return result
 
     # ── 같은 건물 상가 + 같은 상호명 다른 지점 ────────────────────
     def getStoresByBuilding(self, road_addr: str, store_nm: str = None,
