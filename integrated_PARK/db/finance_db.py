@@ -1,61 +1,50 @@
-import os
+import logging
 
-import psycopg2
-from dotenv import load_dotenv
+from db.dao.baseDAO import BaseDAO
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
 
-class DBWork:
-    def _get_connection(self):
-        return psycopg2.connect(
-            host=os.getenv("PG_HOST"),
-            port=int(os.getenv("PG_PORT", "5432")),
-            dbname=os.getenv("PG_DB"),
-            user=os.getenv("PG_USER"),
-            password=os.getenv("PG_PASSWORD"),
-            sslmode=os.getenv("PG_SSLMODE", "require"),
+class DBWork(BaseDAO):
+    """
+    재무 시뮬레이션용 DB 조회 클래스.
+    baseDAO._pool(ThreadedConnectionPool)을 공유하여
+    매 호출마다 raw 커넥션을 생성하는 문제를 해결한다.
+    """
+
+    def get_sales(self, region: list, industry: str) -> list:
+        if not region or not industry:
+            return [17000000]
+        placeholders = ",".join(["%s"] * len(region))
+        sql = (
+            f"SELECT tot_sales_amt FROM sangkwon_sales"
+            f" WHERE adm_cd IN ({placeholders}) AND svc_induty_cd = %s"
         )
-
-    def get_sales(self, region, industry):
+        conn, cur = self._db_con()
         try:
-            con = self._get_connection()
-            cur = con.cursor()
-
-            if not region or not industry:
-                return [17000000]
-
-            placeholders = ",".join(["%s"] * len(region))
-            sql = f"""
-                SELECT tot_sales_amt
-                FROM sangkwon_sales
-                WHERE adm_cd IN ({placeholders})
-                AND svc_induty_cd = %s
-            """
             cur.execute(sql, region + [industry])
-            return [amt for (amt,) in cur]
-
+            rows = cur.fetchall()
+            return [row["tot_sales_amt"] for row in rows] if rows else [17000000]
         except Exception as e:
-            print("DB 조회 실패:", e)
+            logger.warning(
+                "DBWork.get_sales 실패 region=%s industry=%s: %s", region, industry, e
+            )
             return [17000000]
         finally:
-            if 'cur' in locals():
-                cur.close()
-            if 'con' in locals():
-                con.close()
+            self._close(conn, cur)
 
-    def get_average_sales(self) -> float:
+    def get_average_sales(self) -> list:
+        sql = (
+            "SELECT ROUND(AVG(tot_sales_amt)) AS avg"
+            " FROM sangkwon_sales WHERE svc_induty_cd LIKE 'CS10%'"
+        )
+        conn, cur = self._db_con()
         try:
-            con = self._get_connection()
-            cur = con.cursor()
-            cur.execute("SELECT ROUND(AVG(tot_sales_amt)) FROM sangkwon_sales WHERE svc_induty_cd LIKE 'CS10%'")
-            (avg,) = cur.fetchone()
-            return [avg]
+            cur.execute(sql)
+            row = cur.fetchone()
+            return [row["avg"]] if row and row["avg"] is not None else [170000000]
         except Exception as e:
-            print("DB 평균 조회 실패:", e)
+            logger.warning("DBWork.get_average_sales 실패: %s", e)
             return [170000000]
         finally:
-            if 'cur' in locals():
-                cur.close()
-            if 'con' in locals():
-                con.close()
+            self._close(conn, cur)
