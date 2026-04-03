@@ -196,6 +196,7 @@ export default function UserChat() {
   const [activeEvents, setActiveEvents] = useState([]);
   const [pendingQuestion, setPendingQuestion] = useState(null);
   const [showBanner, setShowBanner] = useState(() => !localStorage.getItem("sohobi_tip_dismissed"));
+  const [showSamples, setShowSamples] = useState(false);
   const [placeholder] = useState(
     () => PLACEHOLDER_QUESTIONS[Math.floor(Math.random() * PLACEHOLDER_QUESTIONS.length)]
   );
@@ -411,8 +412,53 @@ export default function UserChat() {
       </main>
 
       {/* 입력창 */}
-      <footer className="sticky bottom-0 bg-background border-t border-[var(--border)] px-4 py-3 max-w-3xl mx-auto w-full">
-        <ChatInput ref={inputRef} onSubmit={handleSubmit} loading={loading} placeholder={placeholder} />
+      <footer className="sticky bottom-0 bg-background border-t border-[var(--border)] max-w-3xl mx-auto w-full">
+        {/* 샘플 질문 패널 */}
+        {showSamples && (
+          <div className="border-b border-[var(--border)] px-4 py-3 max-h-72 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {DOMAIN_CARDS.map(card => (
+                <div
+                  key={card.id}
+                  className="rounded-xl p-3 border"
+                  style={{ background: card.colorBg, borderColor: card.borderColor }}
+                >
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-base">{card.icon}</span>
+                    <span className="font-semibold text-xs text-foreground">{card.label}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {card.questions.map(q => (
+                      <button
+                        key={q}
+                        onClick={() => { setShowSamples(false); handleSubmit(q); }}
+                        className="text-left text-xs px-2.5 py-1.5 rounded-lg transition-opacity hover:opacity-70 leading-relaxed"
+                        style={{ background: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="px-4 py-3 flex flex-col gap-2">
+          <button
+            onClick={() => setShowSamples(v => !v)}
+            className="self-start text-xs px-3 py-1.5 rounded-full border transition-colors"
+            style={{
+              borderColor: showSamples ? "var(--brand-blue)" : "var(--border)",
+              color: showSamples ? "var(--brand-blue)" : "var(--muted-foreground)",
+              background: showSamples ? "rgba(8,145,178,0.08)" : "transparent",
+            }}
+          >
+            {showSamples ? "▲ 샘플 질문 닫기" : "💬 샘플 질문 보기"}
+          </button>
+          <ChatInput ref={inputRef} onSubmit={handleSubmit} loading={loading} placeholder={placeholder} />
+        </div>
       </footer>
     </div>
   );
