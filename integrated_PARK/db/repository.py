@@ -512,7 +512,7 @@ class CommercialRepository:
         return INDUSTRY_CODE_MAP.get(business_type, "")
 
     def get_sales(
-        self, location: str, business_type: str, quarter: str = "20244"
+        self, location: str, business_type: str, quarter: str = "20254"
     ) -> Optional[dict]:
         """
         행정동별 매출 조회 + 합산
@@ -625,7 +625,7 @@ class CommercialRepository:
         return {"summary": summary, "breakdown": breakdown}
 
     def get_store_count(
-        self, location: str, business_type: str, quarter: str = "20244"
+        self, location: str, business_type: str, quarter: str = "20254"
     ) -> Optional[dict]:
         """
         점포수/개폐업률 조회 + 합산 (sangkwon_store 테이블)
@@ -695,7 +695,7 @@ class CommercialRepository:
     def get_similar_locations(
         self,
         business_type: str,
-        quarter: str = "20244",
+        quarter: str = "20254",
         exclude_location: str = None,
         top_n: int = 3,
     ) -> list:
