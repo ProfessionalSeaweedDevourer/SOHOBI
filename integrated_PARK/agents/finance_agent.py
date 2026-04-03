@@ -77,8 +77,8 @@ _EXPLAIN_PROMPT = """[사용자 질문]
   이는 10명 중 2명꼴로 월 순이익이 {p20:,}원 이하에 그칠 수 있으며, 이것이 지속될 경우 사업 운영에 부담이 될 수 있음을 의미합니다.
 
 [3. 외부 리스크 경고]\n
-- 손익분기 매출: {breakeven_revenue:,}원 (일 기준: {breakeven_daily:,}원)
-- 안전마진: {safety_margin:.1f}% (매출이 이 비율만큼 하락해도 손익 유지 가능)
+- 손익분기 매출: {breakeven_revenue}
+- 안전마진: {safety_margin}
 
 위 [2. 시뮬레이션 결과]와 손익분기/안전마진 수치를 기반으로,
 외부 충격(경기 침체, 임대료 급등, 수요 급감 등) 발생 시 실제 손실로 이어질 수 있음을 경고하고,
@@ -265,14 +265,21 @@ class FinanceAgent:
         else:
             loss_prob_str = f"{raw_loss:.1%} (10,000회 시뮬레이션 기준)"
 
+        # breakeven 계산 가능 여부에 따라 [3] 섹션 변수 조건부 구성
+        if breakeven and breakeven["breakeven_revenue"] is not None:
+            breakeven_revenue_str = f"{breakeven['breakeven_revenue']:,}원 (일 기준: {breakeven['breakeven_daily']:,}원)\n"
+            safety_margin_str = f"{breakeven['safety_margin'] * 100:.1f}% (매출이 이 비율만큼 하락해도 손익 유지 가능)\n"
+        else:
+            breakeven_revenue_str = "계산 불가 (매출이 0 이하이거나 원가율이 매출을 초과한 상태)\n"
+            safety_margin_str = "계산 불가 — 현재 구조로는 손익분기 달성이 불가하며, 매출 개선이 시급하거나 사업 시작을 재고할 필요가 있습니다.\n"
+
         explain_prompt = _EXPLAIN_PROMPT.format(
             assumptions=assumptions,
             avg_profit=sim_result["average_net_profit"],
             loss_prob=loss_prob_str,
             p20=sim_result["p20"],
-            breakeven_revenue=breakeven["breakeven_revenue"],
-            breakeven_daily=breakeven["breakeven_daily"],
-            safety_margin=breakeven["safety_margin"] * 100,
+            breakeven_revenue=breakeven_revenue_str,
+            safety_margin=safety_margin_str,
             question=question,
         )
         # context 정보(지역·업종)를 프롬프트 앞에 주입
