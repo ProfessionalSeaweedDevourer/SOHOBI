@@ -274,6 +274,7 @@ async def query(req: QueryRequest):
             "confidence_note":   result.get("confidence_note", ""),
             "draft":             result["draft"],
             "chart":             result.get("chart"),
+            "charts":            result.get("charts", []),
             "updated_params":    result.get("updated_params"),
             "retry_count":       result["retry_count"],
             "agent_ms":          result.get("agent_ms", 0),

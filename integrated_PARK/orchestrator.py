@@ -101,7 +101,8 @@ async def run(
         # finance/location 에이전트는 dict를 반환
         if isinstance(raw, dict):
             draft = raw.get("draft", "")
-            chart = raw.get("chart")
+            chart = raw.get("chart")                    # finance: 단일 chart dict
+            charts = raw.get("charts", []) or []        # location: 차트 list (CHOI)
             updated_params = raw.get("updated_params")
             adm_codes = raw.get("adm_codes", [])
             analysis_type = raw.get("type", "")
@@ -113,6 +114,7 @@ async def run(
                 updated_context["location_name"] = raw.get("location_name", updated_context.get("location_name", ""))
         else:
             draft = raw
+            charts = []
 
         # 이전 attempt와 draft가 동일하면 재시도해도 개선 불가 → 조기 종료
         if draft == prev_draft:
@@ -145,6 +147,7 @@ async def run(
                 "rejection_history": rejection_history,
                 "draft":            draft,
                 "chart":            chart,
+                "charts":           charts,
                 "updated_params":   updated_params,
                 "adm_codes":        adm_codes,
                 "analysis_type":    analysis_type,
@@ -177,6 +180,7 @@ async def run(
         "rejection_history": rejection_history,
         "draft":            draft,
         "chart":            chart,
+        "charts":           charts,
         "updated_params":   updated_params,
         "adm_codes":        adm_codes,
         "analysis_type":    analysis_type,
@@ -249,6 +253,7 @@ async def run_stream(
     draft = ""
     prev_draft = None
     chart = None
+    charts: list = []
     updated_params = None
     adm_codes: list = []
     analysis_type: str = ""
@@ -274,7 +279,8 @@ async def run_stream(
 
         if isinstance(raw, dict):
             draft = raw.get("draft", "")
-            chart = raw.get("chart")
+            chart = raw.get("chart")                    # finance: 단일 chart dict
+            charts = raw.get("charts", []) or []        # location: 차트 list (CHOI)
             updated_params = raw.get("updated_params")
             adm_codes = raw.get("adm_codes", [])
             analysis_type = raw.get("type", "")
@@ -285,6 +291,7 @@ async def run_stream(
                 updated_context["location_name"] = raw.get("location_name", updated_context.get("location_name", ""))
         else:
             draft = raw
+            charts = []
 
         if draft == prev_draft:
             break
@@ -331,6 +338,7 @@ async def run_stream(
                 "rejection_history": rejection_history,
                 "draft":            draft,
                 "chart":            chart,
+                "charts":           charts,
                 "updated_params":   updated_params,
                 "adm_codes":        adm_codes,
                 "analysis_type":    analysis_type,
@@ -364,6 +372,7 @@ async def run_stream(
         "rejection_history": rejection_history,
         "draft":            draft,
         "chart":            chart,
+        "charts":           charts,
         "updated_params":   updated_params,
         "adm_codes":        adm_codes,
         "analysis_type":    analysis_type,
