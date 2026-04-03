@@ -142,7 +142,7 @@ _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 상권 분석 질문을
 - 지역이 하나이면 mode="analyze", 두 개 이상이면 mode="compare"
 - 지역명은 한국어 원문 그대로 (예: "홍대", "강남", "잠실")
 - 업종명은 한국어 원문 그대로 (예: "카페", "한식", "치킨")
-- 분기가 언급되지 않으면 "20244" 사용
+- 분기가 언급되지 않으면 "20254" 사용
 - JSON 외 다른 텍스트 절대 출력 금지"""
 
 # ── LLM 분석 지시 프롬프트 ────────────────────────────────────────────
@@ -298,7 +298,7 @@ class LocationAgent:
             "mode": params.get("mode", "analyze"),
             "locations": params.get("locations", []),
             "business_type": params.get("business_type", ""),
-            "quarter": params.get("quarter", "20244"),
+            "quarter": params.get("quarter", "20254"),
         }
 
     # ── DB 조회 + LLM 단일 지역 분석 ───────────────────────────
@@ -344,7 +344,7 @@ class LocationAgent:
         return await self._call_llm(instructions, user_msg)
 
     async def analyze(
-        self, location: str, business_type: str, quarter: str = "20244"
+        self, location: str, business_type: str, quarter: str = "20254"
     ) -> dict:
         """단일 지역 상권 분석 → {draft, adm_codes, type} dict 반환"""
         supported = self._repo.get_supported_industries()
@@ -452,7 +452,7 @@ class LocationAgent:
         return await self._call_llm(instructions, user_msg)
 
     async def compare(
-        self, locations: list[str], business_type: str, quarter: str = "20244"
+        self, locations: list[str], business_type: str, quarter: str = "20254"
     ) -> dict:
         """복수 지역 비교 → {draft, adm_codes, type} dict 반환"""
         supported = self._repo.get_supported_industries()

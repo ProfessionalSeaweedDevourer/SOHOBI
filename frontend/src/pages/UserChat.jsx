@@ -51,7 +51,7 @@ const DOMAIN_CARDS = [
     id: "location",
     icon: "📍",
     label: "상권 분석",
-    desc: "서울 2024 Q4 데이터 기반 분석",
+    desc: "서울 2025 Q4 데이터 기반 분석",
     color: "var(--brand-teal)",
     colorBg: "rgba(20,184,166,0.08)",
     borderColor: "rgba(20,184,166,0.25)",

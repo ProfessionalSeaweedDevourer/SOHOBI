@@ -43,8 +43,8 @@ class LocationPlugin:
         location: Annotated[str, "분석할 지역명 (예: 홍대, 강남, 잠실)"],
         business_type: Annotated[str, "업종명 (예: 카페, 한식, 치킨)"],
         quarter: Annotated[
-            str, "분기코드 YYYYQ (예: 20244). 언급 없으면 20244 사용"
-        ] = "20244",
+            str, "분기코드 YYYYQ (예: 20254). 언급 없으면 20254 사용"
+        ] = "20254",
     ) -> str:
         result = await self._agent.analyze(location, business_type, quarter)
         return json.dumps(result, ensure_ascii=False)
@@ -64,8 +64,8 @@ class LocationPlugin:
         locations: Annotated[str, "비교할 지역명 목록, 쉼표로 구분 (예: 홍대,강남,잠실)"],
         business_type: Annotated[str, "업종명 (예: 카페, 한식, 치킨)"],
         quarter: Annotated[
-            str, "분기코드 YYYYQ (예: 20244). 언급 없으면 20244 사용"
-        ] = "20244",
+            str, "분기코드 YYYYQ (예: 20254). 언급 없으면 20254 사용"
+        ] = "20254",
     ) -> str:
         location_list = [loc.strip() for loc in locations.split(",")]
         result = await self._agent.compare(location_list, business_type, quarter)

@@ -251,10 +251,15 @@ export default function MapView() {
          const cd = String(f.getProperties().adm_cd || "").trim();
          f.setStyle(admSet.has(cd) ? DONG_STYLE_SELECTED : null);
       });
-      if (admCodes.length === 0) return;
+      if (admCodes.length === 0) {
+         dongSearchFeatsRef.current = [];
+         return;
+      }
       const matched = features.filter((f) =>
          admSet.has(String(f.getProperties().adm_cd || "").trim()),
       );
+      // 하이라이트된 feature를 dongSearchFeatsRef에 저장 → hover 시 스타일 보존
+      dongSearchFeatsRef.current = matched;
       if (matched.length > 0) {
          const extent = matched.reduce(
             (acc, f) => extendExtent(acc, f.getGeometry().getExtent()),
@@ -534,7 +539,10 @@ export default function MapView() {
          }
 
          if (feat) {
-            feat.setStyle(DONG_STYLE_HOVER);
+            // 분석 하이라이트(SELECTED) 폴리곤은 hover 스타일로 덮어쓰지 않음
+            if (!dongSearchFeatsRef.current.includes(feat)) {
+               feat.setStyle(DONG_STYLE_HOVER);
+            }
             dongHoverFeatRef.current = feat;
             map.getTargetElement().style.cursor = "pointer";
 
@@ -1167,6 +1175,7 @@ export default function MapView() {
             onNavigate={handleChatNavigate}
             onHighlightArea={handleHighlightArea}
             onClearContext={() => setChatContext(null)}
+            onSearchArea={handleSearch}
          />
          <div className="coord-bar">
             📍 위도: {coords.lat} | 경도: {coords.lng} | 줌: {currentZoom}
