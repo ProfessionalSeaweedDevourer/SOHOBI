@@ -35,3 +35,4 @@ python-dotenv==1.2.2
 requests==2.33.1
 chardet==7.4.0.post2
 aiohttp==3.13.5
+httpx==0.27.2
