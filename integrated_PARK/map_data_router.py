@@ -298,7 +298,7 @@ def getSdotSensors():
 
 
 @router.get("/map/dong-density")
-async def getDongDensity(sido: str, sigg: str, dong: str):
+def getDongDensity(sido: str, sigg: str, dong: str):
     try:
         return mDAO.getDongDensity(sido=sido, sigg=sigg, dong=dong)
     except Exception as e:
