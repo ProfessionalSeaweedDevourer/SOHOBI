@@ -110,8 +110,8 @@ class GovSupportPlugin:
     # reranker score 임계값 — 0~4 범위에서 1.2 미만은 부적합으로 판단
     RERANKER_THRESHOLD = 1.2
 
-    def _search_one(self, query: str, region: str, top_k: int = 5) -> list[dict]:
-        """단일 쿼리 하이브리드+시맨틱 검색. reranker score 필터링 후 상위 top_k 반환."""
+    def _search_one(self, query: str, region: str, top_k: int = 5, apply_threshold: bool = True) -> list[dict]:
+        """단일 쿼리 하이브리드+시맨틱 검색. apply_threshold=True이면 reranker score 필터링 후 상위 top_k 반환."""
         resp = self._ai_client.embeddings.create(
             input=query, model=self._embedding_deployment
         )
@@ -142,7 +142,7 @@ class GovSupportPlugin:
         scored = []
         for r in results:
             reranker_score = r.get("@search.reranker_score") or 0.0
-            if reranker_score >= self.RERANKER_THRESHOLD:
+            if not apply_threshold or reranker_score >= self.RERANKER_THRESHOLD:
                 d = dict(r)
                 d["_reranker_score"] = reranker_score
                 scored.append(d)
@@ -224,7 +224,7 @@ class GovSupportPlugin:
                     flat_results.append(r)
 
             if not flat_results:
-                return f"{profile_summary}\n\n조건에 맞는 지원사업을 찾을 수 없습니다."
+                return f"{profile_summary}\n\n조건에 맞는 지원사업을 찾을 수 없습니다. (검색 결과가 관련성 기준 score {self.RERANKER_THRESHOLD} 을 충족하지 못했습니다)"
 
             # reranker score 기준 전역 정렬 후 상위 5개만 선별
             flat_results.sort(key=lambda x: x.get("_reranker_score", 0.0), reverse=True)
@@ -270,7 +270,7 @@ class GovSupportPlugin:
             if not region:
                 region = self._extract_region(query)
 
-            results = self._search_one(query, region, top_k)
+            results = self._search_one(query, region, top_k, apply_threshold=False)
 
             if not results:
                 return f"[검색: '{query}', 지역: {region or '전국'}]\n결과를 찾을 수 없습니다."
