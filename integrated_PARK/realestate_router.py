@@ -14,6 +14,7 @@ origin: backend/realEstateController.py (WOO-clean2)
   GET /realestate/land-value         — 공시지가 (VWorld)
 """
 
+import asyncio
 import logging
 from typing import Optional
 
@@ -62,9 +63,11 @@ def _format_sangkwon_row(row: dict) -> dict:
 async def getSeoulRtms(adm_cd: str = Query(...)):
     logger.info(f"[seoul-rtms] adm_cd={adm_cd}")
     try:
-        seoul      = await rtmsDAO.fetch_by_emd_cd(adm_cd)
-        officetel  = molitDAO.fetch_officetel_rent(adm_cd)
-        commercial = molitDAO.fetch_commercial_trade(adm_cd)
+        seoul, officetel, commercial = await asyncio.gather(
+            rtmsDAO.fetch_by_emd_cd(adm_cd),
+            asyncio.to_thread(molitDAO.fetch_officetel_rent, adm_cd),
+            asyncio.to_thread(molitDAO.fetch_commercial_trade, adm_cd),
+        )
         return {
             "has_data":     seoul.get("has_data") or officetel.get("has_data") or commercial.get("has_data"),
             "매매":         seoul.get("매매",    {"건수": 0}),
@@ -82,7 +85,7 @@ async def getSeoulRtms(adm_cd: str = Query(...)):
 # ── 상권 매출 ─────────────────────────────────────────────────────
 
 @router.get("/realestate/sangkwon")
-async def getSangkwon(
+def getSangkwon(
     adm_cd:  str = Query(""),
     dong:    str = Query(""),
     gu:      str = Query(""),
@@ -108,7 +111,7 @@ async def getSangkwon(
 
 
 @router.get("/realestate/sangkwon-svc")
-async def getSangkwonBySvc(
+def getSangkwonBySvc(
     adm_cd:  str = Query(...),
     quarter: str = Query(""),
 ):
@@ -118,7 +121,7 @@ async def getSangkwonBySvc(
 
 
 @router.get("/realestate/sangkwon-svc-by-cat")
-async def getSangkwonSvcByCat(
+def getSangkwonSvcByCat(
     adm_cd:  str = Query(...),
     cat_cd:  str = Query(...),
     quarter: str = Query(""),
@@ -133,7 +136,7 @@ async def getSangkwonSvcByCat(
 
 
 @router.get("/realestate/sangkwon-store")
-async def getSangkwonStore(
+def getSangkwonStore(
     adm_cd:  str = Query(...),
     quarter: str = Query(""),
     svc_cd:  str = Query(""),
@@ -147,7 +150,7 @@ async def getSangkwonStore(
 
 
 @router.get("/realestate/sangkwon-induty")
-async def getSangkwonByInduty(
+def getSangkwonByInduty(
     code:   str = Query(...),
     induty: str = Query(""),
 ):
@@ -156,7 +159,7 @@ async def getSangkwonByInduty(
 
 
 @router.get("/realestate/sangkwon-quarters")
-async def getSangkwonQuarters():
+def getSangkwonQuarters():
     quarters = skDAO.getQuarters()
     return {"quarters": quarters, "latest": quarters[-1] if quarters else None}
 
@@ -164,7 +167,7 @@ async def getSangkwonQuarters():
 # ── 검색 ─────────────────────────────────────────────────────────
 
 @router.get("/realestate/search-dong")
-async def searchDong(q: str = Query(...)):
+def searchDong(q: str = Query(...)):
     logger.info(f"[search-dong] q={q}")
     try:
         rows = skDAO.searchDong(q)
