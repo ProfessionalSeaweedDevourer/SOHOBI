@@ -91,13 +91,17 @@ function groupByDate(commits) {
     }));
 }
 
-function relativeTime(isoDate) {
-  const d = Math.floor((Date.now() - new Date(isoDate)) / 86400000);
-  if (d === 0) return "오늘";
-  if (d === 1) return "어제";
-  if (d < 7) return `${d}일 전`;
-  if (d < 30) return `${Math.floor(d / 7)}주 전`;
-  return `${Math.floor(d / 30)}개월 전`;
+function formatCommitDate(isoDate) {
+  const d = new Date(isoDate);
+  const now = new Date();
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleDateString("ko-KR", {
+    ...(sameYear ? {} : { year: "numeric" }),
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 // ── 서브 컴포넌트 ────────────────────────────────────────────────────
@@ -130,7 +134,7 @@ function CommitCard({ commit, idx }) {
       </span>
       <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0 flex-wrap">
         <span>{commit.author}</span>
-        <span>{relativeTime(commit.date)}</span>
+        <span>{formatCommitDate(commit.date)}</span>
         <a
           href={commit.url}
           target="_blank"
