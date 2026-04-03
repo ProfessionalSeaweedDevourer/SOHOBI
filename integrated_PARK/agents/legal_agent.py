@@ -4,6 +4,9 @@
 - 추가: LegalSearchPlugin (CHOI) — Azure AI Search 법령 RAG 자동 조회
 """
 
+import asyncio
+import logging
+
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import (
     AzureChatCompletion,
@@ -12,6 +15,8 @@ from semantic_kernel.connectors.ai.open_ai import (
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import kernel_function
+
+logger = logging.getLogger(__name__)
 
 from plugins.legal_search_plugin import LegalSearchPlugin
 
@@ -117,7 +122,17 @@ class LegalAgent:
                 auto_invoke_counting_limit=2,  # 함수 호출 최대 2회 (무한 루프 방지, CHOI p04)
             ),
         )
-        response = await service.get_chat_message_content(
-            history, settings=settings, kernel=self._kernel
-        )
+        try:
+            response = await asyncio.wait_for(
+                service.get_chat_message_content(
+                    history, settings=settings, kernel=self._kernel
+                ),
+                timeout=60.0,
+            )
+        except asyncio.TimeoutError:
+            logger.warning("LegalAgent LLM 타임아웃 (60초)")
+            raise ValueError("AI 응답 생성 중 타임아웃이 발생했습니다. 잠시 후 다시 시도해 주세요.")
+        except Exception as e:
+            logger.error("LegalAgent LLM 호출 실패: %s", e)
+            raise ValueError(f"AI 응답 생성 중 오류가 발생했습니다: {e}") from e
         return str(response)

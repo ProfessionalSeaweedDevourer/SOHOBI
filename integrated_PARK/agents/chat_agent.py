@@ -4,9 +4,14 @@ ChatAgent: 일상 대화·서비스 안내 전용 에이전트
 - 플러그인 없음, "chat" AzureChatCompletion 서비스 사용
 """
 
+import asyncio
+import logging
+
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion, OpenAIChatPromptExecutionSettings
 from semantic_kernel.contents import ChatHistory
+
+logger = logging.getLogger(__name__)
 
 _PRIVACY_KEYWORDS = ["개인정보"]
 
@@ -86,5 +91,15 @@ class ChatAgent:
                 history.add_assistant_message(msg["content"])
         history.add_user_message(question)
         settings = OpenAIChatPromptExecutionSettings()
-        response = await service.get_chat_message_content(history, settings=settings, kernel=self._kernel)
+        try:
+            response = await asyncio.wait_for(
+                service.get_chat_message_content(history, settings=settings, kernel=self._kernel),
+                timeout=30.0,
+            )
+        except asyncio.TimeoutError:
+            logger.warning("ChatAgent LLM 타임아웃 (30초)")
+            return "응답 생성에 시간이 걸리고 있습니다. 잠시 후 다시 시도해 주세요."
+        except Exception as e:
+            logger.error("ChatAgent LLM 호출 실패: %s", e)
+            return "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
         return str(response)
