@@ -77,16 +77,19 @@ class GovSupportPlugin:
     def __init__(self):
         self._available = bool(SEARCH_API_KEY and SEARCH_ENDPOINT and OPENAI_ENDPOINT and OPENAI_API_KEY)
         if self._available:
-            self._ai_client = AzureOpenAI(
-                azure_endpoint=OPENAI_ENDPOINT,
-                api_key=OPENAI_API_KEY,
-                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
-            )
-            self._search_client = SearchClient(
-                endpoint=SEARCH_ENDPOINT,
-                index_name=SEARCH_INDEX,
-                credential=AzureKeyCredential(SEARCH_API_KEY)
-            )
+            try:
+                self._ai_client = AzureOpenAI(
+                    azure_endpoint=OPENAI_ENDPOINT,
+                    api_key=OPENAI_API_KEY,
+                    api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
+                )
+                self._search_client = SearchClient(
+                    endpoint=SEARCH_ENDPOINT,
+                    index_name=SEARCH_INDEX,
+                    credential=AzureKeyCredential(SEARCH_API_KEY)
+                )
+            except Exception:
+                self._available = False
 
     def _get_embedding(self, text: str) -> list[float]:
         response = self._ai_client.embeddings.create(input=text, model=EMBEDDING_DEPLOYMENT)
@@ -103,7 +106,7 @@ class GovSupportPlugin:
         """단일 쿼리 검색 실행, 결과를 dict 리스트로 반환"""
         vector = self._get_embedding(query)
         vector_query = VectorizedQuery(
-            vector=vector, k_nearest_neighbors=20, fields="embedding"
+            vector=vector, k_nearest_neighbors=max(top_k, 20), fields="embedding"
         )
         filter_str = None
         if region:
@@ -126,12 +129,12 @@ class GovSupportPlugin:
         return [dict(r) for r in results]
 
     @staticmethod
-    def _select_categories(business_type: str, funding_purpose: str, additional_info: str) -> list[dict]:
+    def _select_categories(business_type: str, funding_purpose: str, additional_info: str, startup_stage: str = "") -> list[dict]:
         """사용자 입력에서 관련 카테고리만 선택. 매칭 없으면 보조금+대출 기본 제공."""
-        context = f"{business_type} {funding_purpose} {additional_info}".lower()
+        context = f"{business_type} {funding_purpose} {additional_info} {startup_stage}".lower()
         matched = [
             cat for cat in RECOMMEND_CATEGORIES
-            if any(kw in context for kw in cat["trigger_keywords"])
+            if any(kw.lower() in context for kw in cat["trigger_keywords"])
         ]
         if not matched:
             matched = [c for c in RECOMMEND_CATEGORIES if c["name"] in ("보조금/창업패키지", "대출/융자")]
@@ -182,21 +185,22 @@ class GovSupportPlugin:
                 profile_summary += f", 기타: {additional_info}"
 
             # 관련 카테고리만 선택 (최대 3개)
-            selected_cats = self._select_categories(business_type, funding_purpose, additional_info)
+            selected_cats = self._select_categories(business_type, funding_purpose, additional_info, startup_stage)
 
             all_results = {}
             seen_names = set()
 
             for cat in selected_cats:
-                query = cat["query_template"].format(**profile)
+                query = " ".join(cat["query_template"].format(**profile).split())
                 results = self._search_one(query, extracted_region, top_k=5)
 
                 cat_results = []
                 for r in results:
                     name = r.get("program_name", "")
-                    if name in seen_names:
+                    if name and name in seen_names:
                         continue
-                    seen_names.add(name)
+                    if name:
+                        seen_names.add(name)
                     cat_results.append(r)
 
                 if cat_results:
@@ -249,6 +253,9 @@ class GovSupportPlugin:
     ) -> str:
         if not self._available:
             return "검색 서비스가 설정되지 않았습니다."
+
+        if not isinstance(top_k, int) or top_k < 1:
+            raise ValueError(f"top_k는 1 이상의 정수여야 합니다. (전달값: {top_k!r})")
 
         try:
             if not region:
