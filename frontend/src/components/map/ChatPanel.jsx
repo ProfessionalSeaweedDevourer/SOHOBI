@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { streamQuery } from "../../api";
 import "./ChatPanel.css";
 
@@ -267,7 +269,11 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
 
           {messages.map((msg) => (
             <div key={msg.id} className={`mv-chat-msg mv-chat-msg--${msg.role}`}>
-              {msg.content}
+              {msg.role === "assistant" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+              ) : (
+                msg.content
+              )}
               {msg.charts && msg.charts.length > 0 && (
                 <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
                   {msg.charts.map((b64, idx) => (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { GradeBadge } from "./GradeBadge";
 
 const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석", chat: "안내" };
@@ -218,7 +219,7 @@ function EntryDetail({ entry }) {
       <div>
         <div className="font-semibold text-muted-foreground mb-1">최종 응답 (draft)</div>
         <div className="prose-response text-foreground border border-[var(--border)] rounded-lg p-3 glass">
-          <ReactMarkdown>{entry.final_draft || entry.draft || "(없음)"}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.final_draft || entry.draft || "(없음)"}</ReactMarkdown>
         </div>
       </div>
     </div>
