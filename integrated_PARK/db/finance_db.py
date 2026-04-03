@@ -23,39 +23,80 @@ class DBWork:
             cur = con.cursor()
 
             if not region or not industry:
-                return [17000000]
+                return self.get_average_sales()
 
             placeholders = ",".join(["%s"] * len(region))
             sql = f"""
-                SELECT tot_sales_amt
-                FROM sangkwon_sales
-                WHERE adm_cd IN ({placeholders})
-                AND svc_induty_cd = %s
+                SELECT
+                    ROUND(
+                        s.tot_sales_amt::numeric
+                        / NULLIF(
+                            COALESCE(
+                                (SELECT st.stor_co
+                                FROM sangkwon_store st
+                                WHERE st.adm_cd         = s.adm_cd
+                                AND   st.svc_induty_cd  = s.svc_induty_cd
+                                AND   st.base_yr_qtr_cd = s.base_yr_qtr_cd
+                                AND   st.stor_co > 0
+                                LIMIT 1),
+                            1),
+                        0)
+                    ) AS avg_sales_per_store
+                FROM sangkwon_sales s
+                WHERE s.adm_cd IN ({placeholders})
+                AND   s.svc_induty_cd = %s
+                AND   s.tot_sales_amt IS NOT NULL
             """
             cur.execute(sql, region + [industry])
-            return [amt for (amt,) in cur]
+            rows = cur.fetchall()
+
+            if not rows:
+                return self.get_average_sales()
+
+            results = [float(val) for (val,) in rows if val is not None]
+            return results if results else self.get_average_sales()
 
         except Exception as e:
             print("DB 조회 실패:", e)
-            return [17000000]
+            return [170_000_000]
         finally:
-            if 'cur' in locals():
-                cur.close()
-            if 'con' in locals():
-                con.close()
-
-    def get_average_sales(self) -> float:
+            if 'cur' in locals(): cur.close()
+            if 'con' in locals(): con.close()
+                    
+    def get_average_sales(self) -> list:
         try:
             con = self._get_connection()
             cur = con.cursor()
-            cur.execute("SELECT ROUND(AVG(tot_sales_amt)) FROM sangkwon_sales WHERE svc_induty_cd LIKE 'CS10%'")
-            (avg,) = cur.fetchone()
-            return [avg]
+            sql = """
+                SELECT
+                    ROUND(
+                        AVG(
+                            s.tot_sales_amt::numeric
+                            / NULLIF(
+                                COALESCE(
+                                    (SELECT st.stor_co
+                                    FROM sangkwon_store st
+                                    WHERE st.adm_cd         = s.adm_cd
+                                    AND   st.svc_induty_cd  = s.svc_induty_cd
+                                    AND   st.base_yr_qtr_cd = s.base_yr_qtr_cd
+                                    AND   st.stor_co > 0
+                                    LIMIT 1),
+                                1),
+                            0)
+                        )
+                    )
+                FROM sangkwon_sales s
+                WHERE s.svc_induty_cd LIKE 'CS10%'
+                AND   s.tot_sales_amt IS NOT NULL
+            """
+            cur.execute(sql)
+            row = cur.fetchone()
+            avg = row[0] if row and row[0] is not None else None
+            return [float(avg)] if avg is not None else [170_000_000]
+
         except Exception as e:
             print("DB 평균 조회 실패:", e)
-            return [170000000]
+            return [170_000_000]
         finally:
-            if 'cur' in locals():
-                cur.close()
-            if 'con' in locals():
-                con.close()
+            if 'cur' in locals(): cur.close()
+            if 'con' in locals(): con.close()
