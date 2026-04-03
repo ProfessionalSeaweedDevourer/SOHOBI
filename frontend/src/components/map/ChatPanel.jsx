@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { streamQuery } from "../../api";
+import ProgressPanel from "../ProgressPanel";
 import "./ChatPanel.css";
 
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
@@ -18,12 +21,14 @@ const AREA_KEYWORDS = [
   "대학로", "을지로", "명동", "남대문", "북촌", "서촌", "익선동",
 ];
 
-export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, onClearContext, onHighlightArea }) {
+export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, onClearContext, onHighlightArea, onSearchArea }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [sessionId, setSessionId] = useState(null);
+  const [activeEvents, setActiveEvents] = useState([]);
+  const [enlargedChart, setEnlargedChart] = useState(null);
 
   const messagesEndRef = useRef(null);
   const timerRef = useRef(null);
@@ -105,18 +110,42 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
     // 지도 이동 패턴 체크
     const navMatch = text.match(NAV_PATTERN);
     if (navMatch) {
-      const moved = await geocodeAndNavigate(navMatch[1].trim());
+      const placeName = navMatch[1].trim();
+      const moved = await geocodeAndNavigate(placeName);
       if (moved) {
         setMessages((prev) => [
           ...prev,
           {
             id: crypto.randomUUID(),
             role: "system",
-            content: `${navMatch[1].trim()}(으)로 지도를 이동했습니다.`,
+            content: `${placeName}(으)로 지도를 이동했습니다.`,
           },
         ]);
         return;
       }
+      // Kakao 실패 시 MapView의 handleSearch 폴백
+      if (onSearchArea) {
+        onSearchArea(placeName);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: `지도에서 "${placeName}" 검색 중입니다.`,
+          },
+        ]);
+        return;
+      }
+      // 둘 다 없으면 안내 메시지
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "system",
+          content: `지도 이동 기능을 사용할 수 없습니다. 상권 분석은 "홍대 카페 분석" 형식으로 입력하세요.`,
+        },
+      ]);
+      return;
     }
 
     // ── 지역명 / 업종 포함 여부 판별 ──────────────────────────
@@ -145,6 +174,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
     }
 
     setLoading(true);
+    setActiveEvents([]);
     const streamMsgId = crypto.randomUUID();
     setMessages((prev) => [
       ...prev,
@@ -153,6 +183,9 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
     let accumulated = "";
     try {
       await streamQuery(question, 3, sessionId, (eventName, data) => {
+        // 모든 이벤트 수집 (ProgressPanel용)
+        setActiveEvents((prev) => [...prev, { event: eventName, ...data }]);
+
         if (eventName === "chunk") {
           accumulated += data.text || data.content || "";
           setMessages((prev) =>
@@ -161,6 +194,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
             ),
           );
         } else if (eventName === "complete") {
+          setActiveEvents([]);
           if (data.session_id) setSessionId(data.session_id);
           const draft = data.draft || accumulated || "응답을 받지 못했습니다.";
           const charts = data.charts || [];
@@ -184,6 +218,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           const foundBiz = BIZ_LIST.find((b) => question.includes(b));
           if (foundBiz) lastBusinessRef.current = foundBiz;
         } else if (eventName === "error" || eventName === "rejected") {
+          setActiveEvents([]);
           const msg = data.message || data.reason || "오류가 발생했습니다.";
           setMessages((prev) =>
             prev.map((m) =>
@@ -193,6 +228,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
         }
       });
     } catch (err) {
+      setActiveEvents([]);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === streamMsgId
@@ -203,7 +239,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
     } finally {
       setLoading(false);
     }
-  }, [input, loading, sessionId, mapContext, geocodeAndNavigate]);
+  }, [input, loading, sessionId, mapContext, geocodeAndNavigate, onSearchArea]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -267,7 +303,11 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
 
           {messages.map((msg) => (
             <div key={msg.id} className={`mv-chat-msg mv-chat-msg--${msg.role}`}>
-              {msg.content}
+              {msg.role === "assistant" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+              ) : (
+                msg.content
+              )}
               {msg.charts && msg.charts.length > 0 && (
                 <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
                   {msg.charts.map((b64, idx) => (
@@ -275,7 +315,8 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
                       key={idx}
                       src={`data:image/png;base64,${b64}`}
                       alt={`상권 분석 차트 ${idx + 1}`}
-                      style={{ width: "100%", borderRadius: "8px" }}
+                      style={{ width: "100%", borderRadius: "8px", cursor: "zoom-in" }}
+                      onClick={() => setEnlargedChart(b64)}
                     />
                   ))}
                 </div>
@@ -285,12 +326,18 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
 
           {loading && (
             <div className="mv-chat-loading">
-              <div className="mv-chat-dots">
-                <span />
-                <span />
-                <span />
-              </div>
-              <span>분석 중... ({elapsed}초)</span>
+              {activeEvents.length > 0 ? (
+                <ProgressPanel events={activeEvents} detailed={false} />
+              ) : (
+                <>
+                  <div className="mv-chat-dots">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <span>분석 준비 중... ({elapsed}초)</span>
+                </>
+              )}
             </div>
           )}
 
@@ -316,6 +363,28 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           </button>
         </div>
       </div>
+
+      {/* 차트 확대 오버레이 */}
+      {enlargedChart && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.75)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setEnlargedChart(null)}
+        >
+          <img
+            src={`data:image/png;base64,${enlargedChart}`}
+            alt="차트 확대"
+            style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: "12px" }}
+          />
+        </div>
+      )}
     </>
   );
 }

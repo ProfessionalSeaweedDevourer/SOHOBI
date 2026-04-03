@@ -124,7 +124,19 @@
   background: #f1f5f9;
   color: #1e293b;
   border-bottom-left-radius: 4px;
-  white-space: pre-wrap;
+}
+.mv-chat-msg--assistant table {
+  border-collapse: collapse; width: 100%; margin: 0.5rem 0; font-size: 0.78rem;
+}
+.mv-chat-msg--assistant table th,
+.mv-chat-msg--assistant table td {
+  border: 1px solid #cbd5e1; padding: 0.3rem 0.5rem; text-align: left;
+}
+.mv-chat-msg--assistant table th {
+  background: rgba(8,145,178,0.1); font-weight: 600;
+}
+.mv-chat-msg--assistant table tbody tr:nth-child(even) {
+  background: rgba(0,0,0,0.03);
 }
 .mv-chat-msg--system {
   align-self: center;
