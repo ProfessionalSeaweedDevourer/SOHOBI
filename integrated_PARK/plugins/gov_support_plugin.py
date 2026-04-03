@@ -107,14 +107,17 @@ class GovSupportPlugin:
                 return region
         return ""
 
+    # reranker score 임계값 — 0~4 범위에서 1.2 미만은 부적합으로 판단
+    RERANKER_THRESHOLD = 1.2
+
     def _search_one(self, query: str, region: str, top_k: int = 5) -> list[dict]:
-        """단일 쿼리 검색 실행, 결과를 dict 리스트로 반환"""
+        """단일 쿼리 하이브리드+시맨틱 검색. reranker score 필터링 후 상위 top_k 반환."""
         resp = self._ai_client.embeddings.create(
             input=query, model=self._embedding_deployment
         )
         vector = resp.data[0].embedding
         vector_query = VectorizedQuery(
-            vector=vector, k_nearest_neighbors=20, fields="embedding"
+            vector=vector, k_nearest_neighbors=top_k * 4, fields="embedding"
         )
         filter_str = None
         if region:
@@ -126,15 +129,26 @@ class GovSupportPlugin:
             filter=filter_str,
             query_type="semantic",
             semantic_configuration_name="sohobi-semantic",
+            query_caption="extractive",
             select=[
                 "program_name", "field", "summary", "target",
                 "support_content", "criteria", "apply_deadline",
                 "apply_method", "org_name", "phone", "url",
                 "support_type", "target_region"
             ],
-            top=top_k,
+            top=top_k * 3,
         )
-        return [dict(r) for r in results]
+
+        scored = []
+        for r in results:
+            reranker_score = r.get("@search.reranker_score") or 0.0
+            if reranker_score >= self.RERANKER_THRESHOLD:
+                d = dict(r)
+                d["_reranker_score"] = reranker_score
+                scored.append(d)
+
+        scored.sort(key=lambda x: x["_reranker_score"], reverse=True)
+        return scored[:top_k]
 
     @staticmethod
     def _select_categories(business_type: str, funding_purpose: str, additional_info: str) -> list[dict]:
@@ -196,50 +210,41 @@ class GovSupportPlugin:
             # 관련 카테고리만 선택 (최대 3개)
             selected_cats = self._select_categories(business_type, funding_purpose, additional_info)
 
-            all_results = {}
+            flat_results = []
             seen_names = set()
 
             for cat in selected_cats:
                 query = cat["query_template"].format(**profile)
-                results = self._search_one(query, extracted_region, top_k=5)
-
-                cat_results = []
+                results = self._search_one(query, extracted_region, top_k=8)
                 for r in results:
                     name = r.get("program_name", "")
                     if name in seen_names:
                         continue
                     seen_names.add(name)
-                    cat_results.append(r)
+                    flat_results.append(r)
 
-                if cat_results:
-                    all_results[cat["name"]] = cat_results
-
-            if not all_results:
+            if not flat_results:
                 return f"{profile_summary}\n\n조건에 맞는 지원사업을 찾을 수 없습니다."
 
-            output_parts = [profile_summary, ""]
+            # reranker score 기준 전역 정렬 후 상위 5개만 선별
+            flat_results.sort(key=lambda x: x.get("_reranker_score", 0.0), reverse=True)
+            top_results = flat_results[:5]
 
-            total_count = 0
-            for cat_name, results in all_results.items():
-                output_parts.append(f"━━━ {cat_name} ━━━")
-                for r in results:
-                    total_count += 1
-                    output_parts.append(
-                        f"\n■ {r.get('program_name', '-')}\n"
-                        f"  분야: {r.get('field', '-')} | 유형: {r.get('support_type', '-')} | 지역: {r.get('target_region', '-')}\n"
-                        f"  대상: {r.get('target', '-')}\n"
-                        f"  선정기준: {r.get('criteria', '-')}\n"
-                        f"  지원내용: {r.get('support_content', '-')}\n"
-                        f"  신청방법: {r.get('apply_method', '-')}\n"
-                        f"  신청기한: {r.get('apply_deadline', '-')}\n"
-                        f"  기관: {r.get('org_name', '-')} | 문의: {r.get('phone', '-')}\n"
-                        f"  링크: {r.get('url', '-')}"
-                    )
-                output_parts.append("")
+            output_parts = [profile_summary, f"[상위 {len(top_results)}건 추천]\n"]
+            for i, r in enumerate(top_results, 1):
+                output_parts.append(
+                    f"[{i}] {r.get('program_name', '-')}\n"
+                    f"  분야: {r.get('field', '-')} | 유형: {r.get('support_type', '-')} | 지역: {r.get('target_region', '-')}\n"
+                    f"  대상: {r.get('target', '-')}\n"
+                    f"  선정기준: {r.get('criteria', '-')}\n"
+                    f"  지원내용: {r.get('support_content', '-')}\n"
+                    f"  신청방법: {r.get('apply_method', '-')}\n"
+                    f"  신청기한: {r.get('apply_deadline', '-')}\n"
+                    f"  기관: {r.get('org_name', '-')} | 문의: {r.get('phone', '-')}\n"
+                    f"  링크: {r.get('url', '-')}"
+                )
 
-            output_parts.insert(1, f"[총 {len(all_results)}개 카테고리에서 {total_count}건 추천]\n")
-
-            return "\n".join(output_parts)
+            return "\n\n".join(output_parts)
 
         except Exception as e:
             return f"추천 오류: {e}"
