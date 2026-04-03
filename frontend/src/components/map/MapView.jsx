@@ -35,7 +35,7 @@ import { CATEGORIES } from "../../constants/categories";
 import "./MapView.css";
 
 // ── API 엔드포인트 (vite proxy: /map-api → 8681, /realestate → 8682) ──
-const FASTAPI_URL = import.meta.env.VITE_MAP_URL || "http://localhost:8681";
+const FASTAPI_URL = import.meta.env.VITE_MAP_URL || "";
 const REALESTATE_URL = import.meta.env.VITE_REALESTATE_URL || "";
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
 
