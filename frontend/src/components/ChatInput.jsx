@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 
-const ChatInput = forwardRef(function ChatInput({ onSubmit, loading, placeholder }, ref) {
-  const [value, setValue] = useState("");
+const ChatInput = forwardRef(function ChatInput({ onSubmit, loading, placeholder, defaultValue }, ref) {
+  const [value, setValue] = useState(defaultValue || "");
   const textareaRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
@@ -14,6 +14,12 @@ const ChatInput = forwardRef(function ChatInput({ onSubmit, loading, placeholder
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [value]);
+
+  useEffect(() => {
+    if (defaultValue && textareaRef.current) {
+      textareaRef.current.select();
+    }
+  }, []);
 
   function handleKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {

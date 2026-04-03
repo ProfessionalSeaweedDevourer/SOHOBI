@@ -457,7 +457,7 @@ export default function UserChat() {
           >
             {showSamples ? "▲ 샘플 질문 닫기" : "💬 샘플 질문 보기"}
           </button>
-          <ChatInput ref={inputRef} onSubmit={handleSubmit} loading={loading} placeholder={placeholder} />
+          <ChatInput ref={inputRef} onSubmit={handleSubmit} loading={loading} defaultValue={placeholder} />
         </div>
       </footer>
     </div>
