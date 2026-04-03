@@ -14,31 +14,14 @@ export default defineConfig({
          "/health": "http://localhost:8000",
 
          // 지도: 소상공인 DB (integrated_PARK 통합 서버, 포트 8000)
-
+         // /map-api: useLandmarkLayer.js 폴백 경로 (rewrite 필요)
          "/map-api": {
             target: "http://localhost:8000",
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/map-api/, ""),
          },
-         "/map/nearby": { target: "http://localhost:8000", changeOrigin: true },
-         "/map/landmarks": {
-            target: "http://localhost:8000",
-            changeOrigin: true,
-         },
-         "/map/schools": {
-            target: "http://localhost:8000",
-            changeOrigin: true,
-         },
-         "/map/festivals": {
-            target: "http://localhost:8000",
-            changeOrigin: true,
-         },
-         "/map/population": {
-            target: "http://localhost:8000",
-            changeOrigin: true,
-         },
-         "/map/sdot": { target: "http://localhost:8000", changeOrigin: true },
-         "/map/dong": { target: "http://localhost:8000", changeOrigin: true },
+         // /map: MapView.jsx의 모든 /map/* 요청 커버
+         "/map": { target: "http://localhost:8000", changeOrigin: true },
 
          // 지도: 부동산/상권 데이터 API (integrated_PARK 통합 서버, 포트 8000)
          "/realestate": {
