@@ -255,6 +255,10 @@ export default function Landing() {
           <Link to="/privacy" className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2">
             개인정보처리방침
           </Link>
+          <span className="mx-2 opacity-30">·</span>
+          <Link to="/changelog" className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2">
+            업데이트 로그
+          </Link>
         </div>
       </footer>
     </div>
