@@ -17,7 +17,7 @@ const GRADE_STYLE = {
 };
 const GRADE_LABEL = { A: "A 통과", B: "B 경고", C: "C 반려" };
 
-export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, showMeta }) {
+export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, showMeta, showGrade }) {
   const isEscalated = status === "escalated";
   const isError = status === "error";
   const effectiveGrade = grade || (isEscalated ? "C" : "A");
@@ -61,6 +61,19 @@ export default function ResponseCard({ question, domain, status, grade, confiden
             )}
             {retryCount !== undefined && retryCount > 0 && (
               <span className="text-xs text-muted-foreground">재시도 {retryCount}회</span>
+            )}
+          </div>
+        )}
+        {!isError && !showMeta && showGrade && domain && domain !== "chat" && (
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <span
+              className="text-xs px-2 py-0.5 rounded-full font-semibold"
+              style={GRADE_STYLE[effectiveGrade] || { background: "var(--muted)", color: "var(--muted-foreground)" }}
+            >
+              {GRADE_LABEL[effectiveGrade] || effectiveGrade}
+            </span>
+            {retryCount !== undefined && retryCount > 0 && (
+              <span className="text-xs text-muted-foreground">{retryCount}회 검증</span>
             )}
           </div>
         )}

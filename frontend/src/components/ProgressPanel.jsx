@@ -105,7 +105,7 @@ export default function ProgressPanel({ events = [], detailed = false }) {
                   {signoffResult
                     ? (signoffResult.approved
                         ? `검증 통과`
-                        : `반려`)
+                        : (detailed ? `반려` : `재시도`))
                     : "검증 중…"}
                 </span>
                 {signoffResult && (

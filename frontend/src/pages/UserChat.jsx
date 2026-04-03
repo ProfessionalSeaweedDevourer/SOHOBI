@@ -140,6 +140,7 @@ export default function UserChat() {
               retryCount={msg.retryCount}
               chart={msg.chart}
               showMeta={false}
+              showGrade={true}
             />
           ))}
 
