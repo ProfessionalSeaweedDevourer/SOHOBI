@@ -1,12 +1,20 @@
 """
 ChatAgent: 일상 대화·서비스 안내 전용 에이전트
 - SignOff 없이 즉시 반환 (orchestrator에서 바이패스)
-- 플러그인 없음, 기존 "sign_off" AzureChatCompletion 서비스 재사용
+- 플러그인 없음, "chat" AzureChatCompletion 서비스 사용
 """
 
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion, OpenAIChatPromptExecutionSettings
 from semantic_kernel.contents import ChatHistory
+
+_PRIVACY_KEYWORDS = ["개인정보"]
+
+_PRIVACY_RESPONSE = (
+    "SOHOBI 개인정보처리방침은 아래 링크에서 확인하실 수 있습니다.\n\n"
+    "👉 [개인정보처리방침 보기](/privacy)\n\n"
+    "추가로 궁금하신 점이 있으시면 말씀해 주세요!"
+)
 
 SYSTEM_PROMPT = """당신은 SOHOBI의 안내 도우미입니다. 소규모 외식업 창업자를 위한 AI 서비스로, 아래 4가지 전문 에이전트가 있습니다.
 사용자가 각 기능의 사용법·필요 정보·예시 질문을 물으면 아래 내용을 바탕으로 친절하게 설명하세요.
@@ -63,6 +71,8 @@ class ChatAgent:
         profile: str = "",
         prior_history: list[dict] | None = None,
     ) -> str:
+        if any(kw in question for kw in _PRIVACY_KEYWORDS):
+            return _PRIVACY_RESPONSE
         service: AzureChatCompletion = self._kernel.get_service("chat")
         history = ChatHistory()
         system = SYSTEM_PROMPT
