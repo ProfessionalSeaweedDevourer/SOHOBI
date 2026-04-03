@@ -6,6 +6,9 @@
 - ChatCompletionAgent / _make_kernel() 제거 → 단일 커널(get_kernel) + 직접 LLM 호출
 - generate_draft(question, retry_prompt, profile) 진입점 구현
 - S1~S5 루브릭 통과용 지시 포함 (sign-off 루프 참여)
+- _find_peak_time(), _find_top_age() 사전 계산 함수 추가 (CHOI)
+- 차트 생성 연결: generate_analyze_charts / generate_compare_charts (CHOI)
+- 지역명/업종명 정규화 로직 추가 (CHOI)
 """
 
 import asyncio
@@ -23,7 +26,103 @@ from semantic_kernel.connectors.ai.open_ai import (
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import kernel_function
 
-from db.repository import CommercialRepository
+from db.repository import AREA_MAP, INDUSTRY_CODE_MAP, CommercialRepository
+from chart.location_chart import generate_analyze_charts, generate_compare_charts
+
+
+# ── 사전 계산 유틸 (CHOI) ─────────────────────────────────────────────
+
+def _find_peak_time(data: dict) -> str:
+    """시간대별 매출에서 피크타임 판별"""
+    time_slots = {
+        "00~06시": data.get("time_00_06_krw", 0),
+        "06~11시": data.get("time_06_11_krw", 0),
+        "11~14시": data.get("time_11_14_krw", 0),
+        "14~17시": data.get("time_14_17_krw", 0),
+        "17~21시": data.get("time_17_21_krw", 0),
+        "21~24시": data.get("time_21_24_krw", 0),
+    }
+    return max(time_slots, key=time_slots.get)
+
+
+def _find_top_age(data: dict) -> tuple:
+    """연령대별 매출에서 주요 고객층 판별 → (연령대, 비율%)"""
+    total = data.get("monthly_sales_krw", 0) or 1
+    ages = {
+        "10대": data.get("age_10s_krw", 0),
+        "20대": data.get("age_20s_krw", 0),
+        "30대": data.get("age_30s_krw", 0),
+        "40대": data.get("age_40s_krw", 0),
+        "50대": data.get("age_50s_krw", 0),
+        "60대": data.get("age_60s_krw", 0),
+    }
+    top = max(ages, key=ages.get)
+    pct = round(ages[top] / total * 100) if total > 0 else 0
+    return top, pct
+
+
+# ── 지역명/업종명 정규화 (CHOI) ────────────────────────────────────────
+
+def _normalize_location(raw: str) -> str | None:
+    """
+    사용자 입력 지역명 → AREA_MAP 키로 정규화 (5단계)
+    예: "강남역" → "강남", "홍대입구" → "홍대", "서초1동" → "서초"
+    """
+    if not raw:
+        return None
+
+    # 1단계: 정확히 일치
+    if raw in AREA_MAP:
+        return raw
+
+    # 2단계: 접미사 제거 후 매칭 (숫자+동, 동, 구, 역, 입구 등)
+    stripped = re.sub(r"\d*동$|구$|역$|입구$|지역$|쪽$|근처$|일대$|주변$|앞$", "", raw)
+    if stripped and stripped in AREA_MAP:
+        return stripped
+
+    # 3단계: 부분 문자열 매칭 (AREA_MAP 키가 입력에 포함)
+    candidates = [key for key in AREA_MAP if len(key) >= 2 and key in raw]
+    if candidates:
+        candidates.sort(key=len, reverse=True)  # 가장 긴(구체적) 매칭 우선
+        return candidates[0]
+
+    # 4단계: 입력이 AREA_MAP 키에 포함
+    for key in AREA_MAP:
+        if len(key) >= 2 and raw in key:
+            return key
+
+    # 5단계: stripped로 부분 매칭
+    if stripped and len(stripped) >= 2:
+        for key in AREA_MAP:
+            if stripped in key or key in stripped:
+                return key
+
+    return None
+
+
+def _normalize_business_type(raw: str) -> str | None:
+    """
+    사용자 입력 업종명 → INDUSTRY_CODE_MAP 키로 정규화 (3단계)
+    예: "치킨집" → "치킨", "카페전문점" → "카페"
+    """
+    if not raw:
+        return None
+
+    # 1단계: 정확히 일치
+    if raw in INDUSTRY_CODE_MAP:
+        return raw
+
+    # 2단계: 접미사 제거 후 매칭
+    stripped = re.sub(r"(집|점|가게|전문점|전문|샵)$", "", raw)
+    if stripped and stripped in INDUSTRY_CODE_MAP:
+        return stripped
+
+    # 3단계: 부분 문자열 매칭
+    for key in INDUSTRY_CODE_MAP:
+        if len(key) >= 2 and (key in raw or raw in key):
+            return key
+
+    return None
 
 
 # ── 파라미터 추출 프롬프트 ─────────────────────────────────────────────
@@ -222,6 +321,18 @@ class LocationAgent:
         store_summary = store_data.get("summary", {}) if store_data else {}
         store_breakdown = store_data.get("breakdown", []) if store_data else []
 
+        # 사전 계산: 피크타임 / 주요 고객층 주입 (CHOI)
+        if sales_summary:
+            sales_summary["peak_time"] = _find_peak_time(sales_summary)
+            top_age, top_age_pct = _find_top_age(sales_summary)
+            sales_summary["top_age"] = top_age
+            sales_summary["top_age_pct"] = top_age_pct
+        for s in sales_breakdown:
+            s["peak_time"] = _find_peak_time(s)
+            top_age, top_age_pct = _find_top_age(s)
+            s["top_age"] = top_age
+            s["top_age_pct"] = top_age_pct
+
         user_msg = (
             f"지역: {location} / 업종: {business_type} / 분기: {year}년 {q}분기\n\n"
             f"[매출 합산]\n{json.dumps(sales_summary, ensure_ascii=False, indent=2)}\n\n"
@@ -313,8 +424,18 @@ class LocationAgent:
         elif similar_failed:
             analysis += "\n\n> 유사 상권 추천 조회에 실패했습니다."
 
+        # 차트 생성 (CHOI)
+        charts = []
+        if sales_data:
+            try:
+                charts = generate_analyze_charts(
+                    sales_data["summary"], location, business_type
+                )
+            except Exception as e:
+                logger.warning("LocationAgent 차트 생성 실패: %s", e)
+
         adm_codes = self._repo._get_adm_codes(location)
-        return {"draft": analysis, "adm_codes": adm_codes, "type": "analyze"}
+        return {"draft": analysis, "adm_codes": adm_codes, "type": "analyze", "charts": charts}
 
     # ── DB 조회 + LLM 복수 지역 비교 ───────────────────────────
 
@@ -384,10 +505,18 @@ class LocationAgent:
             }
 
         analysis = await self._run_compare_agent(location_data, business_type, year, q)
+
+        # 차트 생성 (CHOI)
+        charts = []
+        try:
+            charts = generate_compare_charts(location_data, business_type)
+        except Exception as e:
+            logger.warning("LocationAgent 비교 차트 생성 실패: %s", e)
+
         all_adm_codes = []
         for loc in locations:
             all_adm_codes.extend(self._repo._get_adm_codes(loc))
-        return {"draft": analysis, "adm_codes": all_adm_codes, "type": "compare"}
+        return {"draft": analysis, "adm_codes": all_adm_codes, "type": "compare", "charts": charts}
 
     # ── 오케스트레이터 진입점 ───────────────────────────────────
 
@@ -406,10 +535,17 @@ class LocationAgent:
 
         # context fallback: LLM이 추출 못한 경우 세션 저장값 사용
         ctx = context or {}
-        locations = params["locations"] or (
+        raw_locations = params["locations"] or (
             [ctx["location_name"]] if ctx.get("location_name") else []
         )
-        business_type = params["business_type"] or ctx.get("business_type") or ""
+        raw_business_type = params["business_type"] or ctx.get("business_type") or ""
+
+        # 지역명/업종명 정규화 (CHOI): "강남역" → "강남", "치킨집" → "치킨"
+        locations = []
+        for raw_loc in raw_locations:
+            normed = _normalize_location(raw_loc)
+            locations.append(normed if normed else raw_loc)
+        business_type = _normalize_business_type(raw_business_type) or raw_business_type
 
         if not locations or not business_type:
             return {
@@ -441,6 +577,7 @@ class LocationAgent:
 
         draft = result["draft"]
         adm_codes = result["adm_codes"]
+        charts = result.get("charts", [])
 
         # retry_prompt 반영 (sign-off 재시도)
         # 데이터 부재·미지원 업종 응답은 재시도해도 달라지지 않으므로 건너뜀
@@ -485,4 +622,5 @@ class LocationAgent:
             "type":          mode,
             "business_type": business_type,
             "location_name": locations[0] if locations else "",
+            "charts":        charts,
         }

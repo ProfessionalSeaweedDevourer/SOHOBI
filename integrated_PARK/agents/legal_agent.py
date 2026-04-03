@@ -113,7 +113,9 @@ class LegalAgent:
         history.add_user_message(question)
 
         settings = OpenAIChatPromptExecutionSettings(
-            function_choice_behavior=FunctionChoiceBehavior.Required(),
+            function_choice_behavior=FunctionChoiceBehavior.Required(
+                auto_invoke_counting_limit=2,  # 함수 호출 최대 2회 (무한 루프 방지, CHOI p04)
+            ),
         )
         response = await service.get_chat_message_content(
             history, settings=settings, kernel=self._kernel
