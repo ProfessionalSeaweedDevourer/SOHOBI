@@ -17,10 +17,12 @@ const GRADE_STYLE = {
 };
 const GRADE_LABEL = { A: "A 통과", B: "B 경고", C: "C 반려" };
 
-export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, showMeta, showGrade }) {
+// displayMode: 'full' = 개발자(도메인+등급+재시도), 'grade' = 사용자(등급+검증횟수), 'none' = 미표시
+export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, displayMode = "none" }) {
   const isEscalated = status === "escalated";
   const isError = status === "error";
   const effectiveGrade = grade || (isEscalated ? "C" : "A");
+  const showBadges = !isError && displayMode !== "none" && domain && (displayMode === "full" || domain !== "chat");
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -43,14 +45,17 @@ export default function ResponseCard({ question, domain, status, grade, confiden
             <div className="text-foreground">{draft}</div>
           </div>
         ) : null}
-        {!isError && showMeta && domain && (
+
+        {showBadges && (
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span
-              className="text-xs font-semibold px-2 py-0.5 rounded-full"
-              style={DOMAIN_COLOR[domain] || { background: "var(--muted)", color: "var(--muted-foreground)" }}
-            >
-              {DOMAIN_KR[domain] || domain}
-            </span>
+            {displayMode === "full" && (
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={DOMAIN_COLOR[domain] || { background: "var(--muted)", color: "var(--muted-foreground)" }}
+              >
+                {DOMAIN_KR[domain] || domain}
+              </span>
+            )}
             {domain !== "chat" && (
               <span
                 className="text-xs px-2 py-0.5 rounded-full font-semibold"
@@ -59,21 +64,10 @@ export default function ResponseCard({ question, domain, status, grade, confiden
                 {GRADE_LABEL[effectiveGrade] || effectiveGrade}
               </span>
             )}
-            {retryCount !== undefined && retryCount > 0 && (
-              <span className="text-xs text-muted-foreground">재시도 {retryCount}회</span>
-            )}
-          </div>
-        )}
-        {!isError && !showMeta && showGrade && domain && domain !== "chat" && (
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span
-              className="text-xs px-2 py-0.5 rounded-full font-semibold"
-              style={GRADE_STYLE[effectiveGrade] || { background: "var(--muted)", color: "var(--muted-foreground)" }}
-            >
-              {GRADE_LABEL[effectiveGrade] || effectiveGrade}
-            </span>
-            {retryCount !== undefined && retryCount > 0 && (
-              <span className="text-xs text-muted-foreground">{retryCount}회 검증</span>
+            {retryCount > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {displayMode === "full" ? `재시도 ${retryCount}회` : `${retryCount}회 검증`}
+              </span>
             )}
           </div>
         )}
@@ -104,8 +98,7 @@ export default function ResponseCard({ question, domain, status, grade, confiden
               )}
             </div>
 
-            {/* 사용자 모드: grade B일 때 주의 배너 */}
-            {!showMeta && effectiveGrade === "B" && (
+            {displayMode !== "full" && effectiveGrade === "B" && (
               <div
                 className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2 text-xs border"
                 style={{

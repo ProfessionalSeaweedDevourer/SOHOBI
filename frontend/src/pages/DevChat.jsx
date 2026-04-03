@@ -30,7 +30,6 @@ export default function DevChat() {
     setActiveEvents([]);
 
     let finalResult = null;
-    let resolvedSessionId = sessionId;
 
     try {
       await streamQuery(question, 3, sessionId, (eventName, data) => {
@@ -46,7 +45,6 @@ export default function DevChat() {
         setActiveEvents(prev => [...prev, { event: eventName, ...data }]);
 
         if (eventName === "domain_classified" && data.session_id) {
-          resolvedSessionId = data.session_id;
           setSessionId(data.session_id);
         }
         if (eventName === "complete") {
@@ -146,7 +144,7 @@ export default function DevChat() {
                 draft={msg.draft}
                 retryCount={msg.retryCount}
                 chart={msg.chart}
-                showMeta={true}
+                displayMode="full"
               />
               {msg.status !== "error" && (
                 <SignoffPanel
