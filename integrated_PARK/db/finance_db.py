@@ -32,13 +32,11 @@ class DBWork:
                         s.tot_sales_amt::numeric
                         / NULLIF(
                             COALESCE(
-                                (SELECT st.stor_co
+                                (SELECT ROUND(AVG(st.stor_co))
                                 FROM sangkwon_store st
-                                WHERE st.adm_cd         = s.adm_cd
-                                AND   st.svc_induty_cd  = s.svc_induty_cd
-                                AND   st.base_yr_qtr_cd = s.base_yr_qtr_cd
-                                AND   st.stor_co > 0
-                                LIMIT 1),
+                                WHERE st.adm_cd        = s.adm_cd
+                                AND   st.svc_induty_cd = s.svc_induty_cd
+                                AND   st.stor_co > 0),
                             1),
                         0)
                     ) AS avg_sales_per_store
@@ -74,13 +72,11 @@ class DBWork:
                             s.tot_sales_amt::numeric
                             / NULLIF(
                                 COALESCE(
-                                    (SELECT st.stor_co
+                                    (SELECT ROUND(AVG(st.stor_co))
                                     FROM sangkwon_store st
-                                    WHERE st.adm_cd         = s.adm_cd
-                                    AND   st.svc_induty_cd  = s.svc_induty_cd
-                                    AND   st.base_yr_qtr_cd = s.base_yr_qtr_cd
-                                    AND   st.stor_co > 0
-                                    LIMIT 1),
+                                    WHERE st.adm_cd        = s.adm_cd
+                                    AND   st.svc_induty_cd = s.svc_induty_cd
+                                    AND   st.stor_co > 0),
                                 1),
                             0)
                         )
