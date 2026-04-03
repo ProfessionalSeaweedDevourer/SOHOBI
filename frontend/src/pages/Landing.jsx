@@ -133,7 +133,7 @@ export default function Landing() {
               {
                 icon: Shield,
                 title: 'SignOff 품질 검증',
-                description: '모든 답변은 자동 품질 검증 파이프라인을 거쳐 신뢰성을 보장합니다',
+                description: 'AI가 생성한 답변을 별도의 검증 AI가 한 번 더 검토해, 오류나 부정확한 정보를 사전에 걸러냅니다',
                 color: 'var(--brand-blue)',
                 delay: 0,
               },
@@ -201,10 +201,10 @@ export default function Landing() {
               <Zap size={14} className="text-[var(--brand-blue)]" />
               <span className="text-muted-foreground">전문가 에이전트</span>
             </div>
-            <h2 className="text-4xl md:text-5xl gradient-text">세 명의 AI 전문가</h2>
+            <h2 className="text-4xl md:text-5xl gradient-text">네 명의 AI 전문가</h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6">
             {agentData.map((agent, idx) => (
               <AgentCard key={agent.id} agent={agent} index={idx} />
             ))}

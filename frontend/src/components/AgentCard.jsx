@@ -1,10 +1,11 @@
-import { FileText, MapPin, Calculator } from 'lucide-react';
+import { FileText, MapPin, Calculator, Scale } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const iconMap = {
   FileText,
   MapPin,
   Calculator,
+  Scale,
 };
 
 export function AgentCard({ agent, index = 0 }) {
@@ -12,6 +13,7 @@ export function AgentCard({ agent, index = 0 }) {
 
   const glowClass =
     agent.id === 'admin' ? 'hover-glow-blue' :
+    agent.id === 'legal' ? 'hover-glow-blue' :
     agent.id === 'commercial' ? 'hover-glow-teal' :
     'hover-glow-orange';
 
@@ -52,7 +54,7 @@ export function AgentCard({ agent, index = 0 }) {
               {agent.descriptionKo}
             </p>
             <div className="space-y-1.5">
-              {agent.plugins.slice(0, 4).map((plugin, idx) => (
+              {(agent.features || []).map((feature, idx) => (
                 <motion.div
                   key={idx}
                   initial={{ opacity: 0, x: -10 }}
@@ -65,16 +67,11 @@ export function AgentCard({ agent, index = 0 }) {
                     className="mt-0.5 transition-colors group-hover:opacity-100 opacity-60"
                     style={{ color: agent.color }}
                   >
-                    •
+                    ✓
                   </span>
-                  <span className="text-foreground/80">{plugin}</span>
+                  <span className="text-foreground/80">{feature}</span>
                 </motion.div>
               ))}
-              {agent.plugins.length > 4 && (
-                <div className="text-sm text-muted-foreground pl-4">
-                  +{agent.plugins.length - 4} more...
-                </div>
-              )}
             </div>
           </div>
         </div>
