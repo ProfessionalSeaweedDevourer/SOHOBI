@@ -53,12 +53,26 @@ INDUSTRY_RATIO = {
 
 
 class FinanceSimulationPlugin:
-    """몬테카를로 시뮬레이션 기반 재무 분석 플러그인"""
+    """
+    몬테카를로 시뮬레이션 기반 재무 분석 플러그인.
+
+    월매출 데이터를 기반으로 순이익 분포, 손실 확률, 손익분기점,
+    투자 회수 기간을 산출한다. 업종별 비용 비율은 INDUSTRY_RATIO 참조.
+    """
 
     def _calculate_salary(self, salary: float, hours: float = None) -> float:
         return salary if hours is None else salary * hours
 
     def get_industry_ratio(self, industry: str = None) -> dict:
+        """
+        업종 코드에 대응하는 비용 비율 dict를 반환한다.
+
+        Args:
+            industry: 서비스 업종 코드 (예: "CS100010"). 미입력 시 default 비율 반환.
+
+        Returns:
+            dict: cost, salary, rent, admin, fee 비율 포함.
+        """
         return INDUSTRY_RATIO.get(industry, INDUSTRY_RATIO["default"])
 
     def _generate_chart(self, results: list, avg: float, p20: float) -> dict:
@@ -106,6 +120,31 @@ class FinanceSimulationPlugin:
         fee: float | None = None,
         industry: str = None,
     ) -> dict:
+        """
+        10,000회 몬테카를로 시뮬레이션으로 순이익 분포를 산출한다.
+
+        미입력 비용 항목은 업종 비율(INDUSTRY_RATIO) 기반으로 자동 산출.
+        revenue가 단일값이면 ±10% 정규분포, 복수값이면 실데이터 샘플링 방식 적용.
+
+        Args:
+            revenue (list[float]): 월매출 리스트 (원 단위)
+            cost (float | None): 월 원가
+            salary (float | None): 급여 (시급 시 hours와 함께 사용)
+            hours (float | None): 월 근무시간 (시급 계산용)
+            rent (float | None): 임대료
+            admin (float | None): 관리비
+            fee (float | None): 수수료
+            industry (str | None): 업종 코드
+
+        Returns:
+            dict:
+                - average_net_profit: 평균 순이익
+                - loss_probability: 손실 발생 확률 (0~1)
+                - avg_loss_amount: 손실 발생 시 평균 손실액
+                - p20: 하위 20% 순이익 (비관 시나리오)
+                - actual_cost/salary/rent/admin/fee: 실제 적용된 비용
+                - chart: 히스토그램 bins 데이터
+        """
         iterations = 10_000
         results = []
 
@@ -177,8 +216,22 @@ class FinanceSimulationPlugin:
         variable_cost: float,
     ) -> dict:
         """
-        MC시뮬레이션 결과를 토대로 손익분기 및 안전마진 역산 
-        평균매출(avg_revenue)이 0 이하 및 매출보다 변동비가 큰 경우 None 반환
+        몬테카를로 결과 기반 손익분기점 및 안전마진을 산출한다.
+
+        계산 불가 조건:
+            - avg_revenue <= 0: 매출이 0 이하
+            - variable_cost_ratio >= 1: 원가율이 매출을 초과
+
+        Args:
+            avg_revenue: 평균 월매출
+            avg_net_profit: 평균 순이익
+            variable_cost: 변동비 (원가)
+
+        Returns:
+            dict:
+                - breakeven_revenue: 손익분기 월매출. 계산 불가 시 None.
+                - breakeven_daily: 손익분기 일매출. 계산 불가 시 None.
+                - safety_margin: 안전마진 비율. 계산 불가 시 None.
         """
         if avg_revenue <= 0:
             return {
@@ -207,7 +260,18 @@ class FinanceSimulationPlugin:
         }
 
     def load_initial(self, region: list = None, industry: str = None) -> dict:
-        """지역/업종 코드를 받아 매출 데이터를 불러옵니다."""
+        """
+        지역/업종 기반 초기 매출 데이터를 로드한다.
+
+        DB 조회 실패 또는 미입력 시 DEFAULT_REVENUE_FALLBACK 반환.
+
+        Args:
+            region: 행정동 코드 리스트
+            industry: 업종명 (INDUSTRY_CODE_MAP 키값)
+
+        Returns:
+            dict: revenue 및 나머지 비용 항목(None) 포함한 초기 파라미터 dict.
+        """
         industry_cd = INDUSTRY_CODE_MAP.get(industry)
         if _DBWORK_AVAILABLE:
             try:
@@ -233,7 +297,18 @@ class FinanceSimulationPlugin:
         }
 
     def merge_json(self, previous: dict, current: dict) -> dict:
-        """기존 JSON(previous)에 새 입력(current)을 병합."""
+        """
+        기존 파라미터 dict에 새 입력값을 병합한다.
+
+        current의 None이 아닌 값만 previous를 덮어쓴다.
+
+        Args:
+            previous: 누적된 기존 파라미터
+            current: 새로 입력된 파라미터
+
+        Returns:
+            dict: 병합된 파라미터 dict.
+        """
         merged = previous.copy()
         for key, value in current.items():
             if value is not None:
