@@ -9,7 +9,7 @@ const DOMAIN_STYLE = {
   admin: { background: "rgba(8,145,178,0.12)", color: "var(--brand-blue)" },
   legal: { background: "rgba(245,158,11,0.12)", color: "var(--grade-b, #f59e0b)" },
   location: { background: "rgba(139,92,246,0.12)", color: "#8b5cf6" },
-  chat: { background: "rgba(139,92,246,0.12)", color: "#8b5cf6" },
+  chat: { background: "rgba(236,72,153,0.12)", color: "#ec4899" },
 };
 const ITEM_LABELS = {
   C1: "질문 응답성", C2: "완결성", C3: "내부 일관성", C4: "톤 적절성", C5: "할루시네이션 징후",

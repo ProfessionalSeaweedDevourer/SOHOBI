@@ -7,8 +7,8 @@ const DOMAIN_COLOR = {
   finance: { background: "rgba(20,184,166,0.15)", color: "var(--brand-teal)" },
   admin:   { background: "rgba(8,145,178,0.15)",  color: "var(--brand-blue)" },
   legal:   { background: "rgba(249,115,22,0.15)", color: "var(--brand-orange)" },
-  location:{ background: "rgba(20,184,166,0.15)", color: "var(--brand-teal)" },
-  chat:    { background: "rgba(139,92,246,0.15)", color: "#8b5cf6" },
+  location:{ background: "rgba(139,92,246,0.15)", color: "#8b5cf6" },
+  chat:    { background: "rgba(236,72,153,0.15)", color: "#ec4899" },
 };
 
 const GRADE_STYLE = {
