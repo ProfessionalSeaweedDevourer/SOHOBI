@@ -114,6 +114,15 @@ _PROFILE_CONTEXT = """[창업자 상황]
 
 
 class FinanceAgent:
+    """
+    재무 시뮬레이션 기반 창업 분석 에이전트.
+
+    파이프라인:
+        1. 사용자 질문 → LLM으로 시뮬레이션 파라미터 추출
+        2. FinanceSimulationPlugin으로 몬테카를로 시뮬레이션 실행
+        3. 시뮬레이션 결과 → LLM으로 설명 draft 생성
+        4. 초기 투자비용 입력 시 투자 회수 전망 병합
+    """
     def __init__(self, kernel: Kernel):
         self._kernel = kernel
         self._sim = FinanceSimulationPlugin()
@@ -141,6 +150,19 @@ class FinanceAgent:
             ) from e
 
     async def _extract_params(self, question: str) -> tuple[dict, dict]:
+        """
+        사용자 질문에서 시뮬레이션 파라미터와 컨텍스트를 추출한다.
+
+        LLM으로 JSON 추출 후 지역명 → 행정동 코드, 업종명 → INDUSTRY_CODE_MAP 키로 변환.
+
+        Args:
+            question: 사용자 입력 질문
+
+        Returns:
+            tuple:
+                - dict: revenue, cost, salary 등 시뮬레이션 파라미터
+                - dict: adm_codes(행정동 코드 리스트), business_type(업종명) 컨텍스트
+        """
         raw = await self._call_llm(_PARAM_EXTRACT_PROMPT.format(user_input=question))
         clean = re.sub(r"^```json\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
         try:
@@ -216,6 +238,23 @@ class FinanceAgent:
         prior_history: list[dict] | None = None,
         context: dict | None = None,
     ) -> str:
+        """
+        시뮬레이션 기반 재무 분석 draft를 생성한다.
+
+        Args:
+            question: 사용자 질문
+            current_params: 누적된 파라미터 dict. None이면 DB에서 초기값 로드.
+            retry_prompt: SignOffAgent 재시도 지적 사항. 있을 시 프롬프트 앞에 주입.
+            profile: 창업자 상황 정보. 있을 시 프롬프트 앞에 주입.
+            prior_history: 이전 대화 이력
+            context: 지역/업종 컨텍스트 dict
+
+        Returns:
+            dict:
+                - draft: LLM 생성 설명 텍스트
+                - chart: 히스토그램 bins 데이터
+                - updated_params: 병합된 누적 파라미터 (프론트 저장용)
+        """
         # ── 1단계: 파라미터 추출 ─────────────────────────────
         # current_params 없으면 None 기반 초기값 사용
         ctx = context or {}
