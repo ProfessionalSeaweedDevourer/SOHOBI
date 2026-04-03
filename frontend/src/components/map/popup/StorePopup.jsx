@@ -197,7 +197,6 @@ function StoreDetailView({
                ✕
             </button>
          </div>
-
          <div
             style={{
                fontSize: 17,
@@ -214,7 +213,6 @@ function StoreDetailView({
             </div>
          )}
          <div style={{ height: 1, background: "#f0f0f0", margin: "10px 0" }} />
-
          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {popup.ROAD_ADDR && (
                <div
@@ -241,7 +239,6 @@ function StoreDetailView({
                </span>
             </div>
          </div>
-
          {loadingDetail && (
             <div
                style={{
@@ -400,8 +397,8 @@ function StoreDetailView({
                )}
             </div>
          )}
-
-         {nearbyStores.length > 0 && (
+         {/* 같은 건물 상가 */}
+         {nearbyStores?.same_building?.length > 0 && (
             <>
                <div
                   style={{
@@ -418,23 +415,21 @@ function StoreDetailView({
                      marginBottom: 6,
                   }}
                >
-                  같은 건물 상가 ({nearbyStores.length}건)
+                  같은 건물 상가 ({nearbyStores.same_building.length}건)
                </div>
-               <div style={{ maxHeight: 160, overflowY: "auto" }}>
-                  {nearbyStores.slice(0, 20).map((s, i) => {
-                     const c = getCatStyle(s.CAT_CD);
+               <div style={{ maxHeight: 120, overflowY: "auto" }}>
+                  {nearbyStores.same_building.map((s, i) => {
+                     const c = getCatStyle(s.CAT_CD || s.cat_cd);
                      return (
                         <div
-                           key={`${s.STORE_ID || "x"}-${i}`}
+                           key={`bldg-${s.STORE_ID || s.store_id || i}`}
                            onClick={() => onStoreSelect?.(s)}
                            style={{
                               display: "flex",
                               alignItems: "center",
-                              gap: 8,
-                              padding: "6px 4px",
+                              gap: 6,
+                              padding: "4px 0",
                               cursor: "pointer",
-                              borderRadius: 6,
-                              borderBottom: "1px solid #f5f5f5",
                            }}
                         >
                            <div
@@ -446,29 +441,78 @@ function StoreDetailView({
                                  flexShrink: 0,
                               }}
                            />
-                           <div style={{ flex: 1, minWidth: 0 }}>
-                              <div
-                                 style={{
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    color: "#222",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                 }}
-                              >
-                                 {s.STORE_NM}
-                              </div>
-                              <div style={{ fontSize: 10, color: "#aaa" }}>
-                                 {c.label}
-                              </div>
-                           </div>
+                           <span
+                              style={{ fontSize: 12, color: "#333", flex: 1 }}
+                           >
+                              {s.STORE_NM || s.store_nm}
+                           </span>
+                           <span style={{ fontSize: 10, color: "#aaa" }}>
+                              {s.FLOOR_INFO || s.floor_info}
+                           </span>
                         </div>
                      );
                   })}
                </div>
             </>
          )}
+         {/* 같은 상호 다른 지점 */}
+         {nearbyStores?.other_branches?.length > 0 && (
+            <>
+               <div
+                  style={{
+                     height: 1,
+                     background: "#f0f0f0",
+                     margin: "12px 0 8px",
+                  }}
+               />
+               <div
+                  style={{
+                     fontSize: 11,
+                     fontWeight: 700,
+                     color: "#aaa",
+                     marginBottom: 6,
+                  }}
+               >
+                  다른 지점 ({nearbyStores.other_branches.length}곳)
+               </div>
+               <div style={{ maxHeight: 100, overflowY: "auto" }}>
+                  {nearbyStores.other_branches.map((s, i) => {
+                     const c = getCatStyle(s.CAT_CD || s.cat_cd);
+                     return (
+                        <div
+                           key={`branch-${s.STORE_ID || s.store_id || i}`}
+                           onClick={() => onStoreSelect?.(s)}
+                           style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "4px 0",
+                              cursor: "pointer",
+                           }}
+                        >
+                           <div
+                              style={{
+                                 width: 8,
+                                 height: 8,
+                                 borderRadius: "50%",
+                                 background: c.color,
+                                 flexShrink: 0,
+                              }}
+                           />
+                           <span
+                              style={{ fontSize: 12, color: "#333", flex: 1 }}
+                           >
+                              {s.STORE_NM || s.store_nm}
+                           </span>
+                           <span style={{ fontSize: 10, color: "#888" }}>
+                              {s.ADM_NM || s.adm_nm}
+                           </span>
+                        </div>
+                     );
+                  })}
+               </div>
+            </>
+         )}{" "}
       </div>
    );
 }
@@ -481,6 +525,7 @@ export default function StorePopup({
    onClose,
    nearbyStores = [],
    onStoreSelect,
+   onBack,
    clusterStores = null,
    onClusterSelect,
    onLandValue,
@@ -568,7 +613,13 @@ export default function StorePopup({
             onClose={onClose}
             nearbyStores={nearbyStores}
             onStoreSelect={onStoreSelect}
-            onBack={clusterStores?.length > 0 ? () => setShowList(true) : null}
+            onBack={
+               clusterStores?.length > 0
+                  ? () => setShowList(true)
+                  : nearbyStores?.same_building?.length > 0
+                    ? onBack
+                    : null
+            }
             onLandValue={onLandValue}
          />
       </div>

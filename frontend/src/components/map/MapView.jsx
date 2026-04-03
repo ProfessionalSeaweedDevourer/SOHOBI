@@ -75,10 +75,15 @@ export default function MapView() {
    const [clusterPopup, setClusterPopup] = useState(null);
    const lastClusterStoresRef = useRef(null); // 뒤로가기용 클러스터 보존
    const [storeSearchOn, setStoreSearchOn] = useState(true); // 상가 전체 검색 ON/OFF
-   const [buildingStores, setBuildingStores] = useState([]);
+   const [buildingStores, setBuildingStores] = useState({
+      same_building: [],
+      other_branches: [],
+   });
    const [loading, setLoading] = useState(false);
    const [wmsPopup, setWmsPopup] = useState(null);
    const prevStorePopupRef = useRef(null); // WmsPopup 뒤로가기용
+   const prevBuildingStoresRef = useRef(null); // 같은 건물 뒤로가기용
+   const selectedStoreIdRef = useRef(null); // 줌 변화 후 하이라이트 유지용
    const [landValue, setLandValue] = useState(null);
    const [showPanel, setShowPanel] = useState(false);
 
@@ -178,7 +183,38 @@ export default function MapView() {
       clearMarkers,
       selectMarker,
       markerLayerRef,
-   } = useMarkers(mapInstance, visibleCats);
+      clusterSourceRef,
+   } = useMarkers(mapInstance, visibleCats, selectedStoreIdRef);
+
+   // 마커 하이라이트 헬퍼 - ref로 감싸서 useEffect 클로저 문제 해결
+   const highlightStoreMarkerRef = useRef(null);
+   highlightStoreMarkerRef.current = (storeId) => {
+      if (!storeId || !clusterSourceRef?.current) return;
+      const wrappers = clusterSourceRef.current.getFeatures();
+      for (const wf of wrappers) {
+         const members = wf.get("features") || [];
+         const match = members.find((f) => {
+            const st = f.get("store");
+            return (st?.STORE_ID || st?.store_id) === storeId;
+         });
+         if (match) {
+            selectMarker(wf);
+            return;
+         }
+      }
+   };
+   const highlightStoreMarker = (storeId) =>
+      highlightStoreMarkerRef.current?.(storeId);
+
+   // 상가 선택 시 팝업(우측 300px)에 가리지 않도록 왼쪽으로 오프셋해서 이동
+   const animateToStore = (lngLat, zoom, callback) => {
+      const map = mapInstance.current;
+      if (!map) return;
+      const targetCoord = fromLonLat(lngLat);
+      map.getView().animate({ center: targetCoord, zoom, duration: 600 }, () =>
+         setTimeout(() => callback?.(), 100),
+      );
+   };
 
    const {
       landmarkLayerRef,
@@ -205,8 +241,46 @@ export default function MapView() {
       landmarkInitRef.current = true;
       loadLandmarks().then(() => setLandmarkLoaded(true));
       loadSchools().then(() => setSchoolLoaded(true));
-      // 기본 폴리곤 활성화 (dongMode 기본값 sales라서 경계 표시)
       ensureDongBoundaryLayer();
+
+      // 지적도 초기 ON (Layerpanel 마운트 타이밍보다 먼저 실행)
+      const map = mapInstance.current;
+      const vKey = import.meta.env.VITE_VWORLD_API_KEY;
+      if (
+         !map
+            .getLayers()
+            .getArray()
+            .some((l) => l.get("name") === "cadastral")
+      ) {
+         Promise.all([
+            import("ol/layer/Tile"),
+            import("ol/source/TileWMS"),
+         ]).then(([{ default: TileLayer }, { default: TileWMS }]) => {
+            const layer = new TileLayer({
+               source: new TileWMS({
+                  url: `/wms/req/wms?KEY=${vKey}&DOMAIN=localhost`,
+                  params: {
+                     SERVICE: "WMS",
+                     VERSION: "1.3.0",
+                     REQUEST: "GetMap",
+                     LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+                     STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+                     FORMAT: "image/png",
+                     TRANSPARENT: "TRUE",
+                     CRS: "EPSG:3857",
+                  },
+                  crossOrigin: "anonymous",
+                  transition: 0,
+               }),
+               opacity: 0.7,
+               zIndex: 50,
+               minZoom: 18,
+            });
+            layer.set("name", "cadastral");
+            map.addLayer(layer);
+            wmsLayerRef.current = layer;
+         });
+      }
    }, [mapReady]); // eslint-disable-line
    const dongSelectedFeatRef = useRef(null); // 현재 선택(클릭)된 폴리곤
    const dongSearchFeatsRef = useRef([]); // 검색으로 하이라이트된 폴리곤 목록
@@ -610,6 +684,8 @@ export default function MapView() {
                   clusterMembers?.length === 1 ? clusterMembers[0] : markerFeat;
                if (realFeat?.get("store")) {
                   const store = realFeat.get("store");
+                  selectedStoreIdRef.current =
+                     store?.STORE_ID || store?.store_id || null;
                   selectMarker(markerFeat);
                   setLandmarkPopup(null);
                   selectLandmark(null);
@@ -618,9 +694,22 @@ export default function MapView() {
                   setLandValue(null);
                   prevStorePopupRef.current = null;
                   setPopup(store);
+                  // 줌 19 이동 + animate 완료 후 하이라이트
+                  {
+                     const _lng = parseFloat(store.LNG || store.lng);
+                     const _lat = parseFloat(store.LAT || store.lat);
+                     const _storeId = store.STORE_ID || store.store_id;
+                     if (!isNaN(_lng) && !isNaN(_lat)) {
+                        const _map = mapInstance.current;
+                        const _coord = fromLonLat([_lng, _lat]);
+                        animateToStore([_lng, _lat], 19, () =>
+                           highlightStoreMarker(_storeId),
+                        );
+                     }
+                  }
 
                   setKakaoDetail(null);
-                  setBuildingStores([]);
+                  setBuildingStores({ same_building: [], other_branches: [] });
                   setLoadingDetail(true);
                   const roadAddr = store.ROAD_ADDR || "";
                   const [detail] = await Promise.all([
@@ -953,7 +1042,8 @@ export default function MapView() {
          {showPanel && mapInstance.current && (
             <div className="mv-layer-panel-wrap">
                <Layerpanel
-                  map={mapInstance.current}
+                  map={mapReady ? mapInstance.current : null}
+                  mapReady={mapReady}
                   vworldKey={import.meta.env.VITE_VWORLD_API_KEY}
                   wmsLayerRef={wmsLayerRef}
                   dongModeOn={dongMode}
@@ -995,42 +1085,71 @@ export default function MapView() {
             kakaoDetail={kakaoDetail}
             loadingDetail={loadingDetail}
             nearbyStores={buildingStores}
+            onBack={
+               prevBuildingStoresRef.current
+                  ? () => {
+                       const prev = prevBuildingStoresRef.current;
+                       setPopup(prev.popup);
+                       setKakaoDetail(prev.kakaoDetail);
+                       setBuildingStores(prev.buildingStores);
+                       prevBuildingStoresRef.current = null;
+                    }
+                  : null
+            }
             onStoreSelect={(s) => {
-               // 모든 팝업 닫고 해당 상가로 이동
+               // 뒤로가기용 이전 상태 저장
+               prevBuildingStoresRef.current = {
+                  popup: popup,
+                  kakaoDetail: kakaoDetail,
+                  buildingStores: buildingStores,
+               };
                setClusterPopup(null);
                setWmsPopup(null);
                setLandmarkPopup(null);
                lastClusterStoresRef.current = null;
                setPopup(s);
                setKakaoDetail(null);
-               setBuildingStores([]);
+               setBuildingStores({ same_building: [], other_branches: [] });
                setLoadingDetail(true);
-               // 해당 위치로 지도 이동
-               if (s.LNG && s.LAT) {
+
+               // 마커 하이라이트 + 화면 중앙 이동
+               const _lng = parseFloat(s.LNG || s.lng);
+               const _lat = parseFloat(s.LAT || s.lat);
+               if (!isNaN(_lng) && !isNaN(_lat)) {
                   const map = mapInstance.current;
+                  const storeId = s.STORE_ID || s.store_id;
+                  selectedStoreIdRef.current = storeId;
+
                   if (map) {
-                     map.getView().animate({
-                        center: fromLonLat([
-                           parseFloat(s.LNG),
-                           parseFloat(s.LAT),
-                        ]),
-                        zoom: Math.max(map.getView().getZoom() || 17, 17),
-                        duration: 500,
-                     });
+                     animateToStore([_lng, _lat], 19, () =>
+                        highlightStoreMarker(storeId),
+                     );
                   }
                }
+
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
                   setKakaoDetail(d);
                   setLoadingDetail(false);
                });
                // 건물 상가 조회
                if (s.ROAD_ADDR) {
+                  const catCd = s.CAT_CD || s.cat_cd || "";
                   fetch(
-                     `${FASTAPI_URL}/map/stores-by-building?road_addr=${encodeURIComponent(s.ROAD_ADDR)}&store_nm=${encodeURIComponent(s.STORE_NM || "")}&exclude_id=${encodeURIComponent(s.STORE_ID || "")}`,
+                     `${FASTAPI_URL}/map/stores-by-building?road_addr=${encodeURIComponent(s.ROAD_ADDR)}&store_nm=${encodeURIComponent(s.STORE_NM || s.store_nm || "")}&exclude_id=${encodeURIComponent(s.STORE_ID || s.store_id || "")}&cat_cd=${encodeURIComponent(catCd)}`,
                   )
                      .then((r) => r.json())
-                     .then((d) => setBuildingStores(d.stores || []))
-                     .catch(() => setBuildingStores([]));
+                     .then((d) =>
+                        setBuildingStores({
+                           same_building: d.same_building || [],
+                           other_branches: d.other_branches || [],
+                        }),
+                     )
+                     .catch(() =>
+                        setBuildingStores({
+                           same_building: [],
+                           other_branches: [],
+                        }),
+                     );
                }
             }}
             clusterStores={clusterPopup?.stores || lastClusterStoresRef.current}
@@ -1046,7 +1165,7 @@ export default function MapView() {
                setKakaoDetail(null);
                setLandmarkPopup(null);
                setClusterPopup(null);
-               setBuildingStores([]);
+               setBuildingStores({ same_building: [], other_branches: [] });
                lastClusterStoresRef.current = null;
                // 좌표로 PNU 조회 → 공시지가 표시
                const vKey = import.meta.env.VITE_VWORLD_API_KEY;
@@ -1101,19 +1220,18 @@ export default function MapView() {
                setLandmarkPopup(null);
                setPopup(s);
                setKakaoDetail(null);
-               setBuildingStores([]);
+               setBuildingStores({ same_building: [], other_branches: [] });
                setLoadingDetail(true);
                if (s.LNG && s.LAT) {
                   const map = mapInstance.current;
                   if (map) {
-                     map.getView().animate({
-                        center: fromLonLat([
-                           parseFloat(s.LNG),
-                           parseFloat(s.LAT),
-                        ]),
-                        zoom: Math.max(map.getView().getZoom() || 17, 17),
-                        duration: 500,
-                     });
+                     const _cLng = parseFloat(s.LNG || s.lng);
+                     const _cLat = parseFloat(s.LAT || s.lat);
+                     const _cId = s.STORE_ID || s.store_id;
+                     const _cCoord = fromLonLat([_cLng, _cLat]);
+                     animateToStore([_cLng, _cLat], 19, () =>
+                        highlightStoreMarker(_cId),
+                     );
                   }
                }
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
@@ -1133,8 +1251,10 @@ export default function MapView() {
                setPopup(null);
                setKakaoDetail(null);
                setClusterPopup(null);
-               setBuildingStores([]);
+               setBuildingStores({ same_building: [], other_branches: [] });
                lastClusterStoresRef.current = null;
+               selectedStoreIdRef.current = null;
+               prevBuildingStoresRef.current = null;
                selectMarker(null);
             }}
          />

@@ -5,29 +5,6 @@ import React, { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
 
-function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
-   const layer = new TileLayer({
-      source: new TileWMS({
-         url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
-         params: {
-            SERVICE: "WMS",
-            VERSION: "1.3.0",
-            REQUEST: "GetMap",
-            LAYERS: layerName,
-            STYLES: layerName,
-            FORMAT: "image/png",
-            TRANSPARENT: "TRUE",
-            CRS: "EPSG:3857",
-         },
-         crossOrigin: "anonymous",
-         transition: 0,
-      }),
-      opacity: 1,
-      zIndex,
-   });
-   layer.set("name", layerKey);
-   return layer;
-}
 
 export default function LayerPanel({
    map,
@@ -42,7 +19,6 @@ export default function LayerPanel({
    schoolLoaded,
 }) {
    const [cadastralOn, setCadastralOn] = useState(true);
-   const [touristInfoOn, setTouristInfoOn] = useState(true);
    const [landmarkOn, setLandmarkOn] = useState(true);
    const [festivalOn, setFestivalOn] = useState(true);
    const [schoolOn, setSchoolOn] = useState(true);
@@ -56,38 +32,27 @@ export default function LayerPanel({
       const layer = new TileLayer({
          source: new TileWMS({
             url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
-            params: {
-               SERVICE: "WMS",
-               VERSION: "1.3.0",
-               REQUEST: "GetMap",
-               LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-               STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-               FORMAT: "image/png",
-               TRANSPARENT: "TRUE",
-               CRS: "EPSG:3857",
-            },
-            crossOrigin: "anonymous",
-            transition: 0,
+            params: { SERVICE:"WMS", VERSION:"1.3.0", REQUEST:"GetMap",
+               LAYERS:"lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+               STYLES:"lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+               FORMAT:"image/png", TRANSPARENT:"TRUE", CRS:"EPSG:3857" },
+            crossOrigin:"anonymous", transition:0,
          }),
-         opacity: 0.7,
-         zIndex: 50,
+         opacity: 0.7, zIndex: 50,
       });
       layer.set("name", "cadastral");
       map.addLayer(layer);
       wmsLayerRef.current = layer;
-      // 관광안내소 초기 ON
-      map.addLayer(
-         makeWmsLayer("lt_p_dgtouristinfo", "tourist_info", 215, vworldKey),
-      );
    }, [map, mapReady]); // eslint-disable-line
 
    // ── 지적도 ──────────────────────────────────────────────────
    const toggleCadastral = () => {
       if (cadastralOn) {
-         if (wmsLayerRef.current) {
-            map.removeLayer(wmsLayerRef.current);
-            wmsLayerRef.current = null;
-         }
+         // name 기준으로 모든 지적도 레이어 제거 (중복 방지)
+         map.getLayers().getArray()
+            .filter(l => l.get("name") === "cadastral")
+            .forEach(l => map.removeLayer(l));
+         wmsLayerRef.current = null;
          setCadastralOn(false);
       } else {
          const layer = new TileLayer({
@@ -116,21 +81,7 @@ export default function LayerPanel({
       }
    };
 
-   // ── 관광안내소 (VWorld WMS) ──────────────────────────────────
-   const toggleTouristInfo = () => {
-      if (touristInfoOn) {
-         map.getLayers()
-            .getArray()
-            .filter((l) => l.get("name") === "tourist_info")
-            .forEach((l) => map.removeLayer(l));
-         setTouristInfoOn(false);
-      } else {
-         map.addLayer(
-            makeWmsLayer("lt_p_dgtouristinfo", "tourist_info", 215, vworldKey),
-         );
-         setTouristInfoOn(true);
-      }
-   };
+
 
    // ── 관광지·문화시설 (KTO DB 마커) ───────────────────────────
    const toggleLandmark = () => {
@@ -154,6 +105,7 @@ export default function LayerPanel({
       setSchoolOn(next);
    };
 
+
    return (
       <div style={S.panel}>
          <div style={S.title}>🗂️ 레이어 관리</div>
@@ -166,13 +118,7 @@ export default function LayerPanel({
             color="#2196F3"
             onClick={toggleCadastral}
          />
-         <LayerRow
-            label="ℹ️ 관광안내소"
-            desc="VWorld WMS"
-            on={touristInfoOn}
-            color="#0288D1"
-            onClick={toggleTouristInfo}
-         />
+
 
          <div style={S.sectionLabel}>한국관광공사</div>
          <LayerRow
@@ -202,6 +148,7 @@ export default function LayerPanel({
             disabled={!schoolLoaded}
          />
 
+   
          <div style={S.notice}>💡 동 클릭 시 해당 구역 마커 자동 로드</div>
       </div>
    );

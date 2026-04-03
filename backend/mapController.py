@@ -139,14 +139,25 @@ def getStoresByDong(adm_cd: str):
 
 
 @app.get("/map/stores-by-building")
-def getStoresByBuilding(road_addr: str, store_nm: str = "", exclude_id: str = ""):
+def getStoresByBuilding(road_addr: str, store_nm: str = "",
+                        exclude_id: str = "", cat_cd: str = ""):
     """같은 건물 상가 + 같은 상호명 다른 지점 조회"""
     try:
-        result = mDAO.getStoresByBuilding(road_addr, store_nm or None, exclude_id or None)
-        return {"count": len(result), "stores": _clean(result)}
+        result = mDAO.getStoresByBuilding(
+            road_addr, store_nm or None, exclude_id or None, cat_cd or None
+        )
+        same  = _clean(result["same_building"])
+        other = _clean(result["other_branches"])
+        return {
+            "same_building":  same,
+            "other_branches": other,
+            "count": len(same) + len(other),
+            "stores": same,  # 하위 호환
+        }
     except Exception as e:
         logger.error(f"[stores-by-building] {e}")
-        return {"error": str(e), "count": 0, "stores": []}
+        return {"error": str(e), "count": 0, "stores": [],
+                "same_building": [], "other_branches": []}
 
 
 @app.get("/map/nearby-bbox")

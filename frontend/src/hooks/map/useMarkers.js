@@ -40,23 +40,31 @@ function makeMarkerStyle(category, selected = false) {
 }
 
 // 클러스터 스타일
-function makeClusterStyle(size, color) {
+function makeClusterStyle(size, color, selected = false) {
    const radius = size < 5 ? 10 : size < 20 ? 13 : size < 100 ? 16 : 20;
+   const r = selected ? radius + 4 : radius;
    return new Style({
       image: new CircleStyle({
-         radius,
-         fill: new Fill({ color }),
-         stroke: new Stroke({ color: "#fff", width: 2 }),
+         radius: r,
+         fill: new Fill({ color: selected ? "#fff" : color }),
+         stroke: new Stroke({
+            color: selected ? color : "#fff",
+            width: selected ? 3 : 2,
+         }),
       }),
       text: new Text({
          text: String(size),
-         fill: new Fill({ color: "#fff" }),
-         font: `bold ${radius}px sans-serif`,
+         fill: new Fill({ color: selected ? color : "#fff" }),
+         font: `bold ${r}px sans-serif`,
       }),
    });
 }
 
-export function useMarkers(mapInstance, visibleCats) {
+export function useMarkers(
+   mapInstance,
+   visibleCats,
+   selectedStoreIdRef = { current: null },
+) {
    const clusterLayerRef = useRef(null);
    const circleLayerRef = useRef(null);
    const allStoresRef = useRef([]);
@@ -79,10 +87,36 @@ export function useMarkers(mapInstance, visibleCats) {
       );
       const layer = new VectorLayer({
          source: new VectorSource({ features: [feature] }),
-         zIndex: 99,
+         zIndex: 220,
       });
       map.addLayer(layer);
       circleLayerRef.current = layer;
+   };
+
+   const styleFunction = (feature) => {
+      const members = feature.get("features") || [];
+      // wrapper feature 일치 OR store_id 일치 (줌 변화 후)
+      const isSelected =
+         selectedFeatRef.current === feature ||
+         (selectedStoreIdRef.current &&
+            members.some((f) => {
+               const st = f.get("store");
+               return (
+                  (st?.STORE_ID || st?.store_id) === selectedStoreIdRef.current
+               );
+            }));
+      if (members.length === 1) {
+         const store = members[0].get("store");
+         return makeMarkerStyle(store?.CAT_CD, isSelected);
+      }
+      const cats = members.map((f) => f.get("store")?.CAT_CD).filter(Boolean);
+      const topCat = cats.sort(
+         (a, b) =>
+            cats.filter((c) => c === b).length -
+            cats.filter((c) => c === a).length,
+      )[0];
+      const color = CAT_COLORS[topCat] || "#888";
+      return makeClusterStyle(members.length, color, isSelected);
    };
 
    const drawMarkers = (stores, visible = visibleCats) => {
@@ -117,50 +151,32 @@ export function useMarkers(mapInstance, visibleCats) {
       const clusterSource = new Cluster({ source: vectorSource, distance: 40 });
       clusterSourceRef.current = clusterSource;
 
-      const layer = new VectorLayer({
-         source: clusterSource,
-         zIndex: 100,
-         style: (feature) => {
-            const members = feature.get("features") || [];
-            if (members.length === 1) {
-               const store = members[0].get("store");
-               return makeMarkerStyle(store?.CAT_CD);
-            }
-            // 클러스터 - 대표 카테고리 색상
-            const cats = members
-               .map((f) => f.get("store")?.CAT_CD)
-               .filter(Boolean);
-            const topCat = cats.sort(
-               (a, b) =>
-                  cats.filter((c) => c === b).length -
-                  cats.filter((c) => c === a).length,
-            )[0];
-            const color = CAT_COLORS[topCat] || "#888";
-            return makeClusterStyle(members.length, color);
-         },
-      });
-
-      map.addLayer(layer);
-      clusterLayerRef.current = layer;
+      if (clusterLayerRef.current) {
+         // 레이어 재사용 - source만 교체
+         clusterLayerRef.current.setSource(clusterSource);
+      } else {
+         const layer = new VectorLayer({
+            source: clusterSource,
+            zIndex: 221,
+            style: styleFunction,
+         });
+         map.addLayer(layer);
+         clusterLayerRef.current = layer;
+      }
    };
 
    const selectMarker = (feature) => {
-      if (selectedFeatRef.current) {
-         const prev = selectedFeatRef.current;
-         prev.setStyle(makeMarkerStyle(prev.get("store")?.CAT_CD));
+      selectedFeatRef.current = feature || null;
+      // 레이어 직접 changed() - 스타일 재계산 트리거
+      if (clusterLayerRef.current) {
+         clusterLayerRef.current.changed();
       }
-      if (!feature) {
-         selectedFeatRef.current = null;
-         return;
-      }
-      const store = feature.get("store");
-      feature.setStyle(makeMarkerStyle(store?.CAT_CD, true));
-      selectedFeatRef.current = feature;
    };
 
    const clearMarkers = () => {
       const map = mapInstance.current;
       if (!map) return;
+      selectedFeatRef.current = null; // 마커 초기화 시 선택도 초기화
       if (clusterLayerRef.current) {
          map.removeLayer(clusterLayerRef.current);
          clusterLayerRef.current = null;
@@ -190,6 +206,7 @@ export function useMarkers(mapInstance, visibleCats) {
 
    return {
       markerLayerRef: clusterLayerRef,
+      clusterSourceRef,
       allStoresRef,
       drawCircle,
       drawMarkers,

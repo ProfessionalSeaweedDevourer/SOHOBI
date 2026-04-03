@@ -92,19 +92,33 @@ class MapInfoDAO(BaseDAO):
 
     # ── 같은 건물 상가 + 같은 상호명 다른 지점 ────────────────────
     def getStoresByBuilding(self, road_addr: str, store_nm: str = None,
-                             exclude_store_id: str = None) -> list:
+                             exclude_store_id: str = None,
+                             cat_cd: str = None) -> dict:
+        """
+        같은 건물 상가 + 같은 상호 다른 지점 조회
+        반환: { "same_building": [...], "other_branches": [...] }
+        """
         if not road_addr:
-            return []
+            return {"same_building": [], "other_branches": []}
 
+        # 1. 같은 건물 상가 (road_addr 동일)
+        cat_cond = "AND cat_cd = %(cat_cd)s" if cat_cd else ""
         sql_bldg = f"""
             {SELECT_STORE}
             FROM store_seoul
             WHERE road_addr = %(road_addr)s
               AND lng IS NOT NULL AND lat IS NOT NULL
+              {cat_cond}
             LIMIT 50
         """
-        results = self._query(sql_bldg, {"road_addr": road_addr})
+        params_bldg = {"road_addr": road_addr}
+        if cat_cd:
+            params_bldg["cat_cd"] = cat_cd
+        same_building = self._query(sql_bldg, params_bldg)
+        same_building = [_clean_store(r) for r in same_building]
 
+        # 2. 같은 상호명 다른 지점 (road_addr 다름, 중복 제거)
+        other_branches = []
         if store_nm:
             sql_nm = f"""
                 {SELECT_STORE}
@@ -114,11 +128,27 @@ class MapInfoDAO(BaseDAO):
                   AND lng IS NOT NULL AND lat IS NOT NULL
                 LIMIT 20
             """
-            results += self._query(sql_nm, {"store_nm": store_nm, "road_addr": road_addr})
+            rows = self._query(sql_nm, {"store_nm": store_nm, "road_addr": road_addr})
+            other_branches = [_clean_store(r) for r in rows]
 
+        # 3. exclude_store_id 제거 + 중복 제거
+        existing_ids = set()
         if exclude_store_id:
-            results = [r for r in results if r.get("store_id") != exclude_store_id]
-        return results
+            existing_ids.add(exclude_store_id)
+
+        def dedup(lst):
+            result = []
+            for r in lst:
+                sid = r.get("STORE_ID") or r.get("store_id")
+                if sid not in existing_ids:
+                    existing_ids.add(sid)
+                    result.append(r)
+            return result
+
+        return {
+            "same_building": dedup(same_building),
+            "other_branches": dedup(other_branches),
+        }
 
     # ── 행정동/법정동 검색 ────────────────────────────────────────
     def searchDong(self, q: str) -> list:
