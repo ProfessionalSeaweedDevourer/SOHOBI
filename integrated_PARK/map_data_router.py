@@ -182,7 +182,7 @@ def getLandmarks(
         elif adm_cd:
             result = lmDAO.get_by_adm_cd(adm_cd, type_list)
         else:
-            result = lmDAO.get_all(type_list)
+            result = lmDAO.get_all(type_list, limit=500)
         if type_list and adm_cd:
             result = [r for r in result if str(r["content_type_id"]) in type_list]
         return {"count": len(result), "landmarks": result}
@@ -258,7 +258,7 @@ def getSchools(
         if adm_cd and not sgg_nm:
             gu = mDAO.get_gu_nm_by_adm_cd(adm_cd) if hasattr(mDAO, "get_gu_nm_by_adm_cd") else ""
             sgg_nm = gu or ""
-        result = lmDAO.get_schools(school_type or None)
+        result = lmDAO.get_schools(school_type or None, limit=500)
         return {"count": len(result), "schools": result}
     except Exception as e:
         logger.error(f"[schools] {e}")
