@@ -23,7 +23,7 @@ class DBWork:
             cur = con.cursor()
 
             if not region or not industry:
-                return [17000000]
+                return [170000000]
 
             placeholders = ",".join(["%s"] * len(region))
             sql = f"""
@@ -37,7 +37,7 @@ class DBWork:
 
         except Exception as e:
             print("DB 조회 실패:", e)
-            return [17000000]
+            return [170000000]
         finally:
             if 'cur' in locals():
                 cur.close()
