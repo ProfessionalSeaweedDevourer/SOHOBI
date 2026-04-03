@@ -84,6 +84,7 @@ class MapInfoDAO(BaseDAO):
             FROM store_seoul
             WHERE adm_cd = %(adm_cd)s
               AND lng IS NOT NULL AND lat IS NOT NULL
+            LIMIT 1500
         """
         rows = self._query(sql, {"adm_cd": adm_cd})
         result = [_clean_store(r) for r in rows]

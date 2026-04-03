@@ -5,7 +5,6 @@ import { useRef, useState, useEffect } from "react";
 import { useMap } from "../../hooks/map/useMap";
 import { toLonLat, fromLonLat } from "ol/proj";
 import {
-   getCenter as getExtentCenter,
    extend as extendExtent,
    createEmpty as createEmptyExtent,
 } from "ol/extent";
@@ -55,16 +54,6 @@ async function fetchKakaoDetail(name, address) {
 }
 
 // ── 줌 레벨별 반경/건수 계산 ───────────────────────────────────
-function getRadiusAndLimit(zoom) {
-   if (zoom >= 18) return { radius: 100, limit: 2000 };
-   if (zoom >= 17) return { radius: 200, limit: 1500 };
-   if (zoom >= 16) return { radius: 300, limit: 1000 };
-   if (zoom >= 15) return { radius: 400, limit: 700 };
-   if (zoom >= 14) return { radius: 500, limit: 500 };
-   if (zoom >= 13) return { radius: 800, limit: 400 };
-   return { radius: 1200, limit: 300 };
-}
-
 // ── 메인 컴포넌트 ──────────────────────────────────────────────
 export default function MapView() {
    const mapRef = useRef(null);
@@ -379,37 +368,6 @@ export default function MapView() {
          maxZoom: 17,
       });
 
-      // ── 폴리곤 중심점 기반 반경 검색 자동 실행 ──────────────────
-      const centerCoord = getExtentCenter(extent);
-      const [lng, lat] = toLonLat(centerCoord);
-      const zoom = map.getView().getZoom() ?? 15;
-      const { radius, limit } = getRadiusAndLimit(zoom);
-
-      setLoading(true);
-      setNearbyCount(null);
-      setCatCounts({});
-      clearMarkers();
-
-      fetch(
-         `${FASTAPI_URL}/map/nearby?lat=${lat}&lng=${lng}&radius=${radius}&limit=${limit}`,
-      )
-         .then((r) => r.json())
-         .then((data) => {
-            const stores = data.stores || [];
-            setNearbyCount(data.count);
-            allStoresRef.current = stores;
-            const counts = {};
-            stores.forEach((s) => {
-               const key =
-                  CATEGORIES.find((c) => c.key === s.상권업종대분류코드)?.key ||
-                  "기타";
-               counts[key] = (counts[key] || 0) + 1;
-            });
-            setCatCounts(counts);
-            drawMarkers(stores, visibleCatsRef.current);
-         })
-         .catch(() => {})
-         .finally(() => setLoading(false));
    };
 
    // ── 동 모드 전환 핸들러 ─────────────────────────────────────────
@@ -549,7 +507,10 @@ export default function MapView() {
          }
       })();
 
+      let _lastMove = 0;
       const moveHandler = (e) => {
+         if (Date.now() - _lastMove < 50) return;
+         _lastMove = Date.now();
          const [lng, lat] = toLonLat(e.coordinate);
          setCoords({ lat: lat.toFixed(6), lng: lng.toFixed(6) });
 
@@ -793,26 +754,6 @@ export default function MapView() {
                               apiData: jj,
                            });
                      } else if (_mode === "sales") {
-                        // 폴리곤 내 스토어 클러스터 표시
-                        if (_admCd) {
-                           fetch(
-                              `${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}&limit=9999`,
-                           )
-                              .then((r) => r.json())
-                              .then((d) => {
-                                 const stores = d.stores || [];
-                                 allStoresRef.current = stores;
-                                 setNearbyCount(stores.length);
-                                 const counts = {};
-                                 stores.forEach((s) => {
-                                    counts[s.CAT_CD || "기타"] =
-                                       (counts[s.CAT_CD || "기타"] || 0) + 1;
-                                 });
-                                 setCatCounts(counts);
-                                 drawMarkers(stores, visibleCatsRef.current);
-                              })
-                              .catch(() => {});
-                        }
                         const qtrParam = selectedQtr
                            ? `&quarter=${encodeURIComponent(selectedQtr)}`
                            : "";
