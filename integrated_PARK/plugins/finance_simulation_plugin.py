@@ -198,7 +198,7 @@ class FinanceSimulationPlugin:
                 "safety_margin": None,
             }
 
-        breakeven_revenue = fixed_cost / 1 - variable_cost_ratio
+        breakeven_revenue = fixed_cost / (1 - variable_cost_ratio)
         safety_margin = (avg_revenue - breakeven_revenue) / avg_revenue
         return {
             "breakeven_revenue": round(breakeven_revenue),
