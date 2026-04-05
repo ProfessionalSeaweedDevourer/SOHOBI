@@ -264,6 +264,8 @@ export default function UserChat() {
           retryCount:     finalResult.retry_count,
           chart:          finalResult.chart || null,
           charts:         finalResult.charts || [],
+          requestId:      finalResult.request_id || null,
+          sessionId:      finalResult.session_id || null,
         },
       ]);
       if (finalResult.updated_params) setLatestParams(finalResult.updated_params);
@@ -385,6 +387,8 @@ export default function UserChat() {
               chart={msg.chart}
               charts={msg.charts || []}
               displayMode="grade"
+              sessionId={msg.sessionId}
+              messageId={msg.requestId}
             />
           ))}
 
