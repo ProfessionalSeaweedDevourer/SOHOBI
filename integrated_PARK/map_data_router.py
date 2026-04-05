@@ -345,9 +345,13 @@ def getCsvList():
 
 @router.get("/map/load-csv")
 def loadCSV(filename: str):
-    filepath = os.path.join(CSV_DIR, filename)
+    # 경로 탐색 방어: 정규화 후 CSV_DIR 내부인지 확인
+    safe_dir = os.path.realpath(CSV_DIR)
+    filepath  = os.path.realpath(os.path.join(CSV_DIR, filename))
+    if not filepath.startswith(safe_dir + os.sep):
+        return {"error": "잘못된 파일명"}
     if not os.path.exists(filepath):
-        return {"error": f"파일 없음: {filepath}"}
+        return {"error": "파일을 찾을 수 없습니다"}
     table_name = next((v for k, v in SIDO_TABLE_MAP.items() if k in filename), None)
     if not table_name:
         return {"error": f"시도 매핑 실패: {filename}"}

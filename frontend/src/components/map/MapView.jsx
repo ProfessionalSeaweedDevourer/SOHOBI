@@ -946,7 +946,7 @@ export default function MapView() {
                setLoading(true);
                clearMarkers();
                setNearbyCount(null);
-               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`)
+               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, { headers: _mapHeaders })
                   .then((r) => r.json())
                   .then((d) => {
                      const stores = d.stores || [];
@@ -1047,6 +1047,7 @@ export default function MapView() {
                if (s.ROAD_ADDR) {
                   fetch(
                      `${FASTAPI_URL}/map/stores-by-building?road_addr=${encodeURIComponent(s.ROAD_ADDR)}&store_nm=${encodeURIComponent(s.STORE_NM || "")}&exclude_id=${encodeURIComponent(s.STORE_ID || "")}`,
+                     { headers: _mapHeaders },
                   )
                      .then((r) => r.json())
                      .then((d) => setBuildingStores(d.stores || []))
@@ -1143,6 +1144,7 @@ export default function MapView() {
                if (s.ROAD_ADDR) {
                   fetch(
                      `${FASTAPI_URL}/map/stores-by-building?road_addr=${encodeURIComponent(s.ROAD_ADDR)}&store_nm=${encodeURIComponent(s.STORE_NM || "")}&exclude_id=${encodeURIComponent(s.STORE_ID || "")}`,
+                     { headers: _mapHeaders },
                   )
                      .then((r) => r.json())
                      .then((d) => setBuildingStores(d.stores || []))

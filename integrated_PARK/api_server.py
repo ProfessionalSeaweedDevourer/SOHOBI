@@ -57,10 +57,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SOHOBI Integrated API", version="1.1.0", lifespan=lifespan)
 app.include_router(map_router)
-app.include_router(map_data_router)
-app.include_router(realestate_router)
-app.include_router(feedback_router)
-app.include_router(event_router)
+app.include_router(map_data_router,   dependencies=[Depends(verify_api_key)])
+app.include_router(realestate_router, dependencies=[Depends(verify_api_key)])
+app.include_router(feedback_router,   dependencies=[Depends(verify_api_key)])
+app.include_router(event_router,       dependencies=[Depends(verify_api_key)])
 
 # ── CORS: 허용 origin 명시적 화이트리스트 ─────────────────────
 _ALLOWED_ORIGINS = [
@@ -521,15 +521,11 @@ async def doc_chat(req: DocChatRequest):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-@app.get("/api/v1/logs/export")
+@app.get("/api/v1/logs/export", dependencies=[Depends(verify_api_key)])
 async def export_logs(
     type: str = Query("queries", description="queries | rejections | errors"),
-    key: str = Query(..., description="EXPORT_SECRET 값"),
 ):
     """로그 JSONL 파일 전체를 원본 그대로 다운로드한다."""
-    secret = os.getenv("EXPORT_SECRET", "")
-    if not secret or key != secret:
-        return JSONResponse(status_code=403, content={"error": "인증 실패"})
     if type not in ("queries", "rejections", "errors"):
         return JSONResponse(status_code=400, content={"error": "type은 queries, rejections, errors 중 하나여야 합니다."})
 
