@@ -7,6 +7,14 @@
     {
       "route": "/api/*",
       "rewrite": "https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/api/*"
+    },
+    {
+      "route": "/map/*",
+      "rewrite": "https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/map/*"
+    },
+    {
+      "route": "/realestate/*",
+      "rewrite": "https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/realestate/*"
     }
   ],
   "globalHeaders": {
