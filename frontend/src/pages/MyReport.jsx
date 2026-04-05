@@ -118,6 +118,8 @@ export default function MyReport() {
               totalQueries={report.total_queries}
               feedback={report.feedback}
               checklist={report.checklist}
+              firstActive={report.first_active}
+              lastActive={report.last_active}
             />
             <AgentUsageChart agentUsage={report.agent_usage} />
             <Recommendations incompleteItems={report.checklist?.incomplete_items} />
