@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { streamQuery } from "../api";
 import { interpretError } from "../utils/errorInterpreter";
+import { trackEvent } from "../utils/trackEvent";
 import ChatInput from "../components/ChatInput";
 import ResponseCard from "../components/ResponseCard";
 import ProgressPanel from "../components/ProgressPanel";
@@ -204,6 +205,10 @@ export default function UserChat() {
   const inputRef = useRef(null);
 
   useEffect(() => {
+    trackEvent('feature_discovery', { page: 'user_chat' });
+  }, []);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
@@ -213,6 +218,7 @@ export default function UserChat() {
   }
 
   async function handleSubmit(question) {
+    trackEvent('agent_query', { session_id: sessionId, page: 'user_chat' });
     setPendingQuestion(question);
     setLoading(true);
     setActiveEvents([]);

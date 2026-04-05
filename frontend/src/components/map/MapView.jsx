@@ -37,6 +37,8 @@ import "./MapView.css";
 const FASTAPI_URL = import.meta.env.VITE_MAP_URL || "";
 const REALESTATE_URL = import.meta.env.VITE_REALESTATE_URL || "";
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
+const _API_KEY = import.meta.env.VITE_API_KEY || "";
+const _mapHeaders = _API_KEY ? { "X-API-Key": _API_KEY } : {};
 
 // ── 카카오 키워드 검색 ──────────────────────────────────────────
 async function fetchKakaoDetail(name, address) {
@@ -137,6 +139,7 @@ export default function MapView() {
       const qtrParam = `&quarter=${encodeURIComponent(selectedQtr)}`;
       fetch(
          `${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(dongPanel.admCd)}${qtrParam}`,
+         { headers: _mapHeaders },
       )
          .then((r) => r.json())
          .then((jj) => {
@@ -150,7 +153,7 @@ export default function MapView() {
 
    // ── 분기 목록 초기 로드 ──────────────────────────────────────────
    useEffect(() => {
-      fetch(`${REALESTATE_URL}/realestate/sangkwon-quarters`)
+      fetch(`${REALESTATE_URL}/realestate/sangkwon-quarters`, { headers: _mapHeaders })
          .then((r) => r.json())
          .then((d) => {
             if (d.quarters?.length) {
@@ -303,6 +306,7 @@ export default function MapView() {
          try {
             const res = await fetch(
                `${REALESTATE_URL}/realestate/search-dong?q=${encodeURIComponent(q)}`,
+               { headers: _mapHeaders },
             );
             const jj = await res.json();
             if (jj.data?.length) {
@@ -336,7 +340,7 @@ export default function MapView() {
          ];
          Promise.all(
             admCds.map((admCd) =>
-               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`)
+               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, { headers: _mapHeaders })
                   .then((r) => r.json())
                   .then((d) => d.stores || [])
                   .catch(() => []),
@@ -407,7 +411,7 @@ export default function MapView() {
             if (_admCd) {
                if (allStoresRef.current.length === 0) {
                   clearMarkers();
-                  fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`)
+                  fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`, { headers: _mapHeaders })
                      .then((r) => r.json())
                      .then((d) => {
                         const stores = d.stores || [];
@@ -435,7 +439,7 @@ export default function MapView() {
                   const url = _admCd
                      ? `${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(_admCd)}${qtrParam}`
                      : `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_dongNm)}&gu=${encodeURIComponent(_guNm)}`;
-                  const rr = await fetch(url);
+                  const rr = await fetch(url, { headers: _mapHeaders });
                   const jj = await rr.json();
                   if (jj.data)
                      if (_admCd) {
@@ -457,6 +461,7 @@ export default function MapView() {
                } else if (next === "realestate") {
                   const rr = await fetch(
                      `${REALESTATE_URL}/realestate/seoul-rtms?adm_cd=${encodeURIComponent(_admCd || _emdCd)}`,
+                     { headers: _mapHeaders },
                   );
                   const jj = await rr.json();
                   if (jj)
@@ -471,6 +476,7 @@ export default function MapView() {
                } else if (next === "store") {
                   const rr = await fetch(
                      `${REALESTATE_URL}/realestate/sangkwon-store?adm_cd=${encodeURIComponent(_admCd)}`,
+                     { headers: _mapHeaders },
                   );
                   const jj = await rr.json();
                   if (jj)
@@ -636,6 +642,7 @@ export default function MapView() {
                      roadAddr
                         ? fetch(
                              `${FASTAPI_URL}/map/stores-by-building?road_addr=${encodeURIComponent(roadAddr)}&store_nm=${encodeURIComponent(store.STORE_NM || "")}&exclude_id=${encodeURIComponent(store.STORE_ID || "")}`,
+                             { headers: _mapHeaders },
                           )
                              .then((r) => r.json())
                              .then((d) => setBuildingStores(d.stores || []))
@@ -724,7 +731,7 @@ export default function MapView() {
                      setNearbyCount(null);
                      const _url = `${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`;
                      console.log("[stores-by-dong] 요청:", _url);
-                     fetch(_url)
+                     fetch(_url, { headers: _mapHeaders })
                         .then((r) => r.json())
                         .then((d) => {
                            const stores = d.stores || [];
@@ -750,6 +757,7 @@ export default function MapView() {
                      if (_mode === "store") {
                         const rr = await fetch(
                            `${REALESTATE_URL}/realestate/sangkwon-store?adm_cd=${encodeURIComponent(_admCd)}`,
+                           { headers: _mapHeaders },
                         );
                         const jj = await rr.json();
                         if (jj)
@@ -768,7 +776,7 @@ export default function MapView() {
                         const url = _admCd
                            ? `${REALESTATE_URL}/realestate/sangkwon?adm_cd=${encodeURIComponent(_admCd)}${qtrParam}`
                            : `${REALESTATE_URL}/realestate/sangkwon?dong=${encodeURIComponent(_dongNm)}&gu=${encodeURIComponent(_guNm)}`;
-                        const rr = await fetch(url);
+                        const rr = await fetch(url, { headers: _mapHeaders });
                         const jj = await rr.json();
                         if (jj.data)
                            setDongPanel({
@@ -792,6 +800,7 @@ export default function MapView() {
                         if (_admCd) {
                            fetch(
                               `${REALESTATE_URL}/realestate/sangkwon-svc?adm_cd=${encodeURIComponent(_admCd)}${qtrParam}`,
+                              { headers: _mapHeaders },
                            )
                               .then((r) => r.json())
                               .then((sv) => setSvcData(sv.data || []))
@@ -800,6 +809,7 @@ export default function MapView() {
                      } else if (_mode === "realestate") {
                         const rr = await fetch(
                            `${REALESTATE_URL}/realestate/seoul-rtms?adm_cd=${encodeURIComponent(_admCd || _emdCd)}`,
+                           { headers: _mapHeaders },
                         );
                         const jj = await rr.json();
                         if (jj)
@@ -882,6 +892,7 @@ export default function MapView() {
                      : "";
                   fetch(
                      `${REALESTATE_URL}/realestate/sangkwon-svc-by-cat?adm_cd=${encodeURIComponent(dongPanel.admCd)}&cat_cd=${encodeURIComponent(catCd)}${qtrParam}`,
+                     { headers: _mapHeaders },
                   )
                      .then((r) => r.json())
                      .then((d) => setSvcData(d.data || []))
@@ -893,6 +904,7 @@ export default function MapView() {
                      : "";
                   fetch(
                      `${REALESTATE_URL}/realestate/sangkwon-svc?adm_cd=${encodeURIComponent(dongPanel.admCd)}${qtrParam}`,
+                     { headers: _mapHeaders },
                   )
                      .then((r) => r.json())
                      .then((d) => setSvcData(d.data || []))
