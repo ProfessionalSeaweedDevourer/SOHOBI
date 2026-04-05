@@ -105,11 +105,13 @@ async def _aggregate_events(session_id: str) -> dict:
             return None
         return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    most_used = max(counts, key=counts.get) if counts else None
     return {
         "total": total,
         "by_agent": counts,
         "last_active": _ts_to_iso(last_ts),
         "first_active": _ts_to_iso(first_ts),
+        "most_used_agent": {"type": most_used, "count": counts[most_used]} if most_used else None,
     }
 
 
@@ -212,11 +214,12 @@ async def get_report(session_id: str):
         }
 
     return {
-        "session_id":    session_id,
-        "total_queries": events_data["total"],
-        "agent_usage":   events_data["by_agent"],
-        "first_active":  events_data["first_active"],
-        "last_active":   events_data["last_active"],
-        "feedback":      feedback_data,
-        "checklist":     checklist_data,
+        "session_id":      session_id,
+        "total_queries":   events_data["total"],
+        "agent_usage":     events_data["by_agent"],
+        "most_used_agent": events_data["most_used_agent"],
+        "first_active":    events_data["first_active"],
+        "last_active":     events_data["last_active"],
+        "feedback":        feedback_data,
+        "checklist":       checklist_data,
     }

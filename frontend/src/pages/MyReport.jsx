@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { trackEvent } from "../utils/trackEvent";
 import { ThemeToggle } from "../components/ThemeToggle";
 import ReportSummary from "../components/report/ReportSummary";
 import AgentUsageChart from "../components/report/AgentUsageChart";
@@ -37,7 +38,10 @@ export default function MyReport() {
       return;
     }
     fetchReport(sessionId)
-      .then(setReport)
+      .then((data) => {
+        setReport(data);
+        trackEvent("report_view", { session_id: sessionId });
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [sessionId]);
@@ -116,13 +120,17 @@ export default function MyReport() {
           <>
             <ReportSummary
               totalQueries={report.total_queries}
+              mostUsedAgent={report.most_used_agent}
               feedback={report.feedback}
               checklist={report.checklist}
               firstActive={report.first_active}
               lastActive={report.last_active}
             />
             <AgentUsageChart agentUsage={report.agent_usage} />
-            <Recommendations incompleteItems={report.checklist?.incomplete_items} />
+            <Recommendations
+              incompleteItems={report.checklist?.incomplete_items}
+              sessionId={sessionId}
+            />
           </>
         )}
 

@@ -1,14 +1,27 @@
+const AGENT_LABEL = {
+  admin:    "관리",
+  finance:  "재무",
+  legal:    "법률·세무",
+  location: "상권",
+  chat:     "일반",
+};
+
 /**
  * 사용 리포트 요약 카드 3개
  *
  * @param {object} props
- * @param {number} props.totalQueries    - 총 질문 수
- * @param {object} props.feedback        - {positive, negative, total, positive_rate, top_negative_tags}
- * @param {object} props.checklist       - {completed, total, progress_pct}
- * @param {string} [props.firstActive]   - 최초 활동 시각 (ISO 8601)
- * @param {string} [props.lastActive]    - 최근 활동 시각 (ISO 8601)
+ * @param {number} props.totalQueries      - 총 질문 수
+ * @param {object} [props.mostUsedAgent]   - {type, count} 가장 많이 사용한 에이전트
+ * @param {object} props.feedback          - {positive, negative, total, positive_rate, top_negative_tags}
+ * @param {object} props.checklist         - {completed, total, progress_pct}
+ * @param {string} [props.firstActive]     - 최초 활동 시각 (ISO 8601)
+ * @param {string} [props.lastActive]      - 최근 활동 시각 (ISO 8601)
  */
-export default function ReportSummary({ totalQueries, feedback, checklist, firstActive, lastActive }) {
+export default function ReportSummary({ totalQueries, mostUsedAgent, feedback, checklist, firstActive, lastActive }) {
+  const agentLabel = mostUsedAgent?.type
+    ? `${AGENT_LABEL[mostUsedAgent.type] ?? mostUsedAgent.type} 에이전트`
+    : "-";
+
   const cards = [
     {
       icon: "💬",
@@ -18,16 +31,10 @@ export default function ReportSummary({ totalQueries, feedback, checklist, first
       color: "#0891b2",
     },
     {
-      icon: "👍",
-      label: "긍정 피드백",
-      value:
-        feedback?.positive_rate != null
-          ? `${Math.round(feedback.positive_rate * 100)}%`
-          : "-",
-      sub:
-        feedback?.total > 0
-          ? `${feedback.positive}/${feedback.total}건`
-          : "피드백 없음",
+      icon: "🤖",
+      label: "주요 에이전트",
+      value: agentLabel,
+      sub: mostUsedAgent ? `${mostUsedAgent.count}회 사용` : "",
       color: "#10b981",
     },
     {
