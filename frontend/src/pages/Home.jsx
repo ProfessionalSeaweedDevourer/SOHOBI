@@ -38,8 +38,8 @@ const modes = [
 export default function Home() {
   const navigate = useNavigate();
 
-  function handleModeClick(path) {
-    if (path === "/dev" && !isDevAuthenticated()) {
+  async function handleModeClick(path) {
+    if (path === "/dev" && !(await isDevAuthenticated())) {
       navigate("/dev/login", { state: { from: { pathname: "/dev" } } });
       return;
     }

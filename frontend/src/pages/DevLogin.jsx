@@ -18,9 +18,9 @@ export default function DevLogin() {
   const destination = location.state?.from?.pathname ?? "/dev";
 
   useEffect(() => {
-    if (isDevAuthenticated()) {
-      navigate(destination, { replace: true });
-    }
+    isDevAuthenticated().then((ok) => {
+      if (ok) navigate(destination, { replace: true });
+    });
   }, []);
 
   async function handleSubmit(e) {
@@ -31,9 +31,9 @@ export default function DevLogin() {
     setError(null);
 
     try {
-      const ok = await checkDevPassword(password);
+      const { ok, hash } = await checkDevPassword(password);
       if (ok) {
-        setDevAuthenticated();
+        await setDevAuthenticated(hash);
         navigate(destination, { replace: true });
       } else {
         setError("비밀번호가 올바르지 않습니다.");
