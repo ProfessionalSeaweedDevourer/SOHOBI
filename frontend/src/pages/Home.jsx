@@ -95,6 +95,13 @@ export default function Home() {
 
       <p className="mt-10 text-xs text-muted-foreground text-center relative z-10">
         <Link
+          to="/roadmap"
+          className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2"
+        >
+          로드맵 투표
+        </Link>
+        <span className="mx-2 opacity-30">·</span>
+        <Link
           to="/changelog"
           className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2"
         >

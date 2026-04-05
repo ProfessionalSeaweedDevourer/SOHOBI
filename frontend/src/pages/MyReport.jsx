@@ -123,6 +123,14 @@ export default function MyReport() {
             <Recommendations incompleteItems={report.checklist?.incomplete_items} />
           </>
         )}
+
+        {!loading && (
+          <p className="text-xs text-center mt-2" style={{ color: "var(--muted-foreground)" }}>
+            <a href="/roadmap" style={{ color: "var(--brand-blue, #0891b2)" }}>
+              🗳️ 다음에 추가할 기능 투표하기
+            </a>
+          </p>
+        )}
       </main>
     </div>
   );
