@@ -31,6 +31,7 @@ from auth import verify_api_key
 from map_router import router as map_router
 from map_data_router import router as map_data_router
 from realestate_router import router as realestate_router
+from feedback_router import router as feedback_router
 from signoff.signoff_agent import run_signoff
 from kernel_setup import get_kernel, get_signoff_client, _TOKEN_PROVIDER
 from logger import log_query, log_error
@@ -57,6 +58,7 @@ app = FastAPI(title="SOHOBI Integrated API", version="1.1.0", lifespan=lifespan)
 app.include_router(map_router)
 app.include_router(map_data_router)
 app.include_router(realestate_router)
+app.include_router(feedback_router)
 
 # ── CORS: 허용 origin 명시적 화이트리스트 ─────────────────────
 _ALLOWED_ORIGINS = [

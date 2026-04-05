@@ -1,6 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import SimulationChart from "./SimulationChart";
+import InlineFeedback from "./feedback/InlineFeedback";
 
 const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석", chat: "안내" };
 const DOMAIN_COLOR = {
@@ -19,7 +20,7 @@ const GRADE_STYLE = {
 const GRADE_LABEL = { A: "A 통과", B: "B 경고", C: "C 반려" };
 
 // displayMode: 'full' = 개발자(도메인+등급+재시도), 'grade' = 사용자(등급+검증횟수), 'none' = 미표시
-export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, charts, displayMode = "none" }) {
+export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, charts, displayMode = "none", sessionId, messageId }) {
   const isEscalated = status === "escalated";
   const isError = status === "error";
   const effectiveGrade = grade || (isEscalated ? "C" : "A");
@@ -128,6 +129,15 @@ export default function ResponseCard({ question, domain, status, grade, confiden
                     : "일부 주의 사항이 포함된 응답입니다. 중요한 결정 전에 전문가 상담을 권장합니다."}
                 </span>
               </div>
+            )}
+
+            {sessionId && messageId && (
+              <InlineFeedback
+                sessionId={sessionId}
+                agentType={domain}
+                messageId={messageId}
+                conversationContext={question}
+              />
             )}
           </>
         )}
