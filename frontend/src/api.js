@@ -107,6 +107,16 @@ export async function fetchLogs(type = "queries", limit = 500) {
 }
 
 /**
+ * GET /api/roadmap/votes
+ * @returns {Promise<{features: Array<{feature_id, label, icon, vote_count, user_voted}>}>}
+ */
+export async function fetchRoadmapVotes() {
+  const res = await fetch(`${BASE_URL}/api/roadmap/votes`, { headers: _AUTH_HEADERS });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+/**
  * GET /api/feedback
  * @param {number} limit
  * @returns {Promise<{count: number, items: Array}>}

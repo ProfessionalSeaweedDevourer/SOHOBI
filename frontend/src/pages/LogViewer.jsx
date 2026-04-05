@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchLogs, fetchFeedback } from "../api";
+import { fetchLogs, fetchFeedback, fetchRoadmapVotes } from "../api";
 import LogTable from "../components/LogTable";
 import ErrorTable from "../components/ErrorTable";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -9,6 +9,7 @@ const TABS = [
   { key: "queries", label: "전체 요청" },
   { key: "rejections", label: "거부 이력" },
   { key: "errors", label: "응답 오류" },
+  { key: "roadmap", label: "투표 집계" },
 ];
 
 function resolveGrade(entry) {
@@ -21,6 +22,7 @@ export default function LogViewer() {
   const [tab, setTab] = useState("queries");
   const [entries, setEntries] = useState([]);
   const [feedbackMap, setFeedbackMap] = useState(new Map());
+  const [roadmapFeatures, setRoadmapFeatures] = useState([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState(null);
@@ -39,6 +41,20 @@ export default function LogViewer() {
       if (fb.status === "fulfilled") {
         setFeedbackMap(new Map((fb.value.items || []).map((f) => [f.message_id, f])));
       }
+      setLastFetched(new Date().toLocaleTimeString("ko-KR"));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadRoadmap() {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchRoadmapVotes();
+      setRoadmapFeatures(data.features || []);
       setLastFetched(new Date().toLocaleTimeString("ko-KR"));
     } catch (e) {
       setError(e.message);
@@ -69,9 +85,14 @@ export default function LogViewer() {
   }
 
   useEffect(() => {
-    load(tab);
+    if (tab === "roadmap") {
+      loadRoadmap();
+    } else {
+      load(tab);
+    }
   }, [tab]);
 
+  const isRoadmapTab = tab === "roadmap";
   const isErrorTab = tab === "errors";
 
   const total = entries.length;
@@ -98,15 +119,17 @@ export default function LogViewer() {
           {lastFetched ? `마지막 갱신: ${lastFetched}` : ""}
         </span>
         <ThemeToggle />
+        {!isRoadmapTab && (
+          <button
+            onClick={handleDownload}
+            disabled={downloading || loading}
+            className="text-xs glass rounded-lg px-3 py-1.5 hover:shadow-elevated transition-glow disabled:opacity-40 text-foreground"
+          >
+            {downloading ? "다운로드 중…" : "전체 다운로드"}
+          </button>
+        )}
         <button
-          onClick={handleDownload}
-          disabled={downloading || loading}
-          className="text-xs glass rounded-lg px-3 py-1.5 hover:shadow-elevated transition-glow disabled:opacity-40 text-foreground"
-        >
-          {downloading ? "다운로드 중…" : "전체 다운로드"}
-        </button>
-        <button
-          onClick={() => load(tab)}
+          onClick={() => isRoadmapTab ? loadRoadmap() : load(tab)}
           disabled={loading}
           className="text-xs glass rounded-lg px-3 py-1.5 hover:shadow-elevated transition-glow disabled:opacity-40 text-foreground"
         >
@@ -115,7 +138,7 @@ export default function LogViewer() {
       </header>
 
       {/* 통계 바 */}
-      {total > 0 && (
+      {total > 0 && !isRoadmapTab && (
         <div className="glass border-b border-[var(--border)] px-4 py-2 flex gap-6 text-xs text-muted-foreground overflow-x-auto">
           <span>전체 <strong className="text-foreground">{total}</strong>건</span>
           {isErrorTab ? (
@@ -164,6 +187,34 @@ export default function LogViewer() {
             {tab === "rejections" && error.includes("없거나")
               ? "거부 이력 로그 파일이 없습니다. 에이전트 테스트 후 재시도하세요."
               : `오류: ${error}`}
+          </div>
+        ) : isRoadmapTab ? (
+          <div className="flex flex-col gap-3 pt-2 max-w-2xl">
+            {loading && (
+              <div className="text-sm text-center py-12 text-muted-foreground">
+                불러오는 중...
+              </div>
+            )}
+            {!loading && roadmapFeatures.map((feat) => (
+              <div
+                key={feat.feature_id}
+                className="flex items-center justify-between rounded-xl border px-4 py-3"
+                style={{ background: "var(--card)", borderColor: "var(--border)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{feat.icon}</span>
+                  <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                    {feat.label}
+                  </span>
+                </div>
+                <span
+                  className="text-sm font-semibold px-3 py-1 rounded-lg"
+                  style={{ background: "var(--muted)", color: "var(--foreground)" }}
+                >
+                  ▲ {feat.vote_count}
+                </span>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="h-[calc(100vh-180px)]">

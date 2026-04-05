@@ -215,3 +215,77 @@ async def save_doc_history(session_id: str, history_raw: list[dict]) -> None:
         "history": history_raw,
         "ttl":     ttl,
     })
+
+
+async def link_session_to_user(session_id: str, user_id: str) -> None:
+    """session_id를 user_id에 귀속하고 TTL을 30일로 연장 (Cosmos) 또는 메모리에 기록."""
+    container = await _get_container()
+    ttl_member = 30 * 86400  # 30일
+
+    if container is None:
+        if session_id in _memory:
+            _memory[session_id]["user_id"] = user_id
+        return
+
+    try:
+        item = await container.read_item(item=session_id, partition_key=session_id)
+        item["user_id"] = user_id
+        item["ttl"] = ttl_member
+        await container.replace_item(item=session_id, body=item)
+    except Exception:
+        pass  # 세션이 이미 만료된 경우 무시
+
+
+async def get_sessions_by_user(user_id: str) -> list[dict]:
+    """user_id에 귀속된 세션 목록을 최신순으로 반환.
+
+    반환 형태: [{"session_id", "context", "history_count", "_ts"}, ...]
+    """
+    container = await _get_container()
+
+    if container is None:
+        results = []
+        for sid, sess in _memory.items():
+            if isinstance(sess, dict) and sess.get("user_id") == user_id:
+                history = sess.get("history", ChatHistory())
+                results.append({
+                    "session_id":    sid,
+                    "context":       sess.get("context", {}),
+                    "history_count": len(history.messages) if hasattr(history, "messages") else 0,
+                    "_ts":           0,
+                })
+        return results
+
+    query = (
+        "SELECT c.id, c.context, c.history, c._ts "
+        "FROM c WHERE c.user_id = @uid "
+        "ORDER BY c._ts DESC"
+    )
+    params = [{"name": "@uid", "value": user_id}]
+    results = []
+    async for item in container.query_items(query=query, parameters=params):
+        results.append({
+            "session_id":    item["id"],
+            "context":       item.get("context", {}),
+            "history_count": len(item.get("history", [])),
+            "_ts":           item.get("_ts", 0),
+        })
+    return results
+
+
+async def get_session_history(session_id: str) -> list[dict]:
+    """특정 세션의 Q&A 히스토리를 [{role, content}] 형태로 반환."""
+    container = await _get_container()
+
+    if container is None:
+        sess = _memory.get(session_id)
+        if sess is None:
+            return []
+        history = sess.get("history", ChatHistory())
+        return _serialize_history(history)
+
+    try:
+        item = await container.read_item(item=session_id, partition_key=session_id)
+        return item.get("history", [])
+    except Exception:
+        return []

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import { streamQuery } from "../api";
 import { interpretError } from "../utils/errorInterpreter";
 import { trackEvent } from "../utils/trackEvent";
@@ -193,6 +194,7 @@ const PLACEHOLDER_QUESTIONS = [
 
 export default function UserChat() {
   const navigate = useNavigate();
+  const { user, login, logout } = useAuth();
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [latestParams, setLatestParams] = useState(null);
@@ -307,6 +309,47 @@ export default function UserChat() {
         >
           사용자
         </span>
+        <a
+          href="/my-report"
+          className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]"
+          style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}
+        >
+          내 리포트 📊
+        </a>
+        <a
+          href="/roadmap"
+          className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]"
+          style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}
+        >
+          로드맵 🗳️
+        </a>
+        {user ? (
+          <>
+            <a
+              href="/my-logs"
+              className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]"
+              style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}
+            >
+              내 로그 📋
+            </a>
+            <button
+              onClick={logout}
+              className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)] max-w-[6rem] truncate"
+              style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}
+              title={user.email}
+            >
+              {user.name || user.email}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={login}
+            className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]"
+            style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}
+          >
+            로그인
+          </button>
+        )}
         <ThemeToggle />
       </header>
 

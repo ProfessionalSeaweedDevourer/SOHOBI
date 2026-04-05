@@ -11,11 +11,14 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Features from "./pages/Features";
 import Changelog from "./pages/Changelog";
 import MyReport from "./pages/MyReport";
+import MyLogs from "./pages/MyLogs";
+import AuthCallback from "./pages/AuthCallback";
 import Roadmap from "./pages/Roadmap";
 import RequireDevAuth from "./components/RequireDevAuth";
 import { CursorGlow } from "./components/CursorGlow";
 import { ToastProvider } from "./components/ToastProvider";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
+import { AuthProvider } from "./contexts/AuthContext";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -33,6 +36,8 @@ function AnimatedRoutes() {
         <Route path="/dev/logs" element={<RequireDevAuth><LogViewer /></RequireDevAuth>} />
         <Route path="/changelog" element={<Changelog />} />
         <Route path="/my-report" element={<MyReport />} />
+        <Route path="/my-logs" element={<MyLogs />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/roadmap" element={<Roadmap />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -43,10 +48,12 @@ function AnimatedRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <CursorGlow />
-      <ToastProvider />
-      <KeyboardShortcuts />
-      <AnimatedRoutes />
+      <AuthProvider>
+        <CursorGlow />
+        <ToastProvider />
+        <KeyboardShortcuts />
+        <AnimatedRoutes />
+      </AuthProvider>
     </BrowserRouter>
   );
 }
