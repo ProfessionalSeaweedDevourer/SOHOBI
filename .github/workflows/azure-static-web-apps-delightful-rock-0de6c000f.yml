@@ -8,8 +8,78 @@ on:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
+  # 매일 자정(KST 09:00 UTC) 스테일 환경 일괄 정리
+  schedule:
+    - cron: '0 0 * * *'
+  # 수동 정리 트리거
+  workflow_dispatch:
 
 jobs:
+  # PR 닫힘 즉시 스테이징 환경 삭제
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+    steps:
+      - name: Close Pull Request
+        id: closepullrequest
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_ROCK_0DE6C000F }}
+          action: "close"
+
+  # 스케줄/수동: 닫힌 PR의 스테이징 환경 일괄 정리
+  # 필요한 추가 시크릿: AZURE_CREDENTIALS, AZURE_SWA_NAME, AZURE_RESOURCE_GROUP
+  cleanup_stale_environments:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: Cleanup Stale Staging Environments
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Delete environments for closed PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SWA_NAME: ${{ secrets.AZURE_SWA_NAME }}
+          RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        run: |
+          echo "현재 스테이징 환경 목록 조회..."
+          EXISTING_ENVS=$(az staticwebapp environment list \
+            --name "$SWA_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?name!='default'].name" -o tsv 2>/dev/null)
+
+          if [ -z "$EXISTING_ENVS" ]; then
+            echo "삭제할 스테이징 환경 없음"
+            exit 0
+          fi
+
+          echo "발견된 환경: $EXISTING_ENVS"
+
+          for ENV_NAME in $EXISTING_ENVS; do
+            # 환경 이름에서 PR 번호 추출 (Azure SWA는 "pr-123" 형식 사용)
+            PR_NUM=$(echo "$ENV_NAME" | grep -oP '(?<=pr-)\d+')
+            if [ -z "$PR_NUM" ]; then
+              echo "  $ENV_NAME: PR 번호 추출 불가, 건너뜀"
+              continue
+            fi
+
+            PR_STATE=$(gh pr view "$PR_NUM" --repo ${{ github.repository }} --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
+            echo "  PR #$PR_NUM 상태: $PR_STATE"
+
+            if [ "$PR_STATE" = "CLOSED" ] || [ "$PR_STATE" = "MERGED" ]; then
+              echo "  삭제: 환경 $ENV_NAME (PR #$PR_NUM)"
+              az staticwebapp environment delete \
+                --name "$SWA_NAME" \
+                --resource-group "$RESOURCE_GROUP" \
+                --environment-name "$ENV_NAME" \
+                --yes
+            fi
+          done
+
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
@@ -41,15 +111,3 @@ jobs:
           api_location: "" # Api source code path - optional
           output_location: "dist" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
-
-  close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close Pull Request Job
-    steps:
-      - name: Close Pull Request
-        id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_ROCK_0DE6C000F }}
-          action: "close"

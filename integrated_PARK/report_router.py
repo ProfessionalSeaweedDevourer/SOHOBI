@@ -107,7 +107,6 @@ async def _aggregate_feedback(session_id: str) -> dict:
         async for item in container.query_items(
             query=query,
             parameters=params,
-            enable_cross_partition_query=True,
         ):
             if item.get("feedback_type") == "positive":
                 positive += 1

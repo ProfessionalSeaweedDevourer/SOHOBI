@@ -81,7 +81,6 @@ async def get_feedback(limit: int = 500):
         query = f"SELECT TOP {limit} * FROM c ORDER BY c._ts DESC"
         async for item in container.query_items(
             query=query,
-            enable_cross_partition_query=True,
         ):
             results.append(item)
     else:
