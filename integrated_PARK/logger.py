@@ -88,6 +88,7 @@ def log_query(
     *,
     request_id: str,
     session_id: str = "",
+    user_id: str = "",
     question: str,
     domain: str,
     status: str,
@@ -102,6 +103,7 @@ def log_query(
     record = {
         "ts":               _now_iso(),
         "session_id":       session_id,
+        "user_id":          user_id,
         "request_id":       request_id,
         "question":         question,
         "domain":           domain,

@@ -17,6 +17,7 @@ Google OAuth 2.0 소셜 로그인 + JWT 발급 라우터.
 """
 
 import os
+import time
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -233,3 +234,34 @@ async def link_session(
     import session_store
     await session_store.link_session_to_user(req.session_id, user["sub"])
     return {"ok": True, "session_id": req.session_id, "user_id": user["sub"]}
+
+
+# ── 공용: user_id → {email, name} 조회 (캐시 포함) ─────────────────
+
+_USER_INFO_CACHE: dict[str, tuple[float, dict]] = {}
+_USER_INFO_CACHE_TTL = 300  # 5분
+
+
+async def get_user_info(user_id: str) -> dict:
+    """user_id로 {email, name} 조회. Cosmos users 컨테이너 사용, 5분 캐시."""
+    if not user_id:
+        return {}
+    now = time.time()
+    if user_id in _USER_INFO_CACHE:
+        expires_at, cached = _USER_INFO_CACHE[user_id]
+        if expires_at > now:
+            return cached
+
+    container = await _get_users_container()
+    if container is None:
+        user = _users_memory.get(user_id, {})
+        result = {"email": user.get("email", ""), "name": user.get("name", "")}
+    else:
+        try:
+            item = await container.read_item(item=user_id, partition_key=user_id)
+            result = {"email": item.get("email", ""), "name": item.get("name", "")}
+        except Exception:
+            result = {}
+
+    _USER_INFO_CACHE[user_id] = (now + _USER_INFO_CACHE_TTL, result)
+    return result

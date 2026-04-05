@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchLogs, fetchFeedback, fetchRoadmapVotes } from "../api";
+import { fetchLogs, fetchFeedback, fetchRoadmapVotes, fetchLogUsers } from "../api";
 import LogTable from "../components/LogTable";
 import ErrorTable from "../components/ErrorTable";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -27,13 +27,15 @@ export default function LogViewer() {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState("");
 
-  async function load(type) {
+  async function load(type, userFilter) {
     setLoading(true);
     setError(null);
     try {
       const [data, fb] = await Promise.allSettled([
-        fetchLogs(type),
+        fetchLogs(type, 500, userFilter ?? selectedUser),
         fetchFeedback(),
       ]);
       setEntries(data.status === "fulfilled" ? data.value.entries || [] : []);
@@ -85,12 +87,18 @@ export default function LogViewer() {
   }
 
   useEffect(() => {
+    fetchLogUsers()
+      .then((data) => setUsers(data.users || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (tab === "roadmap") {
       loadRoadmap();
     } else {
       load(tab);
     }
-  }, [tab]);
+  }, [tab, selectedUser]);
 
   const isRoadmapTab = tab === "roadmap";
   const isErrorTab = tab === "errors";
@@ -179,6 +187,33 @@ export default function LogViewer() {
           </button>
         ))}
       </div>
+
+      {/* 응답자 필터 */}
+      {!isRoadmapTab && (
+        <div className="glass border-b border-[var(--border)] px-4 py-2 flex items-center gap-3">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">응답자 필터:</span>
+          <select
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+            className="text-xs rounded-lg px-2 py-1 text-foreground border border-[var(--border)] bg-[var(--card)]"
+          >
+            <option value="">전체 응답자</option>
+            {users.map((u) => (
+              <option key={u.user_id} value={u.user_id}>
+                {u.name || u.email || u.user_id}
+              </option>
+            ))}
+          </select>
+          {selectedUser && (
+            <button
+              onClick={() => setSelectedUser("")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              초기화
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 컨텐츠 */}
       <main className="flex-1 overflow-hidden px-4 py-4 max-w-6xl mx-auto w-full">

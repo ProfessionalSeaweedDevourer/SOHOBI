@@ -278,6 +278,7 @@ async def query(req: QueryRequest):
         log_query(
             request_id        = result["request_id"],
             session_id        = sid,
+            user_id           = session.get("user_id", ""),
             question          = req.question,
             domain            = domain,
             status            = result["status"],
@@ -408,6 +409,7 @@ async def stream_query(req: QueryRequest):
                     log_query(
                         request_id        = ev["request_id"],
                         session_id        = sid,
+                        user_id           = session.get("user_id", ""),
                         question          = req.question,
                         domain            = domain,
                         status            = ev["status"],
@@ -554,13 +556,109 @@ async def export_logs(
 
 
 @app.get("/api/v1/logs", dependencies=[Depends(verify_api_key)])
-async def get_logs(type: str = "queries", limit: int = 50):
-    """JSONL 로그 파일을 파싱해 JSON 배열로 반환 (프론트엔드 로그 뷰어용)."""
+async def get_logs(type: str = "queries", limit: int = 50, user_id: str = ""):
+    """JSONL 로그 파일을 파싱해 JSON 배열로 반환 (프론트엔드 로그 뷰어용).
+
+    user_id 파라미터를 지정하면 해당 사용자의 로그만 반환한다.
+    응답 엔트리에는 user_id, user_email, user_name 필드가 보강된다.
+    """
     if type not in ("queries", "rejections", "errors"):
         return JSONResponse(status_code=400, content={"error": "type은 queries, rejections, errors 중 하나여야 합니다."})
     try:
-        entries = load_entries_json(log_type=type, limit=limit)
-        return {"type": type, "count": len(entries), "entries": entries}
+        import session_store as _ss
+        from auth_router import get_user_info
+
+        # 전체 로드 후 핸들러 레벨에서 필터·enrichment 처리 (캐시는 log_formatter 내부)
+        entries = load_entries_json(log_type=type, limit=0)
+
+        # 1단계: 기존 로그(user_id 없음)의 session_id → user_id 역조회
+        session_ids_to_lookup = {
+            e["session_id"] for e in entries
+            if e.get("session_id") and not e.get("user_id")
+        }
+        session_user_map: dict[str, str] = {}
+        for sid in session_ids_to_lookup:
+            session_user_map[sid] = await _ss.get_user_id_by_session(sid)
+
+        # 2단계: unique user_ids → {email, name} dedup 조회
+        all_user_ids = {
+            e.get("user_id") or session_user_map.get(e.get("session_id", ""), "")
+            for e in entries
+        } - {""}
+        user_info_map: dict[str, dict] = {}
+        for uid in all_user_ids:
+            user_info_map[uid] = await get_user_info(uid)
+
+        # 3단계: enrichment
+        enriched = []
+        for e in entries:
+            uid = e.get("user_id") or session_user_map.get(e.get("session_id", ""), "")
+            info = user_info_map.get(uid, {})
+            enriched.append({
+                **e,
+                "user_id":    uid,
+                "user_email": info.get("email", ""),
+                "user_name":  info.get("name", ""),
+            })
+
+        # 4단계: user_id 필터 적용
+        if user_id:
+            enriched = [e for e in enriched if e.get("user_id") == user_id]
+
+        # 5단계: limit 적용
+        if limit > 0:
+            enriched = enriched[:limit]
+
+        return {"type": type, "count": len(enriched), "entries": enriched}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# ── 로그에 등장한 사용자 목록 (드롭다운용) ───────────────────────────
+
+_LOG_USERS_CACHE: tuple[float, list] = (0.0, [])
+_LOG_USERS_CACHE_TTL = 300  # 5분
+
+
+@app.get("/api/v1/logs/users", dependencies=[Depends(verify_api_key)])
+async def get_log_users():
+    """로그에 등장한 사용자 목록 반환. LogViewer 필터 드롭다운용."""
+    global _LOG_USERS_CACHE
+    now = time.time()
+    expires_at, cached_users = _LOG_USERS_CACHE
+    if expires_at > now:
+        return {"count": len(cached_users), "users": cached_users}
+
+    try:
+        import session_store as _ss
+        from auth_router import get_user_info
+
+        entries = load_entries_json(log_type="queries", limit=0)
+
+        session_ids_to_lookup = {
+            e["session_id"] for e in entries
+            if e.get("session_id") and not e.get("user_id")
+        }
+        session_user_map: dict[str, str] = {}
+        for sid in session_ids_to_lookup:
+            session_user_map[sid] = await _ss.get_user_id_by_session(sid)
+
+        all_user_ids = {
+            e.get("user_id") or session_user_map.get(e.get("session_id", ""), "")
+            for e in entries
+        } - {""}
+
+        users = []
+        for uid in sorted(all_user_ids):
+            info = await get_user_info(uid)
+            users.append({
+                "user_id": uid,
+                "email":   info.get("email", ""),
+                "name":    info.get("name", ""),
+            })
+
+        _LOG_USERS_CACHE = (now + _LOG_USERS_CACHE_TTL, users)
+        return {"count": len(users), "users": users}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 

@@ -92,17 +92,30 @@ export async function streamQuery(question, maxRetries = 3, sessionId = null, on
  * GET /api/v1/logs
  * @param {"queries"|"rejections"} type
  * @param {number} limit
+ * @param {string} userId  특정 사용자만 필터링 (빈 문자열이면 전체)
  * @returns {Promise<{type, count, entries: Array}>}
  */
-export async function fetchLogs(type = "queries", limit = 500) {
+export async function fetchLogs(type = "queries", limit = 500, userId = "") {
+  const params = new URLSearchParams({ type, limit });
+  if (userId) params.append("user_id", userId);
   const res = await fetch(
-    `${BASE_URL}/api/v1/logs?type=${type}&limit=${limit}`,
+    `${BASE_URL}/api/v1/logs?${params}`,
     { headers: _AUTH_HEADERS }
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `HTTP ${res.status}`);
   }
+  return res.json();
+}
+
+/**
+ * GET /api/v1/logs/users — 로그에 등장한 사용자 목록 (드롭다운용)
+ * @returns {Promise<{count: number, users: Array<{user_id, email, name}>}>}
+ */
+export async function fetchLogUsers() {
+  const res = await fetch(`${BASE_URL}/api/v1/logs/users`, { headers: _AUTH_HEADERS });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 

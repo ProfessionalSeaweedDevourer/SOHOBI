@@ -81,6 +81,14 @@ export default function LogTable({ entries, loading, feedbackMap = new Map() }) 
                 <GradeBadge grade={grade} size="sm" />
                 <DomainBadge domain={entry.domain} />
                 <span className="text-muted-foreground">{fmtTs(entry.ts)}</span>
+                {(entry.user_name || entry.user_email) && (
+                  <span
+                    className="text-muted-foreground truncate max-w-[120px]"
+                    title={entry.user_email}
+                  >
+                    👤 {entry.user_name || entry.user_email}
+                  </span>
+                )}
                 <span className="ml-auto text-muted-foreground">{(entry.latency_ms || 0).toFixed(0)}ms</span>
               </div>
               <div className="text-foreground truncate">{entry.question}</div>
@@ -142,6 +150,11 @@ function EntryDetail({ entry, feedback }) {
         <span className="text-muted-foreground">{fmtTs(entry.ts)}</span>
         <span className="text-muted-foreground">{(entry.latency_ms || 0).toFixed(0)}ms</span>
         <span className="text-muted-foreground">재시도 {entry.retry_count}회</span>
+        {(entry.user_name || entry.user_email) && (
+          <span className="text-muted-foreground" title={entry.user_email}>
+            👤 {entry.user_name || entry.user_email}
+          </span>
+        )}
         {entry.status === "escalated" && (
           <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(245,158,11,0.12)", color: "var(--grade-b)" }}>에스컬레이션</span>
         )}
