@@ -72,6 +72,23 @@ class FeedbackRequest(BaseModel):
 
 
 # ── 엔드포인트 ────────────────────────────────────────────────────
+@router.get("/api/feedback")
+async def get_feedback(limit: int = 500):
+    """저장된 피드백 목록을 반환한다 (로그 뷰어용)."""
+    container = await _get_feedback_container()
+    if container is not None:
+        results = []
+        query = f"SELECT TOP {limit} * FROM c ORDER BY c._ts DESC"
+        async for item in container.query_items(
+            query=query,
+            enable_cross_partition_query=True,
+        ):
+            results.append(item)
+    else:
+        results = _feedback_fallback[-limit:] if limit > 0 else list(_feedback_fallback)
+    return {"count": len(results), "items": results}
+
+
 @router.post("/api/feedback")
 async def submit_feedback(feedback: FeedbackRequest):
     """사용자 인라인 피드백을 Cosmos DB(또는 인메모리)에 저장한다."""

@@ -105,3 +105,17 @@ export async function fetchLogs(type = "queries", limit = 500) {
   }
   return res.json();
 }
+
+/**
+ * GET /api/feedback
+ * @param {number} limit
+ * @returns {Promise<{count: number, items: Array}>}
+ */
+export async function fetchFeedback(limit = 500) {
+  const res = await fetch(
+    `${BASE_URL}/api/feedback?limit=${limit}`,
+    { headers: _AUTH_HEADERS }
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
