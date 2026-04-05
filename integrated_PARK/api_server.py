@@ -193,6 +193,16 @@ async def _extract_and_save(sid: str, session: dict, draft: str) -> None:
         _logger.warning("재무 변수 백그라운드 추출 실패 sid=%s: %s", sid, e)
 
 
+# ── 헬퍼 함수 ────────────────────────────────────────────────
+
+def _get_client_ip(request: Request) -> str:
+    """X-Forwarded-For 헤더 → 실제 클라이언트 IP 추출 (Azure 로드밸런서 환경)."""
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else ""
+
+
 # ── 엔드포인트 ────────────────────────────────────────────────
 
 @app.get("/health")
@@ -206,7 +216,7 @@ async def health():
 
 
 @app.post("/api/v1/query", dependencies=[Depends(verify_api_key)])
-async def query(req: QueryRequest):
+async def query(req: QueryRequest, request: Request):
     """Q&A 플로우: 질문 → 도메인 분류 → 에이전트(창업자 컨텍스트 주입) → Sign-off → 최종 응답"""
     t0 = time.monotonic()
     try:
@@ -279,6 +289,7 @@ async def query(req: QueryRequest):
             request_id        = result["request_id"],
             session_id        = sid,
             user_id           = session.get("user_id", ""),
+            client_ip         = _get_client_ip(request),
             question          = req.question,
             domain            = domain,
             status            = result["status"],
@@ -324,6 +335,7 @@ async def query(req: QueryRequest):
         log_error(
             request_id=str(uuid4()),
             session_id=req.session_id or "",
+            client_ip=_get_client_ip(request),
             question=req.question,
             domain=req.domain or "unknown",
             error=str(e),
@@ -350,12 +362,13 @@ async def query(req: QueryRequest):
 
 
 @app.post("/api/v1/stream", dependencies=[Depends(verify_api_key)])
-async def stream_query(req: QueryRequest):
+async def stream_query(req: QueryRequest, request: Request):
     """Q&A 플로우: SSE로 실시간 진행 상황 전달.
     각 단계(에이전트 시작/완료, Sign-off 판정, 최종 결과)를 이벤트로 스트리밍한다.
     """
-    sid     = req.session_id or str(uuid4())
-    session = await get_query_session(sid)
+    sid       = req.session_id or str(uuid4())
+    session   = await get_query_session(sid)
+    client_ip = _get_client_ip(request)
     if req.founder_context:
         session["profile"] = req.founder_context
 
@@ -410,6 +423,7 @@ async def stream_query(req: QueryRequest):
                         request_id        = ev["request_id"],
                         session_id        = sid,
                         user_id           = session.get("user_id", ""),
+                        client_ip         = client_ip,
                         question          = req.question,
                         domain            = domain,
                         status            = ev["status"],
@@ -431,6 +445,7 @@ async def stream_query(req: QueryRequest):
             log_error(
                 request_id=str(uuid4()),
                 session_id=sid,
+                client_ip=client_ip,
                 question=req.question,
                 domain=req.domain or "unknown",
                 error=str(e),
@@ -556,7 +571,7 @@ async def export_logs(
 
 
 @app.get("/api/v1/logs", dependencies=[Depends(verify_api_key)])
-async def get_logs(type: str = "queries", limit: int = 50, user_id: str = ""):
+async def get_logs(type: str = "queries", limit: int = 50, user_id: str = "", session_id: str = ""):
     """JSONL 로그 파일을 파싱해 JSON 배열로 반환 (프론트엔드 로그 뷰어용).
 
     user_id 파라미터를 지정하면 해당 사용자의 로그만 반환한다.
@@ -604,6 +619,10 @@ async def get_logs(type: str = "queries", limit: int = 50, user_id: str = ""):
         # 4단계: user_id 필터 적용
         if user_id:
             enriched = [e for e in enriched if e.get("user_id") == user_id]
+
+        # 4.5단계: session_id 필터 적용
+        if session_id:
+            enriched = [e for e in enriched if session_id in e.get("session_id", "")]
 
         # 5단계: limit 적용
         if limit > 0:

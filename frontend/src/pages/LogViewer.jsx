@@ -29,6 +29,7 @@ export default function LogViewer() {
   const [lastFetched, setLastFetched] = useState(null);
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("");
+  const [sessionFilter, setSessionFilter] = useState("");
 
   async function load(type, userFilter) {
     setLoading(true);
@@ -103,13 +104,17 @@ export default function LogViewer() {
   const isRoadmapTab = tab === "roadmap";
   const isErrorTab = tab === "errors";
 
-  const total = entries.length;
-  const gradeA = entries.filter((e) => resolveGrade(e) === "A").length;
-  const gradeB = entries.filter((e) => resolveGrade(e) === "B").length;
-  const gradeC = entries.filter((e) => resolveGrade(e) === "C").length;
+  const displayEntries = entries.filter((e) =>
+    (!sessionFilter || e.session_id?.includes(sessionFilter))
+  );
+
+  const total = displayEntries.length;
+  const gradeA = displayEntries.filter((e) => resolveGrade(e) === "A").length;
+  const gradeB = displayEntries.filter((e) => resolveGrade(e) === "B").length;
+  const gradeC = displayEntries.filter((e) => resolveGrade(e) === "C").length;
   const avgLatency =
     total > 0
-      ? Math.round(entries.reduce((s, e) => s + (e.latency_ms || 0), 0) / total)
+      ? Math.round(displayEntries.reduce((s, e) => s + (e.latency_ms || 0), 0) / total)
       : 0;
 
   return (
@@ -212,6 +217,22 @@ export default function LogViewer() {
               초기화
             </button>
           )}
+          <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">세션:</span>
+          <input
+            type="text"
+            placeholder="세션 ID 검색..."
+            value={sessionFilter}
+            onChange={(e) => setSessionFilter(e.target.value)}
+            className="text-xs rounded-lg px-2 py-1 border border-[var(--border)] bg-[var(--card)] text-foreground w-40"
+          />
+          {sessionFilter && (
+            <button
+              onClick={() => setSessionFilter("")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              초기화
+            </button>
+          )}
         </div>
       )}
 
@@ -255,7 +276,7 @@ export default function LogViewer() {
           <div className="h-[calc(100vh-180px)]">
             {isErrorTab
               ? <ErrorTable entries={entries} loading={loading} />
-              : <LogTable entries={entries} loading={loading} feedbackMap={feedbackMap} />}
+              : <LogTable entries={displayEntries} loading={loading} feedbackMap={feedbackMap} />}
           </div>
         )}
       </main>

@@ -89,6 +89,11 @@ export default function LogTable({ entries, loading, feedbackMap = new Map() }) 
                     👤 {entry.user_name || entry.user_email}
                   </span>
                 )}
+                {entry.session_id && (
+                  <span className="text-muted-foreground font-mono text-xs" title={entry.session_id}>
+                    🔗 {entry.session_id.slice(0, 8)}
+                  </span>
+                )}
                 <span className="ml-auto text-muted-foreground">{(entry.latency_ms || 0).toFixed(0)}ms</span>
               </div>
               <div className="text-foreground truncate">{entry.question}</div>
@@ -153,6 +158,20 @@ function EntryDetail({ entry, feedback }) {
         {(entry.user_name || entry.user_email) && (
           <span className="text-muted-foreground" title={entry.user_email}>
             👤 {entry.user_name || entry.user_email}
+          </span>
+        )}
+        {entry.session_id && (
+          <span
+            className="text-muted-foreground font-mono text-xs truncate max-w-[160px] cursor-pointer hover:text-foreground"
+            title={entry.session_id}
+            onClick={() => navigator.clipboard.writeText(entry.session_id)}
+          >
+            🔗 {entry.session_id.slice(0, 8)}…
+          </span>
+        )}
+        {entry.client_ip && (
+          <span className="text-muted-foreground font-mono" title="접속 IP">
+            🌐 {entry.client_ip}
           </span>
         )}
         {entry.status === "escalated" && (
