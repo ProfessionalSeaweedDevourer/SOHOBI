@@ -10,6 +10,7 @@ import MapPage from "./pages/MapPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Features from "./pages/Features";
 import Changelog from "./pages/Changelog";
+import MyReport from "./pages/MyReport";
 import RequireDevAuth from "./components/RequireDevAuth";
 import { CursorGlow } from "./components/CursorGlow";
 import { ToastProvider } from "./components/ToastProvider";
@@ -30,6 +31,7 @@ function AnimatedRoutes() {
         <Route path="/dev" element={<RequireDevAuth><DevChat /></RequireDevAuth>} />
         <Route path="/dev/logs" element={<RequireDevAuth><LogViewer /></RequireDevAuth>} />
         <Route path="/changelog" element={<Changelog />} />
+        <Route path="/my-report" element={<MyReport />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>

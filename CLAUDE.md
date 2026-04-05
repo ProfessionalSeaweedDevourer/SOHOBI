@@ -60,10 +60,37 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 
 - 코드 수정·테스트 완료 후 정상 동작이 확인되면 Claude가 **스스로 커밋하고 main 머지용 PR**을 연다
 - PR 머지 지시는 검증 완료 후에만. 검증 전 추가 수정은 같은 브랜치에 커밋을 추가
+- **PR 생성 직후** Test Plan의 각 TC를 직접 실행하고 결과를 보고한다 (아래 테스트 실행 루틴 참조)
 - **push 후 반드시** `gh pr list --head <브랜치> --state open` 으로 열린 PR을 확인한다:
   - 열린 PR이 있으면 해당 PR 번호를 사용자에게 알린다
   - 없으면 (머지·닫힘·미생성) 즉시 새 PR을 열고 번호를 알린다
   - "PR에 반영되었습니다"는 확인 없이 절대 말하지 않는다
+
+## PR 생성 후 테스트 실행 루틴
+
+PR을 연 직후 Test Plan의 각 TC를 직접 실행하고 결과를 사용자에게 보고한다.
+
+### 테스트 유형별 도구
+
+| 테스트 유형 | 도구 | 실행 조건 |
+| ----------- | ---- | --------- |
+| API E2E | `curl` + `$BACKEND_HOST` (`.env` 로드) | 항상 실행 |
+| 백엔드 로그 확인 | `GET $BACKEND_HOST/api/v1/logs` | API 테스트 후 |
+| DB / 플러그인 단위 | `pytest` (`.venv`) | 관련 파일 수정 시 |
+| 프론트엔드 UI | playwright MCP (`browser_navigate` → `browser_snapshot`) | UI 변경 시 |
+
+### 실행 절차
+
+1. `source integrated_PARK/.env` 로 환경변수 로드
+2. TC 번호 순서대로 각 테스트 실행
+3. 각 TC마다 `✅ PASS` / `❌ FAIL` 결과 출력
+4. FAIL 발생 시 — 즉시 수정 후 동일 브랜치에 커밋 → 재테스트
+5. 전체 PASS 확인 후 "테스트 완료 — PR #번호 머지 가능" 보고
+
+### 실행 불가 예외
+
+- 로컬 서버 미기동 상태의 localhost 테스트 → 사용자에게 기동 요청
+- Azure Container Apps cold start → 30초 대기 후 1회 재시도
 
 ## 세션 인수인계
 

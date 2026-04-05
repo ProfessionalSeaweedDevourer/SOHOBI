@@ -34,6 +34,7 @@ from realestate_router import router as realestate_router
 from feedback_router import router as feedback_router
 from event_router import router as event_router
 from checklist_router import router as checklist_router
+from report_router import router as report_router
 from signoff.signoff_agent import run_signoff
 from kernel_setup import get_kernel, get_signoff_client, _TOKEN_PROVIDER
 from logger import log_query, log_error
@@ -65,6 +66,7 @@ app.include_router(realestate_router, dependencies=[Depends(verify_api_key)])
 app.include_router(feedback_router,   dependencies=[Depends(verify_api_key)])
 app.include_router(event_router,       dependencies=[Depends(verify_api_key)])
 app.include_router(checklist_router,   dependencies=[Depends(verify_api_key)])
+app.include_router(report_router,      dependencies=[Depends(verify_api_key)])
 
 # ── CORS: 허용 origin 명시적 화이트리스트 ─────────────────────
 _ALLOWED_ORIGINS = [
