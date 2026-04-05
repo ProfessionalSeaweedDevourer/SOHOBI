@@ -13,7 +13,9 @@ import os
 from collections import Counter
 from datetime import datetime, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+
+from session_store import session_exists
 
 _logger = logging.getLogger("sohobi.report")
 
@@ -190,6 +192,8 @@ async def _aggregate_checklist(session_id: str) -> dict:
 # ── 엔드포인트 ────────────────────────────────────────────────────
 @router.get("/api/report/{session_id}")
 async def get_report(session_id: str):
+    if not await session_exists(session_id):
+        raise HTTPException(status_code=403, detail="접근 권한 없음")
     """
     session_id의 사용 통계를 집계해 반환한다.
 
