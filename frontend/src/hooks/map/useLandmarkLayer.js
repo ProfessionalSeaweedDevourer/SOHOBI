@@ -10,6 +10,8 @@ import { fromLonLat } from "ol/proj";
 import { Style, Circle as CircleStyle, Fill, Stroke } from "ol/style";
 
 const MAP_URL = import.meta.env.VITE_MAP_URL || "/map-api";
+const _API_KEY = import.meta.env.VITE_API_KEY || "";
+const _mapHeaders = _API_KEY ? { "X-API-Key": _API_KEY } : {};
 
 // ── 타입별 스타일 설정 ────────────────────────────────────────
 const TYPE_STYLE = {
@@ -73,7 +75,7 @@ export function useLandmarkLayer(mapInstance) {
          const url = adm_cd
             ? `${MAP_URL}/map/landmarks?adm_cd=${adm_cd}&types=12,14`
             : `${MAP_URL}/map/landmarks?types=12,14`;
-         const json = await (await fetch(url)).json();
+         const json = await (await fetch(url, { headers: _mapHeaders })).json();
          const features = makeFeatures(json.landmarks || [], "12");
          // 타입별 스타일 적용
          features.forEach((f) => {
@@ -92,7 +94,7 @@ export function useLandmarkLayer(mapInstance) {
    // ── 축제 (API 실시간) ────────────────────────────────────────
    const loadFestivals = async (adm_cd) => {
       try {
-         const res = await fetch(`${MAP_URL}/map/festivals?adm_cd=${adm_cd}`);
+         const res = await fetch(`${MAP_URL}/map/festivals?adm_cd=${adm_cd}`, { headers: _mapHeaders });
          const json = await res.json();
          const features = makeFeatures(json.festivals || [], "15");
          if (festivalLayerRef.current) {
@@ -110,7 +112,7 @@ export function useLandmarkLayer(mapInstance) {
          const url = sgg_nm
             ? `${MAP_URL}/map/schools?sgg_nm=${encodeURIComponent(sgg_nm)}`
             : `${MAP_URL}/map/schools`;
-         const res = await fetch(url);
+         const res = await fetch(url, { headers: _mapHeaders });
          const json = await res.json();
          const features = makeFeatures(
             json.schools || [],
