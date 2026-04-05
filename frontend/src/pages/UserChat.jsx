@@ -195,6 +195,7 @@ const PLACEHOLDER_QUESTIONS = [
 export default function UserChat() {
   const navigate = useNavigate();
   const { user, login, logout } = useAuth();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [latestParams, setLatestParams] = useState(null);
@@ -208,7 +209,19 @@ export default function UserChat() {
   );
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const userMenuRef = useRef(null);
   const { items: checklistItems, progress: checklistProgress, toggleItem, syncFromDraft } = useChecklistState(sessionId);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    function handleClickOutside(e) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [userMenuOpen]);
 
   useEffect(() => {
     trackEvent('feature_discovery', { page: 'user_chat' });
@@ -332,14 +345,33 @@ export default function UserChat() {
             >
               내 로그 📋
             </a>
-            <button
-              onClick={logout}
-              className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)] max-w-[6rem] truncate"
-              style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}
-              title={user.email}
-            >
-              {user.name || user.email}
-            </button>
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setUserMenuOpen((v) => !v)}
+                className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)] max-w-[6rem] truncate"
+                style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}
+                title={user.email}
+              >
+                {user.name || user.email} ▾
+              </button>
+              {userMenuOpen && (
+                <div
+                  className="absolute right-0 top-full mt-1 rounded-xl border shadow-lg z-50 overflow-hidden"
+                  style={{ background: "var(--card)", borderColor: "var(--border)", minWidth: "7rem" }}
+                >
+                  <div className="px-3 py-2 text-xs border-b truncate" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}>
+                    {user.email}
+                  </div>
+                  <button
+                    onClick={() => { setUserMenuOpen(false); logout(); }}
+                    className="w-full text-left px-3 py-2 text-xs transition-colors hover:bg-[var(--muted)]"
+                    style={{ color: "var(--foreground)" }}
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <button
