@@ -10,6 +10,8 @@
 
 import logging
 import os
+from collections import Counter
+from datetime import datetime, timezone
 
 from fastapi import APIRouter
 
@@ -73,8 +75,11 @@ async def _aggregate_events(session_id: str) -> dict:
     counts: dict[str, int] = {}
     total = 0
 
+    last_ts: float | None = None
+    first_ts: float | None = None
+
     if container is not None:
-        query = "SELECT c.agent_type FROM c WHERE c.session_id = @sid"
+        query = "SELECT c.agent_type, c._ts FROM c WHERE c.session_id = @sid"
         params = [{"name": "@sid", "value": session_id}]
         async for item in container.query_items(
             query=query,
@@ -84,6 +89,10 @@ async def _aggregate_events(session_id: str) -> dict:
             agent = item.get("agent_type") or "unknown"
             counts[agent] = counts.get(agent, 0) + 1
             total += 1
+            ts = item.get("_ts")
+            if ts is not None:
+                last_ts = max(last_ts, ts) if last_ts is not None else ts
+                first_ts = min(first_ts, ts) if first_ts is not None else ts
     else:
         for ev in _get_fallback_events():
             if ev.get("session_id") == session_id:
@@ -91,7 +100,17 @@ async def _aggregate_events(session_id: str) -> dict:
                 counts[agent] = counts.get(agent, 0) + 1
                 total += 1
 
-    return {"total": total, "by_agent": counts}
+    def _ts_to_iso(ts: float | None) -> str | None:
+        if ts is None:
+            return None
+        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    return {
+        "total": total,
+        "by_agent": counts,
+        "last_active": _ts_to_iso(last_ts),
+        "first_active": _ts_to_iso(first_ts),
+    }
 
 
 async def _aggregate_feedback(session_id: str) -> dict:
@@ -101,8 +120,10 @@ async def _aggregate_feedback(session_id: str) -> dict:
     positive = 0
     negative = 0
 
+    tag_counter: Counter = Counter()
+
     if container is not None:
-        query = "SELECT c.feedback_type FROM c WHERE c.session_id = @sid"
+        query = "SELECT c.feedback_type, c.tags FROM c WHERE c.session_id = @sid"
         params = [{"name": "@sid", "value": session_id}]
         async for item in container.query_items(
             query=query,
@@ -112,6 +133,8 @@ async def _aggregate_feedback(session_id: str) -> dict:
                 positive += 1
             else:
                 negative += 1
+                for tag in item.get("tags") or []:
+                    tag_counter[tag] += 1
     else:
         for fb in _get_fallback_feedback():
             if fb.get("session_id") == session_id:
@@ -119,15 +142,19 @@ async def _aggregate_feedback(session_id: str) -> dict:
                     positive += 1
                 else:
                     negative += 1
+                    for tag in fb.get("tags") or []:
+                        tag_counter[tag] += 1
 
     total = positive + negative
     positive_rate = round(positive / total, 3) if total > 0 else None
+    top_negative_tags = [{"tag": t, "count": c} for t, c in tag_counter.most_common(5)]
 
     return {
         "positive": positive,
         "negative": negative,
         "total": total,
         "positive_rate": positive_rate,
+        "top_negative_tags": top_negative_tags,
     }
 
 
@@ -188,6 +215,8 @@ async def get_report(session_id: str):
         "session_id":    session_id,
         "total_queries": events_data["total"],
         "agent_usage":   events_data["by_agent"],
+        "first_active":  events_data["first_active"],
+        "last_active":   events_data["last_active"],
         "feedback":      feedback_data,
         "checklist":     checklist_data,
     }
