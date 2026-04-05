@@ -28,6 +28,8 @@ from dotenv import load_dotenv
 import domain_router
 import orchestrator
 from auth import verify_api_key
+from auth_router import router as auth_router
+from my_router import router as my_router
 from map_router import router as map_router
 from map_data_router import router as map_data_router
 from realestate_router import router as realestate_router
@@ -61,6 +63,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SOHOBI Integrated API", version="1.1.0", lifespan=lifespan)
+app.include_router(auth_router)
+app.include_router(my_router)
 app.include_router(map_router)
 app.include_router(map_data_router,   dependencies=[Depends(verify_api_key)])
 app.include_router(realestate_router, dependencies=[Depends(verify_api_key)])
