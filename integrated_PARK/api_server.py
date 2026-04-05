@@ -33,6 +33,7 @@ from map_data_router import router as map_data_router
 from realestate_router import router as realestate_router
 from feedback_router import router as feedback_router
 from event_router import router as event_router
+from checklist_router import router as checklist_router
 from signoff.signoff_agent import run_signoff
 from kernel_setup import get_kernel, get_signoff_client, _TOKEN_PROVIDER
 from logger import log_query, log_error
@@ -45,6 +46,7 @@ from session_store import (
     get_recent_history,
 )
 import session_store
+import checklist_store
 
 load_dotenv()
 
@@ -53,6 +55,7 @@ load_dotenv()
 async def lifespan(app: FastAPI):
     yield
     await session_store.close()
+    await checklist_store.close()
 
 
 app = FastAPI(title="SOHOBI Integrated API", version="1.1.0", lifespan=lifespan)
@@ -61,6 +64,7 @@ app.include_router(map_data_router,   dependencies=[Depends(verify_api_key)])
 app.include_router(realestate_router, dependencies=[Depends(verify_api_key)])
 app.include_router(feedback_router,   dependencies=[Depends(verify_api_key)])
 app.include_router(event_router,       dependencies=[Depends(verify_api_key)])
+app.include_router(checklist_router,   dependencies=[Depends(verify_api_key)])
 
 # ── CORS: 허용 origin 명시적 화이트리스트 ─────────────────────
 _ALLOWED_ORIGINS = [
@@ -76,7 +80,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Request-ID"],
     max_age=600,
 )

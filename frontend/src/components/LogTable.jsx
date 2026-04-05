@@ -47,9 +47,9 @@ function DomainBadge({ domain }) {
 }
 
 /**
- * @param {{ entries: Array, loading: boolean }} props
+ * @param {{ entries: Array, loading: boolean, feedbackMap: Map }} props
  */
-export default function LogTable({ entries, loading }) {
+export default function LogTable({ entries, loading, feedbackMap = new Map() }) {
   const [selected, setSelected] = useState(null);
 
   if (loading) {
@@ -99,7 +99,7 @@ export default function LogTable({ entries, loading }) {
             항목을 선택하면 상세 내용이 표시됩니다.
           </div>
         ) : (
-          <EntryDetail entry={entries[selected]} />
+          <EntryDetail entry={entries[selected]} feedback={feedbackMap.get(entries[selected]?.request_id)} />
         )}
       </div>
 
@@ -113,7 +113,7 @@ export default function LogTable({ entries, loading }) {
             >
               ✕ 닫기
             </button>
-            <EntryDetail entry={entries[selected]} />
+            <EntryDetail entry={entries[selected]} feedback={feedbackMap.get(entries[selected]?.request_id)} />
           </div>
         </div>
       )}
@@ -121,7 +121,14 @@ export default function LogTable({ entries, loading }) {
   );
 }
 
-function EntryDetail({ entry }) {
+const TAG_LABELS = {
+  inaccurate: "정확하지 않음",
+  hard_to_understand: "이해하기 어려움",
+  not_relevant: "내 상황에 맞지 않음",
+  insufficient: "정보가 부족함",
+};
+
+function EntryDetail({ entry, feedback }) {
   const rejHist = entry.rejection_history || [];
   const [openIdx, setOpenIdx] = useState(null);
   const grade = resolveGrade(entry);
@@ -211,6 +218,28 @@ function EntryDetail({ entry }) {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 사용자 피드백 */}
+      {feedback && (
+        <div>
+          <div className="font-semibold text-muted-foreground mb-1">사용자 피드백</div>
+          <div className="rounded-lg px-3 py-2 flex flex-wrap items-center gap-2"
+            style={feedback.feedback_type === "positive"
+              ? { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }
+              : { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+            <span style={{ fontSize: "1rem" }}>{feedback.feedback_type === "positive" ? "👍" : "👎"}</span>
+            <span style={{ color: feedback.feedback_type === "positive" ? "var(--grade-a)" : "var(--grade-c)" }}>
+              {feedback.feedback_type === "positive" ? "긍정" : "부정"}
+            </span>
+            <span className="text-muted-foreground">{fmtTs(feedback.timestamp)}</span>
+            {feedback.feedback_type === "negative" && (feedback.tags || []).length > 0 && (
+              <span className="text-muted-foreground">
+                — {feedback.tags.map((t) => TAG_LABELS[t] || t).join(", ")}
+              </span>
+            )}
           </div>
         </div>
       )}

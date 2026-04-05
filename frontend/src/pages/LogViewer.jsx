@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchLogs } from "../api";
+import { fetchLogs, fetchFeedback } from "../api";
 import LogTable from "../components/LogTable";
 import ErrorTable from "../components/ErrorTable";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -20,6 +20,7 @@ export default function LogViewer() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("queries");
   const [entries, setEntries] = useState([]);
+  const [feedbackMap, setFeedbackMap] = useState(new Map());
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState(null);
@@ -29,8 +30,15 @@ export default function LogViewer() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchLogs(type);
-      setEntries(data.entries || []);
+      const [data, fb] = await Promise.allSettled([
+        fetchLogs(type),
+        fetchFeedback(),
+      ]);
+      setEntries(data.status === "fulfilled" ? data.value.entries || [] : []);
+      if (data.status === "rejected") throw new Error(data.reason?.message);
+      if (fb.status === "fulfilled") {
+        setFeedbackMap(new Map((fb.value.items || []).map((f) => [f.message_id, f])));
+      }
       setLastFetched(new Date().toLocaleTimeString("ko-KR"));
     } catch (e) {
       setError(e.message);
@@ -161,7 +169,7 @@ export default function LogViewer() {
           <div className="h-[calc(100vh-180px)]">
             {isErrorTab
               ? <ErrorTable entries={entries} loading={loading} />
-              : <LogTable entries={entries} loading={loading} />}
+              : <LogTable entries={entries} loading={loading} feedbackMap={feedbackMap} />}
           </div>
         )}
       </main>

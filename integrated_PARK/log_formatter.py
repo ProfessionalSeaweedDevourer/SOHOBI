@@ -19,10 +19,15 @@ import argparse
 import json
 import os
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 LOGS_DIR = Path(os.environ.get("LOGS_DIR", Path(__file__).parent / "logs"))
+
+# ── 로그 캐시 (60초 TTL) ─────────────────────────────────────────────
+_LOG_CACHE: dict[str, tuple[float, list]] = {}  # {log_type: (expires_at, entries)}
+_LOG_CACHE_TTL = 60  # seconds
 
 DOMAIN_KR = {"finance": "재무", "admin": "행정", "legal": "법무"}
 STATUS_ICON = {"approved": "✅", "escalated": "❌"}
@@ -239,11 +244,16 @@ def format_logs(log_type: str = "queries", limit: int = 0) -> str:
 
 def load_entries_json(log_type: str = "queries", limit: int = 50) -> list[dict]:
     """API 엔드포인트용 — 파싱된 엔트리 리스트 반환. log_type: queries | rejections | errors"""
-    path = LOGS_DIR / f"{log_type}.jsonl"
-    entries = _load_jsonl(path)
-    entries.sort(key=_ts_sort_key, reverse=True)
+    now = time.time()
+    if log_type in _LOG_CACHE and _LOG_CACHE[log_type][0] > now:
+        entries = _LOG_CACHE[log_type][1]
+    else:
+        path = LOGS_DIR / f"{log_type}.jsonl"
+        entries = _load_jsonl(path)
+        entries.sort(key=_ts_sort_key, reverse=True)
+        _LOG_CACHE[log_type] = (now + _LOG_CACHE_TTL, entries)
     if limit > 0:
-        entries = entries[:limit]
+        return entries[:limit]
     return entries
 
 
