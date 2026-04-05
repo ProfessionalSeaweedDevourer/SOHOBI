@@ -18,6 +18,7 @@ from agents.finance_agent import FinanceAgent
 from agents.legal_agent import LegalAgent
 from agents.location_agent import LocationAgent
 from signoff.signoff_agent import run_signoff
+from checklist_store import auto_check_items as _auto_check
 
 AGENT_MAP = {
     "admin":    AdminAgent,
@@ -134,6 +135,12 @@ async def run(
         grade = verdict.get("grade", "A" if verdict.get("approved") else "C")
 
         if verdict["approved"]:
+            checked_ids: list[str] = []
+            if session_id and draft:
+                try:
+                    checked_ids = await _auto_check(session_id, draft)
+                except Exception:
+                    pass
             return {
                 "status":           "approved",
                 "grade":            grade,
@@ -152,6 +159,7 @@ async def run(
                 "adm_codes":        adm_codes,
                 "analysis_type":    analysis_type,
                 "updated_context":  updated_context,
+                "checked_items":    checked_ids,
             }
 
         rejection_history.append({
@@ -167,6 +175,12 @@ async def run(
 
     actual_retries = len(rejection_history)
     last_reason = rejection_history[-1]["verdict"].get("retry_prompt", "") if rejection_history else ""
+    esc_checked_ids: list[str] = []
+    if session_id and draft:
+        try:
+            esc_checked_ids = await _auto_check(session_id, draft)
+        except Exception:
+            pass
     return {
         "status":           "escalated",
         "grade":            "C",
@@ -185,6 +199,7 @@ async def run(
         "adm_codes":        adm_codes,
         "analysis_type":    analysis_type,
         "updated_context":  updated_context,
+        "checked_items":    esc_checked_ids,
     }
 
 
@@ -324,6 +339,12 @@ async def run_stream(
         }
 
         if verdict["approved"]:
+            stream_checked_ids: list[str] = []
+            if session_id and draft:
+                try:
+                    stream_checked_ids = await _auto_check(session_id, draft)
+                except Exception:
+                    pass
             yield {
                 "event":            "complete",
                 "status":           "approved",
@@ -343,6 +364,7 @@ async def run_stream(
                 "adm_codes":        adm_codes,
                 "analysis_type":    analysis_type,
                 "updated_context":  updated_context,
+                "checked_items":    stream_checked_ids,
             }
             return
 
@@ -358,6 +380,12 @@ async def run_stream(
             break
 
     actual_retries = len(rejection_history)
+    stream_esc_checked_ids: list[str] = []
+    if session_id and draft:
+        try:
+            stream_esc_checked_ids = await _auto_check(session_id, draft)
+        except Exception:
+            pass
     yield {
         "event":            "complete",
         "status":           "escalated",
@@ -377,4 +405,5 @@ async def run_stream(
         "adm_codes":        adm_codes,
         "analysis_type":    analysis_type,
         "updated_context":  updated_context,
+        "checked_items":    stream_esc_checked_ids,
     }

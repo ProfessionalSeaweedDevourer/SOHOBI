@@ -7,6 +7,9 @@ import ChatInput from "../components/ChatInput";
 import ResponseCard from "../components/ResponseCard";
 import ProgressPanel from "../components/ProgressPanel";
 import { ThemeToggle } from "../components/ThemeToggle";
+import StartupChecklist from "../components/checklist/StartupChecklist";
+import ChecklistProgress from "../components/checklist/ChecklistProgress";
+import { useChecklistState } from "../components/checklist/useChecklistState";
 
 const DOMAIN_CARDS = [
   {
@@ -203,6 +206,7 @@ export default function UserChat() {
   );
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const { items: checklistItems, progress: checklistProgress, toggleItem, syncFromDraft } = useChecklistState(sessionId);
 
   useEffect(() => {
     trackEvent('feature_discovery', { page: 'user_chat' });
@@ -241,6 +245,9 @@ export default function UserChat() {
         }
         if (eventName === "complete") {
           finalResult = data;
+          if (data.checked_items?.length) {
+            syncFromDraft(data.checked_items);
+          }
         }
       }, latestParams);
     } catch (e) {
@@ -302,8 +309,9 @@ export default function UserChat() {
         <ThemeToggle />
       </header>
 
-      {/* 대화 영역 */}
-      <main className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl mx-auto w-full">
+      {/* 대화 영역 + 사이드패널 */}
+      <div className="flex-1 flex overflow-hidden max-w-5xl mx-auto w-full">
+      <main className="flex-1 overflow-y-auto px-4 py-6 min-w-0">
         {messages.length === 0 && !loading && !pendingQuestion && (
           <div className="mt-6">
             {/* 첫 방문 팁 배너 */}
@@ -423,8 +431,23 @@ export default function UserChat() {
         <div ref={bottomRef} />
       </main>
 
+      {/* 체크리스트 사이드패널 (데스크톱 전용) */}
+      <aside className="hidden lg:block w-64 shrink-0 border-l border-[var(--border)] px-3 py-4 overflow-y-auto">
+        <StartupChecklist
+          items={checklistItems}
+          progress={checklistProgress}
+          onToggle={toggleItem}
+        />
+      </aside>
+      </div>
+
       {/* 입력창 */}
-      <footer className="sticky bottom-0 bg-background border-t border-[var(--border)] max-w-3xl mx-auto w-full">
+      <footer className="sticky bottom-0 bg-background border-t border-[var(--border)] max-w-5xl mx-auto w-full">
+        {/* 모바일 전용 진행률 바 */}
+        <div className="lg:hidden border-b border-[var(--border)] px-4 py-2">
+          <ChecklistProgress progress={checklistProgress} total={8} />
+        </div>
+
         {/* 샘플 질문 패널 */}
         {showSamples && (
           <div className="border-b border-[var(--border)] px-4 py-3 max-h-72 overflow-y-auto">
