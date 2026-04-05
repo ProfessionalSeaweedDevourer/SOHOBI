@@ -60,7 +60,7 @@ app.include_router(map_router)
 app.include_router(map_data_router,   dependencies=[Depends(verify_api_key)])
 app.include_router(realestate_router, dependencies=[Depends(verify_api_key)])
 app.include_router(feedback_router,   dependencies=[Depends(verify_api_key)])
-app.include_router(event_router)
+app.include_router(event_router,       dependencies=[Depends(verify_api_key)])
 
 # ── CORS: 허용 origin 명시적 화이트리스트 ─────────────────────
 _ALLOWED_ORIGINS = [
