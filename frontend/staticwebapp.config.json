@@ -1,22 +1,8 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/*.css", "/*.js", "/*.png", "/*.jpg", "/*.svg", "/*.ico", "/api/*"]
+    "exclude": ["/assets/*", "/*.css", "/*.js", "/*.png", "/*.jpg", "/*.svg", "/*.ico"]
   },
-  "routes": [
-    {
-      "route": "/api/*",
-      "rewrite": "https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/api/*"
-    },
-    {
-      "route": "/map/*",
-      "rewrite": "https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/map/*"
-    },
-    {
-      "route": "/realestate/*",
-      "rewrite": "https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/realestate/*"
-    }
-  ],
   "globalHeaders": {
     "Cache-Control": "no-cache",
     "X-Content-Type-Options": "nosniff",
