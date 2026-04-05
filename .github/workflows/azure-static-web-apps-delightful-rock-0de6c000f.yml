@@ -23,7 +23,8 @@ jobs:
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         env:
-          VITE_API_URL: https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io
+          VITE_API_URL: ""
+          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
           VITE_DEV_PASSWORD_HASH: ${{ secrets.VITE_DEV_PASSWORD_HASH }}
           VITE_KAKAO_JS_KEY: 4f588577d41ff38695f0daa513b5bef7
           VITE_KAKAO_API_KEY: 064e455e57b72a7665be2ff5515aead2
