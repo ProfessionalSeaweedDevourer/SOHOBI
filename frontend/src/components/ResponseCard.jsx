@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import SimulationChart from "./SimulationChart";
 import InlineFeedback from "./feedback/InlineFeedback";
+import { trackEvent } from "../utils/trackEvent";
 
 const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석", chat: "안내" };
 const DOMAIN_COLOR = {
@@ -22,6 +24,16 @@ const GRADE_LABEL = { A: "A 통과", B: "B 경고", C: "C 반려" };
 export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, charts, displayMode = "none", sessionId, messageId }) {
   const isEscalated = status === "escalated";
   const isError = status === "error";
+
+  useEffect(() => {
+    if (!isError) {
+      trackEvent('agent_response_view', {
+        session_id: sessionId,
+        message_id: messageId,
+        agent_type: domain,
+      });
+    }
+  }, []);
   const effectiveGrade = grade || (isEscalated ? "C" : "A");
   const showBadges = !isError && displayMode !== "none" && domain && (displayMode === "full" || domain !== "chat");
 

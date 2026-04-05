@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { isDevAuthenticated } from "../utils/devAuth";
 import { AnimatedBackground } from "../components/AnimatedBackground";
 import { ScrollReveal } from "../components/ScrollReveal";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { trackEvent } from "../utils/trackEvent";
 
 const modes = [
   {
@@ -37,6 +39,10 @@ const modes = [
 
 export default function Home() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    trackEvent('feature_discovery', { page: 'home' });
+  }, []);
 
   async function handleModeClick(path) {
     if (path === "/dev" && !(await isDevAuthenticated())) {

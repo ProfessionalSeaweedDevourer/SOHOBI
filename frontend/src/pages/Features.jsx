@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { AnimatedBackground } from '../components/AnimatedBackground';
@@ -8,6 +9,7 @@ import {
   Landmark, Gift, CheckCircle2, Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { trackEvent } from '../utils/trackEvent';
 
 const features = [
   {
@@ -94,6 +96,10 @@ const steps = [
 ];
 
 export default function Features() {
+  useEffect(() => {
+    trackEvent('feature_discovery', { page: 'features' });
+  }, []);
+
   return (
     <div className="min-h-screen relative">
       <AnimatedBackground />

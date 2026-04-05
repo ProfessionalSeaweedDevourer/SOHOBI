@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { AgentCard } from '../components/AgentCard';
@@ -7,8 +8,13 @@ import { ScrollReveal } from '../components/ScrollReveal';
 import { agentData } from '../data/mockData';
 import { MessageSquare, Shield, Zap, TrendingUp, Sparkles, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
+import { trackEvent } from '../utils/trackEvent';
 
 export default function Landing() {
+  useEffect(() => {
+    trackEvent('feature_discovery', { page: 'landing' });
+  }, []);
+
   return (
     <div className="min-h-screen relative">
       <AnimatedBackground />
