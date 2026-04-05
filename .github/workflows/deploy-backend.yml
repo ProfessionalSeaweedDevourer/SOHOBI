@@ -42,4 +42,5 @@ jobs:
           az containerapp update \
             --name ${{ secrets.CONTAINER_APP_NAME }} \
             --resource-group ${{ secrets.RESOURCE_GROUP }} \
-            --image ${{ secrets.ACR_NAME }}.azurecr.io/sohobi-backend:${{ github.sha }}
+            --image ${{ secrets.ACR_NAME }}.azurecr.io/sohobi-backend:${{ github.sha }} \
+            --set-env-vars "API_SECRET_KEY=${{ secrets.API_SECRET_KEY }}"

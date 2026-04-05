@@ -1,4 +1,5 @@
 import { CHECKLIST_ITEMS } from "../../constants/checklistItems";
+import { trackEvent } from "../../utils/trackEvent";
 
 const AGENT_FOR_ITEM = {
   biz_type:    { label: "업종 상담", path: "/user", hint: "AI 에이전트에게 업종·업태 결정을 물어보세요" },
@@ -16,8 +17,9 @@ const AGENT_FOR_ITEM = {
  *
  * @param {object}   props
  * @param {string[]} props.incompleteItems - 미완료 item_id 배열
+ * @param {string}   [props.sessionId]    - 이벤트 트래킹용 세션 ID
  */
-export default function Recommendations({ incompleteItems }) {
+export default function Recommendations({ incompleteItems, sessionId }) {
   if (!incompleteItems?.length) {
     return (
       <div
@@ -63,6 +65,11 @@ export default function Recommendations({ incompleteItems }) {
             href={item.path}
             className="flex items-start gap-3 rounded-xl p-3 transition-colors hover:opacity-80"
             style={{ background: "var(--muted)", textDecoration: "none" }}
+            onClick={() => trackEvent("report_recommendation_click", {
+              session_id: sessionId,
+              item_id: item.id,
+              agent: item.path,
+            })}
           >
             <span className="text-xl mt-0.5">{item.icon}</span>
             <div>

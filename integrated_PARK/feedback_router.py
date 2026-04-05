@@ -15,7 +15,8 @@ from typing import List, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
 
 _logger = logging.getLogger("sohobi.feedback")
 
@@ -62,13 +63,13 @@ _feedback_fallback: list = []
 
 # ── 스키마 ────────────────────────────────────────────────────────
 class FeedbackRequest(BaseModel):
-    session_id:           str
-    agent_type:           str   # admin | finance | legal | location | chat
-    message_id:           str
-    feedback_type:        str   # positive | negative
-    tags:                 Optional[List[str]] = []
-    conversation_context: Optional[str] = None
-    timestamp:            str
+    session_id:           str = Field(..., max_length=255)
+    agent_type:           Literal["admin", "finance", "legal", "location", "chat"]
+    message_id:           str = Field(..., max_length=255)
+    feedback_type:        Literal["positive", "negative"]
+    tags:                 list[str] = Field(default=[], max_length=10)
+    conversation_context: str | None = Field(None, max_length=2000)
+    timestamp:            str = Field(..., max_length=50)
 
 
 # ── 엔드포인트 ────────────────────────────────────────────────────
@@ -98,7 +99,7 @@ async def submit_feedback(feedback: FeedbackRequest):
         "message_id":           feedback.message_id,
         "feedback_type":        feedback.feedback_type,
         "tags":                 feedback.tags or [],
-        "conversation_context": feedback.conversation_context,
+        "conversation_context": None,  # PII 저장 비활성화
         "timestamp":            feedback.timestamp,
         "created_at":           datetime.now(timezone.utc).isoformat(),
     }

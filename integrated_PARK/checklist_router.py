@@ -4,10 +4,11 @@
 GET  /api/checklist/{session_id}  — 현재 상태 조회
 PATCH /api/checklist/{session_id} — 단일 항목 수동 토글
 """
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 import checklist_store
+from session_store import session_exists
 
 router = APIRouter()
 
@@ -28,6 +29,9 @@ async def get_checklist_state(session_id: str):
       items      : {item_id: {checked, source, checked_at}}
       progress   : int  (완료된 항목 수, 0~8)
     """
+    if not await session_exists(session_id):
+        raise HTTPException(status_code=403, detail="접근 권한 없음")
+
     doc = await checklist_store.get_checklist(session_id)
     items = doc["items"]
     progress = sum(1 for v in items.values() if v.get("checked"))
@@ -45,8 +49,10 @@ async def toggle_checklist_item(session_id: str, body: ChecklistToggleRequest):
       checked    : bool
       items      : 갱신된 전체 items
     """
+    if not await session_exists(session_id):
+        raise HTTPException(status_code=403, detail="접근 권한 없음")
+
     if body.item_id not in checklist_store.CHECKLIST_ITEM_IDS:
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail=f"알 수 없는 항목: {body.item_id}")
 
     doc = await checklist_store.get_checklist(session_id)

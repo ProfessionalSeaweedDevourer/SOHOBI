@@ -13,7 +13,9 @@ import os
 from collections import Counter
 from datetime import datetime, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+
+from session_store import session_exists
 
 _logger = logging.getLogger("sohobi.report")
 
@@ -105,11 +107,13 @@ async def _aggregate_events(session_id: str) -> dict:
             return None
         return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    most_used = max(counts, key=counts.get) if counts else None
     return {
         "total": total,
         "by_agent": counts,
         "last_active": _ts_to_iso(last_ts),
         "first_active": _ts_to_iso(first_ts),
+        "most_used_agent": {"type": most_used, "count": counts[most_used]} if most_used else None,
     }
 
 
@@ -188,6 +192,8 @@ async def _aggregate_checklist(session_id: str) -> dict:
 # ── 엔드포인트 ────────────────────────────────────────────────────
 @router.get("/api/report/{session_id}")
 async def get_report(session_id: str):
+    if not await session_exists(session_id):
+        raise HTTPException(status_code=403, detail="접근 권한 없음")
     """
     session_id의 사용 통계를 집계해 반환한다.
 
@@ -212,11 +218,12 @@ async def get_report(session_id: str):
         }
 
     return {
-        "session_id":    session_id,
-        "total_queries": events_data["total"],
-        "agent_usage":   events_data["by_agent"],
-        "first_active":  events_data["first_active"],
-        "last_active":   events_data["last_active"],
-        "feedback":      feedback_data,
-        "checklist":     checklist_data,
+        "session_id":      session_id,
+        "total_queries":   events_data["total"],
+        "agent_usage":     events_data["by_agent"],
+        "most_used_agent": events_data["most_used_agent"],
+        "first_active":    events_data["first_active"],
+        "last_active":     events_data["last_active"],
+        "feedback":        feedback_data,
+        "checklist":       checklist_data,
     }
