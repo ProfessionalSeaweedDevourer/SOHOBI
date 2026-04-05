@@ -143,6 +143,7 @@ async def get_query_session(session_id: str) -> dict:
             "history":   _deserialize_history(item.get("history", [])),
             "extracted": item.get("extracted", {}),
             "context":   item.get("context", dict(_EMPTY_CONTEXT)),
+            "user_id":   item.get("user_id", ""),
         }
     except Exception:
         return _empty_query_session()
@@ -246,6 +247,21 @@ async def link_session_to_user(session_id: str, user_id: str) -> None:
         await container.replace_item(item=session_id, body=item)
     except Exception:
         pass  # 세션이 이미 만료된 경우 무시
+
+
+async def get_user_id_by_session(session_id: str) -> str:
+    """session_id에 귀속된 user_id 반환. 없거나 만료된 경우 빈 문자열."""
+    container = await _get_container()
+    if container is None:
+        sess = _memory.get(session_id)
+        if isinstance(sess, dict):
+            return sess.get("user_id", "")
+        return ""
+    try:
+        item = await container.read_item(item=session_id, partition_key=session_id)
+        return item.get("user_id", "")
+    except Exception:
+        return ""
 
 
 async def get_sessions_by_user(user_id: str) -> list[dict]:

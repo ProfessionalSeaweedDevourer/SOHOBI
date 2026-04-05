@@ -88,6 +88,8 @@ def log_query(
     *,
     request_id: str,
     session_id: str = "",
+    user_id: str = "",
+    client_ip: str = "",
     question: str,
     domain: str,
     status: str,
@@ -102,6 +104,8 @@ def log_query(
     record = {
         "ts":               _now_iso(),
         "session_id":       session_id,
+        "user_id":          user_id,
+        "client_ip":        client_ip,
         "request_id":       request_id,
         "question":         question,
         "domain":           domain,
@@ -123,6 +127,7 @@ def log_error(
     *,
     request_id: str = "",
     session_id: str = "",
+    client_ip: str = "",
     question: str,
     domain: str = "unknown",
     error: str,
@@ -132,6 +137,7 @@ def log_error(
     record = {
         "ts":         _now_iso(),
         "session_id": session_id,
+        "client_ip":  client_ip,
         "request_id": request_id,
         "question":   question,
         "domain":     domain,

@@ -47,26 +47,20 @@ const part1Articles = [
       <>
         <div className="space-y-4">
           <div>
-            <p className="text-sm font-semibold mb-2">2.1 공개 데이터 활용 (학습 데이터)</p>
+            <p className="text-sm font-semibold mb-2">2.1 계약 이행 (개인정보 보호법 제15조 제1항 제4호)</p>
             <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-              공개된 상권 정보, 법령 데이터, 부동산 거래 정보 등 웹에 공개된 데이터를 AI 학습에 활용하는 경우,
-              서비스 성능 향상이라는 <strong>정당한 이익(개인정보 보호법 제15조 제1항 제6호)</strong>을 법적 근거로 합니다.
+              이용자가 요청한 상권 분석·재무 시뮬레이션·법령 안내 등 AI 에이전트 서비스를 제공하기 위해
+              대화 이력·세션 정보를 처리합니다. 로그인 회원의 경우 Google 계정 정보(이름·이메일·식별자)도
+              서비스 제공을 위한 계약 이행 근거로 처리됩니다.
             </p>
-            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>robots.txt 등 수집 제한 표준을 준수하여 수집 대상을 한정합니다.</li>
-              <li>수집된 데이터 내 식별 가능 정보는 학습 전 삭제 또는 비식별화합니다.</li>
-            </ul>
           </div>
           <div>
-            <p className="text-sm font-semibold mb-2">2.2 이용자 입력 데이터 활용</p>
+            <p className="text-sm font-semibold mb-2">2.2 정당한 이익 (개인정보 보호법 제15조 제1항 제6호)</p>
             <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-              이용자가 서비스 내 프롬프트 창에 직접 입력한 대화 데이터를 서비스 개선 목적으로 활용하는 경우,
-              최초 수집 목적과의 <strong>합리적 관련성(개인정보 보호법 제15조 제3항)</strong>을 근거로 합니다.
+              서비스 보안 및 어뷰징 탐지(IP 주소 수집·분석, 프롬프트 인젝션 모니터링)는
+              서비스 안정 운영이라는 <strong>정당한 이익</strong>을 법적 근거로 합니다.
+              이 이익은 이용자의 사생활 침해 위험보다 우선하며, 수집된 IP는 보안 목적으로만 활용됩니다.
             </p>
-            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>대화 내용은 이용자 동의 하에 익명화 처리 후 활용합니다.</li>
-              <li>이용자는 서비스 내 문의 채널을 통해 언제든지 학습 활용 거부 의사를 전달할 수 있습니다.</li>
-            </ul>
           </div>
         </div>
       </>
@@ -90,13 +84,18 @@ const part1Articles = [
             </thead>
             <tbody className="text-muted-foreground">
               <tr className="border-b border-white/10">
-                <td className="py-2 pr-4">서비스 이용</td>
-                <td className="py-2 pr-4">대화 이력, 에이전트 요청 내역</td>
-                <td className="py-2">최대 1년 (삭제 요청 시 즉시 삭제)</td>
+                <td className="py-2 pr-4">비회원 서비스 이용</td>
+                <td className="py-2 pr-4">대화 이력, 에이전트 요청 내역, 세션 ID</td>
+                <td className="py-2">24시간</td>
               </tr>
               <tr className="border-b border-white/10">
-                <td className="py-2 pr-4">자동 수집</td>
-                <td className="py-2 pr-4">서비스 접속 로그, IP 주소, 브라우저 정보</td>
+                <td className="py-2 pr-4">로그인 회원 서비스 이용</td>
+                <td className="py-2 pr-4">대화 이력, 에이전트 요청 내역, 세션 ID, Google 계정명·이메일·식별자</td>
+                <td className="py-2">30일 (탈퇴 요청 시 즉시 삭제)</td>
+              </tr>
+              <tr className="border-b border-white/10">
+                <td className="py-2 pr-4">자동 수집 (전체)</td>
+                <td className="py-2 pr-4">서비스 접속 로그, IP 주소 (보안·어뷰징 탐지 목적)</td>
                 <td className="py-2">6개월</td>
               </tr>
               <tr>
@@ -129,14 +128,7 @@ const part1Articles = [
       <>
         <div className="space-y-4">
           <div>
-            <p className="text-sm font-semibold mb-2">4.1 데이터 전처리 및 비식별화</p>
-            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>수집 데이터 내 주민등록번호·계좌번호·여권번호 등 고유식별정보 탐지 후 즉시 삭제 또는 마스킹 처리</li>
-              <li>학습 데이터셋 생성 전 비식별화 절차 적용</li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-sm font-semibold mb-2">4.2 입출력 필터링 시스템</p>
+            <p className="text-sm font-semibold mb-2">4.1 입출력 필터링 시스템</p>
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
               <li><strong>입력 단계</strong>: 개인정보 패턴(전화번호, 이메일 등) 및 프롬프트 인젝션 공격 자동 탐지</li>
               <li><strong>출력 단계</strong>: 생성된 응답 내 개인정보 노출 여부 검토 및 필터링</li>
@@ -144,7 +136,7 @@ const part1Articles = [
             </ul>
           </div>
           <div>
-            <p className="text-sm font-semibold mb-2">4.3 인프라 보안</p>
+            <p className="text-sm font-semibold mb-2">4.2 인프라 보안</p>
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
               <li>Azure 환경 내 HTTPS 암호화 통신 적용</li>
               <li>Azure Cosmos DB 및 Azure Blob Storage 접근 권한 최소화 (Role-Based Access Control)</li>
@@ -176,7 +168,7 @@ const part1Articles = [
                 ['열람 요청', '본인의 개인정보 처리 현황 확인', '고객 지원 이메일 접수'],
                 ['정정·삭제 요청', '부정확한 정보 수정 또는 삭제', '고객 지원 이메일 접수 후 10일 이내 조치'],
                 ['처리 정지 요청', '개인정보 처리 중단 요청', '고객 지원 이메일 접수 후 10일 이내 조치'],
-                ['학습 활용 거부', '대화 데이터의 AI 학습 활용 거부', '고객 지원 이메일로 의사 표시'],
+                ['데이터 삭제 요청', '보유 중인 대화 이력·세션 데이터 즉시 삭제 요청', '고객 지원 이메일 접수 후 10일 이내 조치'],
               ].map(([right, desc, method], i) => (
                 <tr key={i} className="border-b border-white/10">
                   <td className="py-2 pr-4 font-medium">{right}</td>
@@ -191,8 +183,8 @@ const part1Articles = [
           <div className="flex items-start gap-2">
             <Shield size={16} className="text-[var(--brand-blue)] mt-0.5 flex-shrink-0" />
             <p className="text-sm text-muted-foreground leading-relaxed">
-              AI 모델의 특성상 이미 학습에 반영된 데이터를 모델 가중치에서 완전히 삭제하는 것은 기술적으로 어려울 수 있습니다.
-              이 경우 해당 데이터에서 유래한 출력을 제한하는 방식 등 대체 수단을 통해 10일 이내 성실히 대응합니다.
+              삭제 요청 접수 후 10일 이내에 대화 이력 및 세션 데이터를 삭제합니다.
+              단, 법령상 보존 의무가 있는 접속 로그는 해당 의무 기간(6개월) 경과 후 삭제됩니다.
             </p>
           </div>
         </div>
@@ -627,6 +619,9 @@ export default function PrivacyPolicy() {
           <Link to="/privacy" className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2">
             개인정보처리방침
           </Link>
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            시행일: 2026년 4월 7일 &nbsp;|&nbsp; 버전: 1.1
+          </p>
         </div>
       </footer>
     </div>

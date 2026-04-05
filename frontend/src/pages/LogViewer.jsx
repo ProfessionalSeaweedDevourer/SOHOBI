@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchLogs, fetchFeedback, fetchRoadmapVotes } from "../api";
+import { fetchLogs, fetchFeedback, fetchRoadmapVotes, fetchLogUsers } from "../api";
 import LogTable from "../components/LogTable";
 import ErrorTable from "../components/ErrorTable";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -27,13 +27,16 @@ export default function LogViewer() {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState("");
+  const [sessionFilter, setSessionFilter] = useState("");
 
-  async function load(type) {
+  async function load(type, userFilter) {
     setLoading(true);
     setError(null);
     try {
       const [data, fb] = await Promise.allSettled([
-        fetchLogs(type),
+        fetchLogs(type, 500, userFilter ?? selectedUser),
         fetchFeedback(),
       ]);
       setEntries(data.status === "fulfilled" ? data.value.entries || [] : []);
@@ -85,23 +88,33 @@ export default function LogViewer() {
   }
 
   useEffect(() => {
+    fetchLogUsers()
+      .then((data) => setUsers(data.users || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (tab === "roadmap") {
       loadRoadmap();
     } else {
       load(tab);
     }
-  }, [tab]);
+  }, [tab, selectedUser]);
 
   const isRoadmapTab = tab === "roadmap";
   const isErrorTab = tab === "errors";
 
-  const total = entries.length;
-  const gradeA = entries.filter((e) => resolveGrade(e) === "A").length;
-  const gradeB = entries.filter((e) => resolveGrade(e) === "B").length;
-  const gradeC = entries.filter((e) => resolveGrade(e) === "C").length;
+  const displayEntries = entries.filter((e) =>
+    (!sessionFilter || e.session_id?.includes(sessionFilter))
+  );
+
+  const total = displayEntries.length;
+  const gradeA = displayEntries.filter((e) => resolveGrade(e) === "A").length;
+  const gradeB = displayEntries.filter((e) => resolveGrade(e) === "B").length;
+  const gradeC = displayEntries.filter((e) => resolveGrade(e) === "C").length;
   const avgLatency =
     total > 0
-      ? Math.round(entries.reduce((s, e) => s + (e.latency_ms || 0), 0) / total)
+      ? Math.round(displayEntries.reduce((s, e) => s + (e.latency_ms || 0), 0) / total)
       : 0;
 
   return (
@@ -180,6 +193,49 @@ export default function LogViewer() {
         ))}
       </div>
 
+      {/* 응답자 필터 */}
+      {!isRoadmapTab && (
+        <div className="glass border-b border-[var(--border)] px-4 py-2 flex items-center gap-3">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">응답자 필터:</span>
+          <select
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+            className="text-xs rounded-lg px-2 py-1 text-foreground border border-[var(--border)] bg-[var(--card)]"
+          >
+            <option value="">전체 응답자</option>
+            {users.map((u) => (
+              <option key={u.user_id} value={u.user_id}>
+                {u.name || u.email || u.user_id}
+              </option>
+            ))}
+          </select>
+          {selectedUser && (
+            <button
+              onClick={() => setSelectedUser("")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              초기화
+            </button>
+          )}
+          <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">세션:</span>
+          <input
+            type="text"
+            placeholder="세션 ID 검색..."
+            value={sessionFilter}
+            onChange={(e) => setSessionFilter(e.target.value)}
+            className="text-xs rounded-lg px-2 py-1 border border-[var(--border)] bg-[var(--card)] text-foreground w-40"
+          />
+          {sessionFilter && (
+            <button
+              onClick={() => setSessionFilter("")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              초기화
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 컨텐츠 */}
       <main className="flex-1 overflow-hidden px-4 py-4 max-w-6xl mx-auto w-full">
         {error ? (
@@ -220,7 +276,7 @@ export default function LogViewer() {
           <div className="h-[calc(100vh-180px)]">
             {isErrorTab
               ? <ErrorTable entries={entries} loading={loading} />
-              : <LogTable entries={entries} loading={loading} feedbackMap={feedbackMap} />}
+              : <LogTable entries={displayEntries} loading={loading} feedbackMap={feedbackMap} />}
           </div>
         )}
       </main>
