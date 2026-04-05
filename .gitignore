@@ -8,6 +8,9 @@ NeoFrontend_Mar30/
 # Claude
 .claude/
 
+# Playwright MCP 스냅샷
+.playwright-mcp/
+
 # Python 가상환경
 .venv/
 venv/
@@ -20,6 +23,8 @@ __pycache__/
 
 # 환경 변수
 .env
+*.env.bak
+*.env.local.bak
 
 # 생성된 PDF
 *.pdf
