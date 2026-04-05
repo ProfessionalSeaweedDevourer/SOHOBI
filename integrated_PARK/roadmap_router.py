@@ -12,8 +12,11 @@ import os
 from collections import defaultdict
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+from auth_router import get_optional_user
+from session_store import session_exists
 
 _logger = logging.getLogger("sohobi.roadmap")
 router = APIRouter()
@@ -58,27 +61,38 @@ async def _get_votes_container():
 
 # ── 엔드포인트 ────────────────────────────────────────────────────
 @router.get("/api/roadmap/votes")
-async def get_roadmap_votes(session_id: str = ""):
+async def get_roadmap_votes(
+    session_id: str = "",
+    user: dict | None = Depends(get_optional_user),
+):
     """모든 기능의 투표 현황과 현재 사용자의 투표 상태를 반환한다."""
     counts: dict[str, int] = {f["id"]: 0 for f in ROADMAP_FEATURES}
     user_voted: dict[str, bool] = {f["id"]: False for f in ROADMAP_FEATURES}
+
+    # 현재 유저의 voter_id 계산
+    if user:
+        my_voter_id = f"user:{user['sub']}"
+    else:
+        my_voter_id = f"session:{session_id}" if session_id else ""
 
     try:
         container = await _get_votes_container()
         if container is not None:
             async for item in container.query_items(
-                query="SELECT c.feature_id, c.session_id FROM c",
+                query="SELECT c.feature_id, c.voter_id, c.session_id FROM c",
             ):
                 fid = item.get("feature_id")
                 if fid in counts:
                     counts[fid] += 1
-                    if item.get("session_id") == session_id:
+                    # voter_id 필드 우선, 없으면 레거시 session_id로 폴백
+                    item_voter = item.get("voter_id") or f"session:{item.get('session_id', '')}"
+                    if my_voter_id and item_voter == my_voter_id:
                         user_voted[fid] = True
         else:
             for fid, voters in _votes_fallback.items():
                 if fid in counts:
                     counts[fid] = len(voters)
-                    user_voted[fid] = session_id in voters
+                    user_voted[fid] = my_voter_id in voters
     except Exception as e:
         _logger.error("roadmap votes 조회 실패: %s", e)
 
@@ -102,7 +116,10 @@ class VoteRequest(BaseModel):
 
 
 @router.post("/api/roadmap/vote")
-async def toggle_vote(req: VoteRequest):
+async def toggle_vote(
+    req: VoteRequest,
+    user: dict | None = Depends(get_optional_user),
+):
     """기능에 투표하거나 투표를 취소한다. (토글)"""
     fid = req.feature_id
     sid = req.session_id
@@ -110,7 +127,15 @@ async def toggle_vote(req: VoteRequest):
     if fid not in _FEATURE_IDS:
         raise HTTPException(status_code=400, detail="유효하지 않은 feature_id")
 
-    doc_id = f"vote_{fid}_{sid}"
+    # voter_id 결정: 로그인 유저는 user_id 기반, 비로그인은 session_id (유효성 검증 포함)
+    if user:
+        voter_id = f"user:{user['sub']}"
+    else:
+        if not await session_exists(sid):
+            raise HTTPException(status_code=400, detail="유효하지 않은 session_id")
+        voter_id = f"session:{sid}"
+
+    doc_id = f"vote_{fid}_{voter_id}"
     voted = False
     vote_count = 0
 
@@ -127,6 +152,7 @@ async def toggle_vote(req: VoteRequest):
                 await container.create_item({
                     "id":         doc_id,
                     "feature_id": fid,
+                    "voter_id":   voter_id,
                     "session_id": sid,
                     "voted_at":   datetime.utcnow().isoformat(),
                 })
@@ -143,16 +169,18 @@ async def toggle_vote(req: VoteRequest):
             vote_count = count
         else:
             # 인메모리 폴백
-            if sid in _votes_fallback[fid]:
-                _votes_fallback[fid].discard(sid)
+            if voter_id in _votes_fallback[fid]:
+                _votes_fallback[fid].discard(voter_id)
                 voted = False
             else:
-                _votes_fallback[fid].add(sid)
+                _votes_fallback[fid].add(voter_id)
                 voted = True
             vote_count = len(_votes_fallback[fid])
 
+    except HTTPException:
+        raise
     except Exception as e:
-        _logger.error("roadmap vote 토글 실패 feature=%s session=%s: %s", fid, sid, e)
+        _logger.error("roadmap vote 토글 실패 feature=%s voter=%s: %s", fid, voter_id, e)
         return {"feature_id": fid, "voted": False, "vote_count": 0}
 
     return {"feature_id": fid, "voted": voted, "vote_count": vote_count}

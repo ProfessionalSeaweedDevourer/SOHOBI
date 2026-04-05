@@ -148,6 +148,18 @@ async def get_query_session(session_id: str) -> dict:
         return _empty_query_session()
 
 
+async def session_exists(session_id: str) -> bool:
+    """session_id가 실제 저장된 세션인지 확인한다."""
+    container = await _get_container()
+    if container is None:
+        return session_id in _memory
+    try:
+        await container.read_item(item=session_id, partition_key=session_id)
+        return True
+    except Exception:
+        return False
+
+
 async def save_query_session(session_id: str, session: dict) -> None:
     """Q&A 세션을 저장한다."""
     container = await _get_container()
