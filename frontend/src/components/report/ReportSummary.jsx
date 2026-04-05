@@ -3,10 +3,12 @@
  *
  * @param {object} props
  * @param {number} props.totalQueries    - 총 질문 수
- * @param {object} props.feedback        - {positive, negative, total, positive_rate}
+ * @param {object} props.feedback        - {positive, negative, total, positive_rate, top_negative_tags}
  * @param {object} props.checklist       - {completed, total, progress_pct}
+ * @param {string} [props.firstActive]   - 최초 활동 시각 (ISO 8601)
+ * @param {string} [props.lastActive]    - 최근 활동 시각 (ISO 8601)
  */
-export default function ReportSummary({ totalQueries, feedback, checklist }) {
+export default function ReportSummary({ totalQueries, feedback, checklist, firstActive, lastActive }) {
   const cards = [
     {
       icon: "💬",
@@ -43,7 +45,13 @@ export default function ReportSummary({ totalQueries, feedback, checklist }) {
     },
   ];
 
+  const fmtDate = (iso) => {
+    if (!iso) return null;
+    return new Date(iso).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "short", timeStyle: "short" });
+  };
+
   return (
+    <div className="flex flex-col gap-3">
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {cards.map((card) => (
         <div
@@ -82,6 +90,13 @@ export default function ReportSummary({ totalQueries, feedback, checklist }) {
           )}
         </div>
       ))}
+    </div>
+    {(firstActive || lastActive) && (
+      <div className="text-xs flex gap-4" style={{ color: "var(--muted-foreground)" }}>
+        {firstActive && <span>첫 이용: {fmtDate(firstActive)}</span>}
+        {lastActive && <span>최근 이용: {fmtDate(lastActive)}</span>}
+      </div>
+    )}
     </div>
   );
 }
