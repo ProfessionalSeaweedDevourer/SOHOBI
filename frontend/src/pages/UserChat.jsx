@@ -242,6 +242,7 @@ export default function UserChat() {
         setActiveEvents(prev => [...prev, { event: eventName, ...data }]);
         if (eventName === "domain_classified" && data.session_id) {
           setSessionId(data.session_id);
+          localStorage.setItem("sohobi_session_id", data.session_id);
         }
         if (eventName === "complete") {
           finalResult = data;
