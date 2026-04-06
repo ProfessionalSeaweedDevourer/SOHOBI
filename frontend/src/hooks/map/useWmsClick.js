@@ -138,7 +138,7 @@ export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } 
       try {
          const urlObj = new URL(url, window.location.origin);
          urlObj.searchParams.set("REQUEST", "GetFeatureInfo");
-         const res = await fetch(urlObj.href);
+         const res = await fetch(urlObj.pathname + urlObj.search);
          const text = await res.text();
          let feat = null;
          try {

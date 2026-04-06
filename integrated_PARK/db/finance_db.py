@@ -1,51 +1,16 @@
 import logging
-import os
 
-import psycopg2
+from db.dao.baseDAO import BaseDAO
 
 logger = logging.getLogger(__name__)
 
 
-class DBWork:
+class DBWork(BaseDAO):
     """
-    PostgreSQL 연결 및 상권 매출 데이터 조회 클래스.
-
-    환경변수(PG_HOST, PG_PORT, PG_DB, PG_USER, PG_PASSWORD, PG_SSLMODE)로
-    연결 정보를 관리하며, 조회 실패 시 fallback 값을 반환한다.
+    재무 시뮬레이션용 DB 조회 클래스.
+    BaseDAO의 ThreadedConnectionPool을 공유하여
+    매 호출마다 raw 커넥션을 생성하는 문제를 해결한다.
     """
-    def _get_connection(self):
-        """환경변수 기반 PostgreSQL 연결 객체를 반환한다."""
-        return psycopg2.connect(
-            host=os.getenv("PG_HOST"),
-            port=int(os.getenv("PG_PORT", "5432")),
-            dbname=os.getenv("PG_DB"),
-            user=os.getenv("PG_USER"),
-            password=os.getenv("PG_PASSWORD"),
-            sslmode=os.getenv("PG_SSLMODE", "require"),
-        )
-
-    def _execute_query(self, sql: str, params: list = None):
-        """
-        SQL 쿼리를 실행하고 전체 결과를 반환한다.
-
-        Args:
-            sql: 실행할 SQL 문자열
-            params: 바인딩 파라미터 리스트 (기본값: None)
-
-        Returns:
-            list[tuple]: 쿼리 결과 행 목록. 조회 실패 시 None 반환.
-        """
-        con, cur = None, None
-        try:
-            con = self._get_connection()
-            cur = con.cursor()
-            cur.execute(sql, params or [])
-            return cur.fetchall()
-        except Exception as e:
-            logger.warning("DBWork._execute_query 실패: %s", e)
-        finally:
-            if cur: cur.close()
-            if con: con.close()
 
     def get_sales(self, region, industry):
         """
@@ -86,13 +51,19 @@ class DBWork:
             AND   s.svc_induty_cd = %s
             AND   s.tot_sales_amt IS NOT NULL
         """
-        rows = self._execute_query(sql, region + [industry])
-
-        if not rows:
+        conn, cur = self._db_con()
+        try:
+            cur.execute(sql, region + [industry])
+            rows = cur.fetchall()
+            if not rows:
+                return self.get_average_sales()
+            results = [float(r["avg_sales_per_store"]) for r in rows if r["avg_sales_per_store"] is not None]
+            return results if results else self.get_average_sales()
+        except Exception as e:
+            logger.warning("DBWork.get_sales 실패 region=%s industry=%s: %s", region, industry, e)
             return self.get_average_sales()
-
-        results = [float(val) for (val,) in rows if val is not None]
-        return results if results else self.get_average_sales()
+        finally:
+            self._close(conn, cur)
 
     def get_average_sales(self) -> list:
         """
@@ -118,13 +89,21 @@ class DBWork:
                                 AND   st.svc_induty_cd = s.svc_induty_cd
                                 AND   st.stor_co > 0),
                             1),
-                        0)
+                            0)
                     )
-                )
+                ) AS avg_sales_per_store
             FROM sangkwon_sales s
             WHERE s.svc_induty_cd LIKE 'CS10%'
             AND   s.tot_sales_amt IS NOT NULL
         """
-        rows = self._execute_query(sql)
-        avg = rows[0][0] if rows and rows[0][0] is not None else None
-        return [float(avg)] if avg is not None else [float(46_000_000)]
+        conn, cur = self._db_con()
+        try:
+            cur.execute(sql)
+            row = cur.fetchone()
+            avg = row["avg_sales_per_store"] if row else None
+            return [float(avg)] if avg is not None else [float(46_000_000)]
+        except Exception as e:
+            logger.warning("DBWork.get_average_sales 실패: %s", e)
+            return [float(46_000_000)]
+        finally:
+            self._close(conn, cur)
