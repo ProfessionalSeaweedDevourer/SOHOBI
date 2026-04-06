@@ -262,6 +262,7 @@ export function useMarkers(mapInstance, visibleCats) {
       drawMarkers,
       clearMarkers,
       selectMarker,
+      highlightById: _highlightById,
       getSingleFeature,
    };
 }

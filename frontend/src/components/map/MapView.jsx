@@ -3,7 +3,6 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useMap } from "../../hooks/map/useMap";
-import { useMapZoom } from "../../hooks/map/useMapZoom";
 import { toLonLat, fromLonLat } from "ol/proj";
 import {
    extend as extendExtent,
@@ -65,6 +64,7 @@ export default function MapView() {
    const wmsLayerRef = useRef(null);
 
    const [coords, setCoords] = useState({ lat: "37.5665", lng: "126.9780" });
+   const [currentZoom, setCurrentZoom] = useState(16);
    const [chatOpen, setChatOpen] = useState(false);
    const [chatContext, setChatContext] = useState(null);
    const [landmarkLoaded, setLandmarkLoaded] = useState(false);
@@ -82,7 +82,6 @@ export default function MapView() {
    const [loading, setLoading] = useState(false);
    const [wmsPopup, setWmsPopup] = useState(null);
    const prevStorePopupRef = useRef(null); // WmsPopup 뒤로가기용
-   const catFetchTimerRef = useRef(null); // 카테고리 fetch debounce
    const [landValue, setLandValue] = useState(null);
    const [showPanel, setShowPanel] = useState(false);
 
@@ -102,7 +101,30 @@ export default function MapView() {
       dongModeRef.current = dongMode;
    }, [dongMode]);
 
-   const currentZoom = useMapZoom(mapInstance, mapRef, mapReady);
+   // 줌 레벨 추적 + OL 버튼 사이에 표시
+   useEffect(() => {
+      const map = mapInstance.current;
+      if (!map) return;
+      const updateZoom = () => {
+         const z = Math.round(map.getView().getZoom() || 16);
+         setCurrentZoom(z);
+         // OL +/- 버튼 사이에 줌 레벨 표시
+         const zoomEl = mapRef.current?.querySelector(".ol-zoom");
+         if (zoomEl) {
+            let badge = zoomEl.querySelector(".zoom-level-badge");
+            if (!badge) {
+               badge = document.createElement("div");
+               badge.className = "zoom-level-badge";
+               const btns = zoomEl.querySelectorAll("button");
+               if (btns.length >= 2) zoomEl.insertBefore(badge, btns[1]);
+            }
+            badge.textContent = z;
+         }
+      };
+      map.getView().on("change:resolution", updateZoom);
+      updateZoom();
+      return () => map.getView().un("change:resolution", updateZoom);
+   }, [mapReady]); // eslint-disable-line
 
    // ── 분기 변경 시 현재 패널 자동 재조회 ─────────────────────────────
    useEffect(() => {
@@ -159,6 +181,7 @@ export default function MapView() {
       drawMarkers,
       clearMarkers,
       selectMarker,
+      highlightById,
       markerLayerRef,
    } = useMarkers(mapInstance, visibleCats);
 
@@ -223,7 +246,7 @@ export default function MapView() {
                }),
                opacity: 0.7,
                zIndex: 50,
-               minZoom: 18,
+               minZoom: 17,
             });
             _layer.set("name", "cadastral");
             _map.addLayer(_layer);
@@ -913,34 +936,31 @@ export default function MapView() {
             selectedCatCd={selectedCatCd}
             onCatSelect={(catCd) => {
                setSelectedCatCd(catCd);
-               // 동 패널 열려있으면 해당 대분류 소분류 매출 조회 (200ms debounce)
-               clearTimeout(catFetchTimerRef.current);
-               catFetchTimerRef.current = setTimeout(() => {
-                  if (dongPanel?.admCd && catCd) {
-                     const qtrParam = selectedQtr
-                        ? `&quarter=${encodeURIComponent(selectedQtr)}`
-                        : "";
-                     fetch(
-                        `${REALESTATE_URL}/realestate/sangkwon-svc-by-cat?adm_cd=${encodeURIComponent(dongPanel.admCd)}&cat_cd=${encodeURIComponent(catCd)}${qtrParam}`,
-                        { headers: _mapHeaders },
-                     )
-                        .then((r) => r.json())
-                        .then((d) => setSvcData(d.data || []))
-                        .catch(() => {});
-                  } else if (!catCd && dongPanel?.admCd) {
-                     // 전체 선택 시 기존 대분류 기준으로 복원
-                     const qtrParam = selectedQtr
-                        ? `&quarter=${encodeURIComponent(selectedQtr)}`
-                        : "";
-                     fetch(
-                        `${REALESTATE_URL}/realestate/sangkwon-svc?adm_cd=${encodeURIComponent(dongPanel.admCd)}${qtrParam}`,
-                        { headers: _mapHeaders },
-                     )
-                        .then((r) => r.json())
-                        .then((d) => setSvcData(d.data || []))
-                        .catch(() => {});
-                  }
-               }, 200);
+               // 동 패널 열려있으면 해당 대분류 소분류 매출 조회
+               if (dongPanel?.admCd && catCd) {
+                  const qtrParam = selectedQtr
+                     ? `&quarter=${encodeURIComponent(selectedQtr)}`
+                     : "";
+                  fetch(
+                     `${REALESTATE_URL}/realestate/sangkwon-svc-by-cat?adm_cd=${encodeURIComponent(dongPanel.admCd)}&cat_cd=${encodeURIComponent(catCd)}${qtrParam}`,
+                     { headers: _mapHeaders },
+                  )
+                     .then((r) => r.json())
+                     .then((d) => setSvcData(d.data || []))
+                     .catch(() => {});
+               } else if (!catCd && dongPanel?.admCd) {
+                  // 전체 선택 시 기존 대분류 기준으로 복원
+                  const qtrParam = selectedQtr
+                     ? `&quarter=${encodeURIComponent(selectedQtr)}`
+                     : "";
+                  fetch(
+                     `${REALESTATE_URL}/realestate/sangkwon-svc?adm_cd=${encodeURIComponent(dongPanel.admCd)}${qtrParam}`,
+                     { headers: _mapHeaders },
+                  )
+                     .then((r) => r.json())
+                     .then((d) => setSvcData(d.data || []))
+                     .catch(() => {});
+               }
             }}
             onToggle={handleToggleCat}
             onShowAll={handleShowAll}
@@ -1160,18 +1180,10 @@ export default function MapView() {
                setKakaoDetail(null);
                setBuildingStores([]);
                setLoadingDetail(true);
+               // 팝업 리스트에서 상가 선택 시 지도 이동 없음 - 하이라이트만
                if (s.LNG && s.LAT) {
-                  const map = mapInstance.current;
-                  if (map) {
-                     map.getView().animate({
-                        center: fromLonLat([
-                           parseFloat(s.LNG),
-                           parseFloat(s.LAT),
-                        ]),
-                        zoom: Math.max(map.getView().getZoom() || 17, 17),
-                        duration: 500,
-                     });
-                  }
+                  const storeId = s.STORE_ID || s.store_id;
+                  if (storeId) highlightById(storeId);
                }
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
                   setKakaoDetail(d);
