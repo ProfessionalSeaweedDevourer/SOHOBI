@@ -8,6 +8,10 @@ on:
       - "integrated_PARK/**"
       - ".github/workflows/deploy-backend.yml"
 
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false   # 진행 중인 배포를 취소하지 않고 다음 배포를 대기
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -39,6 +43,20 @@ jobs:
 
       - name: Container App 배포
         run: |
+          # 진행 중인 프로비저닝 완료 대기 (최대 6분)
+          for i in $(seq 1 12); do
+            STATE=$(az containerapp show \
+              --name ${{ secrets.CONTAINER_APP_NAME }} \
+              --resource-group ${{ secrets.RESOURCE_GROUP }} \
+              --query "properties.provisioningState" -o tsv)
+            if [ "$STATE" = "Succeeded" ] || [ "$STATE" = "Failed" ] || [ "$STATE" = "Canceled" ]; then
+              echo "프로비저닝 상태: $STATE — 배포 진행"
+              break
+            fi
+            echo "프로비저닝 진행 중 ($STATE) — 30초 대기 ($i/12)"
+            sleep 30
+          done
+
           az containerapp update \
             --name ${{ secrets.CONTAINER_APP_NAME }} \
             --resource-group ${{ secrets.RESOURCE_GROUP }} \
