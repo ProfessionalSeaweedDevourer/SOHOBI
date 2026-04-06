@@ -20,8 +20,21 @@ export default defineConfig({
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/map-api/, ""),
          },
-         // /map: MapView.jsx의 모든 /map/* 요청 커버
-         "/map": { target: "http://localhost:8000", changeOrigin: true },
+         // 지도: 소상공인 DB API - /map/으로 시작하는 API만 (React 라우트 /map 제외)
+         "/map/stores": { target: "http://localhost:8000", changeOrigin: true },
+         "/map/nearby": { target: "http://localhost:8000", changeOrigin: true },
+         "/map/landmarks": {
+            target: "http://localhost:8000",
+            changeOrigin: true,
+         },
+         "/map/schools": {
+            target: "http://localhost:8000",
+            changeOrigin: true,
+         },
+         "/map/land-use": {
+            target: "http://localhost:8000",
+            changeOrigin: true,
+         },
 
          // 지도: 부동산/상권 데이터 API (integrated_PARK 통합 서버, 포트 8000)
          "/realestate": {

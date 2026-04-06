@@ -144,17 +144,55 @@ export function useMarkers(mapInstance, visibleCats) {
       clusterLayerRef.current = layer;
    };
 
+   // 클러스터/단일 모두 대응: cluster feature는 "features" 배열 안에 store가 있음
+   const _getCatCd = (feat) => {
+      if (!feat) return undefined;
+      const direct = feat.get("store");
+      if (direct) return direct.CAT_CD;
+      const members = feat.get("features");
+      return members?.[0]?.get("store")?.CAT_CD;
+   };
+
    const selectMarker = (feature) => {
+      // 이전 선택 복원
       if (selectedFeatRef.current) {
          const prev = selectedFeatRef.current;
-         prev.setStyle(makeMarkerStyle(prev.get("store")?.CAT_CD));
-      }
-      if (!feature) {
+         const prevMembers = prev.get("features") || [];
+         const prevCat = _getCatCd(prev);
+         if (prevMembers.length > 1) {
+            const color = CAT_COLORS[prevCat] || "#888";
+            prev.setStyle(makeClusterStyle(prevMembers.length, color));
+         } else {
+            prev.setStyle(makeMarkerStyle(prevCat));
+         }
          selectedFeatRef.current = null;
-         return;
       }
-      const store = feature.get("store");
-      feature.setStyle(makeMarkerStyle(store?.CAT_CD, true));
+      if (!feature) return;
+
+      // 새 선택 강조
+      const members = feature.get("features") || [];
+      const catCd = _getCatCd(feature);
+      const color = CAT_COLORS[catCd] || "#888";
+      if (members.length > 1) {
+         // 클러스터: 테두리 흰색+두껍게
+         const radius = members.length > 99 ? 18 : members.length > 9 ? 15 : 12;
+         feature.setStyle(
+            new Style({
+               image: new CircleStyle({
+                  radius,
+                  fill: new Fill({ color }),
+                  stroke: new Stroke({ color: "#fff", width: 3 }),
+               }),
+               text: new Text({
+                  text: String(members.length),
+                  fill: new Fill({ color: "#fff" }),
+                  font: "bold 11px sans-serif",
+               }),
+            }),
+         );
+      } else {
+         feature.setStyle(makeMarkerStyle(catCd, true));
+      }
       selectedFeatRef.current = feature;
    };
 

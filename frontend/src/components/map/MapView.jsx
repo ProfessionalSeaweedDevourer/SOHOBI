@@ -96,6 +96,7 @@ export default function MapView() {
       storeSearchOnRef.current = storeSearchOn;
    }, [storeSearchOn]);
    const currentGuNmRef = useRef("");
+   const [currentGuNm, setCurrentGuNm] = useState("");
 
    useEffect(() => {
       dongModeRef.current = dongMode;
@@ -152,7 +153,9 @@ export default function MapView() {
 
    // ── 분기 목록 초기 로드 ──────────────────────────────────────────
    useEffect(() => {
-      fetch(`${REALESTATE_URL}/realestate/sangkwon-quarters`, { headers: _mapHeaders })
+      fetch(`${REALESTATE_URL}/realestate/sangkwon-quarters`, {
+         headers: _mapHeaders,
+      })
          .then((r) => r.json())
          .then((d) => {
             if (d.quarters?.length) {
@@ -171,6 +174,7 @@ export default function MapView() {
    const visibleCatsRef = useRef(allCatKeys); // 클로저 캡처 방지용 ref
    const [catCounts, setCatCounts] = useState({});
    const [svcData, setSvcData] = useState([]);
+   const [storeData, setStoreData] = useState(null);
    const [selectedSvc, setSelectedSvc] = useState(""); // 업종 필터 선택값
    const [selectedCatCd, setSelectedCatCd] = useState(""); // CategoryPanel 선택 대분류
 
@@ -340,7 +344,9 @@ export default function MapView() {
          ];
          Promise.all(
             admCds.map((admCd) =>
-               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, { headers: _mapHeaders })
+               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, {
+                  headers: _mapHeaders,
+               })
                   .then((r) => r.json())
                   .then((d) => d.stores || [])
                   .catch(() => []),
@@ -376,7 +382,6 @@ export default function MapView() {
          duration: 600,
          maxZoom: 17,
       });
-
    };
 
    // ── 동 모드 전환 핸들러 ─────────────────────────────────────────
@@ -411,7 +416,9 @@ export default function MapView() {
             if (_admCd) {
                if (allStoresRef.current.length === 0) {
                   clearMarkers();
-                  fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`, { headers: _mapHeaders })
+                  fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`, {
+                     headers: _mapHeaders,
+                  })
                      .then((r) => r.json())
                      .then((d) => {
                         const stores = d.stores || [];
@@ -513,6 +520,7 @@ export default function MapView() {
             const region = rj.documents?.find((d) => d.region_type === "H");
             if (region?.region_2depth_name)
                currentGuNmRef.current = region.region_2depth_name;
+            setCurrentGuNm(region.region_2depth_name);
          } catch {
             /* ignore */
          }
@@ -555,7 +563,10 @@ export default function MapView() {
             const p = feat.getProperties();
             const dongNm = p.adm_nm || p.name || "";
             const guNm = p.sig_kor_nm || p.sig_nm || p.sgg_nm || "";
-            if (guNm) currentGuNmRef.current = guNm;
+            if (guNm) {
+               currentGuNmRef.current = guNm;
+               setCurrentGuNm(guNm);
+            }
 
             if (dongNm !== dongHoverNameRef.current) {
                dongHoverNameRef.current = dongNm;
@@ -689,7 +700,10 @@ export default function MapView() {
                   p.gu_nm || p.sig_kor_nm || currentGuNmRef.current || "";
 
                if (_dongNm) {
-                  if (_guNm) currentGuNmRef.current = _guNm;
+                  if (_guNm) {
+                     currentGuNmRef.current = _guNm;
+                     setCurrentGuNm(_guNm);
+                  }
                   // 이전 선택 해제 (클릭 선택)
                   if (
                      dongSelectedFeatRef.current &&
@@ -735,7 +749,9 @@ export default function MapView() {
                         .then((r) => r.json())
                         .then((d) => {
                            const stores = d.stores || [];
-                           console.log(`[stores-by-dong] 응답: count=${stores.length}, adm_cd=${_admCd}`);
+                           console.log(
+                              `[stores-by-dong] 응답: count=${stores.length}, adm_cd=${_admCd}`,
+                           );
                            allStoresRef.current = stores;
                            setNearbyCount(stores.length);
                            const counts = {};
@@ -746,7 +762,9 @@ export default function MapView() {
                            setCatCounts(counts);
                            drawMarkers(stores, visibleCatsRef.current);
                         })
-                        .catch((e) => console.error("[stores-by-dong] 오류:", e));
+                        .catch((e) =>
+                           console.error("[stores-by-dong] 오류:", e),
+                        );
                   }
                   // none 모드면 패널 조회 스킵
                   if (_mode === "none") {
@@ -843,6 +861,7 @@ export default function MapView() {
             setClusterPopup(null);
             if (wmsResult.parsed.sigg)
                currentGuNmRef.current = wmsResult.parsed.sigg;
+            setCurrentGuNm(wmsResult.parsed.sigg);
             return;
          }
          setWmsPopup(null);
@@ -925,7 +944,7 @@ export default function MapView() {
             dongMode={dongMode}
             onDongMode={handleDongMode}
             dongLoading={dongLoading}
-            currentGuNm={currentGuNmRef.current}
+            currentGuNm={currentGuNm}
             storeSearchOn={storeSearchOn}
             onStoreSearchToggle={() => {
                const next = !storeSearchOn;
@@ -946,7 +965,9 @@ export default function MapView() {
                setLoading(true);
                clearMarkers();
                setNearbyCount(null);
-               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, { headers: _mapHeaders })
+               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, {
+                  headers: _mapHeaders,
+               })
                   .then((r) => r.json())
                   .then((d) => {
                      const stores = d.stores || [];
@@ -1168,10 +1189,69 @@ export default function MapView() {
          />
          <DongPanel
             dongPanel={dongPanel}
-            onClose={() => setDongPanel(null)}
+            onClose={() => {
+               setDongPanel(null);
+               setStoreData(null);
+               setSvcData([]);
+               setSelectedCatCd("");
+               setSelectedSvc("");
+            }}
             svcData={svcData}
             selectedSvc={selectedSvc}
-            onSvcChange={setSelectedSvc}
+            selectedCatCd={selectedCatCd}
+            storeData={storeData}
+            onSvcChange={(svcCd) => {
+               setSelectedSvc(svcCd);
+               if (!dongPanel?.admCd) return;
+               const qtrParam = selectedQtr
+                  ? `&quarter=${encodeURIComponent(selectedQtr)}`
+                  : "";
+               if (svcCd) {
+                  // 매출: 대분류 기준 소분류 데이터
+                  fetch(
+                     `${REALESTATE_URL}/realestate/sangkwon-svc-by-cat?adm_cd=${encodeURIComponent(dongPanel.admCd)}&cat_cd=${encodeURIComponent(svcCd)}${qtrParam}`,
+                  )
+                     .then((r) => r.json())
+                     .then((d) => setSvcData(d.data || []))
+                     .catch(() => {});
+                  // 점포수: 대분류 기준 필터
+                  fetch(
+                     `${REALESTATE_URL}/realestate/sangkwon-store?adm_cd=${encodeURIComponent(dongPanel.admCd)}&svc_cd=${encodeURIComponent(svcCd)}`,
+                  )
+                     .then((r) => r.json())
+                     .then((d) => setStoreData(d))
+                     .catch(() => {});
+               } else {
+                  // 전체 복원
+                  setStoreData(null);
+                  fetch(
+                     `${REALESTATE_URL}/realestate/sangkwon-svc?adm_cd=${encodeURIComponent(dongPanel.admCd)}${qtrParam}`,
+                  )
+                     .then((r) => r.json())
+                     .then((d) => setSvcData(d.data || []))
+                     .catch(() => {});
+               }
+            }}
+            onFetchSub={(svcCd, mode) => {
+               const admCd = dongPanel?.admCd || "";
+               const qtrParam = selectedQtr
+                  ? `&quarter=${encodeURIComponent(selectedQtr)}`
+                  : "";
+               if (mode === "store") {
+                  return fetch(
+                     `${REALESTATE_URL}/realestate/sangkwon-store-by-svc?adm_cd=${encodeURIComponent(admCd)}&svc_cd=${encodeURIComponent(svcCd)}`,
+                  )
+                     .then((r) => r.json())
+                     .then((d) => d.data || [])
+                     .catch(() => []);
+               }
+               return fetch(
+                  `${REALESTATE_URL}/realestate/sangkwon-svc-by-cat?adm_cd=${encodeURIComponent(admCd)}&cat_cd=${encodeURIComponent(svcCd)}${qtrParam}`,
+               )
+                  .then((r) => r.json())
+                  .then((d) => d.data || [])
+                  .catch(() => []);
+            }}
             quarters={quarters}
             selectedQuarter={selectedQtr}
             onQuarterChange={(q) => setSelectedQtr(q)}
