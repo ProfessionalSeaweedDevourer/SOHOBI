@@ -40,6 +40,22 @@ SELECT_STORE = """
 
 class MapInfoDAO(BaseDAO):
 
+    def __init__(self):
+        self._ensure_search_indexes()
+
+    def _ensure_search_indexes(self):
+        """searchDong prefix LIKE 성능을 위한 B-tree 인덱스 생성 (없으면 생성)"""
+        sqls = [
+            "CREATE INDEX IF NOT EXISTS idx_store_adm_nm ON store_seoul (adm_nm text_pattern_ops)",
+            "CREATE INDEX IF NOT EXISTS idx_store_legal_nm ON store_seoul (legal_nm text_pattern_ops)",
+        ]
+        try:
+            for sql in sqls:
+                self._execute(sql)
+            logger.debug("[MapInfoDAO] search 인덱스 확인 완료")
+        except Exception as e:
+            logger.warning("[MapInfoDAO] 인덱스 생성 실패 (무시): %s", e)
+
     # ── 반경 조회 ─────────────────────────────────────────────────
     def getNearbyStores(self, lat: float, lng: float, radius: float = 500, limit: int = 500) -> list:
         lat_delta = radius / 111000.0
@@ -123,7 +139,7 @@ class MapInfoDAO(BaseDAO):
 
     # ── 행정동/법정동 검색 ────────────────────────────────────────
     def searchDong(self, q: str) -> list:
-        """행정동명 + 법정동명 LIKE 검색"""
+        """행정동명 + 법정동명 prefix LIKE 검색 (B-tree 인덱스 활용)"""
         try:
             # 1. 행정동 검색 (store_seoul 기준)
             sql_adm = """
@@ -134,7 +150,7 @@ class MapInfoDAO(BaseDAO):
                 ORDER BY adm_nm
                 LIMIT 20
             """
-            rows_adm = self._query(sql_adm, {"q": f"%{q}%"})
+            rows_adm = self._query(sql_adm, {"q": f"{q}%"})
 
             # 2. 법정동 검색
             sql_legal = """
@@ -145,7 +161,7 @@ class MapInfoDAO(BaseDAO):
                 ORDER BY adm_nm
                 LIMIT 20
             """
-            rows_legal = self._query(sql_legal, {"q": f"%{q}%"})
+            rows_legal = self._query(sql_legal, {"q": f"{q}%"})
 
             existing = {r["adm_cd"] for r in rows_adm}
             for r in rows_legal:
