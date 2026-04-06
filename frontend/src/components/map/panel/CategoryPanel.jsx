@@ -112,7 +112,7 @@ export default function CategoryPanel({
                                  }
                                  style={{
                                     ...S.catName,
-                                    color: isOn ? "#111" : "#aaa",
+                                    color: isOn ? "var(--foreground)" : "var(--muted-foreground)",
                                     cursor: "pointer",
                                     textDecoration:
                                        selectedCatCd === cat.key
@@ -127,9 +127,9 @@ export default function CategoryPanel({
                                  <span
                                     style={{
                                        ...S.countChip,
-                                       background: isOn ? cat.bg : "#f5f5f5",
-                                       color: isOn ? cat.color : "#aaa",
-                                       border: `1px solid ${isOn ? cat.color : "#ddd"}`,
+                                       background: isOn ? cat.bg : "var(--secondary)",
+                                       color: isOn ? cat.color : "var(--muted-foreground)",
+                                       border: `1px solid ${isOn ? cat.color : "var(--border)"}`,
                                     }}
                                  >
                                     {count}
@@ -160,8 +160,8 @@ const S = {
    sidebar: {
       position: "relative",
       height: "100%",
-      background: "rgba(255,255,255,0.97)",
-      borderRight: "1px solid #e5e7eb",
+      background: "var(--card)",
+      borderRight: "1px solid var(--border)",
       borderRadius: "0 12px 12px 0",
       boxShadow: "2px 0 12px rgba(0,0,0,0.08)",
       zIndex: 200,
@@ -178,16 +178,16 @@ const S = {
       alignItems: "center",
       justifyContent: "space-between",
       padding: "14px 12px 10px",
-      borderBottom: "1px solid #f0f0f0",
+      borderBottom: "1px solid var(--border)",
       flexShrink: 0,
    },
-   headerTitle: { fontSize: 13, fontWeight: 700, color: "#111" },
+   headerTitle: { fontSize: 13, fontWeight: 700, color: "var(--foreground)" },
    collapseBtn: {
       background: "transparent",
       border: "none",
       cursor: "pointer",
       fontSize: 12,
-      color: "#888",
+      color: "var(--muted-foreground)",
       padding: "2px 4px",
       marginLeft: "auto",
    },
@@ -203,11 +203,12 @@ const S = {
    searchInput: {
       flex: 1,
       padding: "5px 8px",
-      border: "1px solid #ddd",
+      border: "1px solid var(--border)",
       borderRadius: 8,
       fontSize: 12,
       outline: "none",
-      color: "#111",
+      background: "var(--input-background)",
+      color: "var(--foreground)",
       minWidth: 0, // flex 자식 넘침 방지
       boxSizing: "border-box",
    },
@@ -224,22 +225,22 @@ const S = {
    totalBadge: {
       margin: "10px 12px 0",
       padding: "7px 10px",
-      background: "#EFF6FF",
+      background: "rgba(8, 145, 178, 0.08)",
       borderRadius: 8,
       fontSize: 12,
-      color: "#1971C2",
+      color: "var(--brand-blue)",
       textAlign: "center",
    },
    allBtns: { display: "flex", gap: 6, padding: "10px 12px 0" },
    hideAllBtn: {
       flex: 1,
       padding: "5px 0",
-      background: "#f5f5f5",
-      border: "1px solid #ddd",
+      background: "var(--secondary)",
+      border: "1px solid var(--border)",
       borderRadius: 6,
       fontSize: 11,
       fontWeight: 600,
-      color: "#666",
+      color: "var(--foreground)",
       cursor: "pointer",
    },
    showAllBtn: {
@@ -255,7 +256,7 @@ const S = {
    },
    divider: {
       height: 1,
-      background: "#f0f0f0",
+      background: "var(--border)",
       margin: "10px 0 4px",
       flexShrink: 0,
    },

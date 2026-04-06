@@ -226,6 +226,53 @@
   cursor: not-allowed;
 }
 
+/* ── 다크모드 오버라이드 ──────────────────────────────── */
+.dark .mv-chat-panel {
+  background: rgba(15, 20, 32, 0.95);
+}
+.dark .mv-chat-msg--assistant {
+  background: rgba(30, 39, 54, 0.9);
+  border-color: rgba(136, 145, 168, 0.25);
+  color: #e8edf5;
+}
+.dark .mv-chat-msg--assistant table th,
+.dark .mv-chat-msg--assistant table td {
+  border-color: rgba(136, 145, 168, 0.3);
+  color: #e8edf5;
+}
+.dark .mv-chat-msg--assistant table th {
+  background: rgba(20, 184, 166, 0.15);
+}
+.dark .mv-chat-msg--assistant table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.05);
+}
+.dark .mv-chat-msg--system {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #e8edf5;
+}
+.dark .mv-chat-loading {
+  background: rgba(30, 39, 54, 0.9);
+  border-color: rgba(136, 145, 168, 0.25);
+  color: #8891a8;
+}
+.dark .mv-chat-input-area {
+  background: rgba(15, 20, 32, 0.98);
+  border-top-color: rgba(136, 145, 168, 0.2);
+}
+.dark .mv-chat-input {
+  background: rgba(26, 32, 48, 0.9);
+  border-color: rgba(136, 145, 168, 0.25);
+  color: #e8edf5;
+}
+.dark .mv-chat-input::placeholder {
+  color: #8891a8;
+}
+.dark .mv-chat-context {
+  background: rgba(8, 145, 178, 0.1);
+  border-bottom-color: rgba(8, 145, 178, 0.25);
+}
+
 /* ── 디자인 시스템 오버라이드 (glass + CSS variables) ──── */
 .mv-chat-toggle {
   background: var(--brand-blue);

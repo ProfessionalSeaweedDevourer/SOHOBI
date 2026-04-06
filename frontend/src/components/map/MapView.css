@@ -79,10 +79,6 @@
 
 /* ── 레이어 패널 토글 ──────────────────────────────────────── */
 .mv-layer-btn {
-   position: absolute;
-   top: 14px;
-   right: 14px;
-   z-index: 200;
    background: #fff;
    border: 1px solid #e5e7eb;
    border-radius: 10px;
@@ -483,4 +479,142 @@
    font-size: 13px;
    color: #444;
    line-height: 1.4;
+}
+
+/* ── 우상단 컨트롤 그룹 (ThemeToggle + 레이어 버튼) ──── */
+.mv-top-right-controls {
+   position: absolute;
+   top: 14px;
+   right: 14px;
+   z-index: 200;
+   display: flex;
+   align-items: center;
+   gap: 8px;
+}
+
+/* ── OL 줌 레벨 뱃지 기본 스타일 ─────────────────────── */
+.zoom-level-badge {
+   text-align: center;
+   font-size: 11px;
+   font-weight: 700;
+   color: #333;
+   padding: 2px 0;
+   background: #fff;
+   border-left: 2px solid #ddd;
+   border-right: 2px solid #ddd;
+}
+.dark .zoom-level-badge {
+   color: var(--foreground);
+   background: var(--card);
+   border-left-color: var(--border);
+   border-right-color: var(--border);
+}
+
+/* ── OL 기본 줌 버튼 다크모드 ─────────────────────────── */
+.dark .ol-zoom .ol-zoom-in,
+.dark .ol-zoom .ol-zoom-out {
+   background: var(--card) !important;
+   color: var(--foreground) !important;
+}
+
+/* ── 다크모드 오버라이드 ───────────────────────────────── */
+/* 상단 컨트롤 바 */
+.dark .mv-ctrl-bar {
+   background: var(--card);
+   border-color: var(--border);
+}
+.dark .mv-ctrl-btn--off {
+   background: var(--secondary);
+   color: var(--foreground);
+}
+.dark .mv-ctrl-badge {
+   background: rgba(20, 184, 166, 0.12);
+   border-color: rgba(20, 184, 166, 0.3);
+   color: var(--brand-teal);
+}
+.dark .mv-ctrl-loading {
+   background: var(--card);
+   border-color: var(--border);
+   color: var(--muted-foreground);
+}
+.dark .mv-ctrl-clear {
+   background: var(--card);
+   border-color: var(--border);
+   color: var(--muted-foreground);
+}
+
+/* 레이어 패널 토글 버튼 */
+.dark .mv-layer-btn {
+   background: var(--card);
+   border-color: var(--border);
+   color: var(--foreground);
+}
+
+/* 행정동 모드 버튼 */
+.dark .mv-dong-btn--off {
+   background: var(--card);
+   color: var(--foreground);
+   border-color: var(--border);
+}
+
+/* 행정동 로딩 오버레이 */
+.dark .mv-dong-loading {
+   background: rgba(15, 20, 32, 0.92);
+   color: var(--muted-foreground);
+}
+
+/* 우측 동 패널 */
+.dark .mv-dong-panel {
+   background: var(--card);
+}
+.dark .mv-dong-panel__empty {
+   color: var(--muted-foreground);
+}
+
+/* 패널 내 카드/섹션 */
+.dark .mv-dp-card__label {
+   color: var(--muted-foreground);
+}
+.dark .mv-dp-card__sub {
+   color: var(--muted-foreground);
+}
+.dark .mv-dp-section {
+   background: var(--secondary);
+}
+.dark .mv-dp-section__title {
+   color: var(--muted-foreground);
+}
+.dark .mv-dp-bar-track {
+   background: rgba(136, 145, 168, 0.2);
+}
+.dark .mv-dp-grid-item__label {
+   color: var(--muted-foreground);
+}
+.dark .mv-dp-grid-item__value {
+   color: var(--foreground);
+}
+
+/* WMS 팝업 */
+.dark .mv-wms-popup {
+   background: var(--card);
+   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.dark .mv-wms-popup__title {
+   color: var(--foreground);
+}
+.dark .mv-wms-popup__divider {
+   background: var(--border);
+}
+.dark .mv-wms-popup__row-text {
+   color: var(--muted-foreground);
+}
+.dark .mv-wms-popup__close {
+   color: var(--muted-foreground);
+}
+
+/* 좌표 표시바 */
+.dark .coord-bar {
+   background: rgba(15, 20, 32, 0.92);
+   border-color: var(--border);
+   color: var(--muted-foreground);
 }

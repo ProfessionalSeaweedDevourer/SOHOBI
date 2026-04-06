@@ -4,6 +4,7 @@
 import React, { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
+import "./Layerpanel.css";
 
 function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
    const layer = new TileLayer({
@@ -156,10 +157,10 @@ export default function LayerPanel({
    };
 
    return (
-      <div style={S.panel}>
-         <div style={S.title}>🗂️ 레이어 관리</div>
+      <div className="lp-panel">
+         <div className="lp-title">🗂️ 레이어 관리</div>
 
-         <div style={S.sectionLabel}>VWorld</div>
+         <div className="lp-section-label">VWorld</div>
          <LayerRow
             label="📋 지적도"
             desc="토지 경계 (줌 17+ 필요)"
@@ -175,7 +176,7 @@ export default function LayerPanel({
             onClick={toggleTouristInfo}
          />
 
-         <div style={S.sectionLabel}>한국관광공사</div>
+         <div className="lp-section-label">한국관광공사</div>
          <LayerRow
             label="🏛️ 관광지·문화"
             desc="DB 마커 (관광지+문화시설)"
@@ -193,7 +194,7 @@ export default function LayerPanel({
             disabled={!festivalLoaded}
          />
 
-         <div style={S.sectionLabel}>교육</div>
+         <div className="lp-section-label">교육</div>
          <LayerRow
             label="🏫 학교"
             desc="DB 마커"
@@ -203,24 +204,24 @@ export default function LayerPanel({
             disabled={!schoolLoaded}
          />
 
-         <div style={S.notice}>💡 동 클릭 시 해당 구역 마커 자동 로드</div>
+         <div className="lp-notice">💡 동 클릭 시 해당 구역 마커 자동 로드</div>
       </div>
    );
 }
 
 function LayerRow({ label, desc, on, color, onClick, disabled }) {
    return (
-      <div style={{ ...S.row, opacity: disabled ? 0.4 : 1 }}>
+      <div className="lp-row" style={{ opacity: disabled ? 0.4 : 1 }}>
          <div style={{ flex: 1 }}>
-            <div style={S.layerName}>{label}</div>
-            <div style={S.layerDesc}>{desc}</div>
+            <div className="lp-layer-name">{label}</div>
+            <div className="lp-layer-desc">{desc}</div>
          </div>
          <button
             onClick={disabled ? undefined : onClick}
+            className={`lp-toggle ${on ? "" : "lp-toggle--off"}`}
             style={{
-               ...S.toggle,
-               background: on ? color : "#e0e0e0",
-               color: on ? "#fff" : "#555",
+               background: on ? color : undefined,
+               color: on ? "#fff" : undefined,
                cursor: disabled ? "default" : "pointer",
             }}
          >
@@ -229,59 +230,3 @@ function LayerRow({ label, desc, on, color, onClick, disabled }) {
       </div>
    );
 }
-
-const S = {
-   panel: {
-      background: "#fff",
-      border: "1px solid #ddd",
-      borderRadius: 10,
-      padding: 16,
-      minWidth: 230,
-      boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-   },
-   title: {
-      fontSize: 13,
-      fontWeight: 700,
-      color: "#111",
-      marginBottom: 12,
-      paddingBottom: 8,
-      borderBottom: "1px solid #f0f0f0",
-   },
-   sectionLabel: {
-      fontSize: 10,
-      fontWeight: 700,
-      color: "#aaa",
-      textTransform: "uppercase",
-      letterSpacing: 1,
-      margin: "10px 0 4px 2px",
-   },
-   row: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      padding: 10,
-      background: "#f9f9f9",
-      borderRadius: 8,
-      marginBottom: 6,
-   },
-   layerName: { fontSize: 13, fontWeight: 600, color: "#333" },
-   layerDesc: { fontSize: 11, color: "#999", marginTop: 2 },
-   toggle: {
-      border: "none",
-      borderRadius: 6,
-      padding: "6px 14px",
-      fontSize: 12,
-      fontWeight: 700,
-      flexShrink: 0,
-      transition: "all 0.2s",
-   },
-   notice: {
-      fontSize: 11,
-      color: "#bbb",
-      padding: 8,
-      background: "#f9f9f9",
-      borderRadius: 6,
-      textAlign: "center",
-      marginTop: 4,
-   },
-};

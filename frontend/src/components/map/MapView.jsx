@@ -19,6 +19,7 @@ import StorePopup from "./popup/StorePopup";
 import ChatPanel from "./ChatPanel";
 import LandmarkPopup from "./popup/LandmarkPopup";
 import { useLandmarkLayer } from "../../hooks/map/useLandmarkLayer";
+import { ThemeToggle } from "../ThemeToggle";
 
 // ── 커스텀 훅 ──────────────────────────────────────────────────
 import { useMarkers } from "../../hooks/map/useMarkers";
@@ -114,8 +115,6 @@ export default function MapView() {
             if (!badge) {
                badge = document.createElement("div");
                badge.className = "zoom-level-badge";
-               badge.style.cssText =
-                  "text-align:center;font-size:11px;font-weight:700;color:#333;padding:2px 0;background:#fff;border-left:2px solid #ddd;border-right:2px solid #ddd;";
                const btns = zoomEl.querySelectorAll("button");
                if (btns.length >= 2) zoomEl.insertBefore(badge, btns[1]);
             }
@@ -965,12 +964,15 @@ export default function MapView() {
                   .finally(() => setLoading(false));
             }}
          />
-         <button
-            className="mv-layer-btn"
-            onClick={() => setShowPanel((p) => !p)}
-         >
-            🗂️
-         </button>
+         <div className="mv-top-right-controls">
+            <ThemeToggle />
+            <button
+               className="mv-layer-btn"
+               onClick={() => setShowPanel((p) => !p)}
+            >
+               🗂️
+            </button>
+         </div>
          {showPanel && mapInstance.current && (
             <div className="mv-layer-panel-wrap">
                <Layerpanel
