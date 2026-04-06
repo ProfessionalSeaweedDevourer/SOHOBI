@@ -280,9 +280,9 @@ class FinanceSimulationPlugin:
                 else:
                     revenue = [float(v) for v in dbwork.get_sales(region, industry_cd)]
             except Exception:
-                revenue = [170000000]
+                revenue = [float(46_000_000)]
         else:
-            revenue = [170000000]
+            revenue = [float(46_000_000)]
 
         return {
             "revenue": revenue,
