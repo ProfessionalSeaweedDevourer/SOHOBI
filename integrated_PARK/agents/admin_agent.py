@@ -4,6 +4,9 @@
 - 추가: SeoulCommercialPlugin (CHOI) — 지역·업종별 상권 데이터 자동 조회
 """
 
+import asyncio
+import logging
+
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import (
     AzureChatCompletion,
@@ -12,6 +15,8 @@ from semantic_kernel.connectors.ai.open_ai import (
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import kernel_function
+
+logger = logging.getLogger(__name__)
 
 from plugins.seoul_commercial_plugin import SeoulCommercialPlugin
 from plugins.admin_procedure_plugin import AdminProcedurePlugin
@@ -112,7 +117,17 @@ class AdminAgent:
         settings = OpenAIChatPromptExecutionSettings(
             function_choice_behavior=FunctionChoiceBehavior.Auto(),
         )
-        response = await service.get_chat_message_content(
-            history, settings=settings, kernel=self._kernel
-        )
+        try:
+            response = await asyncio.wait_for(
+                service.get_chat_message_content(
+                    history, settings=settings, kernel=self._kernel
+                ),
+                timeout=60.0,
+            )
+        except asyncio.TimeoutError:
+            logger.warning("AdminAgent LLM 타임아웃 (60초)")
+            raise ValueError("AI 응답 생성 중 타임아웃이 발생했습니다. 잠시 후 다시 시도해 주세요.")
+        except Exception as e:
+            logger.error("AdminAgent LLM 호출 실패: %s", e)
+            raise ValueError(f"AI 응답 생성 중 오류가 발생했습니다: {e}") from e
         return str(response)

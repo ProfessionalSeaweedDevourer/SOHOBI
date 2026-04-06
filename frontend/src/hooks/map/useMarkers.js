@@ -62,6 +62,7 @@ export function useMarkers(mapInstance, visibleCats) {
    const allStoresRef = useRef([]);
    const selectedFeatRef = useRef(null);
    const clusterSourceRef = useRef(null);
+   const vectorSourceRef = useRef(null);
 
    const drawCircle = (lng, lat, radius) => {
       const map = mapInstance.current;
@@ -87,7 +88,6 @@ export function useMarkers(mapInstance, visibleCats) {
    const drawMarkers = (stores, visible = visibleCats) => {
       const map = mapInstance.current;
       if (!map) return;
-      if (clusterLayerRef.current) map.removeLayer(clusterLayerRef.current);
 
       const features = stores
          .filter((s) => s.LNG && s.LAT)
@@ -102,7 +102,18 @@ export function useMarkers(mapInstance, visibleCats) {
             return f;
          });
 
+      // 레이어가 이미 존재하면 소스만 교체 (Layer 재생성 생략)
+      if (clusterLayerRef.current && vectorSourceRef.current) {
+         selectedFeatRef.current = null;
+         vectorSourceRef.current.clear();
+         vectorSourceRef.current.addFeatures(features);
+         return;
+      }
+
+      if (clusterLayerRef.current) map.removeLayer(clusterLayerRef.current);
+
       const vectorSource = new VectorSource({ features });
+      vectorSourceRef.current = vectorSource;
       const clusterSource = new Cluster({ source: vectorSource, distance: 40 });
       clusterSourceRef.current = clusterSource;
 
@@ -158,6 +169,9 @@ export function useMarkers(mapInstance, visibleCats) {
          map.removeLayer(circleLayerRef.current);
          circleLayerRef.current = null;
       }
+      vectorSourceRef.current = null;
+      clusterSourceRef.current = null;
+      selectedFeatRef.current = null;
       allStoresRef.current = [];
    };
 

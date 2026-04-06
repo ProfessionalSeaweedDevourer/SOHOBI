@@ -252,7 +252,10 @@ class LocationAgent:
         history.add_user_message(user_msg)
         settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=2000)
         try:
-            result = await service.get_chat_message_content(history, settings=settings)
+            result = await asyncio.wait_for(
+                service.get_chat_message_content(history, settings=settings),
+                timeout=60.0,
+            )
             text = str(result)
             if not text or text == "None":
                 raise ValueError("LLM이 빈 응답을 반환했습니다.")
@@ -265,9 +268,12 @@ class LocationAgent:
                 safe_history = ChatHistory()
                 safe_history.add_system_message(safe_sys)
                 safe_history.add_user_message(user_msg)
-                result = await service.get_chat_message_content(
-                    safe_history,
-                    settings=settings,
+                result = await asyncio.wait_for(
+                    service.get_chat_message_content(
+                        safe_history,
+                        settings=settings,
+                    ),
+                    timeout=60.0,
                 )
                 return str(result)
             raise ValueError(f"AI 응답 생성 중 오류가 발생했습니다: {e}") from e

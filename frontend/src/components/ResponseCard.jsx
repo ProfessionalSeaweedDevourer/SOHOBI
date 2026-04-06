@@ -6,8 +6,8 @@ const DOMAIN_COLOR = {
   finance: { background: "rgba(20,184,166,0.15)", color: "var(--brand-teal)" },
   admin:   { background: "rgba(8,145,178,0.15)",  color: "var(--brand-blue)" },
   legal:   { background: "rgba(249,115,22,0.15)", color: "var(--brand-orange)" },
-  location:{ background: "rgba(20,184,166,0.15)", color: "var(--brand-teal)" },
-  chat:    { background: "rgba(139,92,246,0.15)", color: "#8b5cf6" },
+  location:{ background: "rgba(139,92,246,0.15)", color: "#8b5cf6" },
+  chat:    { background: "rgba(236,72,153,0.15)", color: "#ec4899" },
 };
 
 const GRADE_STYLE = {
@@ -18,7 +18,7 @@ const GRADE_STYLE = {
 const GRADE_LABEL = { A: "A 통과", B: "B 경고", C: "C 반려" };
 
 // displayMode: 'full' = 개발자(도메인+등급+재시도), 'grade' = 사용자(등급+검증횟수), 'none' = 미표시
-export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, displayMode = "none" }) {
+export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, charts, displayMode = "none" }) {
   const isEscalated = status === "escalated";
   const isError = status === "error";
   const effectiveGrade = grade || (isEscalated ? "C" : "A");
@@ -93,6 +93,19 @@ export default function ResponseCard({ question, domain, status, grade, confiden
                   <ReactMarkdown>{draft}</ReactMarkdown>
                   {chart && typeof chart === "object" && (
                     <SimulationChart chartData={chart} />
+                  )}
+                  {charts && charts.length > 0 && (
+                    <div className="mt-4 flex flex-col gap-3">
+                      {charts.map((b64, idx) => (
+                        <img
+                          key={idx}
+                          src={`data:image/png;base64,${b64}`}
+                          alt={`상권 분석 차트 ${idx + 1}`}
+                          className="w-full rounded-xl border border-[var(--border)]"
+                          style={{ maxWidth: "100%" }}
+                        />
+                      ))}
+                    </div>
                   )}
                 </>
               )}

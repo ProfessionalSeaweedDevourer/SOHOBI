@@ -163,9 +163,10 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
         } else if (eventName === "complete") {
           if (data.session_id) setSessionId(data.session_id);
           const draft = data.draft || accumulated || "응답을 받지 못했습니다.";
+          const charts = data.charts || [];
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === streamMsgId ? { ...m, content: draft } : m,
+              m.id === streamMsgId ? { ...m, content: draft, charts } : m,
             ),
           );
           // 지도 하이라이트
@@ -267,6 +268,18 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           {messages.map((msg) => (
             <div key={msg.id} className={`mv-chat-msg mv-chat-msg--${msg.role}`}>
               {msg.content}
+              {msg.charts && msg.charts.length > 0 && (
+                <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {msg.charts.map((b64, idx) => (
+                    <img
+                      key={idx}
+                      src={`data:image/png;base64,${b64}`}
+                      alt={`상권 분석 차트 ${idx + 1}`}
+                      style={{ width: "100%", borderRadius: "8px" }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
 

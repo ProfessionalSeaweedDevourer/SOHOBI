@@ -8,6 +8,7 @@ location_chart.py
 import base64
 import io
 import os
+import threading
 
 try:
     import matplotlib
@@ -17,9 +18,9 @@ try:
     from matplotlib.ticker import FuncFormatter
     import numpy as np
 
-    # 한글 폰트 설정 (NAM/malgun.ttf 번들 폰트 또는 시스템 폰트)
+    # 한글 폰트 설정 (integrated_PARK/nam/malgun.ttf 번들 폰트 또는 시스템 폰트)
     _BUNDLED_FONT = os.path.join(
-        os.path.dirname(__file__), "..", "..", "NAM", "malgun.ttf"
+        os.path.dirname(__file__), "..", "nam", "malgun.ttf"
     )
     if os.path.exists(_BUNDLED_FONT):
         fm.fontManager.addfont(_BUNDLED_FONT)
@@ -40,6 +41,7 @@ try:
 except ImportError:
     _MATPLOTLIB_AVAILABLE = False
 
+_plt_lock = threading.Lock()
 
 # ── 색상 팔레트 ──────────────────────────────────────────────
 _BAR_COLOR = "#4e8cff"
@@ -275,13 +277,14 @@ def generate_analyze_charts(
     if not _MATPLOTLIB_AVAILABLE or not sales_summary:
         return []
 
-    title_prefix = f"{location} 전체 {business_type} 기준".strip()
-    charts = []
-    for fn in [_chart_day, _chart_time, _chart_age, _chart_gender]:
-        result = fn(sales_summary, title_prefix)
-        if result:
-            charts.append(result)
-    return charts
+    with _plt_lock:
+        title_prefix = f"{location} 전체 {business_type} 기준".strip()
+        charts = []
+        for fn in [_chart_day, _chart_time, _chart_age, _chart_gender]:
+            result = fn(sales_summary, title_prefix)
+            if result:
+                charts.append(result)
+        return charts
 
 
 def generate_compare_charts(
@@ -297,57 +300,32 @@ def generate_compare_charts(
     if not _MATPLOTLIB_AVAILABLE or not compare_data:
         return []
 
-    try:
-        n = len(compare_data)
-        locations = [d["location"] for d in compare_data]
-        x = np.arange(n)
-        w = 0.35
-        loc_colors = _COMPARE_COLORS[:n]
-        title = f"{business_type} 지역 비교" if business_type else "지역 비교"
-        charts = []
-
-        monthly = [d.get("monthly_sales_krw", 0) for d in compare_data]
-        avg_store = [d.get("avg_sales_per_store_krw", 0) for d in compare_data]
-
-        # ── 차트1: 월매출 비교 ──────────────────────────────
+    with _plt_lock:
         try:
-            fig, ax = plt.subplots(figsize=(9, 5))
-            fig.suptitle(title, fontsize=13, fontweight="bold")
+            n = len(compare_data)
+            locations = [d["location"] for d in compare_data]
+            x = np.arange(n)
+            w = 0.35
+            loc_colors = _COMPARE_COLORS[:n]
+            title = f"{business_type} 지역 비교" if business_type else "지역 비교"
+            charts = []
 
-            bars1 = ax.bar(x, monthly, width=0.5, color=loc_colors, alpha=0.85)
-            ax.set_xticks(x)
-            ax.set_xticklabels(locations, fontsize=13)
-            ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
-            ax.set_title("💰 지역별 월매출 비교", fontsize=13, fontweight="bold", pad=8)
-            ax.spines[["top", "right"]].set_visible(False)
+            monthly = [d.get("monthly_sales_krw", 0) for d in compare_data]
+            avg_store = [d.get("avg_sales_per_store_krw", 0) for d in compare_data]
 
-            for bar in bars1:
-                h = bar.get_height()
-                if h > 0:
-                    ax.text(
-                        bar.get_x() + bar.get_width() / 2, h,
-                        _억만_label(h), ha="center", va="bottom", fontsize=9, color="#475569",
-                    )
-
-            plt.tight_layout()
-            charts.append(_fig_to_base64(fig))
-        except Exception:
-            pass
-
-        # ── 차트2: 점포당 평균 매출 비교 ────────────────────
-        try:
-            if any(v > 0 for v in avg_store):
+            # ── 차트1: 월매출 비교 ──────────────────────────────
+            try:
                 fig, ax = plt.subplots(figsize=(9, 5))
                 fig.suptitle(title, fontsize=13, fontweight="bold")
 
-                bars2 = ax.bar(x, avg_store, width=0.5, color=loc_colors, alpha=0.85)
+                bars1 = ax.bar(x, monthly, width=0.5, color=loc_colors, alpha=0.85)
                 ax.set_xticks(x)
                 ax.set_xticklabels(locations, fontsize=13)
                 ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
-                ax.set_title("🏬 점포당 평균 매출 비교", fontsize=13, fontweight="bold", pad=8)
+                ax.set_title("💰 지역별 월매출 비교", fontsize=13, fontweight="bold", pad=8)
                 ax.spines[["top", "right"]].set_visible(False)
 
-                for bar in bars2:
+                for bar in bars1:
                     h = bar.get_height()
                     if h > 0:
                         ax.text(
@@ -357,41 +335,67 @@ def generate_compare_charts(
 
                 plt.tight_layout()
                 charts.append(_fig_to_base64(fig))
-        except Exception:
-            pass
+            except Exception:
+                pass
 
-        # ── 차트3: 점포 지표 비교 ────────────────────────────
-        try:
-            open_rates = [d.get("open_rate_pct", 0) for d in compare_data]
-            close_rates = [d.get("close_rate_pct", 0) for d in compare_data]
-            if any(r > 0 for r in open_rates + close_rates):
-                fig, ax = plt.subplots(figsize=(9, 5))
-                fig.suptitle(title, fontsize=13, fontweight="bold")
+            # ── 차트2: 점포당 평균 매출 비교 ────────────────────
+            try:
+                if any(v > 0 for v in avg_store):
+                    fig, ax = plt.subplots(figsize=(9, 5))
+                    fig.suptitle(title, fontsize=13, fontweight="bold")
 
-                bars3 = ax.bar(x - w / 2, open_rates, w, label="개업률", color="#2ecc71", alpha=0.85)
-                bars4 = ax.bar(x + w / 2, close_rates, w, label="폐업률", color="#e74c3c", alpha=0.85)
-                ax.set_xticks(x)
-                ax.set_xticklabels(locations, fontsize=13)
-                ax.set_title("🏪 점포 지표 비교", fontsize=13, fontweight="bold", pad=8)
-                ax.set_ylabel("%", fontsize=11)
-                ax.legend(fontsize=10)
-                ax.spines[["top", "right"]].set_visible(False)
+                    bars2 = ax.bar(x, avg_store, width=0.5, color=loc_colors, alpha=0.85)
+                    ax.set_xticks(x)
+                    ax.set_xticklabels(locations, fontsize=13)
+                    ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
+                    ax.set_title("🏬 점포당 평균 매출 비교", fontsize=13, fontweight="bold", pad=8)
+                    ax.spines[["top", "right"]].set_visible(False)
 
-                for bars in [bars3, bars4]:
-                    for bar in bars:
+                    for bar in bars2:
                         h = bar.get_height()
                         if h > 0:
                             ax.text(
                                 bar.get_x() + bar.get_width() / 2, h,
-                                f"{h:.1f}%", ha="center", va="bottom", fontsize=10, color="#475569",
+                                _억만_label(h), ha="center", va="bottom", fontsize=9, color="#475569",
                             )
 
-                plt.tight_layout()
-                charts.append(_fig_to_base64(fig))
+                    plt.tight_layout()
+                    charts.append(_fig_to_base64(fig))
+            except Exception:
+                pass
+
+            # ── 차트3: 점포 지표 비교 ────────────────────────────
+            try:
+                open_rates = [d.get("open_rate_pct", 0) for d in compare_data]
+                close_rates = [d.get("close_rate_pct", 0) for d in compare_data]
+                if any(r > 0 for r in open_rates + close_rates):
+                    fig, ax = plt.subplots(figsize=(9, 5))
+                    fig.suptitle(title, fontsize=13, fontweight="bold")
+
+                    bars3 = ax.bar(x - w / 2, open_rates, w, label="개업률", color="#2ecc71", alpha=0.85)
+                    bars4 = ax.bar(x + w / 2, close_rates, w, label="폐업률", color="#e74c3c", alpha=0.85)
+                    ax.set_xticks(x)
+                    ax.set_xticklabels(locations, fontsize=13)
+                    ax.set_title("🏪 점포 지표 비교", fontsize=13, fontweight="bold", pad=8)
+                    ax.set_ylabel("%", fontsize=11)
+                    ax.legend(fontsize=10)
+                    ax.spines[["top", "right"]].set_visible(False)
+
+                    for bars in [bars3, bars4]:
+                        for bar in bars:
+                            h = bar.get_height()
+                            if h > 0:
+                                ax.text(
+                                    bar.get_x() + bar.get_width() / 2, h,
+                                    f"{h:.1f}%", ha="center", va="bottom", fontsize=10, color="#475569",
+                                )
+
+                    plt.tight_layout()
+                    charts.append(_fig_to_base64(fig))
+            except Exception:
+                pass
+
+            return charts
+
         except Exception:
-            pass
-
-        return charts
-
-    except Exception:
-        return []
+            return []

@@ -73,37 +73,40 @@ class LandmarkDAO(BaseDAO):
             logger.error(f"[LandmarkDAO] get_by_adm_cd: {e}")
             return []
 
-    def get_all(self, content_types: list = None) -> list:
-        """서울 전체 랜드마크 조회"""
+    def get_all(self, content_types: list = None, limit: int = 500) -> list:
+        """서울 전체 랜드마크 조회 (최대 limit건)"""
         try:
             if content_types:
                 # content_type_id는 varchar → 문자열로 캐스트
                 placeholders = ",".join([f"%(t{i})s" for i in range(len(content_types))])
                 params = {f"t{i}": str(v) for i, v in enumerate(content_types)}
+                params["limit"] = limit
                 sql = f"""
                     {SELECT_LANDMARK}
                     FROM landmark
                     WHERE content_type_id IN ({placeholders})
                     ORDER BY content_type_id, title
+                    LIMIT %(limit)s
                 """
             else:
                 sql = f"""
                     {SELECT_LANDMARK}
                     FROM landmark
                     ORDER BY content_type_id, title
+                    LIMIT %(limit)s
                 """
-                params = {}
+                params = {"limit": limit}
 
             rows = self._query(sql, params)
             result = [_row_to_dict(r) for r in rows]
-            logger.info(f"[LandmarkDAO] get_all → {len(result)}건")
+            logger.info(f"[LandmarkDAO] get_all → {len(result)}건 (limit={limit})")
             return result
         except Exception as e:
             logger.error(f"[LandmarkDAO] get_all: {e}")
             return []
 
-    def get_schools(self, school_type: str = None) -> list:
-        """서울 전체 학교 조회 (좌표 있는 것만)"""
+    def get_schools(self, school_type: str = None, limit: int = 500) -> list:
+        """서울 전체 학교 조회 (좌표 있는 것만, 최대 limit건)"""
         try:
             if school_type:
                 sql = """
@@ -116,8 +119,9 @@ class LandmarkDAO(BaseDAO):
                     WHERE map_x IS NOT NULL AND map_y IS NOT NULL
                       AND schul_knd_sc_nm = %(school_type)s
                     ORDER BY schul_knd_sc_nm, schul_nm
+                    LIMIT %(limit)s
                 """
-                params = {"school_type": school_type}
+                params = {"school_type": school_type, "limit": limit}
             else:
                 sql = """
                     SELECT sd_schul_code, schul_nm, schul_knd_sc_nm,
@@ -128,8 +132,9 @@ class LandmarkDAO(BaseDAO):
                     FROM school_seoul
                     WHERE map_x IS NOT NULL AND map_y IS NOT NULL
                     ORDER BY schul_knd_sc_nm, schul_nm
+                    LIMIT %(limit)s
                 """
-                params = {}
+                params = {"limit": limit}
 
             rows = self._query(sql, params)
             logger.info(f"[LandmarkDAO] get_schools → {len(rows)}건")

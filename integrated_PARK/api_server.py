@@ -9,11 +9,14 @@
 
 import asyncio
 import json
+import logging
 import os
 import time
 from contextlib import asynccontextmanager
 import traceback
 from uuid import uuid4
+
+_logger = logging.getLogger("sohobi.api")
 
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -170,8 +173,8 @@ async def _extract_and_save(sid: str, session: dict, draft: str) -> None:
         if new_vars:
             session["extracted"].update(new_vars)
             await save_query_session(sid, session)
-    except Exception:
-        pass
+    except Exception as e:
+        _logger.warning("재무 변수 백그라운드 추출 실패 sid=%s: %s", sid, e)
 
 
 # ── 엔드포인트 ────────────────────────────────────────────────

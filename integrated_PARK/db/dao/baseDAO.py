@@ -25,6 +25,8 @@ def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
             user=os.environ["PG_USER"],
             password=os.environ["PG_PASSWORD"],
             sslmode=os.environ.get("PG_SSL_MODE", "require"),
+            connect_timeout=10,
+            options="-c statement_timeout=15000",
         )
         logger.info("[BaseDAO] PostgreSQL 연결 풀 생성 완료")
     return _pool
@@ -42,12 +44,12 @@ class BaseDAO:
         """커서 닫고 커넥션 반납"""
         try:
             cur.close()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("[BaseDAO] 커서 닫기 실패: %s", e)
         try:
             _get_pool().putconn(conn)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("[BaseDAO] 커넥션 풀 반납 실패 — 누수 가능성: %s", e)
 
     def _query(self, sql: str, params: dict | None = None) -> list:
         """SELECT → list[dict] 반환 (RealDictCursor 사용)"""
