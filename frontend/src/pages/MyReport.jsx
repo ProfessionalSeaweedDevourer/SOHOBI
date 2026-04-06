@@ -18,6 +18,7 @@ async function fetchReport(sessionId) {
   const res = await fetch(`${BASE_URL}/api/report/${sessionId}`, {
     headers: _HEADERS,
   });
+  if (res.status === 403) return null;
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -94,7 +95,7 @@ export default function MyReport() {
           </div>
         )}
 
-        {!loading && !sessionId && (
+        {!loading && !error && !report && (
           <div
             className="rounded-2xl border p-6 text-center"
             style={{ background: "var(--card)", borderColor: "var(--border)" }}
