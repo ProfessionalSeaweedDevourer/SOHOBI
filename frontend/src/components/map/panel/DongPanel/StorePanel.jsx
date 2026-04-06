@@ -55,7 +55,7 @@ export function StorePanel({ d }) {
                const cnt = Number(r.stor_co) || 0;
                const pct = total > 0 ? Math.round((cnt / total) * 100) : 0;
                const col = SVC_COLOR_STORE[r.svc_cd] || "#888";
-               const lbl = SVC_LABEL[r.svc_cd] || r.svc_nm;
+               const lbl = SVC_LABEL[r.svc_cd] || r.svc_nm || r.svc_cd || "기타";
                return (
                   <div key={r.svc_cd} style={{ marginBottom: 9 }}>
                      <div

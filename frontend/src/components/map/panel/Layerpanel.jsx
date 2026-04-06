@@ -38,8 +38,8 @@ function makeCadastralLayer(vworldKey) {
             SERVICE: "WMS",
             VERSION: "1.3.0",
             REQUEST: "GetMap",
-            LAYERS: "lp_pa_cbnd_bubun",
-            STYLES: "",
+            LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+            STYLES: ",",
             FORMAT: "image/png",
             TRANSPARENT: "TRUE",
             CRS: "EPSG:3857",
@@ -90,34 +90,25 @@ export default function LayerPanel({
 
    // ── 지적도 ──────────────────────────────────────────────────
    const toggleCadastral = () => {
-      if (cadastralOn) {
-         if (wmsLayerRef.current) {
-            map.removeLayer(wmsLayerRef.current);
-            wmsLayerRef.current = null;
-         }
-         setCadastralOn(false);
-      } else {
-         const layer = makeCadastralLayer(vworldKey);
-         map.addLayer(layer);
-         wmsLayerRef.current = layer;
-         setCadastralOn(true);
-      }
+      const layer =
+         map.getLayers().getArray().find((l) => l.get("name") === "cadastral") ??
+         wmsLayerRef.current;
+      if (!layer) return;
+      const next = !cadastralOn;
+      layer.setVisible(next);
+      wmsLayerRef.current = layer;
+      setCadastralOn(next);
    };
 
    // ── 관광안내소 (VWorld WMS) ──────────────────────────────────
    const toggleTouristInfo = () => {
-      if (touristInfoOn) {
-         map.getLayers()
-            .getArray()
-            .filter((l) => l.get("name") === "tourist_info")
-            .forEach((l) => map.removeLayer(l));
-         setTouristInfoOn(false);
-      } else {
-         map.addLayer(
-            makeWmsLayer("lt_p_dgtouristinfo", "tourist_info", 215, vworldKey),
-         );
-         setTouristInfoOn(true);
-      }
+      const layer =
+         map.getLayers().getArray().find((l) => l.get("name") === "tourist_info") ??
+         null;
+      if (!layer) return;
+      const next = !touristInfoOn;
+      layer.setVisible(next);
+      setTouristInfoOn(next);
    };
 
    // ── 관광지·문화시설 (KTO DB 마커) ───────────────────────────

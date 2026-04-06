@@ -29,7 +29,7 @@ export function SvcPanel({ svcData }) {
             const amt = Number(r.tot_sales_amt) || 0;
             const pct = Math.round((amt / total) * 100);
             const col = SVC_COLOR[r.svc_cd] || "#888";
-            const lbl = SVC_LABEL[r.svc_cd] || r.svc_nm;
+            const lbl = SVC_LABEL[r.svc_cd] || r.svc_nm || r.svc_cd || "기타";
             return (
                <div key={r.svc_cd} style={{ marginBottom: 9 }}>
                   <div
