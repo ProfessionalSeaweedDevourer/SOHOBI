@@ -62,7 +62,14 @@ export default function MyReport() {
         <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
           나의 리포트
         </span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          <a
+            href="/map"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            style={{ textDecoration: "none" }}
+          >
+            지도 🗺️
+          </a>
           <ThemeToggle />
         </div>
       </header>

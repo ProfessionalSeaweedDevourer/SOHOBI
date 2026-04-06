@@ -113,7 +113,14 @@ export default function Roadmap() {
         >
           로드맵 투표
         </span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          <a
+            href="/"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            style={{ textDecoration: "none" }}
+          >
+            홈 →
+          </a>
           <ThemeToggle />
         </div>
       </header>

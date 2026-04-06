@@ -965,6 +965,8 @@ export default function MapView() {
             }}
          />
          <div className="mv-top-right-controls">
+            <a href="/user" className="mv-nav-btn">← 상담</a>
+            <a href="/features" className="mv-nav-btn">기능</a>
             <ThemeToggle />
             <button
                className="mv-layer-btn"
