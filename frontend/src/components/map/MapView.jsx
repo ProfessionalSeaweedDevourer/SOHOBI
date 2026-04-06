@@ -207,6 +207,7 @@ export default function MapView() {
       if (!mapReady || !mapInstance.current || landmarkInitRef.current) return;
       landmarkInitRef.current = true;
       loadLandmarks().then(() => setLandmarkLoaded(true));
+      loadFestivals().then(() => setFestivalLoaded(true));
       loadSchools().then(() => setSchoolLoaded(true));
       // 기본 폴리곤 활성화 (dongMode 기본값 sales라서 경계 표시)
       ensureDongBoundaryLayer();
