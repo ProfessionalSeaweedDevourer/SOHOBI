@@ -108,7 +108,7 @@ class DBWork:
         """
         sql = """
          시 [46_000_000] 반환.
-                ROUND(
+            SELECT
                     AVG(
                         s.tot_sales_amt::numeric
                         / NULLIF(
