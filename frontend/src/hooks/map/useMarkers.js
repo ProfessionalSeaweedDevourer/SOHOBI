@@ -79,7 +79,7 @@ export function useMarkers(mapInstance, visibleCats) {
       );
       const layer = new VectorLayer({
          source: new VectorSource({ features: [feature] }),
-         zIndex: 99,
+         zIndex: 90,
       });
       map.addLayer(layer);
       circleLayerRef.current = layer;
@@ -119,12 +119,14 @@ export function useMarkers(mapInstance, visibleCats) {
 
       const layer = new VectorLayer({
          source: clusterSource,
-         zIndex: 100,
+         zIndex: 200,
          style: (feature) => {
             const members = feature.get("features") || [];
+            const isSel = selectedFeatRef.current === feature;
+
             if (members.length === 1) {
                const store = members[0].get("store");
-               return makeMarkerStyle(store?.CAT_CD);
+               return makeMarkerStyle(store?.CAT_CD, isSel);
             }
             // 클러스터 - 대표 카테고리 색상
             const cats = members
@@ -136,6 +138,23 @@ export function useMarkers(mapInstance, visibleCats) {
                   cats.filter((c) => c === a).length,
             )[0];
             const color = CAT_COLORS[topCat] || "#888";
+            if (isSel) {
+               // 선택된 클러스터: 테두리 강조
+               const radius =
+                  members.length > 99 ? 18 : members.length > 9 ? 15 : 12;
+               return new Style({
+                  image: new CircleStyle({
+                     radius: radius + 3,
+                     fill: new Fill({ color }),
+                     stroke: new Stroke({ color: "#fff", width: 3 }),
+                  }),
+                  text: new Text({
+                     text: String(members.length),
+                     fill: new Fill({ color: "#fff" }),
+                     font: `bold ${radius}px sans-serif`,
+                  }),
+               });
+            }
             return makeClusterStyle(members.length, color);
          },
       });
@@ -154,46 +173,9 @@ export function useMarkers(mapInstance, visibleCats) {
    };
 
    const selectMarker = (feature) => {
-      // 이전 선택 복원
-      if (selectedFeatRef.current) {
-         const prev = selectedFeatRef.current;
-         const prevMembers = prev.get("features") || [];
-         const prevCat = _getCatCd(prev);
-         if (prevMembers.length > 1) {
-            const color = CAT_COLORS[prevCat] || "#888";
-            prev.setStyle(makeClusterStyle(prevMembers.length, color));
-         } else {
-            prev.setStyle(makeMarkerStyle(prevCat));
-         }
-         selectedFeatRef.current = null;
-      }
-      if (!feature) return;
-
-      // 새 선택 강조
-      const members = feature.get("features") || [];
-      const catCd = _getCatCd(feature);
-      const color = CAT_COLORS[catCd] || "#888";
-      if (members.length > 1) {
-         // 클러스터: 테두리 흰색+두껍게
-         const radius = members.length > 99 ? 18 : members.length > 9 ? 15 : 12;
-         feature.setStyle(
-            new Style({
-               image: new CircleStyle({
-                  radius,
-                  fill: new Fill({ color }),
-                  stroke: new Stroke({ color: "#fff", width: 3 }),
-               }),
-               text: new Text({
-                  text: String(members.length),
-                  fill: new Fill({ color: "#fff" }),
-                  font: "bold 11px sans-serif",
-               }),
-            }),
-         );
-      } else {
-         feature.setStyle(makeMarkerStyle(catCd, true));
-      }
-      selectedFeatRef.current = feature;
+      selectedFeatRef.current = feature || null;
+      // clusterLayer.changed()로 리렌더 트리거 → style function 재실행 → 선택 강조 반영
+      clusterLayerRef.current?.changed();
    };
 
    const clearMarkers = () => {

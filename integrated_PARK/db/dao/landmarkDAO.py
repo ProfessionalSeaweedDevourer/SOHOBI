@@ -47,13 +47,13 @@ class LandmarkDAO(BaseDAO):
         try:
             if content_types:
                 placeholders = ",".join([f"%(t{i})s" for i in range(len(content_types))])
-                params = {f"t{i}": str(v) for i, v in enumerate(content_types)}
+                params = {f"t{i}": int(v) for i, v in enumerate(content_types)}
                 params["sgg_cd"] = sgg_cd
                 sql = f"""
                     {SELECT_LANDMARK}
                     FROM landmark
                     WHERE sigungu_code = %(sgg_cd)s
-                      AND content_type_id IN ({placeholders})
+                      AND content_type_id::integer IN ({placeholders})
                     ORDER BY title
                 """
             else:
@@ -79,12 +79,12 @@ class LandmarkDAO(BaseDAO):
             if content_types:
                 # content_type_id는 varchar → 문자열로 캐스트
                 placeholders = ",".join([f"%(t{i})s" for i in range(len(content_types))])
-                params = {f"t{i}": str(v) for i, v in enumerate(content_types)}
+                params = {f"t{i}": int(v) for i, v in enumerate(content_types)}
                 params["limit"] = limit
                 sql = f"""
                     {SELECT_LANDMARK}
                     FROM landmark
-                    WHERE content_type_id IN ({placeholders})
+                    WHERE content_type_id::integer IN ({placeholders})
                     ORDER BY content_type_id, title
                     LIMIT %(limit)s
                 """

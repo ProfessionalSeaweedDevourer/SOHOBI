@@ -4,66 +4,12 @@
 import React, { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
-<<<<<<< Updated upstream
-import "./Layerpanel.css";
-
-function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
-   const layer = new TileLayer({
-      source: new TileWMS({
-         url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
-         params: {
-            SERVICE: "WMS",
-            VERSION: "1.3.0",
-            REQUEST: "GetMap",
-            LAYERS: layerName,
-            STYLES: "",
-            FORMAT: "image/png",
-            TRANSPARENT: "TRUE",
-            CRS: "EPSG:3857",
-         },
-         crossOrigin: "anonymous",
-         transition: 0,
-      }),
-      opacity: 1,
-      zIndex,
-   });
-   layer.set("name", layerKey);
-   return layer;
-}
-=======
->>>>>>> Stashed changes
-
-function makeCadastralLayer(vworldKey) {
-   const layer = new TileLayer({
-      source: new TileWMS({
-         url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
-         params: {
-            SERVICE: "WMS",
-            VERSION: "1.3.0",
-            REQUEST: "GetMap",
-            LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-            STYLES: ",",
-            FORMAT: "image/png",
-            TRANSPARENT: "TRUE",
-            CRS: "EPSG:3857",
-         },
-         crossOrigin: "anonymous",
-         transition: 0,
-      }),
-      opacity: 0.7,
-      zIndex: 200,
-      minZoom: 17,
-   });
-   layer.set("name", "cadastral");
-   return layer;
-}
 
 export default function LayerPanel({
    map,
    mapReady,
    vworldKey,
    wmsLayerRef,
-   currentZoom,
    landmarkLayerRef,
    festivalLayerRef,
    schoolLayerRef,
@@ -81,11 +27,16 @@ export default function LayerPanel({
    React.useEffect(() => {
       if (!map || !mapReady || initDoneRef.current) return;
       initDoneRef.current = true;
-<<<<<<< Updated upstream
-      // 지적도 초기 ON (zoom 17+ 에서만 타일 데이터 반환)
-      const layer = makeCadastralLayer(vworldKey);
-=======
-      // 지적도 초기 ON
+      // MapView에서 이미 추가했으면 ref만 연결하고 중복 추가 방지
+      const existing = map
+         .getLayers()
+         .getArray()
+         .find((l) => l.get("name") === "cadastral");
+      if (existing) {
+         wmsLayerRef.current = existing;
+         return;
+      }
+      // 없으면 새로 추가
       const layer = new TileLayer({
          source: new TileWMS({
             url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
@@ -104,9 +55,9 @@ export default function LayerPanel({
          }),
          opacity: 0.7,
          zIndex: 50,
+         minZoom: 19,
       });
       layer.set("name", "cadastral");
->>>>>>> Stashed changes
       map.addLayer(layer);
       wmsLayerRef.current = layer;
    }, [map, mapReady]); // eslint-disable-line
@@ -122,9 +73,6 @@ export default function LayerPanel({
          wmsLayerRef.current = null;
          setCadastralOn(false);
       } else {
-<<<<<<< Updated upstream
-         const layer = makeCadastralLayer(vworldKey);
-=======
          const layer = new TileLayer({
             source: new TileWMS({
                url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
@@ -143,9 +91,9 @@ export default function LayerPanel({
             }),
             opacity: 0.7,
             zIndex: 50,
+            minZoom: 19,
          });
          layer.set("name", "cadastral");
->>>>>>> Stashed changes
          map.addLayer(layer);
          wmsLayerRef.current = layer;
          setCadastralOn(true);
@@ -181,15 +129,7 @@ export default function LayerPanel({
          <div style={S.sectionLabel}>VWorld</div>
          <LayerRow
             label="📋 지적도"
-<<<<<<< Updated upstream
-            desc={
-               cadastralOn && currentZoom < 17
-                  ? `줌 ${Math.floor(currentZoom)}/17 — 더 확대하면 표시`
-                  : "토지 경계 (줌 17+ 필요)"
-            }
-=======
             desc="토지 경계 · 공시지가"
->>>>>>> Stashed changes
             on={cadastralOn}
             color="#2196F3"
             onClick={toggleCadastral}

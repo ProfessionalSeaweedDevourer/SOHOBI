@@ -7,7 +7,14 @@ import VectorSource from "ol/source/Vector";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import { fromLonLat } from "ol/proj";
-import { Style, Circle as CircleStyle, Fill, Stroke, Text } from "ol/style";
+import {
+   Style,
+   Circle as CircleStyle,
+   Fill,
+   Stroke,
+   Text,
+   Icon,
+} from "ol/style";
 
 const MAP_URL = import.meta.env.VITE_MAP_URL || "/map-api";
 const _API_KEY = import.meta.env.VITE_API_KEY || "";
@@ -21,22 +28,26 @@ const TYPE_STYLE = {
    school: { color: "#10b981", label: "학교" }, // 학교 - 초록
 };
 
-function makeStyle(typeKey, selected = false) {
+function makeStyle(typeKey, selected = false, imageUrl = null) {
    const { color, label } = TYPE_STYLE[typeKey] || { color: "#999", label: "" };
+   const radius = selected ? 14 : 10; // 크기 키움 (7→10, 10→14)
+   const imageStyle = imageUrl
+      ? new Icon({ src: imageUrl, width: 28, height: 28, anchor: [0.5, 1] })
+      : new CircleStyle({
+           radius,
+           fill: new Fill({ color: selected ? "#fff" : color }),
+           stroke: new Stroke({
+              color: selected ? color : "#fff",
+              width: selected ? 3 : 2,
+           }),
+        });
    return new Style({
-      image: new CircleStyle({
-         radius: selected ? 10 : 7,
-         fill: new Fill({ color: selected ? "#fff" : color }),
-         stroke: new Stroke({
-            color: selected ? color : "#fff",
-            width: selected ? 3 : 2,
-         }),
-      }),
+      image: imageStyle,
       text: label
          ? new Text({
               text: label,
-              offsetY: -16,
-              font: "bold 10px sans-serif",
+              offsetY: imageUrl ? -32 : -(radius + 6),
+              font: "bold 11px sans-serif",
               fill: new Fill({ color }),
               stroke: new Stroke({ color: "#fff", width: 3 }),
            })
@@ -61,7 +72,7 @@ export function useLandmarkLayer(mapInstance) {
             });
             f.set("lmData", d);
             f.set("lmType", typeKey);
-            f.setStyle(makeStyle(typeKey));
+            f.setStyle(makeStyle(typeKey, false, d.image || null));
             return f;
          });
 
@@ -72,7 +83,7 @@ export function useLandmarkLayer(mapInstance) {
       const layer = new VectorLayer({
          source: new VectorSource({ features }),
          zIndex,
-         minZoom: 16, // 줌 16 미만이면 자동 숨김
+         minZoom: 12, // 줌 12 미만이면 자동 숨김
       });
       map.addLayer(layer);
       return layer;
@@ -95,13 +106,13 @@ export function useLandmarkLayer(mapInstance) {
                });
                f.set("lmData", d);
                f.set("lmType", typeKey);
-               f.setStyle(makeStyle(typeKey));
+               f.setStyle(makeStyle(typeKey, false, d.image || null));
                return f;
             });
          if (landmarkLayerRef.current) {
             mapInstance.current?.removeLayer(landmarkLayerRef.current);
          }
-         landmarkLayerRef.current = addLayer(features, 210);
+         landmarkLayerRef.current = addLayer(features, 55);
       } catch (e) {
          console.error("[useLandmarkLayer] loadLandmarks:", e);
       }
@@ -119,7 +130,7 @@ export function useLandmarkLayer(mapInstance) {
          if (festivalLayerRef.current) {
             mapInstance.current?.removeLayer(festivalLayerRef.current);
          }
-         festivalLayerRef.current = addLayer(features, 211);
+         festivalLayerRef.current = addLayer(features, 56);
       } catch (e) {
          console.error("[useLandmarkLayer] loadFestivals:", e);
       }
@@ -141,7 +152,7 @@ export function useLandmarkLayer(mapInstance) {
          if (schoolLayerRef.current) {
             mapInstance.current?.removeLayer(schoolLayerRef.current);
          }
-         schoolLayerRef.current = addLayer(features, 212);
+         schoolLayerRef.current = addLayer(features, 57);
       } catch (e) {
          console.error("[useLandmarkLayer] loadSchools:", e);
       }
@@ -156,13 +167,25 @@ export function useLandmarkLayer(mapInstance) {
    const selectLandmark = (feature) => {
       if (selectedFeatRef.current) {
          const prev = selectedFeatRef.current;
-         prev.setStyle(makeStyle(prev.get("lmType")));
+         prev.setStyle(
+            makeStyle(
+               prev.get("lmType"),
+               false,
+               prev.get("lmData")?.image || null,
+            ),
+         );
       }
       if (!feature) {
          selectedFeatRef.current = null;
          return;
       }
-      feature.setStyle(makeStyle(feature.get("lmType"), true));
+      feature.setStyle(
+         makeStyle(
+            feature.get("lmType"),
+            true,
+            feature.get("lmData")?.image || null,
+         ),
+      );
       selectedFeatRef.current = feature;
    };
 
