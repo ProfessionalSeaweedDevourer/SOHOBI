@@ -827,6 +827,13 @@ export default function MapView() {
                   } finally {
                      setDongLoading(false);
                   }
+                  // 동 패널 처리와 무관하게 지적도(공시지가) 조회도 병렬 실행
+                  handleWmsClick(map, e.coordinate).then((wmsResult) => {
+                     if (wmsResult) {
+                        setWmsPopup(wmsResult.parsed);
+                        setLandValue(wmsResult.landValue || null);
+                     }
+                  });
                   return;
                }
             }
