@@ -125,14 +125,6 @@ class DBWork:
             WHERE s.svc_induty_cd LIKE 'CS10%'
             AND   s.tot_sales_amt IS NOT NULL
         """
-        conn, cur = self._db_con()
-        try:
-            cur.execute(sql)
-            row = cur.fetchone()
-            avg = row["avg_sales_per_store"] if row else None
-            return [float(avg)] if avg is not None else [float(46_000_000)]
-        except Exception as e:
-            logger.warning("DBWork.get_average_sales 실패: %s", e)
-            return [float(46_000_000)]
-        finally:
-            self._close(conn, cur)
+        rows = self._execute_query(sql)
+        avg = rows[0][0] if rows and rows[0][0] is not None else None
+        return [float(avg)] if avg is not None else [float(46_000_000)]
