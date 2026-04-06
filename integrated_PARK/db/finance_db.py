@@ -102,7 +102,7 @@ class DBWork(BaseDAO):
             cur.execute(sql)
             row = cur.fetchone()
             avg = row["avg_sales_per_store"] if row else None
-            return [float(avg)] if avg is not None else [170_000_000]
+            return [float(avg)] if avg is not None else [float(170_000_000)]
         except Exception as e:
             logger.warning("DBWork.get_average_sales 실패: %s", e)
             return [170_000_000]

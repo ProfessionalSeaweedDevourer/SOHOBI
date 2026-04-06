@@ -53,13 +53,11 @@ INDUSTRY_RATIO = {
 
 
 class FinanceSimulationPlugin:
-    """
-    몬테카를로 시뮬레이션 기반 재무 분석 플러그인.
+    """몬테카를로 시뮬레이션 기반 재무 분석 플러그인
 
     월매출 데이터를 기반으로 순이익 분포, 손실 확률, 손익분기점,
     투자 회수 기간을 산출한다. 업종별 비용 비율은 INDUSTRY_RATIO 참조.
     """
-
     def _calculate_salary(self, salary: float, hours: float = None) -> float:
         return salary if hours is None else salary * hours
 
@@ -277,7 +275,8 @@ class FinanceSimulationPlugin:
             try:
                 dbwork = DBWork()
                 if region is None and industry is None:
-                    revenue = [float(v) for v in dbwork.get_average_sales()]
+                    result = dbwork.get_average_sales()
+                    revenue = [float(v) for v in result] if hasattr(result, '__iter__') else [float(result)]
                 else:
                     revenue = [float(v) for v in dbwork.get_sales(region, industry_cd)]
             except Exception:
