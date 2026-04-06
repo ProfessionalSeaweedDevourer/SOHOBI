@@ -10,6 +10,7 @@ Cosmos DB 구조:
 
 import logging
 import os
+import time
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import uuid4
@@ -60,6 +61,10 @@ async def _get_feedback_container():
 # ── 인메모리 폴백 ──────────────────────────────────────────────────
 _feedback_fallback: list = []
 
+# ── 피드백 조회 캐시 (60초 TTL) ────────────────────────────────────
+_FEEDBACK_CACHE: tuple[float, list] = (0.0, [])
+_FEEDBACK_CACHE_TTL = 60
+
 
 # ── 스키마 ────────────────────────────────────────────────────────
 class FeedbackRequest(BaseModel):
@@ -76,16 +81,24 @@ class FeedbackRequest(BaseModel):
 @router.get("/api/feedback")
 async def get_feedback(limit: int = 500):
     """저장된 피드백 목록을 반환한다 (로그 뷰어용)."""
+    global _FEEDBACK_CACHE
+    now = time.time()
+    expires_at, cached = _FEEDBACK_CACHE
+    if expires_at > now:
+        items = cached[-limit:] if limit > 0 else cached
+        return {"count": len(items), "items": items}
+
     container = await _get_feedback_container()
     if container is not None:
         results = []
-        query = f"SELECT TOP {limit} * FROM c ORDER BY c._ts DESC"
         async for item in container.query_items(
-            query=query,
+            query=f"SELECT TOP {limit} * FROM c ORDER BY c._ts DESC",
         ):
             results.append(item)
     else:
         results = _feedback_fallback[-limit:] if limit > 0 else list(_feedback_fallback)
+
+    _FEEDBACK_CACHE = (now + _FEEDBACK_CACHE_TTL, results)
     return {"count": len(results), "items": results}
 
 
