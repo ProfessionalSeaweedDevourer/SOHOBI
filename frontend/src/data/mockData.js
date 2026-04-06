@@ -26,7 +26,7 @@ export const agentData = [
   {
     id: 'commercial',
     nameKo: '상권분석 에이전트',
-    descriptionKo: '서울 상권 DB(2024년 4분기) 기반 매출·유동인구·경쟁업체 분석 및 입지 비교',
+    descriptionKo: '서울 상권 DB(2025년 4분기) 기반 매출·유동인구·경쟁업체 분석 및 입지 비교',
     icon: 'MapPin',
     color: '#14b8a6',
     features: ['월매출·점포수 데이터 조회', '시간대별 유동인구 분석', '유사 상권 추천 & 비교'],
