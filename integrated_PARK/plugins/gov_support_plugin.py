@@ -8,7 +8,9 @@
 - 행정 에이전트(AdminAgent)에서 사용
 """
 
+import logging
 import os
+from collections.abc import Mapping
 from typing import Annotated
 
 from azure.core.credentials import AzureKeyCredential
@@ -19,6 +21,8 @@ from openai import AzureOpenAI
 from semantic_kernel.functions import kernel_function
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 REGION_MAP = {
     "서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천",
@@ -141,8 +145,9 @@ class GovSupportPlugin:
 
         scored = []
         for r in results:
-            if not hasattr(r, "get"):
-                continue  # str 또는 예외(None) 객체 방어
+            if not isinstance(r, Mapping):
+                logger.warning("gov_support_plugin: 예상치 못한 결과 타입 %s — 건너뜀", type(r))
+                continue
             reranker_score = r.get("@search.reranker_score") or 0.0
             if not apply_threshold or reranker_score >= self.RERANKER_THRESHOLD:
                 d = dict(r)
