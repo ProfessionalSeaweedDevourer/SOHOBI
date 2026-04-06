@@ -5,6 +5,7 @@ import { streamQuery } from "../api";
 import { interpretError } from "../utils/errorInterpreter";
 import { trackEvent } from "../utils/trackEvent";
 import ChatInput from "../components/ChatInput";
+import LoginNudgeCard from "../components/LoginNudgeCard";
 import ResponseCard from "../components/ResponseCard";
 import ProgressPanel from "../components/ProgressPanel";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -204,6 +205,9 @@ export default function UserChat() {
   const [pendingQuestion, setPendingQuestion] = useState(null);
   const [showBanner, setShowBanner] = useState(() => !localStorage.getItem("sohobi_tip_dismissed"));
   const [showSamples, setShowSamples] = useState(false);
+  const [showLoginNudge, setShowLoginNudge] = useState(
+    () => !user && !localStorage.getItem("sohobi_login_nudge_dismissed")
+  );
   const [placeholder] = useState(
     () => PLACEHOLDER_QUESTIONS[Math.floor(Math.random() * PLACEHOLDER_QUESTIONS.length)]
   );
@@ -465,21 +469,31 @@ export default function UserChat() {
 
         <div className="flex flex-col gap-6">
           {messages.map((msg, i) => (
-            <ResponseCard
-              key={i}
-              question={msg.question}
-              domain={msg.domain}
-              status={msg.status}
-              grade={msg.grade}
-              confidenceNote={msg.confidenceNote}
-              draft={msg.draft}
-              retryCount={msg.retryCount}
-              chart={msg.chart}
-              charts={msg.charts || []}
-              displayMode="grade"
-              sessionId={msg.sessionId}
-              messageId={msg.requestId}
-            />
+            <div key={i} className="flex flex-col gap-4">
+              <ResponseCard
+                question={msg.question}
+                domain={msg.domain}
+                status={msg.status}
+                grade={msg.grade}
+                confidenceNote={msg.confidenceNote}
+                draft={msg.draft}
+                retryCount={msg.retryCount}
+                chart={msg.chart}
+                charts={msg.charts || []}
+                displayMode="grade"
+                sessionId={msg.sessionId}
+                messageId={msg.requestId}
+              />
+              {i === 0 && !user && showLoginNudge && (
+                <LoginNudgeCard
+                  onLogin={login}
+                  onDismiss={() => {
+                    localStorage.setItem("sohobi_login_nudge_dismissed", "1");
+                    setShowLoginNudge(false);
+                  }}
+                />
+              )}
+            </div>
           ))}
 
           {pendingQuestion && (
