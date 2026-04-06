@@ -81,17 +81,10 @@ npm run build
 
 ---
 
-## Vercel 배포
+## Azure Static Web Apps 배포
 
-| 항목 | 값 |
-| ---- | -- |
-| Framework Preset | Vite |
-| Root Directory | `frontend` |
-| Build Command | `npm run build` |
-| Output Directory | `dist` |
-| Install Command | `npm install` |
-
-환경변수 `VITE_API_URL`에 배포된 백엔드 URL을 설정해야 합니다.
+GitHub Actions (`azure-static-web-apps-*.yml`)가 `main` 브랜치 push 시 자동으로 빌드·배포합니다.
+환경변수(`VITE_API_URL` 등)는 워크플로우 파일에서 GitHub Secrets로 주입됩니다.
 
 ---
 

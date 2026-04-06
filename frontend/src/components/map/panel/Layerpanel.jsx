@@ -4,6 +4,59 @@
 import React, { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
+<<<<<<< HEAD
+=======
+import "./Layerpanel.css";
+
+function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
+   const layer = new TileLayer({
+      source: new TileWMS({
+         url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
+         params: {
+            SERVICE: "WMS",
+            VERSION: "1.3.0",
+            REQUEST: "GetMap",
+            LAYERS: layerName,
+            STYLES: "",
+            FORMAT: "image/png",
+            TRANSPARENT: "TRUE",
+            CRS: "EPSG:3857",
+         },
+         crossOrigin: "anonymous",
+         transition: 0,
+      }),
+      opacity: 1,
+      zIndex,
+   });
+   layer.set("name", layerKey);
+   return layer;
+}
+
+function makeCadastralLayer(vworldKey) {
+   const layer = new TileLayer({
+      source: new TileWMS({
+         url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
+         params: {
+            SERVICE: "WMS",
+            VERSION: "1.3.0",
+            REQUEST: "GetMap",
+            LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+            STYLES: ",",
+            FORMAT: "image/png",
+            TRANSPARENT: "TRUE",
+            CRS: "EPSG:3857",
+         },
+         crossOrigin: "anonymous",
+         transition: 0,
+      }),
+      opacity: 0.7,
+      zIndex: 200,
+      minZoom: 17,
+   });
+   layer.set("name", "cadastral");
+   return layer;
+}
+>>>>>>> c044fa1873d422bb0287af873d800dbeb6f45fb0
 
 export default function LayerPanel({
    map,
@@ -55,6 +108,7 @@ export default function LayerPanel({
 
    // ── 지적도 ──────────────────────────────────────────────────
    const toggleCadastral = () => {
+<<<<<<< HEAD
       if (cadastralOn) {
          // name 기준으로 모든 지적도 레이어 제거 (중복 방지)
          map.getLayers()
@@ -91,6 +145,29 @@ export default function LayerPanel({
       }
    };
 
+=======
+      const layer =
+         map.getLayers().getArray().find((l) => l.get("name") === "cadastral") ??
+         wmsLayerRef.current;
+      if (!layer) return;
+      const next = !cadastralOn;
+      layer.setVisible(next);
+      wmsLayerRef.current = layer;
+      setCadastralOn(next);
+   };
+
+   // ── 관광안내소 (VWorld WMS) ──────────────────────────────────
+   const toggleTouristInfo = () => {
+      const layer =
+         map.getLayers().getArray().find((l) => l.get("name") === "tourist_info") ??
+         null;
+      if (!layer) return;
+      const next = !touristInfoOn;
+      layer.setVisible(next);
+      setTouristInfoOn(next);
+   };
+
+>>>>>>> c044fa1873d422bb0287af873d800dbeb6f45fb0
    // ── 관광지·문화시설 (KTO DB 마커) ───────────────────────────
    const toggleLandmark = () => {
       if (!landmarkLoaded || !landmarkLayerRef?.current) return;
