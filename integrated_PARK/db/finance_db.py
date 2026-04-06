@@ -42,7 +42,7 @@ class DBWork:
             return cur.fetchall()
         except Exception as e:
             print("DB 조회 실패:", e)
-            return None
+            logger.warning("DBWork._execute_query 실패: %s", e)
         finally:
             if cur: cur.close()
             if con: con.close()
