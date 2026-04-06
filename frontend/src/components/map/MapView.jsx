@@ -19,6 +19,7 @@ import StorePopup from "./popup/StorePopup";
 import ChatPanel from "./ChatPanel";
 import LandmarkPopup from "./popup/LandmarkPopup";
 import { useLandmarkLayer } from "../../hooks/map/useLandmarkLayer";
+import { ThemeToggle } from "../ThemeToggle";
 
 // ── 커스텀 훅 ──────────────────────────────────────────────────
 import { useMarkers } from "../../hooks/map/useMarkers";
@@ -964,6 +965,9 @@ export default function MapView() {
                   .finally(() => setLoading(false));
             }}
          />
+         <div className="mv-theme-toggle">
+            <ThemeToggle />
+         </div>
          <button
             className="mv-layer-btn"
             onClick={() => setShowPanel((p) => !p)}

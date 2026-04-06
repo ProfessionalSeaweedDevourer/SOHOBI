@@ -484,3 +484,113 @@
    color: #444;
    line-height: 1.4;
 }
+
+/* ── 테마 토글 버튼 위치 ───────────────────────────────── */
+.mv-theme-toggle {
+   position: absolute;
+   top: 14px;
+   right: 64px;
+   z-index: 200;
+}
+
+/* ── 다크모드 오버라이드 ───────────────────────────────── */
+/* 상단 컨트롤 바 */
+.dark .mv-ctrl-bar {
+   background: var(--card);
+   border-color: var(--border);
+}
+.dark .mv-ctrl-btn--off {
+   background: var(--secondary);
+   color: var(--foreground);
+}
+.dark .mv-ctrl-badge {
+   background: rgba(20, 184, 166, 0.12);
+   border-color: rgba(20, 184, 166, 0.3);
+   color: var(--brand-teal);
+}
+.dark .mv-ctrl-loading {
+   background: var(--card);
+   border-color: var(--border);
+   color: var(--muted-foreground);
+}
+.dark .mv-ctrl-clear {
+   background: var(--card);
+   border-color: var(--border);
+   color: var(--muted-foreground);
+}
+
+/* 레이어 패널 토글 버튼 */
+.dark .mv-layer-btn {
+   background: var(--card);
+   border-color: var(--border);
+   color: var(--foreground);
+}
+
+/* 행정동 모드 버튼 */
+.dark .mv-dong-btn--off {
+   background: var(--card);
+   color: var(--foreground);
+   border-color: var(--border);
+}
+
+/* 행정동 로딩 오버레이 */
+.dark .mv-dong-loading {
+   background: rgba(15, 20, 32, 0.92);
+   color: var(--muted-foreground);
+}
+
+/* 우측 동 패널 */
+.dark .mv-dong-panel {
+   background: var(--card);
+}
+.dark .mv-dong-panel__empty {
+   color: var(--muted-foreground);
+}
+
+/* 패널 내 카드/섹션 */
+.dark .mv-dp-card__label {
+   color: var(--muted-foreground);
+}
+.dark .mv-dp-card__sub {
+   color: var(--muted-foreground);
+}
+.dark .mv-dp-section {
+   background: var(--secondary);
+}
+.dark .mv-dp-section__title {
+   color: var(--muted-foreground);
+}
+.dark .mv-dp-bar-track {
+   background: rgba(136, 145, 168, 0.2);
+}
+.dark .mv-dp-grid-item__label {
+   color: var(--muted-foreground);
+}
+.dark .mv-dp-grid-item__value {
+   color: var(--foreground);
+}
+
+/* WMS 팝업 */
+.dark .mv-wms-popup {
+   background: var(--card);
+   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.dark .mv-wms-popup__title {
+   color: var(--foreground);
+}
+.dark .mv-wms-popup__divider {
+   background: var(--border);
+}
+.dark .mv-wms-popup__row-text {
+   color: var(--muted-foreground);
+}
+.dark .mv-wms-popup__close {
+   color: var(--muted-foreground);
+}
+
+/* 좌표 표시바 */
+.dark .coord-bar {
+   background: rgba(15, 20, 32, 0.92);
+   border-color: var(--border);
+   color: var(--muted-foreground);
+}

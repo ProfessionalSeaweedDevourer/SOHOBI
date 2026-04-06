@@ -95,7 +95,8 @@
   --sidebar-accent-foreground: #e8edf5;
   --sidebar-border: rgba(136, 145, 168, 0.15);
   --sidebar-ring: rgba(20, 184, 166, 0.4);
-  
+  --input-background: #1a2030;
+
   /* Dark mode glassmorphism - 더 자연스러운 유리 효과 */
   --glass-bg: rgba(26, 32, 48, 0.6);
   --glass-border: rgba(136, 145, 168, 0.2);
