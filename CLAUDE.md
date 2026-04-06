@@ -66,6 +66,45 @@ curl -s -X POST http://localhost:8000/api/v1/query \
   - 없으면 (머지·닫힘·미생성) 즉시 새 PR을 열고 번호를 알린다
   - "PR에 반영되었습니다"는 확인 없이 절대 말하지 않는다
 
+## Rebase 기반 워크플로우
+
+이 프로젝트는 **squash merge**를 사용한다. squash merge는 PR 커밋을 단일 커밋으로 main에 올리므로, 원본 커밋 SHA가 main에 존재하지 않아 다음 PR에도 계속 재노출된다. 이를 방지하기 위해 **PR 생성 직전 반드시 rebase**한다.
+
+### PR 전 필수 절차
+
+```bash
+# 1. 최신 main 가져오기
+git fetch origin
+
+# 2. 브랜치를 main 위로 rebase
+git rebase origin/main
+
+# 충돌 시: 이미 squash-merge된 커밋은 --skip
+# git rebase --skip  (해당 커밋 건너뜀)
+# git rebase --continue  (충돌 해결 후 진행)
+
+# 3. force push (rebase 후 항상 필요)
+git push --force-with-lease origin <브랜치>
+```
+
+### squash-merge된 커밋 충돌 처리
+
+`git rebase origin/main` 중 `patch contents already upstream` 메시지와 함께 충돌이 발생하면, 해당 커밋은 이미 main에 포함된 것이므로 `git rebase --skip`으로 건너뛴다.
+
+이전 커밋 일부만 남기고 rebase할 때는 `--onto` 활용:
+
+```bash
+# <base-commit>: 새 작업의 부모 커밋 SHA (이미 main에 있는 마지막 커밋)
+git rebase --onto origin/main <base-commit> <브랜치>
+git push --force-with-lease origin <브랜치>
+```
+
+### PR당 커밋 수 원칙
+
+- PR 하나에 **관련 커밋만** 포함되어야 한다
+- `git log --oneline origin/main..<브랜치>` 로 PR 생성 전 확인
+- 관련 없는 커밋이 보이면 위 rebase 절차로 정리 후 PR 생성
+
 ## PR 생성 후 테스트 실행 루틴
 
 PR을 연 직후 Test Plan의 각 TC를 직접 실행하고 결과를 사용자에게 보고한다.

@@ -17,7 +17,6 @@ import Roadmap from "./pages/Roadmap";
 import RequireDevAuth from "./components/RequireDevAuth";
 import { CursorGlow } from "./components/CursorGlow";
 import { ToastProvider } from "./components/ToastProvider";
-import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 import { AuthProvider } from "./contexts/AuthContext";
 
 function AnimatedRoutes() {
@@ -51,7 +50,6 @@ export default function App() {
       <AuthProvider>
         <CursorGlow />
         <ToastProvider />
-        <KeyboardShortcuts />
         <AnimatedRoutes />
       </AuthProvider>
     </BrowserRouter>
