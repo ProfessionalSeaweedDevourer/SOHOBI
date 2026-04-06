@@ -1,5 +1,4 @@
 // components/DongPanel.jsx
-import { useState } from "react";
 
 // ── 금액 포맷 헬퍼 ─────────────────────────────────────────────
 // formatAmt: 원 단위 → 억/만원 표시 (매출 등)
@@ -227,7 +226,7 @@ function SubStoreRows({ rows, color }) {
 }
 
 // SvcPanel: 대분류 바 클릭 → 선택 + 소분류 펼침
-function SvcPanel({ svcData, selectedSvc, onSvcClick, subRows, subLoading }) {
+function SvcPanel({ svcData }) {
    if (!svcData || svcData.length === 0) return null;
    const total = svcData.reduce(
       (s, r) => s + (Number(r.tot_sales_amt) || 0),
@@ -238,54 +237,21 @@ function SvcPanel({ svcData, selectedSvc, onSvcClick, subRows, subLoading }) {
       <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14 }}>
          <div
             style={{
-               display: "flex",
-               alignItems: "center",
-               justifyContent: "space-between",
+               fontSize: 11,
+               fontWeight: 700,
+               color: "#475569",
                marginBottom: 10,
             }}
          >
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#475569" }}>
-               🏪 업종별 매출
-            </div>
-            {selectedSvc && (
-               <button
-                  onClick={() => onSvcClick("")}
-                  style={{
-                     fontSize: 10,
-                     color: "#64748b",
-                     background: "#e2e8f0",
-                     border: "none",
-                     borderRadius: 6,
-                     padding: "2px 8px",
-                     cursor: "pointer",
-                  }}
-               >
-                  전체
-               </button>
-            )}
+            🏪 업종별 매출
          </div>
          {svcData.map((r) => {
             const amt = Number(r.tot_sales_amt) || 0;
             const pct = Math.round((amt / total) * 100);
             const col = SVC_COLOR[r.svc_cd] || "#888";
-            const lbl = SVC_LABEL[r.svc_cd] || r.svc_nm;
-            const isSel = selectedSvc === r.svc_cd;
+            const lbl = SVC_LABEL[r.svc_cd] || r.svc_nm || r.svc_cd || "기타";
             return (
-               <div
-                  key={r.svc_cd}
-                  onClick={() => onSvcClick(isSel ? "" : r.svc_cd)}
-                  style={{
-                     marginBottom: 8,
-                     cursor: "pointer",
-                     background: isSel ? `${col}12` : "transparent",
-                     borderRadius: 8,
-                     padding: isSel ? "7px 8px" : "2px 0",
-                     border: isSel
-                        ? `1px solid ${col}55`
-                        : "1px solid transparent",
-                     transition: "all 0.15s",
-                  }}
-               >
+               <div key={r.svc_cd} style={{ marginBottom: 9 }}>
                   <div
                      style={{
                         display: "flex",
@@ -294,18 +260,8 @@ function SvcPanel({ svcData, selectedSvc, onSvcClick, subRows, subLoading }) {
                         marginBottom: 3,
                      }}
                   >
-                     <span
-                        style={{
-                           fontWeight: isSel ? 700 : 600,
-                           color: isSel ? col : "#333",
-                        }}
-                     >
+                     <span style={{ fontWeight: 600, color: "#333" }}>
                         {lbl}
-                        {isSel && (
-                           <span style={{ marginLeft: 4, fontSize: 10 }}>
-                              ▼
-                           </span>
-                        )}
                      </span>
                      <span style={{ color: col, fontWeight: 700 }}>
                         {formatAmt(amt)} ({pct}%)
@@ -328,21 +284,6 @@ function SvcPanel({ svcData, selectedSvc, onSvcClick, subRows, subLoading }) {
                         }}
                      />
                   </div>
-                  {isSel && subLoading && (
-                     <div
-                        style={{
-                           marginTop: 8,
-                           fontSize: 11,
-                           color: "#94a3b8",
-                           textAlign: "center",
-                        }}
-                     >
-                        로딩 중...
-                     </div>
-                  )}
-                  {isSel && !subLoading && (
-                     <SubRows rows={subRows} color={col} />
-                  )}
                </div>
             );
          })}
@@ -350,8 +291,8 @@ function SvcPanel({ svcData, selectedSvc, onSvcClick, subRows, subLoading }) {
    );
 }
 
-// StorePanel: 대분류 클릭 → 소분류 점포수 펼침
-function StorePanel({ d, selectedSvc, onSvcClick, subRows, subLoading }) {
+// StorePanel StorePanel: 대분류 클릭 → 소분류 점포수 펼침
+function StorePanel({ d }) {
    const rows = d?.data || [];
    if (!rows.length)
       return (
@@ -367,11 +308,6 @@ function StorePanel({ d, selectedSvc, onSvcClick, subRows, subLoading }) {
          </div>
       );
    const total = rows.reduce((s, r) => s + (Number(r.stor_co) || 0), 0);
-   // 선택된 대분류 점포수 합산
-   const selRow = selectedSvc
-      ? rows.find((r) => r.svc_cd === selectedSvc)
-      : null;
-   const displayTotal = selRow ? Number(selRow.stor_co) || 0 : total;
    const SVC_COLOR_STORE = {
       I2: "#FF6B6B",
       G2: "#FF9800",
@@ -386,75 +322,33 @@ function StorePanel({ d, selectedSvc, onSvcClick, subRows, subLoading }) {
    };
    return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-         {/* 총/선택 점포수 */}
          <div style={{ background: "#f5f3ff", borderRadius: 12, padding: 14 }}>
             <div style={{ fontSize: 10, color: "#888", marginBottom: 4 }}>
-               {selectedSvc
-                  ? `${SVC_LABEL[selectedSvc] || selectedSvc} 점포수`
-                  : "총 점포수"}
+               총 점포수
             </div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#7C3AED" }}>
-               {Math.round(displayTotal)}개
+               {Math.round(total)}개
             </div>
-            {selRow && (
-               <div style={{ fontSize: 11, color: "#7C3AED", marginTop: 2 }}>
-                  개업률 <b>{selRow.opbiz_rt}%</b> · 폐업률{" "}
-                  <b style={{ color: "#dc2626" }}>{selRow.clsbiz_rt}%</b>
-               </div>
-            )}
          </div>
-         {/* 업종별 점포수 */}
          <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14 }}>
             <div
                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#475569",
                   marginBottom: 10,
                }}
             >
-               <div style={{ fontSize: 11, fontWeight: 700, color: "#475569" }}>
-                  🏪 업종별 점포수
-               </div>
-               {selectedSvc && (
-                  <button
-                     onClick={() => onSvcClick("")}
-                     style={{
-                        fontSize: 10,
-                        color: "#64748b",
-                        background: "#e2e8f0",
-                        border: "none",
-                        borderRadius: 6,
-                        padding: "2px 8px",
-                        cursor: "pointer",
-                     }}
-                  >
-                     전체
-                  </button>
-               )}
+               🏪 업종별 점포수
             </div>
             {rows.map((r) => {
                const cnt = Number(r.stor_co) || 0;
                const pct = total > 0 ? Math.round((cnt / total) * 100) : 0;
                const col = SVC_COLOR_STORE[r.svc_cd] || "#888";
-               const lbl = SVC_LABEL[r.svc_cd] || r.svc_nm;
-               const isSel = selectedSvc === r.svc_cd;
+               const lbl =
+                  SVC_LABEL[r.svc_cd] || r.svc_nm || r.svc_cd || "기타";
                return (
-                  <div
-                     key={r.svc_cd}
-                     onClick={() => onSvcClick(isSel ? "" : r.svc_cd)}
-                     style={{
-                        marginBottom: 8,
-                        cursor: "pointer",
-                        background: isSel ? `${col}12` : "transparent",
-                        borderRadius: 8,
-                        padding: isSel ? "7px 8px" : "2px 0",
-                        border: isSel
-                           ? `1px solid ${col}55`
-                           : "1px solid transparent",
-                        transition: "all 0.15s",
-                     }}
-                  >
+                  <div key={r.svc_cd} style={{ marginBottom: 9 }}>
                      <div
                         style={{
                            display: "flex",
@@ -463,18 +357,8 @@ function StorePanel({ d, selectedSvc, onSvcClick, subRows, subLoading }) {
                            marginBottom: 3,
                         }}
                      >
-                        <span
-                           style={{
-                              fontWeight: isSel ? 700 : 600,
-                              color: isSel ? col : "#333",
-                           }}
-                        >
+                        <span style={{ fontWeight: 600, color: "#333" }}>
                            {lbl}
-                           {isSel && (
-                              <span style={{ marginLeft: 4, fontSize: 10 }}>
-                                 ▼
-                              </span>
-                           )}
                         </span>
                         <span style={{ color: col, fontWeight: 700 }}>
                            {Math.round(cnt)}개 ({pct}%)
@@ -497,7 +381,6 @@ function StorePanel({ d, selectedSvc, onSvcClick, subRows, subLoading }) {
                            }}
                         />
                      </div>
-                     {/* 개업률/폐업률 */}
                      <div
                         style={{
                            display: "flex",
@@ -530,21 +413,6 @@ function StorePanel({ d, selectedSvc, onSvcClick, subRows, subLoading }) {
                            </span>
                         )}
                      </div>
-                     {isSel && subLoading && (
-                        <div
-                           style={{
-                              marginTop: 8,
-                              fontSize: 11,
-                              color: "#94a3b8",
-                              textAlign: "center",
-                           }}
-                        >
-                           로딩 중...
-                        </div>
-                     )}
-                     {isSel && !subLoading && (
-                        <SubStoreRows rows={subRows} color={col} />
-                     )}
                   </div>
                );
             })}
@@ -556,9 +424,7 @@ function StorePanel({ d, selectedSvc, onSvcClick, subRows, subLoading }) {
    );
 }
 
-// ── 실거래가 패널 ─────────────────────────────────────────────
-// d: { 매매, 전세, 월세, 오피스텔전세, 오피스텔월세, 상업용매매 }
-// 서울 열린데이터광장 + 국토부 오피스텔 + 국토부 상업용 통합
+// ── 실거래가── 실거래가 패널 ─────────────────────────────────────────────
 function RealEstatePanel({ d }) {
    return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -878,13 +744,11 @@ function RealEstatePanel({ d }) {
 }
 
 // GenderDonut: SVG 도넛 차트 - 남성(#2563eb) / 여성(#ec4899)
-// male/female: 원 금액 (만원 단위 아님, formatAmt으로 표시)
 function GenderDonut({ male, female }) {
    const total = (male || 0) + (female || 0);
    if (!total) return null;
    const malePct = Math.round(((male || 0) / total) * 100);
    const femalePct = 100 - malePct;
-   // SVG 도넛: cx=50 cy=50 r=36 (둘레 ≈ 226)
    const R = 36,
       CX = 50,
       CY = 50;
@@ -1157,26 +1021,7 @@ export default function DongPanel({
    onQuarterChange,
    svcData, // 대분류별 매출 배열
    storeData,
-   onFetchSub, // (svc_cd, mode) => Promise<소분류 배열>
-   onSvcChange, // (svc_cd) => void — 외부 API 재조회
 }) {
-   const [selSvc, setSelSvc] = useState(""); // 클릭된 대분류
-   const [subRows, setSubRows] = useState([]); // 소분류 데이터
-   const [subLoading, setSubLoading] = useState(false);
-
-   const handleSvcClick = (cd) => {
-      const next = selSvc === cd ? "" : cd;
-      setSelSvc(next);
-      setSubRows([]);
-      onSvcChange?.(next);
-      if (!next || !onFetchSub) return;
-      setSubLoading(true);
-      onFetchSub(next, dongPanel?.mode)
-         ?.then((rows) => setSubRows(rows || []))
-         .catch(() => setSubRows([]))
-         .finally(() => setSubLoading(false));
-   };
-
    if (!dongPanel) return null;
 
    const d = dongPanel.apiData;
@@ -1185,22 +1030,10 @@ export default function DongPanel({
    const panelColor = isRE ? "#2563EB" : isStore ? "#7C3AED" : "#059669";
    const panelBg = isRE ? "#eff6ff" : isStore ? "#f5f3ff" : "#f0fdf4";
 
-   // 대분류 선택 시 총매출: svcSnapshot(원본 대분류) 기준 — 소분류로 교체돼도 정확
-   const activeFilter = selSvc;
-   const baseSvcData = dongPanel.svcSnapshot || svcData;
-   const filteredSales =
-      activeFilter && baseSvcData?.length
-         ? baseSvcData
-              .filter((r) => r.svc_cd === activeFilter)
-              .reduce((s, r) => s + (Number(r.tot_sales_amt) || 0), 0)
-         : null;
-   const displayD = filteredSales ? { ...d, sales: filteredSales } : d;
+   const displayD = d;
 
    return (
-      <div
-         className="mv-dong-panel"
-         onClickCapture={(e) => e.stopPropagation()}
-      >
+      <div className="mv-dong-panel" onClick={(e) => e.stopPropagation()}>
          <div
             className="mv-dong-panel__header"
             style={{ background: panelColor }}
@@ -1222,19 +1055,6 @@ export default function DongPanel({
                   : isStore
                     ? "🏪 점포수 분석"
                     : "📊 상권 매출 분석"}
-               {activeFilter && (
-                  <span
-                     style={{
-                        marginLeft: 6,
-                        fontSize: 11,
-                        background: "rgba(255,255,255,0.3)",
-                        borderRadius: 8,
-                        padding: "2px 8px",
-                     }}
-                  >
-                     📌 {SVC_LABEL[activeFilter] || activeFilter} 필터
-                  </span>
-               )}
             </div>
          </div>
 
@@ -1316,45 +1136,6 @@ export default function DongPanel({
                </select>
             </div>
          )}
-         {/* ── 업종 대분류 select ── */}
-         {!isRE && (
-            <div
-               style={{
-                  padding: "6px 12px",
-                  background: "#f8fafc",
-                  borderBottom: "1px solid #e5e7eb",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-               }}
-            >
-               <span style={{ fontSize: 11, color: "#666", flexShrink: 0 }}>
-                  🏪 업종
-               </span>
-               <select
-                  value={selSvc}
-                  onChange={(e) => handleSvcClick(e.target.value)}
-                  style={{
-                     flex: 1,
-                     fontSize: 12,
-                     padding: "3px 6px",
-                     borderRadius: 6,
-                     border: "1px solid #d1d5db",
-                     background: "#fff",
-                     color: "#111",
-                  }}
-               >
-                  <option key="all" value="">
-                     전체
-                  </option>
-                  {Object.entries(SVC_LABEL).map(([cd, lbl]) => (
-                     <option key={cd} value={cd}>
-                        {lbl}
-                     </option>
-                  ))}
-               </select>
-            </div>
-         )}
 
          <div className="mv-dong-panel__body" style={{ color: "#111" }}>
             {!d ? (
@@ -1371,24 +1152,15 @@ export default function DongPanel({
             ) : isRE ? (
                <RealEstatePanel d={d} />
             ) : isStore ? (
-               <StorePanel
-                  d={storeData || d}
-                  selectedSvc={selSvc}
-                  onSvcClick={handleSvcClick}
-                  subRows={subRows}
-                  subLoading={subLoading}
-               />
+               <StorePanel d={storeData || d} />
             ) : (
                <>
                   {/* ① 총매출 — 대분류 선택 시 해당 매출로 갱신 */}
                   <SalesSummary
                      d={displayD}
-                     panelColor={
-                        selSvc ? SVC_COLOR[selSvc] || panelColor : panelColor
-                     }
+                     panelColor={panelColor}
                      panelBg={panelBg}
-                     avg={activeFilter ? null : dongPanel.avg}
-                     filterLabel={selSvc ? SVC_LABEL[selSvc] || selSvc : null}
+                     avg={dongPanel.avg}
                   />
                   {/* ② 업종별 매출 — 클릭으로 소분류 펼침 */}
                   {svcData && svcData.length > 0 && (
@@ -1400,13 +1172,7 @@ export default function DongPanel({
                               margin: "4px 0",
                            }}
                         />
-                        <SvcPanel
-                           svcData={svcData}
-                           selectedSvc={selSvc}
-                           onSvcClick={handleSvcClick}
-                           subRows={subRows}
-                           subLoading={subLoading}
-                        />
+                        <SvcPanel svcData={svcData} />
                         <div
                            style={{
                               height: 1,

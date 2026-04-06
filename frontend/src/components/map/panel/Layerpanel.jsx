@@ -27,52 +27,17 @@ export default function LayerPanel({
    React.useEffect(() => {
       if (!map || !mapReady || initDoneRef.current) return;
       initDoneRef.current = true;
-      // MapView에서 이미 추가했으면 ref만 연결하고 중복 추가 방지
-      const existing = map
-         .getLayers()
-         .getArray()
-         .find((l) => l.get("name") === "cadastral");
-      if (existing) {
-         wmsLayerRef.current = existing;
-         return;
-      }
-      // 없으면 새로 추가
-      const layer = new TileLayer({
-         source: new TileWMS({
-            url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
-            params: {
-               SERVICE: "WMS",
-               VERSION: "1.3.0",
-               REQUEST: "GetMap",
-               LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-               STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-               FORMAT: "image/png",
-               TRANSPARENT: "TRUE",
-               CRS: "EPSG:3857",
-            },
-            crossOrigin: "anonymous",
-            transition: 0,
-         }),
-         opacity: 0.7,
-         zIndex: 50,
-         minZoom: 19,
-      });
-      layer.set("name", "cadastral");
-      map.addLayer(layer);
-      wmsLayerRef.current = layer;
-   }, [map, mapReady]); // eslint-disable-line
-
-   // ── 지적도 ──────────────────────────────────────────────────
-   const toggleCadastral = () => {
-      if (cadastralOn) {
-         // name 기준으로 모든 지적도 레이어 제거 (중복 방지)
-         map.getLayers()
+      // 500ms 후 연결 시도 (useMapSetup dynamic import 완료 대기)
+      const t = setTimeout(() => {
+         const existing = map
+            .getLayers()
             .getArray()
-            .filter((l) => l.get("name") === "cadastral")
-            .forEach((l) => map.removeLayer(l));
-         wmsLayerRef.current = null;
-         setCadastralOn(false);
-      } else {
+            .find((l) => l.get("name") === "cadastral");
+         if (existing) {
+            wmsLayerRef.current = existing;
+            return;
+         }
+         // useMapSetup에서 못 만들었으면 직접 추가
          const layer = new TileLayer({
             source: new TileWMS({
                url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
@@ -91,12 +56,31 @@ export default function LayerPanel({
             }),
             opacity: 0.7,
             zIndex: 50,
-            minZoom: 19,
+            minZoom: 17,
          });
          layer.set("name", "cadastral");
          map.addLayer(layer);
          wmsLayerRef.current = layer;
-         setCadastralOn(true);
+      }, 500);
+      return () => clearTimeout(t);
+   }, [map, mapReady]); // eslint-disable-line
+
+   // ── 지적도 ── setVisible로 toggle (레이어 제거/추가 X)
+   const toggleCadastral = () => {
+      // 매번 레이어 목록에서 직접 찾음
+      const layer = map
+         .getLayers()
+         .getArray()
+         .find((l) => l.get("name") === "cadastral");
+      if (layer) {
+         const next = !cadastralOn;
+         layer.setVisible(next);
+         wmsLayerRef.current = layer;
+         setCadastralOn(next);
+      } else if (wmsLayerRef.current) {
+         const next = !cadastralOn;
+         wmsLayerRef.current.setVisible(next);
+         setCadastralOn(next);
       }
    };
 
