@@ -92,7 +92,6 @@ export default function MapView() {
    const {
       dongLoading,
       dongPanel, setDongPanel,
-      dongPanelRef,
       quarters,
       selectedQtr, setSelectedQtr,
       svcData, setSvcData,
@@ -866,23 +865,18 @@ export default function MapView() {
                setClusterPopup(null);
                setBuildingStores([]);
                lastClusterStoresRef.current = null;
-               // 좌표 → PNU 조회 (LP_PA_CBND_BUBUN: 지적도 필지 경계) → 공시지가 표시
-               const vKey = import.meta.env.VITE_VWORLD_API_KEY;
+               // 좌표 → PNU 조회 → 공시지가 표시
                const lng = parseFloat(popup.LNG);
                const lat = parseFloat(popup.LAT);
                const addr = popup.ROAD_ADDR || "";
-               // 1단계: VWorld Data API로 좌표 → PNU 취득
+               // 1단계: 백엔드 /map/pnu-by-coord 로 좌표 → PNU 취득
                fetch(
-                  `/vworld/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN` +
-                  `&key=${vKey}&format=json&size=1` +
-                  `&geomFilter=point(${lng} ${lat})&geometry=false&attribute=true` +
-                  `&columns=pnu,pblntfPclnd,stdrYear`,
+                  `${FASTAPI_URL}/map/pnu-by-coord?lng=${lng}&lat=${lat}`,
+                  { headers: _mapHeaders },
                )
                   .then((r) => r.json())
                   .then((d) => {
-                     const pnu =
-                        d?.response?.result?.featureCollection?.features?.[0]
-                           ?.properties?.pnu || "";
+                     const pnu = d.pnu || "";
                      setWmsPopup({
                         type: "cadastral",
                         pnu,
