@@ -571,9 +571,11 @@ class CommercialRepository:
             with conn.cursor() as cursor:
                 cursor.execute(sql, [adm_nm])
                 rows = cursor.fetchall()
+            return [r[0] for r in rows]
+        except Exception:
+            return []
         finally:
             self._release(conn)
-        return [r[0] for r in rows]
 
     def _get_industry_code(self, business_type: str) -> str:
         return INDUSTRY_CODE_MAP.get(business_type, "")

@@ -1,7 +1,7 @@
 // 개발 프론트 위치: TERRY\p02_frontEnd_React\src\panel\CategoryPanel.jsx
 // 공식 프론트 위치: frontend\src\components\map\panel\CategoryPanel.jsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CATEGORIES } from "../../../constants/categories";
 
 export default function CategoryPanel({
@@ -15,8 +15,17 @@ export default function CategoryPanel({
    selectedCatCd,
    onCatSelect,
 }) {
-   const isMobile = typeof window !== "undefined" && window.innerWidth <= 640;
-   const [collapsed, setCollapsed] = useState(isMobile); // 모바일: 기본 접힘
+   const [isMobile, setIsMobile] = useState(
+      typeof window !== "undefined" && window.innerWidth <= 640
+   );
+   useEffect(() => {
+      const handler = () => setIsMobile(window.innerWidth <= 640);
+      window.addEventListener("resize", handler);
+      return () => window.removeEventListener("resize", handler);
+   }, []);
+   const [collapsed, setCollapsed] = useState(
+      typeof window !== "undefined" && window.innerWidth <= 640
+   ); // 모바일: 기본 접힘
    const [searchQuery, setSearchQuery] = useState("");
 
    // ── 검색 실행 ────────────────────────────────────────────────
