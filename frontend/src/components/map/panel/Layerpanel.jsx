@@ -15,7 +15,7 @@ function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
             VERSION: "1.3.0",
             REQUEST: "GetMap",
             LAYERS: layerName,
-            STYLES: layerName,
+            STYLES: "",
             FORMAT: "image/png",
             TRANSPARENT: "TRUE",
             CRS: "EPSG:3857",
@@ -30,10 +30,36 @@ function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
    return layer;
 }
 
+function makeCadastralLayer(vworldKey) {
+   const layer = new TileLayer({
+      source: new TileWMS({
+         url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
+         params: {
+            SERVICE: "WMS",
+            VERSION: "1.3.0",
+            REQUEST: "GetMap",
+            LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+            STYLES: ",",
+            FORMAT: "image/png",
+            TRANSPARENT: "TRUE",
+            CRS: "EPSG:3857",
+         },
+         crossOrigin: "anonymous",
+         transition: 0,
+      }),
+      opacity: 0.7,
+      zIndex: 200,
+      minZoom: 17,
+   });
+   layer.set("name", "cadastral");
+   return layer;
+}
+
 export default function LayerPanel({
    map,
    vworldKey,
    wmsLayerRef,
+   currentZoom,
    landmarkLayerRef,
    festivalLayerRef,
    schoolLayerRef,
@@ -53,27 +79,7 @@ export default function LayerPanel({
       if (!map || initDoneRef.current) return;
       initDoneRef.current = true;
       // 지적도 초기 ON (zoom 17+ 에서만 타일 데이터 반환)
-      const layer = new TileLayer({
-         source: new TileWMS({
-            url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
-            params: {
-               SERVICE: "WMS",
-               VERSION: "1.3.0",
-               REQUEST: "GetMap",
-               LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-               STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-               FORMAT: "image/png",
-               TRANSPARENT: "TRUE",
-               CRS: "EPSG:3857",
-            },
-            crossOrigin: "anonymous",
-            transition: 0,
-         }),
-         opacity: 0.7,
-         zIndex: 200,
-         minZoom: 17,
-      });
-      layer.set("name", "cadastral");
+      const layer = makeCadastralLayer(vworldKey);
       map.addLayer(layer);
       wmsLayerRef.current = layer;
       // 관광안내소 초기 ON
@@ -91,27 +97,7 @@ export default function LayerPanel({
          }
          setCadastralOn(false);
       } else {
-         const layer = new TileLayer({
-            source: new TileWMS({
-               url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
-               params: {
-                  SERVICE: "WMS",
-                  VERSION: "1.3.0",
-                  REQUEST: "GetMap",
-                  LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-                  STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-                  FORMAT: "image/png",
-                  TRANSPARENT: "TRUE",
-                  CRS: "EPSG:3857",
-               },
-               crossOrigin: "anonymous",
-               transition: 0,
-            }),
-            opacity: 0.7,
-            zIndex: 200,
-            minZoom: 17,
-         });
-         layer.set("name", "cadastral");
+         const layer = makeCadastralLayer(vworldKey);
          map.addLayer(layer);
          wmsLayerRef.current = layer;
          setCadastralOn(true);
@@ -163,7 +149,11 @@ export default function LayerPanel({
          <div className="lp-section-label">VWorld</div>
          <LayerRow
             label="📋 지적도"
-            desc="토지 경계 (줌 17+ 필요)"
+            desc={
+               cadastralOn && currentZoom < 17
+                  ? `줌 ${Math.floor(currentZoom)}/17 — 더 확대하면 표시`
+                  : "토지 경계 (줌 17+ 필요)"
+            }
             on={cadastralOn}
             color="#2196F3"
             onClick={toggleCadastral}

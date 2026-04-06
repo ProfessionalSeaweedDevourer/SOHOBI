@@ -981,6 +981,7 @@ export default function MapView() {
                   map={mapInstance.current}
                   vworldKey={import.meta.env.VITE_VWORLD_API_KEY}
                   wmsLayerRef={wmsLayerRef}
+                  currentZoom={currentZoom}
                   dongModeOn={dongMode}
                   landmarkLayerRef={landmarkLayerRef}
                   festivalLayerRef={festivalLayerRef}
