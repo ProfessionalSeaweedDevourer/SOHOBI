@@ -164,18 +164,28 @@ export default function Roadmap() {
           </div>
         )}
 
-        {!loading && !error && features.length > 0 && (
-          <div className="flex flex-col gap-3">
-            {features.map((feat) => (
-              <div
-                key={feat.feature_id}
-                className="flex items-center justify-between rounded-2xl border px-4 py-3"
-                style={{ background: "var(--card)", borderColor: "var(--border)" }}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{feat.icon}</span>
-                  <span className="text-sm font-medium">{feat.label}</span>
-                </div>
+        {!loading && !error && features.length > 0 && (() => {
+          const inProgress = features.filter(f => f.status === "in_progress");
+          const voting = features.filter(f => f.status !== "in_progress");
+
+          const FeatureRow = ({ feat }) => (
+            <div
+              key={feat.feature_id}
+              className="flex items-center justify-between rounded-2xl border px-4 py-3"
+              style={{ background: "var(--card)", borderColor: "var(--border)" }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-xl">{feat.icon}</span>
+                <span className="text-sm font-medium">{feat.label}</span>
+              </div>
+              {feat.status === "in_progress" ? (
+                <span
+                  className="text-xs font-semibold px-3 py-1.5 rounded-xl"
+                  style={{ background: "var(--brand-teal, #14b8a6)", color: "#fff" }}
+                >
+                  개발 중
+                </span>
+              ) : (
                 <button
                   onClick={() => handleVote(feat.feature_id)}
                   disabled={!sessionId}
@@ -190,10 +200,31 @@ export default function Roadmap() {
                 >
                   ▲ {feat.vote_count}
                 </button>
-              </div>
-            ))}
-          </div>
-        )}
+              )}
+            </div>
+          );
+
+          return (
+            <div className="flex flex-col gap-6">
+              {inProgress.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-teal, #14b8a6)" }}>
+                    개발 중
+                  </p>
+                  {inProgress.map(feat => <FeatureRow key={feat.feature_id} feat={feat} />)}
+                </div>
+              )}
+              {voting.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>
+                    투표 중 — 높은 순으로 개발 반영
+                  </p>
+                  {voting.map(feat => <FeatureRow key={feat.feature_id} feat={feat} />)}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </main>
     </div>
   );

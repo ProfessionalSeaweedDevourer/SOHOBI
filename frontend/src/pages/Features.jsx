@@ -6,7 +6,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { ScrollReveal } from '../components/ScrollReveal';
 import {
   MessageSquare, ArrowLeft, ArrowRight, FileText, MapPin, Calculator,
-  Landmark, Gift, CheckCircle2, Sparkles,
+  Landmark, Gift, CheckCircle2, Sparkles, Receipt, Users, UtensilsCrossed, ShieldCheck,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { trackEvent } from '../utils/trackEvent';
@@ -65,11 +65,50 @@ const features = [
     icon: Gift,
     color: '#ec4899',
     title: '정부 지원 추천',
-    description: '5,600건 이상의 정부 지원 사업 중 내 상황에 맞는 보조금·창업패키지·대출·신용보증을 자동으로 찾아드립니다.',
+    description: '업종·나이·지역을 알려주시면 5,600건+ 지원사업 중 수혜 가능한 보조금·창업패키지·대출·신용보증을 자동으로 매칭해드립니다.',
     examples: [
       '청년 창업자가 받을 수 있는 지원금이 있나요?',
       '소상공인 창업 대출 어디서 신청하나요?',
       '음식점 창업 관련 정부 지원 사업 추천해주세요.',
+    ],
+  },
+  {
+    id: 'tax',
+    icon: Receipt,
+    color: '#10b981',
+    title: '세무 신고 가이드',
+    comingSoon: true,
+    description: '부가세·종합소득세 신고 시기, 서식, 납부 방법을 법령 기반으로 단계별 안내할 예정입니다. 업종별 절세 팁도 함께 제공됩니다.',
+    examples: [
+      '음식점 부가세 신고는 언제, 어떻게 하나요?',
+      '종합소득세 신고 대상이 되는 기준이 뭔가요?',
+      '간이과세자와 일반과세자 차이가 뭔가요?',
+    ],
+  },
+  {
+    id: 'hr',
+    icon: Users,
+    color: '#f59e0b',
+    title: 'HR/노무 안내',
+    comingSoon: true,
+    description: '최저임금·주휴수당·근로계약서·해고예고·퇴직금 등 외식업 인사노무 법령 정보를 제공할 예정입니다.',
+    examples: [
+      '아르바이트생 주휴수당 꼭 줘야 하나요?',
+      '직원 해고할 때 예고 기간이 얼마나 되나요?',
+      '근로계약서에 반드시 들어가야 할 내용이 뭔가요?',
+    ],
+  },
+  {
+    id: 'menu',
+    icon: UtensilsCrossed,
+    color: '#84cc16',
+    title: '메뉴 원가 계산',
+    comingSoon: true,
+    description: '식재료 투입량 기반 원가율·판매가·목표마진 최적화 시뮬레이션과 위생/안전 점검 체크리스트를 추가할 예정입니다.',
+    examples: [
+      '아메리카노 원가율 계산해주세요.',
+      '목표 마진 30%로 판매가를 얼마로 해야 하나요?',
+      '영업 전 위생 점검 항목이 뭐가 있나요?',
     ],
   },
 ];
@@ -84,7 +123,7 @@ const steps = [
   {
     number: '02',
     title: 'AI가 전문가를 배정합니다',
-    description: '질문 내용에 따라 행정·재무·법무·상권 에이전트 중 가장 적합한 전문가가 자동으로 배정됩니다.',
+    description: '질문 내용에 따라 행정·재무·법무·상권·세무·노무 에이전트 중 가장 적합한 전문가가 자동으로 배정됩니다.',
     color: 'var(--brand-teal)',
   },
   {
@@ -172,7 +211,7 @@ export default function Features() {
           transition={{ duration: 0.6, delay: 0.35 }}
           className="text-lg text-muted-foreground max-w-xl mx-auto"
         >
-          행정부터 상권, 재무, 법무, 정부지원까지 — 5개 전문 에이전트가 법령과 데이터를 기반으로 답합니다.
+          행정부터 상권, 재무, 법무, 정부지원까지 — 전문 에이전트가 법령과 데이터를 기반으로 답합니다.
         </motion.p>
       </section>
 
@@ -211,9 +250,16 @@ export default function Features() {
                         <Icon size={26} style={{ color: feature.color }} className="relative z-10" />
                       </motion.div>
                       <div>
-                        <h3 className="text-lg mb-1" style={{ color: feature.color }}>
-                          {feature.title}
-                        </h3>
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <h3 className="text-lg" style={{ color: feature.color }}>
+                            {feature.title}
+                          </h3>
+                          {feature.comingSoon && (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                              출시 예정
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground leading-relaxed md:hidden">
                           {feature.description}
                         </p>
