@@ -75,8 +75,13 @@ def _normalize_location(raw: str) -> str | None:
     if raw in AREA_MAP:
         return raw
 
-    # 2단계: 접미사 제거 후 매칭 (숫자+동, 동, 구, 역, 입구 등)
-    stripped = re.sub(r"\d*동$|구$|역$|입구$|지역$|쪽$|근처$|일대$|주변$|앞$", "", raw)
+    # 1.5단계: 세부 동(숫자+동 형식, 예: 서초1동, 역삼2동) — 정규화 없이 원문 반환
+    # repository._get_adm_codes에서 DB adm_nm 직접 조회로 처리
+    if re.search(r"\d+동$", raw):
+        return raw
+
+    # 2단계: 접미사 제거 후 매칭 (동, 구, 역, 입구 등)
+    stripped = re.sub(r"동$|구$|역$|입구$|지역$|쪽$|근처$|일대$|주변$|앞$", "", raw)
     if stripped and stripped in AREA_MAP:
         return stripped
 

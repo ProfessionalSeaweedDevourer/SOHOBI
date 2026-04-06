@@ -506,7 +506,23 @@ class CommercialRepository:
         self._get_pool().putconn(conn)
 
     def _get_adm_codes(self, location: str) -> list:
-        return AREA_MAP.get(location, [])
+        codes = AREA_MAP.get(location, [])
+        if codes:
+            return codes
+        # AREA_MAP 미등록 지역(세부 동 등) → DB에서 adm_nm으로 직접 조회
+        return self._lookup_adm_codes_by_name(location)
+
+    def _lookup_adm_codes_by_name(self, adm_nm: str) -> list[str]:
+        """AREA_MAP에 없는 지역명(예: 서초1동)을 DB adm_nm으로 직접 조회"""
+        sql = "SELECT DISTINCT adm_cd FROM sangkwon_sales WHERE adm_nm = %s LIMIT 5"
+        conn = self._connect()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql, [adm_nm])
+                rows = cursor.fetchall()
+        finally:
+            self._release(conn)
+        return [r[0] for r in rows]
 
     def _get_industry_code(self, business_type: str) -> str:
         return INDUSTRY_CODE_MAP.get(business_type, "")
