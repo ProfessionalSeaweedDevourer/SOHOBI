@@ -82,6 +82,7 @@ class AdminAgent:
         self,
         question: str,
         retry_prompt: str = "",
+        previous_draft: str = "",
         profile: str = "",
         prior_history: list[dict] | None = None,
         context: dict | None = None,

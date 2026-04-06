@@ -531,16 +531,73 @@ class LocationAgent:
         self,
         question: str,
         retry_prompt: str = "",
+        previous_draft: str = "",
         profile: str = "",
         prior_history: list[dict] | None = None,
         context: dict | None = None,
     ) -> dict:
+        ctx = context or {}
+        _NO_DATA_PREFIXES = ("죄송합니다.", "'", "요청하신 지역")
+
+        # ── retry 빠른 경로: DB 쿼리·분석 LLM 재실행 없이 revision만 수행 ──
+        # previous_draft와 quarter가 context에 있으면 전체 파이프라인 skip
+        if retry_prompt and previous_draft:
+            quarter_ctx = ctx.get("quarter", "")
+            if quarter_ctx and not any(previous_draft.startswith(p) for p in _NO_DATA_PREFIXES):
+                locations_ctx: list[str] = ctx.get("locations") or (
+                    [ctx["location_name"]] if ctx.get("location_name") else []
+                )
+                business_type_ctx = ctx.get("business_type", "")
+                adm_codes_ctx = ctx.get("adm_codes", [])
+                mode_ctx = "compare" if len(locations_ctx) >= 2 else "analyze"
+
+                retry_prefix = _RETRY_PREFIX.format(retry_prompt=retry_prompt)
+                profile_ctx_str = _PROFILE_CONTEXT.format(profile=profile) if profile else ""
+                year_ctx = quarter_ctx[:4]
+                q_ctx = quarter_ctx[4]
+
+                if mode_ctx == "compare" and len(locations_ctx) >= 2:
+                    user_msg = (
+                        f"{retry_prefix}{profile_ctx_str}"
+                        f"업종: {business_type_ctx} / 지역: {', '.join(locations_ctx)} / 분기: {quarter_ctx}\n\n"
+                        f"아래는 이전에 생성된 draft입니다. 위 지적 사항을 반영해 전체를 다시 작성하십시오.\n\n"
+                        f"{previous_draft}"
+                    )
+                    instructions = _COMPARE_INSTRUCTIONS.format(
+                        year=year_ctx, q=q_ctx, business_type=business_type_ctx
+                    )
+                else:
+                    location_name_ctx = locations_ctx[0] if locations_ctx else ctx.get("location_name", "")
+                    user_msg = (
+                        f"{retry_prefix}{profile_ctx_str}"
+                        f"지역: {location_name_ctx} / 업종: {business_type_ctx} / 분기: {quarter_ctx}\n\n"
+                        f"아래는 이전에 생성된 draft입니다. 위 지적 사항을 반영해 전체를 다시 작성하십시오.\n\n"
+                        f"{previous_draft}"
+                    )
+                    instructions = _ANALYZE_INSTRUCTIONS.format(year=year_ctx, q=q_ctx)
+
+                draft_revised = previous_draft
+                try:
+                    draft_revised = await self._call_llm(instructions, user_msg)
+                except ValueError:
+                    logger.warning("LocationAgent retry LLM 실패 — 이전 draft 유지")
+
+                return {
+                    "draft":         draft_revised,
+                    "adm_codes":     adm_codes_ctx,
+                    "type":          mode_ctx,
+                    "business_type": business_type_ctx,
+                    "location_name": locations_ctx[0] if locations_ctx else ctx.get("location_name", ""),
+                    "locations":     locations_ctx,
+                    "quarter":       quarter_ctx,
+                    "charts":        [],  # 차트는 orchestrator가 이전 attempt 것을 유지
+                }
+
+        # ── 전체 파이프라인 (첫 시도 또는 retry 빠른 경로 불가) ──────────
         params = await self._extract_params(question, prior_history=prior_history)
         mode = params["mode"]
         quarter = params["quarter"]
 
-        # context fallback: LLM이 추출 못한 경우 세션 저장값 사용
-        ctx = context or {}
         raw_locations = params["locations"] or (
             [ctx["location_name"]] if ctx.get("location_name") else []
         )
@@ -563,6 +620,8 @@ class LocationAgent:
                 "type": mode,
                 "business_type": business_type,
                 "location_name": "",
+                "locations":     [],
+                "quarter":       quarter,
             }
 
         # draft 생성
@@ -579,15 +638,15 @@ class LocationAgent:
                 "type": mode,
                 "business_type": business_type,
                 "location_name": locations[0] if locations else "",
+                "locations":     locations,
+                "quarter":       quarter,
             }
 
         draft = result["draft"]
         adm_codes = result["adm_codes"]
         charts = result.get("charts", [])
 
-        # retry_prompt 반영 (sign-off 재시도)
-        # 데이터 부재·미지원 업종 응답은 재시도해도 달라지지 않으므로 건너뜀
-        _NO_DATA_PREFIXES = ("죄송합니다.", "'", "요청하신 지역")
+        # retry_prompt 반영 — 첫 시도인데 retry_prompt가 있는 경우 (빠른 경로 fallthrough)
         if retry_prompt and not any(draft.startswith(p) for p in _NO_DATA_PREFIXES):
             retry_prefix = _RETRY_PREFIX.format(retry_prompt=retry_prompt)
             profile_ctx = _PROFILE_CONTEXT.format(profile=profile) if profile else ""
@@ -619,7 +678,6 @@ class LocationAgent:
             try:
                 draft = await self._call_llm(instructions, user_msg)
             except ValueError:
-                # 빈 응답 등 retry LLM 실패 시 이전 draft 유지
                 logger.warning("LocationAgent retry LLM 실패 — 이전 draft 유지")
 
         return {
@@ -628,5 +686,7 @@ class LocationAgent:
             "type":          mode,
             "business_type": business_type,
             "location_name": locations[0] if locations else "",
+            "locations":     locations,
+            "quarter":       quarter,
             "charts":        charts,
         }
