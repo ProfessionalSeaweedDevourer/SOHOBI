@@ -1,4 +1,4 @@
-import { FileText, MapPin, Calculator, Scale } from 'lucide-react';
+import { FileText, MapPin, Calculator, Scale, Receipt, Gift, Users, UtensilsCrossed, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const iconMap = {
@@ -6,6 +6,11 @@ const iconMap = {
   MapPin,
   Calculator,
   Scale,
+  Receipt,
+  Gift,
+  Users,
+  UtensilsCrossed,
+  ShieldCheck,
 };
 
 export function AgentCard({ agent, index = 0 }) {
