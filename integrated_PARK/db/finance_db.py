@@ -84,7 +84,8 @@ class DBWork:
             FROM sangkwon_sales s
             WHERE s.adm_cd IN ({placeholders})
             AND   s.svc_induty_cd = %s
-            AND   s.tot_sales_amt IS NOT NULL
+        sql = """
+            SELECT
         """
         rows = self._execute_query(sql, region + [industry])
 
