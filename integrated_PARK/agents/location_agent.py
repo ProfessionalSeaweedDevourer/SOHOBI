@@ -26,7 +26,7 @@ from semantic_kernel.connectors.ai.open_ai import (
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import kernel_function
 
-from db.repository import AREA_MAP, INDUSTRY_CODE_MAP, CommercialRepository
+from db.repository import AREA_MAP, INDUSTRY_CODE_MAP, STATION_MAP, CommercialRepository
 from chart.location_chart import generate_analyze_charts, generate_compare_charts
 
 
@@ -84,6 +84,12 @@ def _normalize_location(raw: str) -> str | None:
     stripped = re.sub(r"동$|구$|역$|입구$|지역$|쪽$|근처$|일대$|주변$|앞$", "", raw)
     if stripped and stripped in AREA_MAP:
         return stripped
+
+    # 2.5단계: STATION_MAP 조회 (교대역→서초, 선릉역→역삼 등 역명-상권 매핑)
+    # stripped(역$ 제거 결과) 또는 raw 자체가 STATION_MAP 키와 일치하는지 확인
+    station_key = stripped if stripped else raw
+    if station_key in STATION_MAP:
+        return STATION_MAP[station_key]
 
     # 3단계: 부분 문자열 매칭 (AREA_MAP 키가 입력에 포함)
     candidates = [key for key in AREA_MAP if len(key) >= 2 and key in raw]
