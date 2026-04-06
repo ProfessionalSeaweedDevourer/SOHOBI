@@ -94,7 +94,10 @@ export function useLandmarkLayer(mapInstance) {
    // ── 축제 (API 실시간) ────────────────────────────────────────
    const loadFestivals = async (adm_cd) => {
       try {
-         const res = await fetch(`${MAP_URL}/map/festivals?adm_cd=${adm_cd}`, { headers: _mapHeaders });
+         const url = adm_cd
+            ? `${MAP_URL}/map/festivals?adm_cd=${adm_cd}`
+            : `${MAP_URL}/map/festivals`;
+         const res = await fetch(url, { headers: _mapHeaders });
          const json = await res.json();
          const features = makeFeatures(json.festivals || [], "15");
          if (festivalLayerRef.current) {

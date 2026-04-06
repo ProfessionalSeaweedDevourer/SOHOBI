@@ -51,7 +51,7 @@ export default function LayerPanel({
    React.useEffect(() => {
       if (!map || initDoneRef.current) return;
       initDoneRef.current = true;
-      // 지적도 초기 ON
+      // 지적도 초기 ON (zoom 17+ 에서만 타일 데이터 반환)
       const layer = new TileLayer({
          source: new TileWMS({
             url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
@@ -70,6 +70,7 @@ export default function LayerPanel({
          }),
          opacity: 0.7,
          zIndex: 200,
+         minZoom: 17,
       });
       layer.set("name", "cadastral");
       map.addLayer(layer);
@@ -107,6 +108,7 @@ export default function LayerPanel({
             }),
             opacity: 0.7,
             zIndex: 200,
+            minZoom: 17,
          });
          layer.set("name", "cadastral");
          map.addLayer(layer);
@@ -160,7 +162,7 @@ export default function LayerPanel({
          <div style={S.sectionLabel}>VWorld</div>
          <LayerRow
             label="📋 지적도"
-            desc="토지 경계 · 공시지가"
+            desc="토지 경계 (줌 17+ 필요)"
             on={cadastralOn}
             color="#2196F3"
             onClick={toggleCadastral}
