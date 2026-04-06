@@ -79,10 +79,6 @@
 
 /* ── 레이어 패널 토글 ──────────────────────────────────────── */
 .mv-layer-btn {
-   position: absolute;
-   top: 14px;
-   right: 14px;
-   z-index: 200;
    background: #fff;
    border: 1px solid #e5e7eb;
    border-radius: 10px;
@@ -485,12 +481,40 @@
    line-height: 1.4;
 }
 
-/* ── 테마 토글 버튼 위치 ───────────────────────────────── */
-.mv-theme-toggle {
+/* ── 우상단 컨트롤 그룹 (ThemeToggle + 레이어 버튼) ──── */
+.mv-top-right-controls {
    position: absolute;
    top: 14px;
-   right: 64px;
+   right: 14px;
    z-index: 200;
+   display: flex;
+   align-items: center;
+   gap: 8px;
+}
+
+/* ── OL 줌 레벨 뱃지 기본 스타일 ─────────────────────── */
+.zoom-level-badge {
+   text-align: center;
+   font-size: 11px;
+   font-weight: 700;
+   color: #333;
+   padding: 2px 0;
+   background: #fff;
+   border-left: 2px solid #ddd;
+   border-right: 2px solid #ddd;
+}
+.dark .zoom-level-badge {
+   color: var(--foreground);
+   background: var(--card);
+   border-left-color: var(--border);
+   border-right-color: var(--border);
+}
+
+/* ── OL 기본 줌 버튼 다크모드 ─────────────────────────── */
+.dark .ol-zoom .ol-zoom-in,
+.dark .ol-zoom .ol-zoom-out {
+   background: var(--card) !important;
+   color: var(--foreground) !important;
 }
 
 /* ── 다크모드 오버라이드 ───────────────────────────────── */

@@ -1,0 +1,109 @@
+/* ── MapControls 컨테이너 ──────────────────────────────── */
+.mv-map-controls {
+   position: absolute;
+   bottom: 50px;
+   left: 16px;
+   z-index: 200;
+   display: flex;
+   flex-direction: column;
+   gap: 6px;
+}
+
+/* 현재 구 이름 뱃지 */
+.mv-map-controls__gu-badge {
+   background: rgba(255, 255, 255, 0.95);
+   border-radius: 8px;
+   padding: 4px 10px;
+   font-size: 11px;
+   color: #555;
+   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+   text-align: center;
+}
+.dark .mv-map-controls__gu-badge {
+   background: rgba(15, 20, 32, 0.95);
+   color: var(--muted-foreground);
+}
+
+/* 로딩 표시 */
+.mv-map-controls__loading {
+   background: rgba(255, 255, 255, 0.95);
+   border-radius: 8px;
+   padding: 5px 12px;
+   font-size: 11px;
+   color: #555;
+   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+.dark .mv-map-controls__loading {
+   background: rgba(15, 20, 32, 0.95);
+   color: var(--muted-foreground);
+}
+
+/* 버튼 행 */
+.mv-map-controls__mode-row {
+   display: flex;
+   flex-direction: row;
+   gap: 6px;
+}
+.mv-map-controls__store-row {
+   display: flex;
+   gap: 6px;
+}
+
+/* 공통 버튼 */
+.mv-mode-btn {
+   border: 2px solid #e5e7eb;
+   border-radius: 10px;
+   padding: 7px 12px;
+   font-size: 12px;
+   font-weight: 700;
+   cursor: pointer;
+   background: #fff;
+   color: #555;
+   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+   transition: all 0.18s;
+   white-space: nowrap;
+}
+.dark .mv-mode-btn {
+   background: var(--card);
+   border-color: var(--border);
+   color: var(--foreground);
+}
+
+/* 상가 검색 버튼 (비활성) */
+.mv-store-btn {
+   border: 2px solid #e5e7eb;
+   border-radius: 10px;
+   padding: 7px 12px;
+   font-size: 12px;
+   font-weight: 700;
+   cursor: pointer;
+   background: #fff;
+   color: #555;
+   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+   white-space: nowrap;
+   flex: 1;
+}
+.dark .mv-store-btn {
+   background: var(--card);
+   border-color: var(--border);
+   color: var(--foreground);
+}
+
+/* 새로고침 버튼 */
+.mv-refresh-btn {
+   border: 2px solid #0891B2;
+   border-radius: 10px;
+   padding: 7px 10px;
+   font-size: 12px;
+   font-weight: 700;
+   cursor: pointer;
+   background: #fff;
+   color: #0891B2;
+   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+   white-space: nowrap;
+}
+.dark .mv-refresh-btn {
+   background: var(--card);
+   border-color: var(--brand-teal);
+   color: var(--brand-teal);
+}
