@@ -141,6 +141,8 @@ class GovSupportPlugin:
 
         scored = []
         for r in results:
+            if not hasattr(r, "get"):
+                continue  # str 또는 예외(None) 객체 방어
             reranker_score = r.get("@search.reranker_score") or 0.0
             if not apply_threshold or reranker_score >= self.RERANKER_THRESHOLD:
                 d = dict(r)
