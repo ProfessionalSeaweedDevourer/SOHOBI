@@ -103,10 +103,10 @@ class DBWork:
 
         Returns:
             list[float]: 전체 평균 매출 단일값 리스트.
-                         조회 실패 또는 NULL 반환 시 [float(46_000_000)] 반환.
+                         조회 실패 또는 NULL 반환 시 [46_000_000] 반환.
         """
         sql = """
-            SELECT
+         시 [46_000_000] 반환.
                 ROUND(
                     AVG(
                         s.tot_sales_amt::numeric
