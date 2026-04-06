@@ -110,7 +110,7 @@ export function parseWmsProps(p, layerType) {
 const CADASTRAL_MIN_ZOOM = 17; // Layerpanel.jsx minZoom: 17 과 동기화
 
 // ── WMS 레이어 클릭 처리 ────────────────────────────────────────
-export async function handleWmsClick(map, coordinate) {
+export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } = {}) {
    const wmsLayers = map
       .getLayers()
       .getArray()
@@ -123,8 +123,8 @@ export async function handleWmsClick(map, coordinate) {
    for (const wmsLayer of wmsLayers) {
       if (!wmsLayer.getVisible()) continue;
 
-      // cadastral: minZoom 이하에서 타일 없음 → GetFeatureInfo 스킵
-      if (wmsLayer.get("name") === "cadastral") {
+      // cadastral: minZoom 이하에서 타일 없음 → GetFeatureInfo 스킵 (프로그래매틱 호출은 예외)
+      if (!skipZoomGuard && wmsLayer.get("name") === "cadastral") {
          if ((map.getView().getZoom() ?? 0) < CADASTRAL_MIN_ZOOM) continue;
       }
       const source = wmsLayer.getSource();
@@ -138,7 +138,7 @@ export async function handleWmsClick(map, coordinate) {
       try {
          const urlObj = new URL(url, window.location.origin);
          urlObj.searchParams.set("REQUEST", "GetFeatureInfo");
-         const res = await fetch(urlObj.pathname + urlObj.search);
+         const res = await fetch(urlObj.href);
          const text = await res.text();
          let feat = null;
          try {
