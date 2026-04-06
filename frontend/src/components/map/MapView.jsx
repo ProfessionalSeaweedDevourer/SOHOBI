@@ -1175,7 +1175,11 @@ export default function MapView() {
          />
          <DongPanel
             dongPanel={dongPanel}
-            onClose={() => setDongPanel(null)}
+            onClose={() => {
+               setDongPanel(null);
+               setSvcData([]);
+               setSelectedSvc("");
+            }}
             svcData={svcData}
             selectedSvc={selectedSvc}
             onSvcChange={setSelectedSvc}

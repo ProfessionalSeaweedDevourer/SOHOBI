@@ -47,7 +47,7 @@ class LandmarkDAO(BaseDAO):
         try:
             if content_types:
                 placeholders = ",".join([f"%(t{i})s" for i in range(len(content_types))])
-                params = {f"t{i}": v for i, v in enumerate(content_types)}
+                params = {f"t{i}": str(v) for i, v in enumerate(content_types)}
                 params["sgg_cd"] = sgg_cd
                 sql = f"""
                     {SELECT_LANDMARK}

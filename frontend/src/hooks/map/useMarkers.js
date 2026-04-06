@@ -145,16 +145,60 @@ export function useMarkers(mapInstance, visibleCats) {
    };
 
    const selectMarker = (feature) => {
+      // 이전 선택 복원
       if (selectedFeatRef.current) {
          const prev = selectedFeatRef.current;
-         prev.setStyle(makeMarkerStyle(prev.get("store")?.CAT_CD));
-      }
-      if (!feature) {
+         const prevMembers = prev.get("features") || [];
+         if (prevMembers.length > 1) {
+            // 클러스터: 빈도 기반 대표 색상으로 복원
+            const cats = prevMembers
+               .map((f) => f.get("store")?.CAT_CD)
+               .filter(Boolean);
+            const topCat = cats.sort(
+               (a, b) =>
+                  cats.filter((c) => c === b).length -
+                  cats.filter((c) => c === a).length,
+            )[0];
+            const color = CAT_COLORS[topCat] || "#888";
+            prev.setStyle(makeClusterStyle(prevMembers.length, color));
+         } else {
+            prev.setStyle(makeMarkerStyle(prev.get("store")?.CAT_CD));
+         }
          selectedFeatRef.current = null;
-         return;
       }
-      const store = feature.get("store");
-      feature.setStyle(makeMarkerStyle(store?.CAT_CD, true));
+      if (!feature) return;
+
+      // 새 선택 강조
+      const members = feature.get("features") || [];
+      if (members.length > 1) {
+         const cats = members
+            .map((f) => f.get("store")?.CAT_CD)
+            .filter(Boolean);
+         const topCat = cats.sort(
+            (a, b) =>
+               cats.filter((c) => c === b).length -
+               cats.filter((c) => c === a).length,
+         )[0];
+         const color = CAT_COLORS[topCat] || "#888";
+         const radius = members.length > 99 ? 18 : members.length > 9 ? 15 : 12;
+         feature.setStyle(
+            new Style({
+               image: new CircleStyle({
+                  radius,
+                  fill: new Fill({ color }),
+                  stroke: new Stroke({ color: "#fff", width: 3 }),
+               }),
+               text: new Text({
+                  text: String(members.length),
+                  fill: new Fill({ color: "#fff" }),
+                  font: "bold 11px sans-serif",
+               }),
+            }),
+         );
+      } else {
+         const store = feature.get("store");
+         feature.setStyle(makeMarkerStyle(store?.CAT_CD, true));
+      }
       selectedFeatRef.current = feature;
    };
 

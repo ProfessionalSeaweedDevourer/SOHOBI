@@ -63,6 +63,7 @@ export function useLandmarkLayer(mapInstance) {
       const layer = new VectorLayer({
          source: new VectorSource({ features }),
          zIndex,
+         minZoom: 16,
       });
       map.addLayer(layer);
       return layer;
@@ -76,12 +77,18 @@ export function useLandmarkLayer(mapInstance) {
             ? `${MAP_URL}/map/landmarks?adm_cd=${adm_cd}&types=12,14`
             : `${MAP_URL}/map/landmarks?types=12,14`;
          const json = await (await fetch(url, { headers: _mapHeaders })).json();
-         const features = makeFeatures(json.landmarks || [], "12");
-         // 타입별 스타일 적용
-         features.forEach((f) => {
-            const d = f.get("lmData");
-            f.setStyle(makeStyle(String(d.content_type_id)));
-         });
+         const features = (json.landmarks || [])
+            .filter((d) => d.lng && d.lat)
+            .map((d) => {
+               const typeKey = String(d.content_type_id);
+               const f = new Feature({
+                  geometry: new Point(fromLonLat([d.lng, d.lat])),
+               });
+               f.set("lmData", d);
+               f.set("lmType", typeKey);
+               f.setStyle(makeStyle(typeKey));
+               return f;
+            });
          if (landmarkLayerRef.current) {
             mapInstance.current?.removeLayer(landmarkLayerRef.current);
          }
