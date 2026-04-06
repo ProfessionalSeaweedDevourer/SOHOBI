@@ -1096,7 +1096,7 @@ export default function MapView() {
                         .getArray()
                         .find((l) => l.get("name") === "cadastral");
                      if (cadastralLayer) {
-                        handleWmsClick(map, coord).then((result) => {
+                        handleWmsClick(map, coord, { skipZoomGuard: true }).then((result) => {
                            if (result) {
                               setWmsPopup(result.parsed);
                               setLandValue(result.landValue || null);

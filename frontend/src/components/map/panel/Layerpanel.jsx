@@ -9,7 +9,7 @@ import "./Layerpanel.css";
 function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
    const layer = new TileLayer({
       source: new TileWMS({
-         url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
+         url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
          params: {
             SERVICE: "WMS",
             VERSION: "1.3.0",
@@ -33,13 +33,13 @@ function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
 function makeCadastralLayer(vworldKey) {
    const layer = new TileLayer({
       source: new TileWMS({
-         url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
+         url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
          params: {
             SERVICE: "WMS",
             VERSION: "1.3.0",
             REQUEST: "GetMap",
-            LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-            STYLES: ",",
+            LAYERS: "lp_pa_cbnd_bubun",
+            STYLES: "",
             FORMAT: "image/png",
             TRANSPARENT: "TRUE",
             CRS: "EPSG:3857",
