@@ -29,6 +29,7 @@ import os
 import logging
 from typing import Optional
 
+import asyncio
 import httpx
 from fastapi import APIRouter, Query
 
@@ -197,31 +198,28 @@ async def getFestivals(
     lat:    float = None,
     lng:    float = None,
 ):
-    """축제(contentTypeId=15) 실시간 KTO API 조회"""
+    """축제 실시간 KTO searchFestival2 조회 (서울 + 90일 이내)"""
     KTO_KEY = os.getenv("KTO_GW_INFO_KEY", "")
     sgg_cd = adm_cd[:5] if adm_cd else None
     try:
         from datetime import datetime, timedelta
         today     = datetime.now()
         date_from = today.strftime("%Y%m%d")
-        date_to   = (today + timedelta(days=90)).strftime("%Y%m%d")
         params = {
-            "serviceKey":    KTO_KEY,
-            "numOfRows":     100,
-            "pageNo":        1,
-            "MobileOS":      "ETC",
-            "MobileApp":     "SOHOBI",
-            "areaCode":      "1",
-            "contentTypeId": "15",
+            "serviceKey":     KTO_KEY,
+            "numOfRows":      100,
+            "pageNo":         1,
+            "MobileOS":       "ETC",
+            "MobileApp":      "SOHOBI",
+            "areaCode":       "1",
             "eventStartDate": date_from,
-            "eventEndDate":   date_to,
             "_type":          "xml",
         }
         if sgg_cd:
             params["sigunguCode"] = sgg_cd
         async with httpx.AsyncClient() as client:
             r = await client.get(
-                "https://apis.data.go.kr/B551011/KorService2/areaBasedList2",
+                "https://apis.data.go.kr/B551011/KorService2/searchFestival2",
                 params=params,
                 timeout=10,
             )
@@ -474,32 +472,33 @@ async def getLandUse(pnu: str):
 
 @router.get("/map/dong-centroids")
 async def getDongCentroids(gu: str, dongs: str):
-    """동 중심좌표 (카카오 주소/키워드 검색)"""
+    """동 중심좌표 (카카오 주소/키워드 검색) — asyncio.gather 병렬 호출"""
     dong_list = [d.strip() for d in dongs.split(",") if d.strip()]
-    results   = []
-    async with httpx.AsyncClient(timeout=10) as client:
-        for dong in dong_list:
-            query = f"서울 {gu} {dong}"
-            try:
-                r = await client.get(
-                    "https://dapi.kakao.com/v2/local/search/address.json",
+
+    async def _fetch_one(client: httpx.AsyncClient, dong: str):
+        query = f"서울 {gu} {dong}"
+        try:
+            r = await client.get(
+                "https://dapi.kakao.com/v2/local/search/address.json",
+                params={"query": query, "size": 1},
+                headers={"Authorization": f"KakaoAK {KAKAO_REST_KEY}"},
+            )
+            docs = r.json().get("documents", [])
+            if not docs:
+                r2 = await client.get(
+                    "https://dapi.kakao.com/v2/local/search/keyword.json",
                     params={"query": query, "size": 1},
                     headers={"Authorization": f"KakaoAK {KAKAO_REST_KEY}"},
                 )
-                docs = r.json().get("documents", [])
-                if not docs:
-                    r2 = await client.get(
-                        "https://dapi.kakao.com/v2/local/search/keyword.json",
-                        params={"query": query, "size": 1},
-                        headers={"Authorization": f"KakaoAK {KAKAO_REST_KEY}"},
-                    )
-                    docs = r2.json().get("documents", [])
-                if docs:
-                    results.append({
-                        "dong": dong,
-                        "lng":  float(docs[0]["x"]),
-                        "lat":  float(docs[0]["y"]),
-                    })
-            except Exception as e:
-                logger.warning(f"[dong-centroids] {dong} 실패: {e}")
+                docs = r2.json().get("documents", [])
+            if docs:
+                return {"dong": dong, "lng": float(docs[0]["x"]), "lat": float(docs[0]["y"])}
+        except Exception as e:
+            logger.warning(f"[dong-centroids] {dong} 실패: {e}")
+        return None
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        raw = await asyncio.gather(*[_fetch_one(client, d) for d in dong_list])
+
+    results = [r for r in raw if r is not None]
     return {"gu": gu, "count": len(results), "data": results}
