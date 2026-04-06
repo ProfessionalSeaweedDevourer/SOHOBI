@@ -6,6 +6,8 @@ from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 import openai
 from dotenv import load_dotenv
 
+from model_config import API_VERSIONS
+
 load_dotenv()
 
 _TOKEN_PROVIDER = get_bearer_token_provider(
@@ -22,13 +24,15 @@ def _deployment(specific_var: str) -> str:
     return os.getenv(specific_var) or os.getenv("AZURE_DEPLOYMENT_NAME") or ""
 
 
+def _api_version(deployment: str) -> str:
+    """배포명 → API 버전 (model_config.API_VERSIONS 조회, 없으면 env fallback)"""
+    return API_VERSIONS.get(deployment, os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"))
+
+
 def _build_kernel() -> sk.Kernel:
     kernel = sk.Kernel()
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
-    # Azure AI Foundry 프로젝트 엔드포인트는 base_url 형식 사용
-    # 예: https://<resource>.services.ai.azure.com/api/projects/<project>/openai/v1
-    base_url = os.getenv("AZURE_OPENAI_ENDPOINT")
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 
     agent_services = [
         ("admin",    "AZURE_ADMIN_DEPLOYMENT"),
@@ -39,14 +43,15 @@ def _build_kernel() -> sk.Kernel:
         ("router",   "AZURE_ROUTER_DEPLOYMENT"),
     ]
     for service_id, env_var in agent_services:
+        dep = _deployment(env_var)
         kernel.add_service(
             AzureChatCompletion(
                 service_id=service_id,
-                deployment_name=_deployment(env_var),
-                base_url=base_url,
+                deployment_name=dep,
+                endpoint=endpoint,
                 api_key=api_key if api_key else None,
                 ad_token_provider=None if api_key else _TOKEN_PROVIDER,
-                api_version=api_version,
+                api_version=_api_version(dep),
             )
         )
     return kernel
@@ -62,14 +67,15 @@ def get_kernel() -> sk.Kernel:
 
 
 def get_signoff_client() -> openai.AsyncAzureOpenAI:
-    signoff_base_url = (
+    signoff_endpoint = (
         os.getenv("AZURE_SIGNOFF_ENDPOINT")
         or os.getenv("AZURE_OPENAI_ENDPOINT")
         or ""
     )
+    signoff_dep = os.getenv("AZURE_SIGNOFF_DEPLOYMENT", "")
     return openai.AsyncAzureOpenAI(
-        azure_endpoint=signoff_base_url,
+        azure_endpoint=signoff_endpoint,
         azure_ad_token_provider=_TOKEN_PROVIDER,
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview"),
+        api_version=_api_version(signoff_dep),
         timeout=220.0,
     )
