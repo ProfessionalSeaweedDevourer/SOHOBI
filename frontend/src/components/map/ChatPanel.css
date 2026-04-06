@@ -347,3 +347,37 @@
 .mv-chat-send {
   background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
 }
+
+/* ── 모바일 반응형 (≤ 640px) ──────────────────────────────── */
+@media (max-width: 640px) {
+  /* 채팅 패널: 400px 고정 → 전체 너비 슬라이드 */
+  .mv-chat-panel {
+    width: 100vw;
+    width: 100dvw; /* iOS 주소창 대응 */
+    left: 0;
+    right: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* .mv-chat-panel--closed의 translateX(100%) 유지 → 전체 화면 슬라이드 자동 동작 */
+
+  /* 채팅 토글: coord-bar(bottom:12px)와 겹침 방지 */
+  .mv-chat-toggle {
+    bottom: 70px;
+    right: 12px;
+  }
+
+  .mv-chat-msg {
+    font-size: 13px;
+  }
+
+  .mv-chat-input-area {
+    padding: 8px 10px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom)); /* iPhone notch 대응 */
+  }
+
+  /* 전송 버튼: 44px 터치 타겟 보장 */
+  .mv-chat-send {
+    width: 44px;
+    height: 44px;
+  }
+}
