@@ -638,21 +638,6 @@ export default function MapView() {
                   prevStorePopupRef.current = null;
                   setPopup(store);
 
-                  // 팝업(우측 320px) 가리지 않도록 지도 중앙 왼쪽 offset 이동
-                  {
-                     const _lng = parseFloat(store.LNG || store.lng);
-                     const _lat = parseFloat(store.LAT || store.lat);
-                     if (!isNaN(_lng) && !isNaN(_lat) && mapInstance.current) {
-                        mapInstance.current.getView().animate({
-                           center: fromLonLat([_lng, _lat]),
-                           zoom: Math.max(
-                              mapInstance.current.getView().getZoom() || 18,
-                              18,
-                           ),
-                           duration: 500,
-                        });
-                     }
-                  }
                   setKakaoDetail(null);
                   setBuildingStores([]);
                   setLoadingDetail(true);

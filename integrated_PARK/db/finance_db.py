@@ -8,11 +8,11 @@ logger = logging.getLogger(__name__)
 class DBWork(BaseDAO):
     """
     재무 시뮬레이션용 DB 조회 클래스.
-    baseDAO._pool(ThreadedConnectionPool)을 공유하여
+    BaseDAO의 ThreadedConnectionPool을 공유하여
     매 호출마다 raw 커넥션을 생성하는 문제를 해결한다.
     """
 
-    def get_sales(self, region: list, industry: str) -> list:
+    def get_sales(self, region, industry):
         """
         행정동 코드 및 업종 코드 기준 업장별 평균 월매출을 조회한다.
 
@@ -30,6 +30,7 @@ class DBWork(BaseDAO):
         """
         if not region or not industry:
             return self.get_average_sales()
+
         placeholders = ",".join(["%s"] * len(region))
         sql = f"""
             SELECT
@@ -59,10 +60,8 @@ class DBWork(BaseDAO):
             results = [float(r["avg_sales_per_store"]) for r in rows if r["avg_sales_per_store"] is not None]
             return results if results else self.get_average_sales()
         except Exception as e:
-            logger.warning(
-                "DBWork.get_sales 실패 region=%s industry=%s: %s", region, industry, e
-            )
-            return [170_000_000]
+            logger.warning("DBWork.get_sales 실패 region=%s industry=%s: %s", region, industry, e)
+            return self.get_average_sales()
         finally:
             self._close(conn, cur)
 
@@ -75,7 +74,7 @@ class DBWork(BaseDAO):
 
         Returns:
             list[float]: 전체 평균 매출 단일값 리스트.
-                         조회 실패 또는 NULL 반환 시 [170_000_000] 반환.
+                         조회 실패 또는 NULL 반환 시 [46_000_000] 반환.
         """
         sql = """
             SELECT
@@ -90,7 +89,7 @@ class DBWork(BaseDAO):
                                 AND   st.svc_induty_cd = s.svc_induty_cd
                                 AND   st.stor_co > 0),
                             1),
-                        0)
+                            0)
                     )
                 ) AS avg_sales_per_store
             FROM sangkwon_sales s
@@ -102,9 +101,9 @@ class DBWork(BaseDAO):
             cur.execute(sql)
             row = cur.fetchone()
             avg = row["avg_sales_per_store"] if row else None
-            return [float(avg)] if avg is not None else [float(170_000_000)]
+            return [float(avg)] if avg is not None else [float(46_000_000)]
         except Exception as e:
             logger.warning("DBWork.get_average_sales 실패: %s", e)
-            return [170_000_000]
+            return [float(46_000_000)]
         finally:
             self._close(conn, cur)

@@ -139,18 +139,18 @@ export function useMarkers(mapInstance, visibleCats) {
             )[0];
             const color = CAT_COLORS[topCat] || "#888";
             if (isSel) {
-               // 선택된 클러스터: 테두리 강조
+               // 선택된 클러스터: 색 반전 (배경=흰색, 글자=원래색, 테두리=원래색)
                const radius =
                   members.length > 99 ? 18 : members.length > 9 ? 15 : 12;
                return new Style({
                   image: new CircleStyle({
                      radius: radius + 3,
-                     fill: new Fill({ color }),
-                     stroke: new Stroke({ color: "#fff", width: 3 }),
+                     fill: new Fill({ color: "#fff" }),
+                     stroke: new Stroke({ color, width: 3 }),
                   }),
                   text: new Text({
                      text: String(members.length),
-                     fill: new Fill({ color: "#fff" }),
+                     fill: new Fill({ color }),
                      font: `bold ${radius}px sans-serif`,
                   }),
                });
@@ -174,8 +174,31 @@ export function useMarkers(mapInstance, visibleCats) {
 
    const selectMarker = (feature) => {
       selectedFeatRef.current = feature || null;
-      // clusterLayer.changed()로 리렌더 트리거 → style function 재실행 → 선택 강조 반영
       clusterLayerRef.current?.changed();
+
+      // 선택된 마커 위치로 지도 이동
+      if (feature && mapInstance.current) {
+         const members = feature.get("features") || [];
+         const store =
+            members.length === 1
+               ? members[0].get("store")
+               : members[0]?.get("store"); // 클러스터는 첫 번째 멤버 기준
+         const lng = parseFloat(store?.LNG || store?.lng);
+         const lat = parseFloat(store?.LAT || store?.lat);
+         if (!isNaN(lng) && !isNaN(lat)) {
+            const map = mapInstance.current;
+            const currentZoom = map.getView().getZoom() ?? 16;
+            const targetZoom =
+               members.length === 1
+                  ? Math.max(currentZoom, 18) // 단일 마커: 최소 18
+                  : Math.max(currentZoom, 15); // 클러스터: 최소 15
+            map.getView().animate({
+               center: fromLonLat([lng, lat]),
+               zoom: targetZoom,
+               duration: 400,
+            });
+         }
+      }
    };
 
    const clearMarkers = () => {

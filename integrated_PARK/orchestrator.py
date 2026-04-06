@@ -93,6 +93,7 @@ async def run(
         raw = await agent.generate_draft(
             question=question,
             retry_prompt=retry_prompt,
+            previous_draft=prev_draft or "",
             profile=profile,
             prior_history=prior_history,
             **extra,
@@ -107,12 +108,15 @@ async def run(
             updated_params = raw.get("updated_params")
             adm_codes = raw.get("adm_codes", [])
             analysis_type = raw.get("type", "")
-            # location agent가 반환한 지역·업종으로 context 갱신
+            # location agent가 반환한 지역·업종으로 context 갱신 (다음 iteration에 전달)
             if domain == "location" and adm_codes:
                 updated_context = dict(context) if context else {}
                 updated_context["adm_codes"]     = adm_codes
                 updated_context["business_type"] = raw.get("business_type", updated_context.get("business_type", ""))
                 updated_context["location_name"] = raw.get("location_name", updated_context.get("location_name", ""))
+                updated_context["locations"]     = raw.get("locations", [])
+                updated_context["quarter"]       = raw.get("quarter", "")
+                context = updated_context  # retry 시 다음 iteration에서 재사용
         else:
             draft = raw
             charts = []
@@ -286,6 +290,7 @@ async def run_stream(
         raw = await agent.generate_draft(
             question=question,
             retry_prompt=retry_prompt,
+            previous_draft=prev_draft or "",
             profile=profile,
             prior_history=prior_history,
             **extra,
@@ -304,6 +309,9 @@ async def run_stream(
                 updated_context["adm_codes"]     = adm_codes
                 updated_context["business_type"] = raw.get("business_type", updated_context.get("business_type", ""))
                 updated_context["location_name"] = raw.get("location_name", updated_context.get("location_name", ""))
+                updated_context["locations"]     = raw.get("locations", [])
+                updated_context["quarter"]       = raw.get("quarter", "")
+                context = updated_context  # retry 시 다음 iteration에서 재사용
         else:
             draft = raw
             charts = []

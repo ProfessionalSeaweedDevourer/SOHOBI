@@ -1,177 +1,217 @@
-// 개발 프론트 위치: TERRY\p02_frontEnd_React\src\hooks\useWmsClick.js
-// 공식 프론트 위치: frontend\src\hooks\map\useWmsClick.js
+// hooks/useLandmarkLayer.js
+// KTO 랜드마크(관광지/문화시설) + 축제 + 학교 레이어
 
-// WMS 레이어 클릭 → GetFeatureInfo → wmsPopup 상태 설정
+import { useRef } from "react";
+import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
+import Feature from "ol/Feature";
+import Point from "ol/geom/Point";
+import { fromLonLat } from "ol/proj";
+import {
+   Style,
+   Circle as CircleStyle,
+   Fill,
+   Stroke,
+   Text,
+   Icon,
+} from "ol/style";
 
-// ── WMS 레이어 타입별 메타 정보 ────────────────────────────────
-export const LAYER_META = {
-   cadastral: { icon: "📋", label: "지적도", color: "#2196F3", bg: "#E3F2FD" },
-   tourist_info: {
-      icon: "ℹ️",
-      label: "관광안내소",
-      color: "#FF9800",
-      bg: "#FFF3E0",
-   },
-   tourist_spot: {
-      icon: "🏖️",
-      label: "관광지",
-      color: "#9C27B0",
-      bg: "#F3E5F5",
-   },
-   market: { icon: "🏪", label: "전통시장", color: "#E53935", bg: "#FFEBEE" },
+const MAP_URL = import.meta.env.VITE_MAP_URL || "/map-api";
+const _API_KEY = import.meta.env.VITE_API_KEY || "";
+const _mapHeaders = _API_KEY ? { "X-API-Key": _API_KEY } : {};
+
+// ── 타입별 스타일 설정 ────────────────────────────────────────
+const TYPE_STYLE = {
+   12: { color: "#f59e0b", label: "관광" }, // 관광지 - 노랑
+   14: { color: "#8b5cf6", label: "문화" }, // 문화시설 - 보라
+   15: { color: "#ef4444", label: "축제" }, // 축제 - 빨강
+   school: { color: "#10b981", label: "학교" }, // 학교 - 초록
 };
 
-// ── WMS GetFeatureInfo 응답 → 공통 팝업 구조 파싱 ──────────────
-export function parseWmsProps(p, layerType) {
-   if (layerType === "cadastral") {
-      return {
-         pnu: p.pnu || "",
-         addr: p.addr || p.uname || "",
-         jibun: p.jibun || (p.bubun ? `${p.bubun}-${p.bonbun}` : ""),
-         sido: p.ctp_nm || p.sido_name || "",
-         sigg: p.sig_nm || p.sigg_name || "",
-         dong: p.emd_nm || "",
-         name: p.uname || p.addr || p.sig_nm || "정보 없음",
-         remark: p.remark || "",
-         tel: "",
-         hours: "",
-         jiga: p.jiga || p.pblntfPclnd || "",
-         gosi_year: p.gosi_year || p.stdrYear || "",
-         gosi_month: p.gosi_month || "",
-      };
-   }
-   if (layerType === "tourist_info") {
-      return {
-         pnu: "",
-         jibun: "",
-         addr: p.new_adr || p.jibun_adr || "",
-         sido: p.sido_nam || "",
-         sigg: p.sigg_nam || "",
-         dong: "",
-         name: p.tur_nam || "관광안내소",
-         remark: p.des_inf || p.add_inf || "",
-         tel: p.inf_tel || "",
-         hours:
-            p.wws_tme && p.wwe_tme
-               ? `평일 ${p.wws_tme.slice(0, 5)}~${p.wwe_tme.slice(0, 5)}`
-               : "",
-      };
-   }
-   if (layerType === "tourist_spot") {
-      return {
-         pnu: "",
-         jibun: "",
-         addr: p.new_adr || p.adr || p.jibun_adr || "",
-         sido: p.sido_nam || p.ctpv_nm || "",
-         sigg: p.sigg_nam || p.sig_nm || "",
-         dong: "",
-         name: p.tur_nam || p.mus_nam || p.fac_nam || p.nm || "관광지",
-         remark: p.des_inf || p.fac_inf || "",
-         tel: p.mng_tel || p.tel || "",
-         hours:
-            p.wds_tme && p.wde_tme
-               ? `평일 ${p.wds_tme.slice(0, 5)}~${p.wde_tme.slice(0, 5)}`
-               : "",
-      };
-   }
-   if (layerType === "market") {
-      return {
-         pnu: "",
-         jibun: "",
-         addr: p.new_adr || p.jibun_adr || p.adr || "",
-         sido: p.sido_nam || p.ctpv_nm || "",
-         sigg: p.sigg_nam || p.sig_nm || "",
-         dong: "",
-         name: p.name || p.nm || "전통시장",
-         remark: p.mkt_type || "",
-         tel: p.inf_tel || p.tel || "",
-         hours: "",
-      };
-   }
-   return {
-      pnu: "",
-      addr: "",
-      jibun: "",
-      sido: "",
-      sigg: "",
-      dong: "",
-      name: "정보 없음",
-      remark: "",
-      tel: "",
-      hours: "",
-   };
+function makeStyle(typeKey, selected = false, imageUrl = null) {
+   const { color, label } = TYPE_STYLE[typeKey] || { color: "#999", label: "" };
+   const radius = selected ? 14 : 10; // 크기 키움 (7→10, 10→14)
+   const imageStyle = imageUrl
+      ? new Icon({ src: imageUrl, width: 28, height: 28, anchor: [0.5, 1] })
+      : new CircleStyle({
+           radius,
+           fill: new Fill({ color: selected ? "#fff" : color }),
+           stroke: new Stroke({
+              color: selected ? color : "#fff",
+              width: selected ? 3 : 2,
+           }),
+        });
+   return new Style({
+      image: imageStyle,
+      text: label
+         ? new Text({
+              text: label,
+              offsetY: imageUrl ? -32 : -(radius + 6),
+              font: "bold 11px sans-serif",
+              fill: new Fill({ color }),
+              stroke: new Stroke({ color: "#fff", width: 3 }),
+           })
+         : null,
+   });
 }
 
-/**
- * WMS 레이어 클릭 처리
- * @returns {Promise<{parsed, layerType, landValue}|null>}
- */
+export function useLandmarkLayer(mapInstance) {
+   // 레이어 ref
+   const landmarkLayerRef = useRef(null); // 관광지+문화시설 (DB)
+   const festivalLayerRef = useRef(null); // 축제 (API)
+   const schoolLayerRef = useRef(null); // 학교 (DB)
+   const selectedFeatRef = useRef(null);
 
-// ── WMS 레이어 클릭 처리 ────────────────────────────────────────
-export async function handleWmsClick(map, coordinate) {
-   const wmsLayers = map
-      .getLayers()
-      .getArray()
-      .filter((l) =>
-         ["cadastral", "tourist_info", "tourist_spot", "market"].includes(
-            l.get("name"),
+   // ── 공통: feature 생성 ───────────────────────────────────────
+   const makeFeatures = (items, typeKey) =>
+      items
+         .filter((d) => d.lng && d.lat)
+         .map((d) => {
+            const f = new Feature({
+               geometry: new Point(fromLonLat([d.lng, d.lat])),
+            });
+            f.set("lmData", d);
+            f.set("lmType", typeKey);
+            f.setStyle(makeStyle(typeKey, false, d.image || null));
+            return f;
+         });
+
+   // ── 레이어 추가 헬퍼 ─────────────────────────────────────────
+   const addLayer = (features, zIndex) => {
+      const map = mapInstance.current;
+      if (!map) return null;
+      const layer = new VectorLayer({
+         source: new VectorSource({ features }),
+         zIndex,
+         minZoom: 12, // 줌 12 미만이면 자동 숨김
+      });
+      map.addLayer(layer);
+      return layer;
+   };
+
+   // ── 관광지 + 문화시설 (DB) ───────────────────────────────────
+   // adm_cd 없으면 서울 전체 조회
+   const loadLandmarks = async (adm_cd) => {
+      try {
+         const url = adm_cd
+            ? `${MAP_URL}/map/landmarks?adm_cd=${adm_cd}&types=12,14`
+            : `${MAP_URL}/map/landmarks?types=12,14`;
+         const json = await (await fetch(url, { headers: _mapHeaders })).json();
+         const features = (json.landmarks || [])
+            .filter((d) => d.lng && d.lat)
+            .map((d) => {
+               const typeKey = String(d.content_type_id);
+               const f = new Feature({
+                  geometry: new Point(fromLonLat([d.lng, d.lat])),
+               });
+               f.set("lmData", d);
+               f.set("lmType", typeKey);
+               f.setStyle(makeStyle(typeKey, false, d.image || null));
+               return f;
+            });
+         if (landmarkLayerRef.current) {
+            mapInstance.current?.removeLayer(landmarkLayerRef.current);
+         }
+         landmarkLayerRef.current = addLayer(features, 55);
+      } catch (e) {
+         console.error("[useLandmarkLayer] loadLandmarks:", e);
+      }
+   };
+
+   // ── 축제 (API 실시간) ────────────────────────────────────────
+   const loadFestivals = async (adm_cd) => {
+      try {
+         const url = adm_cd
+            ? `${MAP_URL}/map/festivals?adm_cd=${adm_cd}`
+            : `${MAP_URL}/map/festivals`;
+         const res = await fetch(url, { headers: _mapHeaders });
+         const json = await res.json();
+         const features = makeFeatures(json.festivals || [], "15");
+         if (festivalLayerRef.current) {
+            mapInstance.current?.removeLayer(festivalLayerRef.current);
+         }
+         festivalLayerRef.current = addLayer(features, 56);
+      } catch (e) {
+         console.error("[useLandmarkLayer] loadFestivals:", e);
+      }
+   };
+
+   // ── 학교 (DB) ────────────────────────────────────────────────
+   const loadSchools = async (sgg_nm) => {
+      try {
+         const url = sgg_nm
+            ? `${MAP_URL}/map/schools?sgg_nm=${encodeURIComponent(sgg_nm)}`
+            : `${MAP_URL}/map/schools`;
+         const res = await fetch(url, { headers: _mapHeaders });
+         const json = await res.json();
+         const features = makeFeatures(
+            json.schools || [],
+            "school",
+            "school_id",
+         );
+         if (schoolLayerRef.current) {
+            mapInstance.current?.removeLayer(schoolLayerRef.current);
+         }
+         schoolLayerRef.current = addLayer(features, 57);
+      } catch (e) {
+         console.error("[useLandmarkLayer] loadSchools:", e);
+      }
+   };
+
+   // ── 레이어 표시/숨김 ─────────────────────────────────────────
+   const setLandmarkVisible = (v) => landmarkLayerRef.current?.setVisible(v);
+   const setFestivalVisible = (v) => festivalLayerRef.current?.setVisible(v);
+   const setSchoolVisible = (v) => schoolLayerRef.current?.setVisible(v);
+
+   // ── 마커 하이라이트 ──────────────────────────────────────────
+   const selectLandmark = (feature) => {
+      if (selectedFeatRef.current) {
+         const prev = selectedFeatRef.current;
+         prev.setStyle(
+            makeStyle(
+               prev.get("lmType"),
+               false,
+               prev.get("lmData")?.image || null,
+            ),
+         );
+      }
+      if (!feature) {
+         selectedFeatRef.current = null;
+         return;
+      }
+      feature.setStyle(
+         makeStyle(
+            feature.get("lmType"),
+            true,
+            feature.get("lmData")?.image || null,
          ),
       );
+      selectedFeatRef.current = feature;
+   };
 
-   const currentZoom = map.getView().getZoom() ?? 0;
-
-   for (const wmsLayer of wmsLayers) {
-      if (!wmsLayer.getVisible()) continue;
-      // minZoom 미만이면 레이어가 실제로 렌더되지 않으므로 skip
-      const layerMinZoom = wmsLayer.getMinZoom?.() ?? 0;
-      if (currentZoom < layerMinZoom) continue;
-      const source = wmsLayer.getSource();
-      const url = source.getFeatureInfoUrl(
-         coordinate,
-         map.getView().getResolution(),
-         "EPSG:3857",
-         { INFO_FORMAT: "application/json", FEATURE_COUNT: 1 },
-      );
-      if (!url) continue;
-      try {
-         const urlObj = new URL(url, window.location.origin);
-         urlObj.searchParams.set("REQUEST", "GetFeatureInfo");
-         const res = await fetch(urlObj.pathname + urlObj.search);
-         const text = await res.text();
-         let feat = null;
-         try {
-            feat = JSON.parse(text).features?.[0];
-         } catch {
-            /* ignore */
+   // ── 레이어 제거 ──────────────────────────────────────────────
+   const clearLandmarks = () => {
+      const map = mapInstance.current;
+      if (!map) return;
+      [landmarkLayerRef, festivalLayerRef, schoolLayerRef].forEach((ref) => {
+         if (ref.current) {
+            map.removeLayer(ref.current);
+            ref.current = null;
          }
-         if (!feat) continue;
+      });
+   };
 
-         const layerType = wmsLayer.get("name");
-         const parsed = parseWmsProps(feat.properties, layerType);
-
-         // 지적도 공시지가 처리
-         let landValue = null;
-         if (layerType === "cadastral" && parsed.jiga && parsed.gosi_year) {
-            const price = parseInt(String(parsed.jiga).replace(/,/g, ""));
-            const manwon = Math.round(price / 10000);
-            landValue = [
-               {
-                  year: parsed.gosi_year,
-                  month: parsed.gosi_month || "",
-                  price,
-                  price_str: `${manwon.toLocaleString()}만원/㎡`,
-                  label: `${parsed.gosi_year}년${parsed.gosi_month ? ` ${parsed.gosi_month}월` : ""} 기준`,
-               },
-            ];
-         }
-         return {
-            parsed: { ...parsed, type: layerType },
-            layerType,
-            landValue,
-         };
-      } catch (err) {
-         console.error("[WMS 오류]", err);
-      }
-   }
-   return null;
+   return {
+      landmarkLayerRef,
+      festivalLayerRef,
+      schoolLayerRef,
+      loadLandmarks,
+      loadFestivals,
+      loadSchools,
+      setLandmarkVisible,
+      setFestivalVisible,
+      setSchoolVisible,
+      selectLandmark,
+      clearLandmarks,
+   };
 }

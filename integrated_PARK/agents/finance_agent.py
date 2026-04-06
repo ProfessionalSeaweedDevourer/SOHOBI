@@ -234,6 +234,7 @@ class FinanceAgent:
         question: str,
         current_params: dict = None,
         retry_prompt: str = "",
+        previous_draft: str = "",
         profile: str = "",
         prior_history: list[dict] | None = None,
         context: dict | None = None,
@@ -245,6 +246,7 @@ class FinanceAgent:
             question: 사용자 질문
             current_params: 누적된 파라미터 dict. None이면 DB에서 초기값 로드.
             retry_prompt: SignOffAgent 재시도 지적 사항. 있을 시 프롬프트 앞에 주입.
+            previous_draft: 직전 attempt의 draft. 있으면 파라미터 재추출을 건너뜀.
             profile: 창업자 상황 정보. 있을 시 프롬프트 앞에 주입.
             prior_history: 이전 대화 이력
             context: 지역/업종 컨텍스트 dict
@@ -256,15 +258,18 @@ class FinanceAgent:
                 - updated_params: 병합된 누적 파라미터 (프론트 저장용)
         """
         # ── 1단계: 파라미터 추출 ─────────────────────────────
-        # current_params 없으면 None 기반 초기값 사용
         ctx = context or {}
-        extracted, extracted_ctx = await self._extract_params(question)
-        if extracted_ctx.get("adm_codes"):
-            ctx["adm_codes"] = extracted_ctx["adm_codes"]
-        if extracted_ctx.get("business_type"):
-            ctx["business_type"] = extracted_ctx["business_type"]
-        base = current_params or self._sim.load_initial(ctx.get("adm_codes"), ctx.get("business_type"))
-        variables = self._sim.merge_json(base, extracted)
+        if retry_prompt and previous_draft and current_params:
+            # retry: 파라미터 이미 확정 → _extract_params LLM 호출 생략
+            variables = current_params
+        else:
+            extracted, extracted_ctx = await self._extract_params(question)
+            if extracted_ctx.get("adm_codes"):
+                ctx["adm_codes"] = extracted_ctx["adm_codes"]
+            if extracted_ctx.get("business_type"):
+                ctx["business_type"] = extracted_ctx["business_type"]
+            base = current_params or self._sim.load_initial(ctx.get("adm_codes"), ctx.get("business_type"))
+            variables = self._sim.merge_json(base, extracted)
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]
 

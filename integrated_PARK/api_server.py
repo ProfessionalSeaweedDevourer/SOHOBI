@@ -20,7 +20,8 @@ _logger = logging.getLogger("sohobi.api")
 
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+import httpx
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 from dotenv import load_dotenv
@@ -690,6 +691,19 @@ async def get_log_users():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api_server:app", host="0.0.0.0", port=8000, reload=True)
+
+
+@app.get("/wms/{path:path}")
+async def vworld_wms_proxy(path: str, request: Request):
+    """VWorld WMS 프록시 — 프로덕션(Azure SWA)에서 /wms/* 요청을 VWorld로 전달"""
+    url = f"https://api.vworld.kr/{path}"
+    params = dict(request.query_params)
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, params=params, timeout=10.0)
+    return Response(
+        content=r.content,
+        media_type=r.headers.get("content-type", "application/octet-stream"),
+    )
 
 
 @app.exception_handler(Exception)
