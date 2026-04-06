@@ -516,6 +516,15 @@ export default function MapView() {
          if (wmsResult) {
             setWmsPopup(wmsResult.parsed);
             setLandValue(wmsResult.landValue || null);
+            if (!wmsResult.landValue && wmsResult.parsed.pnu) {
+               fetch(
+                  `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(wmsResult.parsed.pnu)}`,
+                  { headers: _mapHeaders },
+               )
+                  .then((r) => r.json())
+                  .then((d) => { if (d.data?.length) setLandValue(d.data); })
+                  .catch(() => {});
+            }
          }
       });
       return true;
@@ -538,6 +547,15 @@ export default function MapView() {
          setLandmarkPopup(null);
          setClusterPopup(null);
          if (wmsResult.parsed.sigg) currentGuNmRef.current = wmsResult.parsed.sigg;
+         if (!wmsResult.landValue && wmsResult.parsed.pnu) {
+            fetch(
+               `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(wmsResult.parsed.pnu)}`,
+               { headers: _mapHeaders },
+            )
+               .then((r) => r.json())
+               .then((d) => { if (d.data?.length) setLandValue(d.data); })
+               .catch(() => {});
+         }
          return;
       }
       setWmsPopup(null);
@@ -848,51 +866,46 @@ export default function MapView() {
                setClusterPopup(null);
                setBuildingStores([]);
                lastClusterStoresRef.current = null;
-               // 좌표로 PNU 조회 → 공시지가 표시
+               // 좌표 → PNU 조회 (LP_PA_CBND_BUBUN: 지적도 필지 경계) → 공시지가 표시
                const vKey = import.meta.env.VITE_VWORLD_API_KEY;
                const lng = parseFloat(popup.LNG);
                const lat = parseFloat(popup.LAT);
+               const addr = popup.ROAD_ADDR || "";
+               // 1단계: VWorld Data API로 좌표 → PNU 취득
                fetch(
-                  `/vworld/req/data?service=data&request=GetFeature&data=LT_C_ADSIDO_INFO&key=${vKey}&format=json&size=1&geomFilter=point(${lng} ${lat})&geometry=false&attribute=true`,
+                  `/vworld/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN` +
+                  `&key=${vKey}&format=json&size=1` +
+                  `&geomFilter=point(${lng} ${lat})&geometry=false&attribute=true` +
+                  `&columns=pnu,pblntfPclnd,stdrYear`,
                )
                   .then((r) => r.json())
-                  .then(async () => {
-                     // PNU는 지적도에서만 얻을 수 있으므로 realEstate API 사용
-                     // ROAD_ADDR 기반으로 land-value 검색
-                     const addr = popup.ROAD_ADDR || "";
-                     setWmsPopup({ type: "cadastral", pnu: "", addr });
-                     // 지적도 레이어 있으면 WMS 클릭으로 PNU 취득
-                     const map = mapInstance.current;
-                     const coord = fromLonLat([lng, lat]);
-                     const cadastralLayer = map
-                        .getLayers()
-                        .getArray()
-                        .find((l) => l.get("name") === "cadastral");
-                     if (cadastralLayer) {
-                        handleWmsClick(map, coord, { skipZoomGuard: true }).then((result) => {
-                           if (result) {
-                              setWmsPopup(result.parsed);
-                              setLandValue(result.landValue || null);
-                           }
-                        });
-                     } else {
-                        // 지적도 없으면 주소 표시만
-                        setWmsPopup({
-                           type: "cadastral",
-                           pnu: "",
-                           addr,
-                           sido: popup.SIDO_NM,
-                           sigg: popup.SGG_NM,
-                           dong: popup.ADM_NM,
-                        });
+                  .then((d) => {
+                     const pnu =
+                        d?.response?.result?.featureCollection?.features?.[0]
+                           ?.properties?.pnu || "";
+                     setWmsPopup({
+                        type: "cadastral",
+                        pnu,
+                        addr,
+                        sido: popup.SIDO_NM,
+                        sigg: popup.SGG_NM,
+                        dong: popup.ADM_NM,
+                     });
+                     // 2단계: PNU 있으면 백엔드 공시지가 이력 조회
+                     if (pnu) {
+                        fetch(
+                           `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(pnu)}`,
+                           { headers: _mapHeaders },
+                        )
+                           .then((r) => r.json())
+                           .then((lv) => {
+                              if (lv.data?.length) setLandValue(lv.data);
+                           })
+                           .catch(() => {});
                      }
                   })
                   .catch(() => {
-                     setWmsPopup({
-                        type: "cadastral",
-                        pnu: "",
-                        addr: popup.ROAD_ADDR || "",
-                     });
+                     setWmsPopup({ type: "cadastral", pnu: "", addr });
                   });
             }}
             onClusterSelect={(s) => {
