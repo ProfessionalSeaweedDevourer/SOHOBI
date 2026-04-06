@@ -174,6 +174,14 @@ export default function Features() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <Link to="/map">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button size="sm" variant="outline" className="gap-1.5 glass border shadow-lg">
+                  <MapPin size={14} />
+                  지도 보기
+                </Button>
+              </motion.div>
+            </Link>
             <Link to="/user">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button size="sm" className="shadow-lg hover-glow-blue transition-glow">

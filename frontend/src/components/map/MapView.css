@@ -492,6 +492,32 @@
    gap: 8px;
 }
 
+/* ── 지도 페이지 네비게이션 링크 ───────────────────────────────── */
+.mv-nav-btn {
+   background: #fff;
+   border: 1px solid #e5e7eb;
+   border-radius: 10px;
+   padding: 6px 12px;
+   font-size: 12px;
+   font-weight: 500;
+   color: #374151;
+   text-decoration: none;
+   cursor: pointer;
+   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+   transition: background 0.15s;
+}
+.mv-nav-btn:hover {
+   background: #f3f4f6;
+}
+.dark .mv-nav-btn {
+   background: var(--card);
+   border-color: var(--border);
+   color: var(--foreground);
+}
+.dark .mv-nav-btn:hover {
+   background: var(--muted);
+}
+
 /* ── OL 줌 레벨 뱃지 기본 스타일 ─────────────────────── */
 .zoom-level-badge {
    text-align: center;

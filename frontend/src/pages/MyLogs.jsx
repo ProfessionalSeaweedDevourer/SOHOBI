@@ -159,7 +159,14 @@ export default function MyLogs() {
         >
           내 질의응답 로그
         </span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          <a
+            href="/features"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            style={{ textDecoration: "none" }}
+          >
+            기능 안내 ✨
+          </a>
           <ThemeToggle />
         </div>
       </header>

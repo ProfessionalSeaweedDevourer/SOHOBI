@@ -327,6 +327,20 @@ export default function UserChat() {
           사용자
         </span>
         <a
+          href="/map"
+          className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]"
+          style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}
+        >
+          지도 🗺️
+        </a>
+        <a
+          href="/features"
+          className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]"
+          style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}
+        >
+          기능 ✨
+        </a>
+        <a
           href="/my-report"
           className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]"
           style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}

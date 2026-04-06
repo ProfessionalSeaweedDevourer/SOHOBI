@@ -241,7 +241,15 @@ export default function Changelog() {
             <span className="font-semibold text-sm">업데이트 로그</span>
           </div>
 
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <Link
+              to="/user"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              AI 상담 →
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
       </motion.header>
 

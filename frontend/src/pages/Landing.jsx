@@ -265,6 +265,10 @@ export default function Landing() {
           <Link to="/changelog" className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2">
             업데이트 로그
           </Link>
+          <span className="mx-2 opacity-30">·</span>
+          <Link to="/roadmap" className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2">
+            로드맵
+          </Link>
         </div>
       </footer>
     </div>

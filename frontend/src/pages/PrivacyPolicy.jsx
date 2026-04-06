@@ -474,6 +474,13 @@ export default function PrivacyPolicy() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <Link to="/user">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" size="sm" className="glass border shadow-lg">
+                  AI 상담 →
+                </Button>
+              </motion.div>
+            </Link>
             <Link to="/">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button variant="outline" className="glass border shadow-lg gap-1.5">
