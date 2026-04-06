@@ -187,7 +187,7 @@ def getLandmarks(
         elif adm_cd:
             result = lmDAO.get_by_adm_cd(adm_cd, type_list)
         else:
-            result = lmDAO.get_all(type_list, limit=500)
+            result = lmDAO.get_all(type_list, limit=2000)
         if type_list and adm_cd:
             result = [r for r in result if str(r["content_type_id"]) in type_list]
         return {"count": len(result), "landmarks": result}

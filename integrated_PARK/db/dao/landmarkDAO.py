@@ -73,7 +73,7 @@ class LandmarkDAO(BaseDAO):
             logger.error(f"[LandmarkDAO] get_by_adm_cd: {e}")
             return []
 
-    def get_all(self, content_types: list = None, limit: int = 500) -> list:
+    def get_all(self, content_types: list = None, limit: int = 2000) -> list:
         """서울 전체 랜드마크 조회 (최대 limit건)"""
         try:
             if content_types:

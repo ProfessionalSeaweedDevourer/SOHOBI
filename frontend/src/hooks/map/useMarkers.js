@@ -172,31 +172,55 @@ export function useMarkers(mapInstance, visibleCats) {
       return members?.[0]?.get("store")?.CAT_CD;
    };
 
+   // 스토어 ID로 클러스터 소스에서 feature 찾아 하이라이트
+   const _highlightById = (storeId) => {
+      if (!storeId || !clusterSourceRef?.current) return;
+      const wrappers = clusterSourceRef.current.getFeatures();
+      for (const wf of wrappers) {
+         const match = (wf.get("features") || []).find((f) => {
+            const s = f.get("store");
+            return (s?.STORE_ID || s?.store_id) === storeId;
+         });
+         if (match) {
+            selectedFeatRef.current = wf;
+            clusterLayerRef.current?.changed();
+            return;
+         }
+      }
+   };
+
    const selectMarker = (feature) => {
       selectedFeatRef.current = feature || null;
       clusterLayerRef.current?.changed();
 
-      // 선택된 마커 위치로 지도 이동
       if (feature && mapInstance.current) {
          const members = feature.get("features") || [];
-         const store =
-            members.length === 1
-               ? members[0].get("store")
-               : members[0]?.get("store"); // 클러스터는 첫 번째 멤버 기준
+         const store = members[0]?.get("store");
+         const storeId = store?.STORE_ID || store?.store_id;
          const lng = parseFloat(store?.LNG || store?.lng);
          const lat = parseFloat(store?.LAT || store?.lat);
          if (!isNaN(lng) && !isNaN(lat)) {
             const map = mapInstance.current;
             const currentZoom = map.getView().getZoom() ?? 16;
-            const targetZoom =
-               members.length === 1
-                  ? Math.max(currentZoom, 18) // 단일 마커: 최소 18
-                  : Math.max(currentZoom, 15); // 클러스터: 최소 15
-            map.getView().animate({
-               center: fromLonLat([lng, lat]),
-               zoom: targetZoom,
-               duration: 400,
-            });
+            let targetZoom;
+            if (members.length === 1) {
+               targetZoom = Math.max(currentZoom, 18);
+            } else if (currentZoom < 18) {
+               targetZoom = 19;
+            } else {
+               targetZoom = Math.min(currentZoom + 1, 19);
+            }
+            map.getView().animate(
+               {
+                  center: fromLonLat([lng, lat]),
+                  zoom: targetZoom,
+                  duration: 400,
+               },
+               () => {
+                  // animate 완료 후 클러스터 재분해된 feature 재하이라이트
+                  if (storeId) _highlightById(storeId);
+               },
+            );
          }
       }
    };

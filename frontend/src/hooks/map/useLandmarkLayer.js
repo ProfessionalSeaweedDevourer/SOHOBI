@@ -28,27 +28,27 @@ const TYPE_STYLE = {
    school: { color: "#10b981", label: "학교" }, // 학교 - 초록
 };
 
-function makeStyle(typeKey, selected = false, imageUrl = null) {
+function makeStyle(typeKey, selected = false) {
    const { color, label } = TYPE_STYLE[typeKey] || { color: "#999", label: "" };
-   const radius = selected ? 14 : 10; // 크기 키움 (7→10, 10→14)
-   const imageStyle = imageUrl
-      ? new Icon({ src: imageUrl, width: 28, height: 28, anchor: [0.5, 1] })
-      : new CircleStyle({
-           radius,
-           fill: new Fill({ color: selected ? "#fff" : color }),
-           stroke: new Stroke({
-              color: selected ? color : "#fff",
-              width: selected ? 3 : 2,
-           }),
-        });
+   const radius = selected ? 14 : 10;
+   // 선택 시 색 반전: 배경=색상, 테두리=흰색 → 배경=흰색, 테두리=색상+두껍게
+   // CORS 이슈로 외부 이미지 Canvas 처리 불가 → CircleStyle만 사용
+   const imageStyle = new CircleStyle({
+      radius,
+      fill: new Fill({ color: selected ? "#fff" : color }),
+      stroke: new Stroke({
+         color: selected ? color : "#fff",
+         width: selected ? 4 : 2,
+      }),
+   });
    return new Style({
       image: imageStyle,
       text: label
          ? new Text({
               text: label,
-              offsetY: imageUrl ? -32 : -(radius + 6),
-              font: "bold 11px sans-serif",
-              fill: new Fill({ color }),
+              offsetY: -(radius + 6),
+              font: selected ? "bold 12px sans-serif" : "bold 11px sans-serif",
+              fill: new Fill({ color: selected ? color : color }),
               stroke: new Stroke({ color: "#fff", width: 3 }),
            })
          : null,
@@ -72,7 +72,7 @@ export function useLandmarkLayer(mapInstance) {
             });
             f.set("lmData", d);
             f.set("lmType", typeKey);
-            f.setStyle(makeStyle(typeKey, false, d.image || null));
+            f.setStyle(makeStyle(typeKey, false));
             return f;
          });
 
@@ -83,7 +83,7 @@ export function useLandmarkLayer(mapInstance) {
       const layer = new VectorLayer({
          source: new VectorSource({ features }),
          zIndex,
-         minZoom: 12, // 줌 12 미만이면 자동 숨김
+         minZoom: 16, // 줌 16 미만이면 자동 숨김
       });
       map.addLayer(layer);
       return layer;
@@ -106,7 +106,7 @@ export function useLandmarkLayer(mapInstance) {
                });
                f.set("lmData", d);
                f.set("lmType", typeKey);
-               f.setStyle(makeStyle(typeKey, false, d.image || null));
+               f.setStyle(makeStyle(typeKey, false));
                return f;
             });
          if (landmarkLayerRef.current) {
@@ -167,25 +167,13 @@ export function useLandmarkLayer(mapInstance) {
    const selectLandmark = (feature) => {
       if (selectedFeatRef.current) {
          const prev = selectedFeatRef.current;
-         prev.setStyle(
-            makeStyle(
-               prev.get("lmType"),
-               false,
-               prev.get("lmData")?.image || null,
-            ),
-         );
+         prev.setStyle(makeStyle(prev.get("lmType"), false));
       }
       if (!feature) {
          selectedFeatRef.current = null;
          return;
       }
-      feature.setStyle(
-         makeStyle(
-            feature.get("lmType"),
-            true,
-            feature.get("lmData")?.image || null,
-         ),
-      );
+      feature.setStyle(makeStyle(feature.get("lmType"), true));
       selectedFeatRef.current = feature;
    };
 
