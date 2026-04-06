@@ -24,7 +24,13 @@ const TYPE_MAP = {
   test:     { label: "테스트",    color: "#eab308" },
   ci:       { label: "CI/CD",     color: "#6366f1" },
   security: { label: "보안",      color: "#ec4899" },
+  debug:    { label: "디버그",    color: "#a3a3a3" },
 };
+
+function isNotMerge(raw) {
+  const msg = raw.commit.message;
+  return !msg.startsWith("Merge pull request") && !msg.startsWith("Merge branch");
+}
 
 // ── 유틸 함수 ────────────────────────────────────────────────────────
 async function fetchCommits(page = 1) {
@@ -166,7 +172,7 @@ export default function Changelog() {
       try {
         const data = await fetchCommits(1);
         if (!cancelled) {
-          setCommits(data.map(parseCommit));
+          setCommits(data.filter(isNotMerge).map(parseCommit));
           setHasMore(data.length === 100);
         }
       } catch (e) {
@@ -184,7 +190,7 @@ export default function Changelog() {
     setIsLoading(true);
     try {
       const data = await fetchCommits(nextPage);
-      setCommits((prev) => [...prev, ...data.map(parseCommit)]);
+      setCommits((prev) => [...prev, ...data.filter(isNotMerge).map(parseCommit)]);
       setCurrentPage(nextPage);
       setHasMore(data.length === 100);
     } catch (e) {

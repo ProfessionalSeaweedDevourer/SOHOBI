@@ -1,6 +1,14 @@
 # 임시 폴더
 NeoFrontend_Mar30/
 
+# 팀원별 통합 이전 버전 디렉토리
+CHOI/
+TERRY/
+NAM/
+NAM2/
+CHANG/
+PARK/
+
 # macOS
 .DS_Store
 **/.DS_Store
