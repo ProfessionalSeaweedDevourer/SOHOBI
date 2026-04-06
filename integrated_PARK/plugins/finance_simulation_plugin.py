@@ -275,7 +275,8 @@ class FinanceSimulationPlugin:
             try:
                 dbwork = DBWork()
                 if region is None and industry is None:
-                    revenue = [float(v) for v in dbwork.get_average_sales()]
+                    result = dbwork.get_average_sales()
+                    revenue = [float(v) for v in result] if hasattr(result, '__iter__') else [float(result)]
                 else:
                     revenue = [float(v) for v in dbwork.get_sales(region, industry_cd)]
             except Exception:
