@@ -1,6 +1,7 @@
 import logging
+import os
 
-from db.dao.baseDAO import BaseDAO
+import psycopg2
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,6 @@ class DBWork:
             cur.execute(sql, params or [])
             return cur.fetchall()
         except Exception as e:
-            print("DB 조회 실패:", e)
             logger.warning("DBWork._execute_query 실패: %s", e)
         finally:
             if cur: cur.close()
@@ -84,8 +84,7 @@ class DBWork:
             FROM sangkwon_sales s
             WHERE s.adm_cd IN ({placeholders})
             AND   s.svc_induty_cd = %s
-        sql = """
-            SELECT
+            AND   s.tot_sales_amt IS NOT NULL
         """
         rows = self._execute_query(sql, region + [industry])
 
@@ -107,8 +106,8 @@ class DBWork:
                          조회 실패 또는 NULL 반환 시 [46_000_000] 반환.
         """
         sql = """
-         시 [46_000_000] 반환.
             SELECT
+                ROUND(
                     AVG(
                         s.tot_sales_amt::numeric
                         / NULLIF(
