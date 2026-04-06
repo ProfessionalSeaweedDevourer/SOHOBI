@@ -41,6 +41,22 @@ SELECT_SALES_SUM = """
 
 class SangkwonDAO(BaseDAO):
 
+    def __init__(self):
+        self._ensure_search_indexes()
+
+    def _ensure_search_indexes(self):
+        """searchDong prefix LIKE 성능을 위한 B-tree 인덱스 생성 (없으면 생성)"""
+        sqls = [
+            "CREATE INDEX IF NOT EXISTS idx_sangkwon_adm_nm ON sangkwon_sales (adm_nm text_pattern_ops)",
+            "CREATE INDEX IF NOT EXISTS idx_store_legal_nm ON store_seoul (legal_nm text_pattern_ops)",
+        ]
+        try:
+            for sql in sqls:
+                self._execute(sql)
+            logger.debug("[SangkwonDAO] search 인덱스 확인 완료")
+        except Exception as e:
+            logger.warning("[SangkwonDAO] 인덱스 생성 실패 (무시): %s", e)
+
     def getQuarters(self) -> list:
         try:
             rows = self._query(
@@ -222,7 +238,7 @@ class SangkwonDAO(BaseDAO):
                 ORDER BY adm_nm
                 LIMIT 20
             """
-            rows = self._query(sql_adm, {"q": f"%{q}%"})
+            rows = self._query(sql_adm, {"q": f"{q}%"})
 
             sql_legal = """
                 SELECT DISTINCT adm_cd, adm_nm, legal_nm, '법정동' AS type
@@ -232,7 +248,7 @@ class SangkwonDAO(BaseDAO):
                 ORDER BY adm_nm
                 LIMIT 20
             """
-            rows_legal = self._query(sql_legal, {"q": f"%{q}%"})
+            rows_legal = self._query(sql_legal, {"q": f"{q}%"})
             existing = {r["adm_cd"] for r in rows}
             for r in rows_legal:
                 if r["adm_cd"] not in existing:

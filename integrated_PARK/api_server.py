@@ -586,23 +586,23 @@ async def get_logs(type: str = "queries", limit: int = 50, user_id: str = "", se
         # 전체 로드 후 핸들러 레벨에서 필터·enrichment 처리 (캐시는 log_formatter 내부)
         entries = load_entries_json(log_type=type, limit=0)
 
-        # 1단계: 기존 로그(user_id 없음)의 session_id → user_id 역조회
+        # 1단계: 기존 로그(user_id 없음)의 session_id → user_id 역조회 (gather 병렬)
         session_ids_to_lookup = {
             e["session_id"] for e in entries
             if e.get("session_id") and not e.get("user_id")
         }
-        session_user_map: dict[str, str] = {}
-        for sid in session_ids_to_lookup:
-            session_user_map[sid] = await _ss.get_user_id_by_session(sid)
+        sid_list = list(session_ids_to_lookup)
+        sid_results = await asyncio.gather(*[_ss.get_user_id_by_session(sid) for sid in sid_list])
+        session_user_map: dict[str, str] = dict(zip(sid_list, sid_results))
 
-        # 2단계: unique user_ids → {email, name} dedup 조회
+        # 2단계: unique user_ids → {email, name} dedup 조회 (gather 병렬)
         all_user_ids = {
             e.get("user_id") or session_user_map.get(e.get("session_id", ""), "")
             for e in entries
         } - {""}
-        user_info_map: dict[str, dict] = {}
-        for uid in all_user_ids:
-            user_info_map[uid] = await get_user_info(uid)
+        uid_list = list(all_user_ids)
+        uid_results = await asyncio.gather(*[get_user_info(uid) for uid in uid_list])
+        user_info_map: dict[str, dict] = dict(zip(uid_list, uid_results))
 
         # 3단계: enrichment
         enriched = []
