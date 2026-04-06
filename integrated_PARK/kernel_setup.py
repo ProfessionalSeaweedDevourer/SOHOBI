@@ -25,10 +25,8 @@ def _deployment(specific_var: str) -> str:
 def _build_kernel() -> sk.Kernel:
     kernel = sk.Kernel()
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
-    # Azure AI Foundry 프로젝트 엔드포인트는 base_url 형식 사용
-    # 예: https://<resource>.services.ai.azure.com/api/projects/<project>/openai/v1
-    base_url = os.getenv("AZURE_OPENAI_ENDPOINT")
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview")
 
     agent_services = [
         ("admin",    "AZURE_ADMIN_DEPLOYMENT"),
@@ -43,7 +41,7 @@ def _build_kernel() -> sk.Kernel:
             AzureChatCompletion(
                 service_id=service_id,
                 deployment_name=_deployment(env_var),
-                base_url=base_url,
+                endpoint=endpoint,
                 api_key=api_key if api_key else None,
                 ad_token_provider=None if api_key else _TOKEN_PROVIDER,
                 api_version=api_version,
@@ -62,14 +60,14 @@ def get_kernel() -> sk.Kernel:
 
 
 def get_signoff_client() -> openai.AsyncAzureOpenAI:
-    signoff_base_url = (
+    signoff_endpoint = (
         os.getenv("AZURE_SIGNOFF_ENDPOINT")
         or os.getenv("AZURE_OPENAI_ENDPOINT")
         or ""
     )
     return openai.AsyncAzureOpenAI(
-        azure_endpoint=signoff_base_url,
+        azure_endpoint=signoff_endpoint,
         azure_ad_token_provider=_TOKEN_PROVIDER,
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"),
         timeout=220.0,
     )
