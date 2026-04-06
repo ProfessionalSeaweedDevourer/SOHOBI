@@ -48,7 +48,7 @@ function makeCadastralLayer(vworldKey) {
          transition: 0,
       }),
       opacity: 0.7,
-      zIndex: 200,
+      zIndex: 50,
       minZoom: 17,
    });
    layer.set("name", "cadastral");

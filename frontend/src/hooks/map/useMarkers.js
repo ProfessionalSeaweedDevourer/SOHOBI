@@ -79,7 +79,7 @@ export function useMarkers(mapInstance, visibleCats) {
       );
       const layer = new VectorLayer({
          source: new VectorSource({ features: [feature] }),
-         zIndex: 99,
+         zIndex: 90,
       });
       map.addLayer(layer);
       circleLayerRef.current = layer;
@@ -119,7 +119,7 @@ export function useMarkers(mapInstance, visibleCats) {
 
       const layer = new VectorLayer({
          source: clusterSource,
-         zIndex: 100,
+         zIndex: 200,
          style: (feature) => {
             const members = feature.get("features") || [];
             if (members.length === 1) {

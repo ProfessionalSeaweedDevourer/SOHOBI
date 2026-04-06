@@ -33,7 +33,7 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 | `integrated_PARK/api_server.py` | FastAPI 진입점 |
 | `integrated_PARK/orchestrator.py` | Semantic Kernel 오케스트레이션 |
 | `integrated_PARK/signoff/` | 최종 검증 에이전트 |
-| `integrated_PARK/db/commercial.db` | 상권 SQLite DB (2024 Q4, 서울) — 13MB, git 포함됨 |
+| `integrated_PARK/db/` | DB DAO 모듈 — 실제 DB는 Azure 백엔드에 위치 (SQLite 로컬 파일 없음) |
 | `frontend/` | React + Vite + Tailwind 프론트엔드 |
 | `docs/plans/` | 플랜 문서 (`YYYY-MM-DD-이름.md`) |
 | `docs/session-reports/` | 세션 리포트 및 인수인계 문서 |

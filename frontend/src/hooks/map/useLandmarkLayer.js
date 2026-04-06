@@ -92,7 +92,7 @@ export function useLandmarkLayer(mapInstance) {
          if (landmarkLayerRef.current) {
             mapInstance.current?.removeLayer(landmarkLayerRef.current);
          }
-         landmarkLayerRef.current = addLayer(features, 210);
+         landmarkLayerRef.current = addLayer(features, 55);
       } catch (e) {
          console.error("[useLandmarkLayer] loadLandmarks:", e);
       }
@@ -110,7 +110,7 @@ export function useLandmarkLayer(mapInstance) {
          if (festivalLayerRef.current) {
             mapInstance.current?.removeLayer(festivalLayerRef.current);
          }
-         festivalLayerRef.current = addLayer(features, 211);
+         festivalLayerRef.current = addLayer(features, 56);
       } catch (e) {
          console.error("[useLandmarkLayer] loadFestivals:", e);
       }
@@ -132,7 +132,7 @@ export function useLandmarkLayer(mapInstance) {
          if (schoolLayerRef.current) {
             mapInstance.current?.removeLayer(schoolLayerRef.current);
          }
-         schoolLayerRef.current = addLayer(features, 212);
+         schoolLayerRef.current = addLayer(features, 57);
       } catch (e) {
          console.error("[useLandmarkLayer] loadSchools:", e);
       }
