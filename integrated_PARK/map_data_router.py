@@ -31,6 +31,7 @@ from typing import Optional
 
 import asyncio
 import httpx
+from cachetools import TTLCache
 from fastapi import APIRouter, Query
 
 from db.dao.mapInfoDAO import MapInfoDAO
@@ -41,6 +42,9 @@ router = APIRouter()
 
 VWORLD_KEY = os.getenv("VWORLD_API_KEY", "")
 KAKAO_REST_KEY = os.getenv("KAKAO_REST_KEY", "")
+
+# 동 중심좌표 캐시 — 좌표는 변하지 않으므로 24시간 TTL
+_centroid_cache: TTLCache = TTLCache(maxsize=500, ttl=86400)
 
 SIDO_BOUNDS = {"store_seoul": (33.0, 38.7, 124.5, 132.0)}
 SIDO_TABLE_MAP = {k.replace("STORE_", ""): k for k in SIDO_BOUNDS}
@@ -497,8 +501,25 @@ async def getDongCentroids(gu: str, dongs: str):
             logger.warning(f"[dong-centroids] {dong} 실패: {e}")
         return None
 
-    async with httpx.AsyncClient(timeout=10) as client:
-        raw = await asyncio.gather(*[_fetch_one(client, d) for d in dong_list])
+    # 캐시 히트/미스 분리
+    cached_results = []
+    to_fetch = []
+    for dong in dong_list:
+        hit = _centroid_cache.get((gu, dong))
+        if hit is not None:
+            cached_results.append(hit)
+        else:
+            to_fetch.append(dong)
 
-    results = [r for r in raw if r is not None]
+    # 미캐시 동만 Kakao API 병렬 호출
+    fetched = []
+    if to_fetch:
+        async with httpx.AsyncClient(timeout=10) as client:
+            raw = await asyncio.gather(*[_fetch_one(client, d) for d in to_fetch])
+        for r in raw:
+            if r is not None:
+                _centroid_cache[(gu, r["dong"])] = r
+                fetched.append(r)
+
+    results = cached_results + fetched
     return {"gu": gu, "count": len(results), "data": results}

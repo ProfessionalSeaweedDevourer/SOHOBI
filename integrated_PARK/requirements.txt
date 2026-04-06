@@ -30,6 +30,9 @@ numpy==2.4.4
 # PostgreSQL DB (상권 에이전트 — Azure PostgreSQL Flexible Server)
 psycopg2-binary==2.9.9
 
+# 캐싱
+cachetools==5.3.3
+
 # 유틸리티
 python-dotenv==1.2.2
 requests==2.33.1

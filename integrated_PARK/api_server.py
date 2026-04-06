@@ -583,8 +583,17 @@ async def get_logs(type: str = "queries", limit: int = 50, user_id: str = "", se
         import session_store as _ss
         from auth_router import get_user_info
 
-        # 전체 로드 후 핸들러 레벨에서 필터·enrichment 처리 (캐시는 log_formatter 내부)
-        entries = load_entries_json(log_type=type, limit=0)
+        # 로드 — user_id 필터 없으면 limit 조기 적용 (enrichment 대상 축소)
+        load_limit = 0 if user_id else limit
+        entries = load_entries_json(log_type=type, limit=load_limit)
+
+        # session_id 조기 필터 — raw entry에 session_id 필드 존재, enrichment 전에 가능
+        if session_id:
+            entries = [e for e in entries if session_id in e.get("session_id", "")]
+
+        # user_id 없을 때 limit 조기 적용 (session_id 필터 후)
+        if not user_id and limit > 0:
+            entries = entries[:limit]
 
         # 1단계: 기존 로그(user_id 없음)의 session_id → user_id 역조회 (gather 병렬)
         session_ids_to_lookup = {
@@ -616,16 +625,12 @@ async def get_logs(type: str = "queries", limit: int = 50, user_id: str = "", se
                 "user_name":  info.get("name", ""),
             })
 
-        # 4단계: user_id 필터 적용
+        # 4단계: user_id 필터 적용 (enrichment 이후, user_id 필터 있을 때만)
         if user_id:
             enriched = [e for e in enriched if e.get("user_id") == user_id]
 
-        # 4.5단계: session_id 필터 적용
-        if session_id:
-            enriched = [e for e in enriched if session_id in e.get("session_id", "")]
-
-        # 5단계: limit 적용
-        if limit > 0:
+        # 5단계: limit — user_id 필터 있을 때만 필요 (그 외는 이미 조기 적용)
+        if user_id and limit > 0:
             enriched = enriched[:limit]
 
         return {"type": type, "count": len(enriched), "entries": enriched}
