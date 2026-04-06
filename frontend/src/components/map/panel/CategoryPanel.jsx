@@ -15,7 +15,8 @@ export default function CategoryPanel({
    selectedCatCd,
    onCatSelect,
 }) {
-   const [collapsed, setCollapsed] = useState(false); // false = 확장 상태로 시작
+   const isMobile = typeof window !== "undefined" && window.innerWidth <= 640;
+   const [collapsed, setCollapsed] = useState(isMobile); // 모바일: 기본 접힘
    const [searchQuery, setSearchQuery] = useState("");
 
    // ── 검색 실행 ────────────────────────────────────────────────
@@ -24,7 +25,12 @@ export default function CategoryPanel({
    };
 
    return (
-      <div style={{ ...S.sidebar, width: collapsed ? 48 : 220 }}>
+      <div style={{
+         ...S.sidebar,
+         width: collapsed ? 48 : (isMobile ? "min(220px, 80vw)" : 220),
+         position: isMobile && !collapsed ? "absolute" : "relative",
+         zIndex: isMobile && !collapsed ? 300 : 200,
+      }}>
          {/* ── 헤더 ──────────────────────────────────────────── */}
          <div style={S.header}>
             {!collapsed && <span style={S.headerTitle}>🏪 상권 분석</span>}

@@ -107,3 +107,38 @@
    border-color: var(--brand-teal);
    color: var(--brand-teal);
 }
+
+/* ── 모바일 반응형 (≤ 640px) ──────────────────────────────── */
+@media (max-width: 640px) {
+   /* 버튼 그룹 위치: coord-bar 위로 이동 */
+   .mv-map-controls {
+      bottom: 56px;
+      left: 8px;
+      gap: 4px;
+   }
+
+   .mv-mode-btn,
+   .mv-store-btn {
+      padding: 6px 8px;
+      font-size: 11px;
+      min-height: 36px;
+      border-radius: 8px;
+   }
+
+   .mv-refresh-btn {
+      padding: 6px 8px;
+      font-size: 11px;
+      min-height: 36px;
+      min-width: 36px;
+   }
+
+   .mv-map-controls__gu-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+   }
+
+   .mv-map-controls__loading {
+      font-size: 10px;
+      padding: 4px 10px;
+   }
+}
