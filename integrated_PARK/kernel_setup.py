@@ -6,8 +6,6 @@ from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 import openai
 from dotenv import load_dotenv
 
-from model_config import API_VERSIONS
-
 load_dotenv()
 
 _TOKEN_PROVIDER = get_bearer_token_provider(
@@ -24,15 +22,11 @@ def _deployment(specific_var: str) -> str:
     return os.getenv(specific_var) or os.getenv("AZURE_DEPLOYMENT_NAME") or ""
 
 
-def _api_version(deployment: str) -> str:
-    """배포명 → API 버전 (model_config.API_VERSIONS 조회, 없으면 env fallback)"""
-    return API_VERSIONS.get(deployment, os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"))
-
-
 def _build_kernel() -> sk.Kernel:
     kernel = sk.Kernel()
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview")
 
     agent_services = [
         ("admin",    "AZURE_ADMIN_DEPLOYMENT"),
@@ -43,15 +37,14 @@ def _build_kernel() -> sk.Kernel:
         ("router",   "AZURE_ROUTER_DEPLOYMENT"),
     ]
     for service_id, env_var in agent_services:
-        dep = _deployment(env_var)
         kernel.add_service(
             AzureChatCompletion(
                 service_id=service_id,
-                deployment_name=dep,
+                deployment_name=_deployment(env_var),
                 endpoint=endpoint,
                 api_key=api_key if api_key else None,
                 ad_token_provider=None if api_key else _TOKEN_PROVIDER,
-                api_version=_api_version(dep),
+                api_version=api_version,
             )
         )
     return kernel
@@ -72,10 +65,9 @@ def get_signoff_client() -> openai.AsyncAzureOpenAI:
         or os.getenv("AZURE_OPENAI_ENDPOINT")
         or ""
     )
-    signoff_dep = os.getenv("AZURE_SIGNOFF_DEPLOYMENT", "")
     return openai.AsyncAzureOpenAI(
         azure_endpoint=signoff_endpoint,
         azure_ad_token_provider=_TOKEN_PROVIDER,
-        api_version=_api_version(signoff_dep),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"),
         timeout=220.0,
     )
