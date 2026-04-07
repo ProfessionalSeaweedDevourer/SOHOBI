@@ -26,7 +26,7 @@ from semantic_kernel.connectors.ai.open_ai import (
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import kernel_function
 
-from db.repository import AREA_MAP, INDUSTRY_CODE_MAP, CommercialRepository
+from db.repository import AREA_MAP, INDUSTRY_CODE_MAP, STATION_MAP, CommercialRepository
 from chart.location_chart import generate_analyze_charts, generate_compare_charts
 
 
@@ -75,10 +75,21 @@ def _normalize_location(raw: str) -> str | None:
     if raw in AREA_MAP:
         return raw
 
-    # 2단계: 접미사 제거 후 매칭 (숫자+동, 동, 구, 역, 입구 등)
-    stripped = re.sub(r"\d*동$|구$|역$|입구$|지역$|쪽$|근처$|일대$|주변$|앞$", "", raw)
+    # 1.5단계: 세부 동(숫자+동 형식, 예: 서초1동, 역삼2동) — 정규화 없이 원문 반환
+    # repository._get_adm_codes에서 DB adm_nm 직접 조회로 처리
+    if re.search(r"\d+동$", raw):
+        return raw
+
+    # 2단계: 접미사 제거 후 매칭 (동, 구, 역, 입구 등)
+    stripped = re.sub(r"동$|구$|역$|입구$|지역$|쪽$|근처$|일대$|주변$|앞$", "", raw)
     if stripped and stripped in AREA_MAP:
         return stripped
+
+    # 2.5단계: STATION_MAP 조회 (교대역→서초, 선릉역→역삼 등 역명-상권 매핑)
+    # stripped(역$ 제거 결과) 또는 raw 자체가 STATION_MAP 키와 일치하는지 확인
+    station_key = stripped if stripped else raw
+    if station_key in STATION_MAP:
+        return STATION_MAP[station_key]
 
     # 3단계: 부분 문자열 매칭 (AREA_MAP 키가 입력에 포함)
     candidates = [key for key in AREA_MAP if len(key) >= 2 and key in raw]

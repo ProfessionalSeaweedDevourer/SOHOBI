@@ -1,7 +1,7 @@
 // 개발 프론트 위치: TERRY\p02_frontEnd_React\src\panel\CategoryPanel.jsx
 // 공식 프론트 위치: frontend\src\components\map\panel\CategoryPanel.jsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CATEGORIES } from "../../../constants/categories";
 
 export default function CategoryPanel({
@@ -15,7 +15,17 @@ export default function CategoryPanel({
    selectedCatCd,
    onCatSelect,
 }) {
-   const [collapsed, setCollapsed] = useState(false); // false = 확장 상태로 시작
+   const [isMobile, setIsMobile] = useState(
+      typeof window !== "undefined" && window.innerWidth <= 640
+   );
+   useEffect(() => {
+      const handler = () => setIsMobile(window.innerWidth <= 640);
+      window.addEventListener("resize", handler);
+      return () => window.removeEventListener("resize", handler);
+   }, []);
+   const [collapsed, setCollapsed] = useState(
+      typeof window !== "undefined" && window.innerWidth <= 640
+   ); // 모바일: 기본 접힘
    const [searchQuery, setSearchQuery] = useState("");
 
    // ── 검색 실행 ────────────────────────────────────────────────
@@ -24,7 +34,12 @@ export default function CategoryPanel({
    };
 
    return (
-      <div style={{ ...S.sidebar, width: collapsed ? 48 : 220 }}>
+      <div style={{
+         ...S.sidebar,
+         width: collapsed ? 48 : (isMobile ? "min(220px, 80vw)" : 220),
+         position: isMobile && !collapsed ? "absolute" : "relative",
+         zIndex: isMobile && !collapsed ? 300 : 200,
+      }}>
          {/* ── 헤더 ──────────────────────────────────────────── */}
          <div style={S.header}>
             {!collapsed && <span style={S.headerTitle}>🏪 상권 분석</span>}

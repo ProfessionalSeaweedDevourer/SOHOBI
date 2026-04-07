@@ -379,6 +379,57 @@ AREA_MAP = {
     "잠실역":     ["11710650", "11710670", "11710680"],
 }
 
+# 지하철역명(역 제거) → AREA_MAP 키 매핑
+# AREA_MAP에 없고 부분매칭도 안 되는 역명만 포함
+STATION_MAP = {
+    # ─ 강남/서초권 ─
+    "교대":           "서초",      # 교대역 (서초구 서초동)
+    "선릉":           "역삼",      # 선릉역 (강남구 역삼동)
+    "한티":           "대치",      # 한티역 (강남구 대치동)
+    "매봉":           "도곡",      # 매봉역 (강남구 도곡동)
+    "개포동":         "개포",      # 개포동역
+    "구룡":           "개포",      # 구룡역 (강남구 개포동)
+    "대모산입구":      "일원",      # 대모산입구역
+    "가락시장":        "가락",      # 가락시장역
+    "경찰병원":        "오금",      # 경찰병원역
+    "복정":           "위례",      # 복정역
+    "내방":           "방배",      # 내방역 (서초구 방배동)
+    "이수":           "사당",      # 이수역(=총신대입구역) 동작구 사당동
+    "총신대입구":      "사당",
+    "장승배기":        "상도",      # 장승배기역 (동작구 상도동)
+    # ─ 종로/도심권 ─
+    "종각":           "종로",      # 종각역
+    "종로3가":        "종로",
+    "종로5가":        "종로",
+    "안국":           "가회",      # 안국역 (종로구 가회동·인사동)
+    "경복궁":         "교남",      # 경복궁역 (종로구 교남동)
+    "시청":           "소공",      # 시청역 (중구 소공동)
+    "충무로":         "명동",      # 충무로역 (중구 명동 인근)
+    "동대입구":        "장충",      # 동대입구역 (중구 장충동)
+    # ─ 용산/마포권 ─
+    "숙대입구":        "청파",      # 숙대입구역 (용산구 청파동)
+    "애오개":         "아현",      # 애오개역 (마포구 아현동)
+    "충정로":         "아현",      # 충정로역
+    "디지털미디어시티": "상암",     # DMC역 (마포구 상암동)
+    # ─ 신촌/서대문권 ─
+    "서대문":         "충현",      # 서대문역 (서대문구 충현동)
+    "독립문":         "무악",      # 독립문역 (종로구 무악동)
+    # ─ 성북/강북권 ─
+    "한성대입구":      "삼선",      # 한성대입구역 (성북구 삼선동)
+    # ─ 성동/광진권 ─
+    "왕십리":         "성수",      # 왕십리역 (성동구)
+    "한양대":         "성수",      # 한양대역
+    "강변":           "구의",      # 강변역 (광진구 구의동)
+    # ─ 관악/동작권 ─
+    "서울대입구":      "낙성대",    # 서울대입구역 (관악구)
+    # ─ 영등포/강서권 ─
+    "여의나루":        "여의도",    # 여의나루역
+    "오목교":         "목동",      # 오목교역 (양천구 목동)
+    "까치울":         "화곡",      # 까치울역 (강서구 화곡동)
+    "증미":           "가양",      # 증미역 (강서구 가양동)
+    "개화":           "방화",      # 개화역 (강서구 방화동)
+}
+
 INDUSTRY_CODE_MAP = {
     # 한식 (CS100001)
     "한식": "CS100001",
@@ -506,7 +557,25 @@ class CommercialRepository:
         self._get_pool().putconn(conn)
 
     def _get_adm_codes(self, location: str) -> list:
-        return AREA_MAP.get(location, [])
+        codes = AREA_MAP.get(location, [])
+        if codes:
+            return codes
+        # AREA_MAP 미등록 지역(세부 동 등) → DB에서 adm_nm으로 직접 조회
+        return self._lookup_adm_codes_by_name(location)
+
+    def _lookup_adm_codes_by_name(self, adm_nm: str) -> list[str]:
+        """AREA_MAP에 없는 지역명(예: 서초1동)을 DB adm_nm으로 직접 조회"""
+        sql = "SELECT DISTINCT adm_cd FROM sangkwon_sales WHERE adm_nm = %s LIMIT 5"
+        conn = self._connect()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql, [adm_nm])
+                rows = cursor.fetchall()
+            return [r[0] for r in rows]
+        except Exception:
+            return []
+        finally:
+            self._release(conn)
 
     def _get_industry_code(self, business_type: str) -> str:
         return INDUSTRY_CODE_MAP.get(business_type, "")

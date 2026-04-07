@@ -664,23 +664,21 @@ async def get_log_users():
             e["session_id"] for e in entries
             if e.get("session_id") and not e.get("user_id")
         }
-        session_user_map: dict[str, str] = {}
-        for sid in session_ids_to_lookup:
-            session_user_map[sid] = await _ss.get_user_id_by_session(sid)
+        sid_list = list(session_ids_to_lookup)
+        sid_results = await asyncio.gather(*[_ss.get_user_id_by_session(sid) for sid in sid_list])
+        session_user_map: dict[str, str] = dict(zip(sid_list, sid_results))
 
         all_user_ids = {
             e.get("user_id") or session_user_map.get(e.get("session_id", ""), "")
             for e in entries
         } - {""}
 
-        users = []
-        for uid in sorted(all_user_ids):
-            info = await get_user_info(uid)
-            users.append({
-                "user_id": uid,
-                "email":   info.get("email", ""),
-                "name":    info.get("name", ""),
-            })
+        uid_list = sorted(all_user_ids)
+        uid_results = await asyncio.gather(*[get_user_info(uid) for uid in uid_list])
+        users = [
+            {"user_id": uid, "email": info.get("email", ""), "name": info.get("name", "")}
+            for uid, info in zip(uid_list, uid_results)
+        ]
 
         _LOG_USERS_CACHE = (now + _LOG_USERS_CACHE_TTL, users)
         return {"count": len(users), "users": users}

@@ -644,3 +644,74 @@
    border-color: var(--border);
    color: var(--muted-foreground);
 }
+
+/* ══════════════════════════════════════════════════════════════
+   모바일 반응형 (≤ 640px)
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+   /* ── DongPanel: 300px → 전체 너비 ─────────────────────── */
+   .mv-dong-panel {
+      width: 100vw;
+      width: 100dvw;
+   }
+   .mv-dong-panel__name {
+      font-size: 16px;
+   }
+   /* 닫기 버튼 터치 타겟 44px 보장 */
+   .mv-dong-panel__close {
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+   }
+   /* 동 모드 버튼 터치 타겟 보강 */
+   .mv-dong-btn {
+      min-height: 44px;
+      padding: 10px 14px;
+   }
+
+   /* ── WmsPopup: 고정 너비 → 양쪽 12px 마진 ───────────── */
+   .mv-wms-popup {
+      width: calc(100vw - 24px);
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      box-sizing: border-box;
+   }
+
+   /* ── 우상단 컨트롤: 버튼 축소 + wrap ────────────────── */
+   .mv-top-right-controls {
+      gap: 4px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      max-width: calc(100vw - 28px);
+   }
+   .mv-nav-btn {
+      font-size: 11px;
+      padding: 5px 8px;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+   }
+   .mv-layer-btn {
+      padding: 6px 10px;
+      font-size: 16px;
+      min-height: 32px;
+      min-width: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+   }
+
+   /* ── 좌표 바: 하단 중앙 → 우하단 (MapControls 겹침 방지) */
+   .coord-bar {
+      left: auto;
+      transform: none;
+      right: 12px;
+      bottom: 12px;
+      font-size: 10px;
+      padding: 4px 10px;
+      z-index: 190; /* WmsPopup(z:300) 아래로 */
+   }
+}
