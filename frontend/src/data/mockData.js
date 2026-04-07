@@ -33,6 +33,7 @@ export const agentData = [
   },
   {
     id: 'tax',
+    comingSoon: true,
     nameKo: '세무 신고 가이드 에이전트',
     descriptionKo: '부가세·종합소득세 신고 시기, 서식, 납부 방법을 법령 기반으로 단계별 안내',
     icon: 'Receipt',
@@ -49,6 +50,7 @@ export const agentData = [
   },
   {
     id: 'hr',
+    comingSoon: true,
     nameKo: 'HR/노무 에이전트',
     descriptionKo: '최저임금·근로계약서·해고예고·퇴직금 등 외식업 인사노무 법령 정보 안내',
     icon: 'Users',
@@ -57,6 +59,7 @@ export const agentData = [
   },
   {
     id: 'menu',
+    comingSoon: true,
     nameKo: '메뉴 원가 계산 에이전트',
     descriptionKo: '식재료 투입량 기반 원가율·판매가·목표마진 최적화 시뮬레이션',
     icon: 'UtensilsCrossed',
@@ -65,6 +68,7 @@ export const agentData = [
   },
   {
     id: 'sanitation',
+    comingSoon: true,
     nameKo: '위생/안전 점검 에이전트',
     descriptionKo: 'HACCP·소방·위생법 기준 대화형 체크리스트로 영업 전 준비 사항 점검',
     icon: 'ShieldCheck',

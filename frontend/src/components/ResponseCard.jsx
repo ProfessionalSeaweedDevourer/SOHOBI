@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import SimulationChart from "./SimulationChart";
@@ -22,9 +22,26 @@ const GRADE_STYLE = {
 const GRADE_LABEL = { A: "A 통과", B: "B 경고", C: "C 반려" };
 
 // displayMode: 'full' = 개발자(도메인+등급+재시도), 'grade' = 사용자(등급+검증횟수), 'none' = 미표시
-export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, charts, displayMode = "none", sessionId, messageId }) {
+export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, charts, displayMode = "none", sessionId, messageId, onRegenerate, regenerated, isLoading }) {
   const isEscalated = status === "escalated";
   const isError = status === "error";
+  const [copyState, setCopyState] = useState("idle");
+
+  function handleCopy() {
+    navigator.clipboard.writeText(draft).then(() => {
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 2000);
+    });
+  }
+
+  function handleShare() {
+    const text = `[SOHOBI 창업 어드바이저]\n\nQ: ${question}\n\n${draft}\n\n─────────────────\nSOHOBI — 소호비 창업 어드바이저`;
+    if (navigator.share) {
+      navigator.share({ title: "SOHOBI 창업 어드바이저", text }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(text);
+    }
+  }
 
   useEffect(() => {
     if (!isError) {
@@ -140,6 +157,39 @@ export default function ResponseCard({ question, domain, status, grade, confiden
                     ? confidenceNote
                     : "일부 주의 사항이 포함된 응답입니다. 중요한 결정 전에 전문가 상담을 권장합니다."}
                 </span>
+              </div>
+            )}
+
+            {draft && (
+              <div className="flex items-center gap-1 mt-2 flex-wrap">
+                <button
+                  onClick={handleCopy}
+                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:opacity-70"
+                  style={{
+                    borderColor: "var(--border)",
+                    color: copyState === "copied" ? "var(--brand-teal)" : "var(--muted-foreground)",
+                    background: "transparent",
+                  }}
+                >
+                  {copyState === "copied" ? "복사됨 ✓" : "복사"}
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:opacity-70"
+                  style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", background: "transparent" }}
+                >
+                  공유
+                </button>
+                {onRegenerate && (
+                  <button
+                    onClick={onRegenerate}
+                    disabled={isLoading || regenerated}
+                    className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", background: "transparent" }}
+                  >
+                    {regenerated ? "재생성됨" : "재생성"}
+                  </button>
+                )}
               </div>
             )}
 

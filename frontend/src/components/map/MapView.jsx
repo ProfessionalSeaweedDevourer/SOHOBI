@@ -143,6 +143,31 @@ export default function MapView() {
       loadSchools().then(() => setSchoolLoaded(true));
       // 기본 폴리곤 활성화 (dongMode 기본값 sales라서 경계 표시)
       ensureDongBoundaryLayer();
+
+      // 지적도 레이어 — mapReady 시점에 초기화 (showPanel 여부 무관)
+      const map = mapInstance.current;
+      const vKey = import.meta.env.VITE_VWORLD_API_KEY;
+      if (!map.getLayers().getArray().some((l) => l.get("name") === "cadastral")) {
+         Promise.all([import("ol/layer/Tile"), import("ol/source/TileWMS")])
+            .then(([{ default: TileLayer }, { default: TileWMS }]) => {
+               const layer = new TileLayer({
+                  source: new TileWMS({
+                     url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vKey}&DOMAIN=localhost`,
+                     params: {
+                        SERVICE: "WMS", VERSION: "1.3.0", REQUEST: "GetMap",
+                        LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+                        STYLES: ",",
+                        FORMAT: "image/png", TRANSPARENT: "TRUE", CRS: "EPSG:3857",
+                     },
+                     crossOrigin: "anonymous", transition: 0,
+                  }),
+                  opacity: 0.7, zIndex: 50, minZoom: 17,
+               });
+               layer.set("name", "cadastral");
+               map.addLayer(layer);
+               wmsLayerRef.current = layer;
+            });
+      }
    }, [mapReady]); // eslint-disable-line
    const dongSelectedFeatRef = useRef(null); // 현재 선택(클릭)된 폴리곤
    const dongSearchFeatsRef = useRef([]); // 검색으로 하이라이트된 폴리곤 목록
@@ -522,7 +547,7 @@ export default function MapView() {
                )
                   .then((r) => r.json())
                   .then((d) => { if (d.data?.length) setLandValue(d.data); })
-                  .catch(() => {});
+                  .catch((err) => console.error("[공시지가 조회 실패]", err));
             }
          }
       });
@@ -553,7 +578,7 @@ export default function MapView() {
             )
                .then((r) => r.json())
                .then((d) => { if (d.data?.length) setLandValue(d.data); })
-               .catch(() => {});
+               .catch((err) => console.error("[공시지가 조회 실패]", err));
          }
          return;
       }
@@ -769,6 +794,7 @@ export default function MapView() {
             <div className="mv-layer-panel-wrap">
                <Layerpanel
                   map={mapInstance.current}
+                  mapReady={mapReady}
                   vworldKey={import.meta.env.VITE_VWORLD_API_KEY}
                   wmsLayerRef={wmsLayerRef}
                   currentZoom={currentZoom}
