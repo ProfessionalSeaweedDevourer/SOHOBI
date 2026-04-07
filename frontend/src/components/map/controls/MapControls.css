@@ -1,144 +1,32 @@
-/* ── MapControls 컨테이너 ──────────────────────────────── */
-.mv-map-controls {
-   position: absolute;
-   bottom: 50px;
-   left: 16px;
-   z-index: 200;
+/* ============================================================
+   MapControls.css  –  하단 좌측 컨트롤 (MapView.css에서 분리)
+   변수는 MapView.css :root 에서 상속
+   ============================================================ */
+
+/* MapView.css에 모든 .mv-map-controls 스타일이 포함되어 있음.
+   이 파일은 추가 오버라이드/확장 전용 */
+
+/* 버튼 활성 상태 강조 (클릭 피드백) */
+.mv-mode-btn:active,
+.mv-store-btn:active,
+.mv-refresh-btn:active {
+   transform: scale(0.96);
+}
+
+/* 아이콘 + 텍스트 정렬 */
+.mv-mode-btn > span,
+.mv-store-btn > span {
    display: flex;
-   flex-direction: column;
-   gap: 6px;
+   align-items: center;
+   gap: 4px;
 }
 
-/* 현재 구 이름 뱃지 */
-.mv-map-controls__gu-badge {
-   background: rgba(255, 255, 255, 0.95);
-   border-radius: 8px;
-   padding: 4px 10px;
-   font-size: 11px;
-   color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-   text-align: center;
-}
-.dark .mv-map-controls__gu-badge {
-   background: rgba(15, 20, 32, 0.95);
-   color: var(--muted-foreground);
-}
-
-/* 로딩 표시 */
-.mv-map-controls__loading {
-   background: rgba(255, 255, 255, 0.95);
-   border-radius: 8px;
-   padding: 5px 12px;
-   font-size: 11px;
-   color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-}
-.dark .mv-map-controls__loading {
-   background: rgba(15, 20, 32, 0.95);
-   color: var(--muted-foreground);
-}
-
-/* 버튼 행 */
-.mv-map-controls__mode-row {
-   display: flex;
-   flex-direction: row;
-   gap: 6px;
-}
-.mv-map-controls__store-row {
-   display: flex;
-   gap: 6px;
-}
-
-/* 공통 버튼 */
-.mv-mode-btn {
-   border: 2px solid #e5e7eb;
-   border-radius: 10px;
-   padding: 7px 12px;
-   font-size: 12px;
-   font-weight: 700;
-   cursor: pointer;
-   background: #fff;
-   color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-   transition: all 0.18s;
-   white-space: nowrap;
-}
-.dark .mv-mode-btn {
-   background: var(--card);
-   border-color: var(--border);
-   color: var(--foreground);
-}
-
-/* 상가 검색 버튼 (비활성) */
-.mv-store-btn {
-   border: 2px solid #e5e7eb;
-   border-radius: 10px;
-   padding: 7px 12px;
-   font-size: 12px;
-   font-weight: 700;
-   cursor: pointer;
-   background: #fff;
-   color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-   white-space: nowrap;
-   flex: 1;
-}
-.dark .mv-store-btn {
-   background: var(--card);
-   border-color: var(--border);
-   color: var(--foreground);
-}
-
-/* 새로고침 버튼 */
-.mv-refresh-btn {
-   border: 2px solid #0891B2;
-   border-radius: 10px;
-   padding: 7px 10px;
-   font-size: 12px;
-   font-weight: 700;
-   cursor: pointer;
-   background: #fff;
-   color: #0891B2;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-   white-space: nowrap;
-}
-.dark .mv-refresh-btn {
-   background: var(--card);
-   border-color: var(--brand-teal);
-   color: var(--brand-teal);
-}
-
-/* ── 모바일 반응형 (≤ 640px) ──────────────────────────────── */
 @media (max-width: 640px) {
-   /* 버튼 그룹 위치: coord-bar 위로 이동 */
-   .mv-map-controls {
-      bottom: 56px;
-      left: 8px;
-      gap: 4px;
+   /* 버튼 글자 길면 아이콘만 보이도록 (선택적 적용) */
+   .mv-store-btn .btn-text-short {
+      display: inline;
    }
-
-   .mv-mode-btn,
-   .mv-store-btn {
-      padding: 6px 8px;
-      font-size: 11px;
-      min-height: 36px;
-      border-radius: 8px;
-   }
-
-   .mv-refresh-btn {
-      padding: 6px 8px;
-      font-size: 11px;
-      min-height: 36px;
-      min-width: 36px;
-   }
-
-   .mv-map-controls__gu-badge {
-      font-size: 10px;
-      padding: 3px 8px;
-   }
-
-   .mv-map-controls__loading {
-      font-size: 10px;
-      padding: 4px 10px;
+   .mv-store-btn .btn-text-full {
+      display: none;
    }
 }
