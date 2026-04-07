@@ -57,6 +57,7 @@ function makeCadastralLayer(vworldKey) {
 
 export default function LayerPanel({
    map,
+   mapReady,
    vworldKey,
    wmsLayerRef,
    currentZoom,
@@ -76,17 +77,27 @@ export default function LayerPanel({
    // 초기 레이어 자동 추가
    const initDoneRef = React.useRef(false);
    React.useEffect(() => {
-      if (!map || initDoneRef.current) return;
+      if (!map || !mapReady || initDoneRef.current) return;
       initDoneRef.current = true;
-      // 지적도 초기 ON (zoom 17+ 에서만 타일 데이터 반환)
-      const layer = makeCadastralLayer(vworldKey);
-      map.addLayer(layer);
-      wmsLayerRef.current = layer;
       // 관광안내소 초기 ON
       map.addLayer(
          makeWmsLayer("lt_p_dgtouristinfo", "tourist_info", 215, vworldKey),
       );
-   }, [map]); // eslint-disable-line
+      // 지적도: MapView useEffect([mapReady])에서 동적 import로 생성 — 500ms 후 ref 연결
+      const t = setTimeout(() => {
+         const existing = map.getLayers().getArray()
+            .find((l) => l.get("name") === "cadastral");
+         if (existing) {
+            wmsLayerRef.current = existing;
+            return;
+         }
+         // MapView 동적 import가 아직 완료 안 됐으면 직접 생성 (fallback)
+         const layer = makeCadastralLayer(vworldKey);
+         map.addLayer(layer);
+         wmsLayerRef.current = layer;
+      }, 500);
+      return () => clearTimeout(t);
+   }, [map, mapReady]); // eslint-disable-line
 
    // ── 지적도 ──────────────────────────────────────────────────
    const toggleCadastral = () => {
