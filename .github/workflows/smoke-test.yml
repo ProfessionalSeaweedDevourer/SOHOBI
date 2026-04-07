@@ -1,0 +1,47 @@
+name: Backend Smoke Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    name: API 인증 스모크 테스트
+
+    steps:
+      - name: 헬스 체크 (인증 불필요)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/health)
+          echo "Health check: HTTP $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ FAIL: 백엔드 헬스 체크 실패 (HTTP $STATUS)"
+            exit 1
+          fi
+          echo "✅ PASS: 백엔드 응답 정상"
+
+      - name: API 키 인증 확인 (보호 엔드포인트)
+        env:
+          SMOKE_API_KEY: ${{ secrets.VITE_API_KEY }}
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "X-API-Key: $SMOKE_API_KEY" \
+            "https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/api/v1/logs?type=queries&limit=1")
+          echo "Auth check: HTTP $STATUS"
+          if [ "$STATUS" = "401" ]; then
+            echo "❌ FAIL: API 키 인증 실패 (HTTP 401)"
+            echo "원인 후보:"
+            echo "  1. GitHub Secret VITE_API_KEY ↔ Azure API_SECRET_KEY 불일치"
+            echo "  2. deploy-backend.yml의 --set-env-vars 따옴표 오기입"
+            exit 1
+          fi
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ FAIL: 예상치 못한 응답 (HTTP $STATUS)"
+            exit 1
+          fi
+          echo "✅ PASS: API 키 인증 정상"
