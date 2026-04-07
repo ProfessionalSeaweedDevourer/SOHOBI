@@ -26,3 +26,7 @@
 .prose-response table tbody tr:nth-child(even) {
   background: rgba(0,0,0,0.025);
 }
+.prose-response del,
+.prose-response s {
+  text-decoration: none;
+}
