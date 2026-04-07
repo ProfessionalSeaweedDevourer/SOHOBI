@@ -1,8 +1,0 @@
-.git*
-.vscode
-__azurite_db*
-__pycache__
-.python_packages
-local.settings.json
-test
-.env
