@@ -319,6 +319,8 @@ async def query(req: QueryRequest, request: Request):
             "rejection_history": _format_rejection_history(
                 result.get("rejection_history", [])
             ),
+            "suggested_actions": result.get("suggested_actions", []),
+            "is_partial":        result.get("is_partial", False),
         }
     except Exception as e:
         err_str = str(e).lower()

@@ -132,5 +132,7 @@ function _buildMsg(question, result) {
     charts:           result.charts || [],
     requestId:        result.request_id || null,
     sessionId:        result.session_id || null,
+    suggestedActions: result.suggested_actions || [],
+    isPartial:        result.is_partial || false,
   };
 }

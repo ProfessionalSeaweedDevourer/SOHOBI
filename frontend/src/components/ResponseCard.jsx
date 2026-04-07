@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import SimulationChart from "./SimulationChart";
 import InlineFeedback from "./feedback/InlineFeedback";
+import ActionButtons from "./ActionButtons";
 import { trackEvent } from "../utils/trackEvent";
 
 const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석", chat: "안내" };
@@ -22,7 +23,7 @@ const GRADE_STYLE = {
 const GRADE_LABEL = { A: "A 통과", B: "B 경고", C: "C 반려" };
 
 // displayMode: 'full' = 개발자(도메인+등급+재시도), 'grade' = 사용자(등급+검증횟수), 'none' = 미표시
-export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, charts, displayMode = "none", sessionId, messageId, onRegenerate, regenerated, isLoading }) {
+export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, charts, displayMode = "none", sessionId, messageId, onRegenerate, regenerated, isLoading, suggestedActions, onSuggestedAction, actionsDisabled }) {
   const isEscalated = status === "escalated";
   const isError = status === "error";
   const [copyState, setCopyState] = useState("idle");
@@ -122,6 +123,13 @@ export default function ResponseCard({ question, domain, status, grade, confiden
               ) : (
                 <>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{draft}</ReactMarkdown>
+                  {suggestedActions?.length > 0 && (
+                    <ActionButtons
+                      actions={suggestedActions}
+                      onAction={onSuggestedAction}
+                      disabled={actionsDisabled}
+                    />
+                  )}
                   {chart && typeof chart === "object" && (
                     <SimulationChart chartData={chart} />
                   )}
