@@ -193,36 +193,8 @@ export function useMarkers(mapInstance, visibleCats) {
       selectedFeatRef.current = feature || null;
       clusterLayerRef.current?.changed();
 
-      if (feature && mapInstance.current) {
-         const members = feature.get("features") || [];
-         const store = members[0]?.get("store");
-         const storeId = store?.STORE_ID || store?.store_id;
-         const lng = parseFloat(store?.LNG || store?.lng);
-         const lat = parseFloat(store?.LAT || store?.lat);
-         if (!isNaN(lng) && !isNaN(lat)) {
-            const map = mapInstance.current;
-            const currentZoom = map.getView().getZoom() ?? 16;
-            let targetZoom;
-            if (members.length === 1) {
-               targetZoom = Math.max(currentZoom, 18);
-            } else if (currentZoom < 18) {
-               targetZoom = 19;
-            } else {
-               targetZoom = Math.min(currentZoom + 1, 19);
-            }
-            map.getView().animate(
-               {
-                  center: fromLonLat([lng, lat]),
-                  zoom: targetZoom,
-                  duration: 400,
-               },
-               () => {
-                  // animate 완료 후 클러스터 재분해된 feature 재하이라이트
-                  if (storeId) _highlightById(storeId);
-               },
-            );
-         }
-      }
+      // 지도 이동은 하지 않음
+      // 이동이 필요한 경우(클러스터 팝업 상가 선택)는 MapView에서 직접 처리
    };
 
    const clearMarkers = () => {

@@ -1180,10 +1180,25 @@ export default function MapView() {
                setKakaoDetail(null);
                setBuildingStores([]);
                setLoadingDetail(true);
-               // 팝업 리스트에서 상가 선택 시 지도 이동 없음 - 하이라이트만
+               // 팝업 리스트에서 상가 선택 → zoom 19 이동 후 해당 마커 하이라이트
                if (s.LNG && s.LAT) {
+                  const map = mapInstance.current;
                   const storeId = s.STORE_ID || s.store_id;
-                  if (storeId) highlightById(storeId);
+                  if (map) {
+                     map.getView().animate(
+                        {
+                           center: fromLonLat([
+                              parseFloat(s.LNG),
+                              parseFloat(s.LAT),
+                           ]),
+                           zoom: 19,
+                           duration: 500,
+                        },
+                        () => {
+                           if (storeId) highlightById(storeId);
+                        },
+                     );
+                  }
                }
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
                   setKakaoDetail(d);
