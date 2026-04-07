@@ -1212,7 +1212,13 @@ export default function DongPanel({
                      {dongPanel.dongNm || dongPanel.admNm}
                   </div>
                </div>
-               <button onClick={onClose} className="mv-dong-panel__close">
+               <button
+                  onClick={(e) => {
+                     e.stopPropagation();
+                     onClose?.();
+                  }}
+                  className="mv-dong-panel__close"
+               >
                   ✕
                </button>
             </div>

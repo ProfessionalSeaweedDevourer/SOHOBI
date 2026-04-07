@@ -136,7 +136,7 @@ export async function handleWmsClick(map, coordinate) {
       try {
          const urlObj = new URL(url, window.location.origin);
          urlObj.searchParams.set("REQUEST", "GetFeatureInfo");
-         urlObj.searchParams.set("BUFFER", "10");
+         urlObj.searchParams.set("BUFFER", "20");
          // QUERY_LAYERS: 공시지가 레이어만 조회
          urlObj.searchParams.set(
             "QUERY_LAYERS",
@@ -144,16 +144,29 @@ export async function handleWmsClick(map, coordinate) {
          );
          const res = await fetch(urlObj.pathname + urlObj.search);
          const text = await res.text();
-         console.log("[WMS Response]", text.slice(0, 500));
          let feat = null;
          try {
             feat = JSON.parse(text).features?.[0];
          } catch {
             /* ignore */
          }
-         if (!feat) continue;
-
          const layerType = wmsLayer.get("name");
+         // feat 없어도 cadastral이면 좌표 기반 팝업 표시
+         if (!feat) {
+            if (layerType === "cadastral") {
+               return {
+                  parsed: {
+                     type: "cadastral",
+                     name: "지적도",
+                     addr: "",
+                     pnu: "",
+                  },
+                  layerType,
+                  landValue: null,
+               };
+            }
+            continue;
+         }
          const parsed = parseWmsProps(feat.properties, layerType);
 
          // 지적도 공시지가 처리
