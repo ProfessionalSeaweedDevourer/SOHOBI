@@ -858,6 +858,7 @@ export default function MapView() {
             <div className="mv-layer-panel-wrap">
                <Layerpanel
                   map={mapInstance.current}
+                  mapReady={mapReady}
                   vworldKey={import.meta.env.VITE_VWORLD_API_KEY}
                   wmsLayerRef={wmsLayerRef}
                   dongModeOn={dongMode}

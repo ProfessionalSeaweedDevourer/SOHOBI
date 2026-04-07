@@ -25,13 +25,20 @@ export default function LayerPanel({
 
    // ── 지적도: Layerpanel이 단독 관리, zoom 19+ 에서만 표시 ──
    // ── 지적도 레이어 초기 생성 (마운트 1회) ───────────────────
-   const initDoneRef = React.useRef(false);
    React.useEffect(() => {
-      if (!map || !mapReady || initDoneRef.current) return;
-      initDoneRef.current = true;
+      if (!map || !mapReady) return;
+      // 이미 cadastral 레이어가 있으면 ref만 연결
+      const existing = map
+         .getLayers()
+         .getArray()
+         .find((l) => l.get("name") === "cadastral");
+      if (existing) {
+         wmsLayerRef.current = existing;
+         return;
+      }
       const layer = new TileLayer({
          source: new TileWMS({
-            url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
+            url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
             params: {
                SERVICE: "WMS",
                VERSION: "1.3.0",
@@ -45,7 +52,7 @@ export default function LayerPanel({
             crossOrigin: "anonymous",
             transition: 0,
          }),
-         visible: false, // zoom 체크 후 표시 결정
+         visible: false,
          opacity: 0.7,
          zIndex: 50,
       });
@@ -54,7 +61,7 @@ export default function LayerPanel({
       wmsLayerRef.current = layer;
       // 초기 zoom 체크
       const zoom = map.getView().getZoom() ?? 0;
-      layer.setVisible(zoom >= 19);
+      layer.setVisible(zoom >= 17);
    }, [map, mapReady]); // eslint-disable-line
 
    // ── zoom 변경 시 지적도 visibility 갱신 ─────────────────────
@@ -64,7 +71,7 @@ export default function LayerPanel({
          const layer = wmsLayerRef.current;
          if (!layer) return;
          const zoom = map.getView().getZoom() ?? 0;
-         layer.setVisible(cadastralOn && zoom >= 19);
+         layer.setVisible(cadastralOn && zoom >= 17);
       };
       map.getView().on("change:resolution", updateVisibility);
       return () => map.getView().un("change:resolution", updateVisibility);
@@ -76,7 +83,7 @@ export default function LayerPanel({
       const layer = wmsLayerRef.current;
       if (layer) {
          const zoom = map.getView().getZoom() ?? 0;
-         layer.setVisible(next && zoom >= 19);
+         layer.setVisible(next && zoom >= 17);
       }
       setCadastralOn(next);
    };
