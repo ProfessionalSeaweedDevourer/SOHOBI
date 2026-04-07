@@ -211,6 +211,7 @@ export default function UserChat() {
   const [placeholder] = useState(
     () => PLACEHOLDER_QUESTIONS[Math.floor(Math.random() * PLACEHOLDER_QUESTIONS.length)]
   );
+  const [regeneratingIndex, setRegeneratingIndex] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -307,6 +308,71 @@ export default function UserChat() {
     setActiveEvents([]);
     setLoading(false);
     inputRef.current?.clear();
+  }
+
+  async function handleRegenerate(index) {
+    const msg = messages[index];
+    if (!msg || loading) return;
+
+    const question = msg.question;
+    setLoading(true);
+    setActiveEvents([]);
+    setRegeneratingIndex(index);
+
+    let finalResult = null;
+
+    try {
+      await streamQuery(question, 3, sessionId, (eventName, data) => {
+        if (eventName === "error") {
+          setMessages(prev => {
+            const next = [...prev];
+            next[index] = { ...next[index], status: "error", draft: interpretError(data.message || data.error || "") };
+            return next;
+          });
+          return;
+        }
+        setActiveEvents(prev => [...prev, { event: eventName, ...data }]);
+        if (eventName === "complete") {
+          finalResult = data;
+        }
+      }, latestParams);
+    } catch (e) {
+      setMessages(prev => {
+        const next = [...prev];
+        next[index] = { ...next[index], status: "error", draft: interpretError(e.message) };
+        return next;
+      });
+      setActiveEvents([]);
+      setLoading(false);
+      setRegeneratingIndex(null);
+      return;
+    }
+
+    if (finalResult) {
+      setMessages(prev => {
+        const next = [...prev];
+        next[index] = {
+          question,
+          domain:         finalResult.domain,
+          status:         finalResult.status,
+          grade:          finalResult.grade,
+          confidenceNote: finalResult.confidence_note,
+          draft:          finalResult.draft,
+          retryCount:     finalResult.retry_count,
+          chart:          finalResult.chart || null,
+          charts:         finalResult.charts || [],
+          requestId:      finalResult.request_id || null,
+          sessionId:      finalResult.session_id || null,
+          regenerated:    true,
+        };
+        return next;
+      });
+      if (finalResult.updated_params) setLatestParams(finalResult.updated_params);
+    }
+
+    setActiveEvents([]);
+    setLoading(false);
+    setRegeneratingIndex(null);
   }
 
   return (
@@ -497,6 +563,9 @@ export default function UserChat() {
                 displayMode="full"
                 sessionId={msg.sessionId}
                 messageId={msg.requestId}
+                onRegenerate={() => handleRegenerate(i)}
+                regenerated={!!msg.regenerated}
+                isLoading={loading}
               />
               {i === 0 && !user && showLoginNudge && (
                 <LoginNudgeCard
