@@ -9,7 +9,7 @@ import "./Layerpanel.css";
 function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
    const layer = new TileLayer({
       source: new TileWMS({
-         url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
+         url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
          params: {
             SERVICE: "WMS",
             VERSION: "1.3.0",
@@ -33,7 +33,7 @@ function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
 function makeCadastralLayer(vworldKey) {
    const layer = new TileLayer({
       source: new TileWMS({
-         url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
+         url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
          params: {
             SERVICE: "WMS",
             VERSION: "1.3.0",

@@ -99,6 +99,7 @@ jobs:
           VITE_KAKAO_JS_KEY: 4f588577d41ff38695f0daa513b5bef7
           VITE_KAKAO_API_KEY: 064e455e57b72a7665be2ff5515aead2
           VITE_VWORLD_API_KEY: BE3AF33A-202E-3D5F-A8AD-63D9EE291ABF
+          VITE_VWORLD_DOMAIN: https://sohobi.net
           VITE_MAP_URL: ${{ secrets.VITE_MAP_URL }}
           VITE_REALESTATE_URL: ${{ secrets.VITE_REALESTATE_URL }}
         with:
