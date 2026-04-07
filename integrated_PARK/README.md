@@ -482,8 +482,7 @@ integrated_PARK/
 │   ├── signoff_legal/evaluate/skprompt.txt      # G1~G4, warnings + grade
 │   └── signoff_location/evaluate/skprompt.txt  # S1~S5
 ├── scripts/
-│   ├── pull_logs.py              # 배포 백엔드에서 로그 다운로드
-│   └── merge_logs.py             # 로그 파일 병합
+│   └── pull_logs.py              # 배포 백엔드에서 로그 다운로드
 ├── logs/                         # JSONL 로그 (Git 제외)
 │   ├── queries.jsonl
 │   └── rejections.jsonl
