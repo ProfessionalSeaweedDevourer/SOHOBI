@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { streamQuery } from "../../api";
 import ProgressPanel from "../ProgressPanel";
+import ActionButtons from "../ActionButtons";
 import "./ChatPanel.css";
 
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
@@ -96,8 +97,8 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
     [onNavigate]
   );
 
-  const handleSend = useCallback(async () => {
-    const text = input.trim();
+  const handleSend = useCallback(async (directText) => {
+    const text = (typeof directText === "string" ? directText : input).trim();
     if (!text || loading) return;
 
     // 유저 메시지 추가
@@ -105,7 +106,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
       ...prev,
       { id: crypto.randomUUID(), role: "user", content: text },
     ]);
-    setInput("");
+    if (typeof directText !== "string") setInput("");
 
     // 지도 이동 패턴 체크
     const navMatch = text.match(NAV_PATTERN);
@@ -198,9 +199,10 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           if (data.session_id) setSessionId(data.session_id);
           const draft = data.draft || accumulated || "응답을 받지 못했습니다.";
           const charts = data.charts || [];
+          const suggestedActions = data.suggested_actions || [];
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === streamMsgId ? { ...m, content: draft, charts } : m,
+              m.id === streamMsgId ? { ...m, content: draft, charts, suggestedActions } : m,
             ),
           );
           // 지도 하이라이트
@@ -304,7 +306,16 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           {messages.map((msg) => (
             <div key={msg.id} className={`mv-chat-msg mv-chat-msg--${msg.role}`}>
               {msg.role === "assistant" ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                <>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  {msg.suggestedActions?.length > 0 && (
+                    <ActionButtons
+                      actions={msg.suggestedActions}
+                      onAction={handleSend}
+                      disabled={loading}
+                    />
+                  )}
+                </>
               ) : (
                 msg.content
               )}

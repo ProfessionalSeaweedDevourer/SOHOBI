@@ -138,6 +138,10 @@
 .mv-chat-msg--assistant table tbody tr:nth-child(even) {
   background: rgba(0,0,0,0.03);
 }
+.mv-chat-msg--assistant del,
+.mv-chat-msg--assistant s {
+  text-decoration: none;
+}
 .mv-chat-msg--system {
   align-self: center;
   background: #fef3c7;
