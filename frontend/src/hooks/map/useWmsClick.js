@@ -35,8 +35,8 @@ export function parseWmsProps(p, layerType) {
          remark: p.remark || "",
          tel: "",
          hours: "",
-         jiga: p.jiga || p.pblntfPclnd || "",
-         gosi_year: p.gosi_year || p.stdrYear || "",
+         jiga: p.pblntfPclnd || p.jiga || p.land_price || p.pnu_price || "",
+         gosi_year: p.stdrYear || p.gosi_year || p.pub_year || "",
          gosi_month: p.gosi_month || "",
       };
    }
@@ -107,10 +107,8 @@ export function parseWmsProps(p, layerType) {
  * @returns {Promise<{parsed, layerType, landValue}|null>}
  */
 
-const CADASTRAL_MIN_ZOOM = 17; // Layerpanel.jsx minZoom: 17 과 동기화
-
 // ── WMS 레이어 클릭 처리 ────────────────────────────────────────
-export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } = {}) {
+export async function handleWmsClick(map, coordinate) {
    const wmsLayers = map
       .getLayers()
       .getArray()
@@ -120,13 +118,13 @@ export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } 
          ),
       );
 
+   const currentZoom = map.getView().getZoom() ?? 0;
+
    for (const wmsLayer of wmsLayers) {
       if (!wmsLayer.getVisible()) continue;
-
-      // cadastral: minZoom 이하에서 타일 없음 → GetFeatureInfo 스킵 (프로그래매틱 호출은 예외)
-      if (!skipZoomGuard && wmsLayer.get("name") === "cadastral") {
-         if ((map.getView().getZoom() ?? 0) < CADASTRAL_MIN_ZOOM) continue;
-      }
+      // minZoom 미만이면 레이어가 실제로 렌더되지 않으므로 skip
+      const layerMinZoom = wmsLayer.getMinZoom?.() ?? 0;
+      if (currentZoom < layerMinZoom) continue;
       const source = wmsLayer.getSource();
       const url = source.getFeatureInfoUrl(
          coordinate,
@@ -138,17 +136,37 @@ export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } 
       try {
          const urlObj = new URL(url, window.location.origin);
          urlObj.searchParams.set("REQUEST", "GetFeatureInfo");
+         urlObj.searchParams.set("BUFFER", "20");
+         // QUERY_LAYERS: 공시지가 레이어만 조회
+         urlObj.searchParams.set(
+            "QUERY_LAYERS",
+            "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+         );
          const res = await fetch(urlObj.pathname + urlObj.search);
          const text = await res.text();
+         console.log("[WMS Response]", text.slice(0, 500));
          let feat = null;
          try {
             feat = JSON.parse(text).features?.[0];
          } catch {
             /* ignore */
          }
-         if (!feat) continue;
-
          const layerType = wmsLayer.get("name");
+         if (!feat) {
+            if (layerType === "cadastral") {
+               return {
+                  parsed: {
+                     type: "cadastral",
+                     name: "지적도",
+                     addr: "",
+                     pnu: "",
+                  },
+                  layerType,
+                  landValue: null,
+               };
+            }
+            continue;
+         }
          const parsed = parseWmsProps(feat.properties, layerType);
 
          // 지적도 공시지가 처리
