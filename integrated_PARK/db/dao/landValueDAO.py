@@ -14,7 +14,8 @@ class LandValueDAO:
     """VWorld 개별공시지가 조회 (DB 불필요)"""
 
     def __init__(self):
-        self._key = os.getenv("VWORLD_API_KEY", "BE3AF33A-202E-3D5F-A8AD-63D9EE291ABF")
+        self._key    = os.getenv("VWORLD_API_KEY", "BE3AF33A-202E-3D5F-A8AD-63D9EE291ABF")
+        self._domain = os.getenv("VWORLD_DOMAIN", "https://sohobi.net")
 
     async def fetch(self, pnu: str, years: int = 5) -> dict:
         """PNU 기반 최근 N년 공시지가 이력"""
@@ -30,7 +31,7 @@ class LandValueDAO:
                         f"https://api.vworld.kr/req/data"
                         f"?service=data&version=2.0&request=GetFeature"
                         f"&format=json&errorFormat=json&data=LP_PA_CBND_BUBUN"
-                        f"&key={self._key}&attrFilter=pnu:=:{pnu}"
+                        f"&key={self._key}&domain={self._domain}&attrFilter=pnu:=:{pnu}"
                         f"&columns=pnu,pblntfPclnd,stdrYear&size=1&page=1"
                     )
                     res = await client.get(url)
