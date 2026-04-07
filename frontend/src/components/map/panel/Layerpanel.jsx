@@ -23,7 +23,8 @@ export default function LayerPanel({
    const [festivalOn, setFestivalOn] = useState(true);
    const [schoolOn, setSchoolOn] = useState(true);
 
-   // 초기 레이어 자동 추가 — 한 번만 생성, 이후 setVisible로 토글
+   // ── 지적도: Layerpanel이 단독 관리, zoom 19+ 에서만 표시 ──
+   // ── 지적도 레이어 초기 생성 (마운트 1회) ───────────────────
    const initDoneRef = React.useRef(false);
    React.useEffect(() => {
       if (!map || !mapReady || initDoneRef.current) return;
@@ -44,21 +45,39 @@ export default function LayerPanel({
             crossOrigin: "anonymous",
             transition: 0,
          }),
-         visible: true,
+         visible: false, // zoom 체크 후 표시 결정
          opacity: 0.7,
          zIndex: 50,
       });
       layer.set("name", "cadastral");
       map.addLayer(layer);
       wmsLayerRef.current = layer;
+      // 초기 zoom 체크
+      const zoom = map.getView().getZoom() ?? 0;
+      layer.setVisible(zoom >= 19);
    }, [map, mapReady]); // eslint-disable-line
 
-   // ── 지적도 — removeLayer/addLayer 대신 setVisible로 토글 ────
+   // ── zoom 변경 시 지적도 visibility 갱신 ─────────────────────
+   React.useEffect(() => {
+      if (!map || !mapReady) return;
+      const updateVisibility = () => {
+         const layer = wmsLayerRef.current;
+         if (!layer) return;
+         const zoom = map.getView().getZoom() ?? 0;
+         layer.setVisible(cadastralOn && zoom >= 19);
+      };
+      map.getView().on("change:resolution", updateVisibility);
+      return () => map.getView().un("change:resolution", updateVisibility);
+   }, [map, mapReady, cadastralOn]); // eslint-disable-line
+
+   // ── 지적도 토글 ─────────────────────────────────────────────
    const toggleCadastral = () => {
-      const layer = wmsLayerRef.current;
-      if (!layer) return;
       const next = !cadastralOn;
-      layer.setVisible(next);
+      const layer = wmsLayerRef.current;
+      if (layer) {
+         const zoom = map.getView().getZoom() ?? 0;
+         layer.setVisible(next && zoom >= 19);
+      }
       setCadastralOn(next);
    };
 

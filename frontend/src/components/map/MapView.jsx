@@ -3,7 +3,6 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useMap } from "../../hooks/map/useMap";
-import { useMapZoom } from "../../hooks/map/useMapZoom";
 import { toLonLat, fromLonLat } from "ol/proj";
 import {
    extend as extendExtent,
@@ -66,6 +65,7 @@ export default function MapView() {
    const wmsLayerRef = useRef(null);
 
    const [coords, setCoords] = useState({ lat: "37.5665", lng: "126.9780" });
+   const [currentZoom, setCurrentZoom] = useState(16);
    const [chatOpen, setChatOpen] = useState(false);
    const [chatContext, setChatContext] = useState(null);
    const [landmarkLoaded, setLandmarkLoaded] = useState(false);
@@ -78,12 +78,12 @@ export default function MapView() {
    const [nearbyCount, setNearbyCount] = useState(null);
    const [clusterPopup, setClusterPopup] = useState(null);
    const lastClusterStoresRef = useRef(null); // 뒤로가기용 클러스터 보존
+   const catFetchTimerRef = useRef(null); // 카테고리 fetch debounce
    const [storeSearchOn, setStoreSearchOn] = useState(true); // 상가 전체 검색 ON/OFF
    const [buildingStores, setBuildingStores] = useState([]);
    const [loading, setLoading] = useState(false);
    const [wmsPopup, setWmsPopup] = useState(null);
    const prevStorePopupRef = useRef(null); // WmsPopup 뒤로가기용
-   const catFetchTimerRef = useRef(null); // 카테고리 fetch debounce
    const [landValue, setLandValue] = useState(null);
    const [showPanel, setShowPanel] = useState(false);
 
@@ -102,7 +102,30 @@ export default function MapView() {
       fetchDongPanel,
    } = useDongPanel();
 
-   const currentZoom = useMapZoom(mapInstance, mapRef, mapReady);
+   // 줌 레벨 추적 + OL 버튼 사이에 표시
+   useEffect(() => {
+      const map = mapInstance.current;
+      if (!map) return;
+      const updateZoom = () => {
+         const z = Math.round(map.getView().getZoom() || 16);
+         setCurrentZoom(z);
+         // OL +/- 버튼 사이에 줌 레벨 표시
+         const zoomEl = mapRef.current?.querySelector(".ol-zoom");
+         if (zoomEl) {
+            let badge = zoomEl.querySelector(".zoom-level-badge");
+            if (!badge) {
+               badge = document.createElement("div");
+               badge.className = "zoom-level-badge";
+               const btns = zoomEl.querySelectorAll("button");
+               if (btns.length >= 2) zoomEl.insertBefore(badge, btns[1]);
+            }
+            badge.textContent = z;
+         }
+      };
+      map.getView().on("change:resolution", updateZoom);
+      updateZoom();
+      return () => map.getView().un("change:resolution", updateZoom);
+   }, [mapReady]); // eslint-disable-line
 
    const allCatKeys = new Set(CATEGORIES.map((c) => c.key));
    const [visibleCats, setVisibleCats] = useState(allCatKeys);
@@ -115,6 +138,7 @@ export default function MapView() {
       drawMarkers,
       clearMarkers,
       selectMarker,
+      highlightById,
       markerLayerRef,
    } = useMarkers(mapInstance, visibleCats);
 
@@ -144,48 +168,9 @@ export default function MapView() {
       loadLandmarks().then(() => setLandmarkLoaded(true));
       loadFestivals().then(() => setFestivalLoaded(true));
       loadSchools().then(() => setSchoolLoaded(true));
-      // 기본 폴리곤 활성화 (dongMode 기본값 sales라서 경계 표시)
       ensureDongBoundaryLayer();
-
-      // 지적도 레이어 — mapReady 시점에 초기화 (showPanel 여부 무관)
-      const map = mapInstance.current;
-      const vKey = import.meta.env.VITE_VWORLD_API_KEY;
-      if (
-         !map
-            .getLayers()
-            .getArray()
-            .some((l) => l.get("name") === "cadastral")
-      ) {
-         Promise.all([
-            import("ol/layer/Tile"),
-            import("ol/source/TileWMS"),
-         ]).then(([{ default: TileLayer }, { default: TileWMS }]) => {
-            const layer = new TileLayer({
-               source: new TileWMS({
-                  url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vKey}&DOMAIN=localhost`,
-                  params: {
-                     SERVICE: "WMS",
-                     VERSION: "1.3.0",
-                     REQUEST: "GetMap",
-                     LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-                     STYLES: ",",
-                     FORMAT: "image/png",
-                     TRANSPARENT: "TRUE",
-                     CRS: "EPSG:3857",
-                  },
-                  crossOrigin: "anonymous",
-                  transition: 0,
-               }),
-               opacity: 0.7,
-               zIndex: 50,
-               minZoom: 17,
-            });
-            layer.set("name", "cadastral");
-            map.addLayer(layer);
-            wmsLayerRef.current = layer;
-         });
-      }
    }, [mapReady]); // eslint-disable-line
+
    const dongSelectedFeatRef = useRef(null); // 현재 선택(클릭)된 폴리곤
    const dongSearchFeatsRef = useRef([]); // 검색으로 하이라이트된 폴리곤 목록
 
@@ -501,7 +486,7 @@ export default function MapView() {
          return true;
       }
       return false;
-   }, []); // eslint-disable-line react-hooks/exhaustive-deps — 모든 deps가 안정적(ref/setter)
+   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
    // ── 2순위: 동 폴리곤 클릭 ──────────────────────────────────────────
    const handlePolygonClick = useCallback(
@@ -601,16 +586,15 @@ export default function MapView() {
                      .then((d) => {
                         if (d.data?.length) setLandValue(d.data);
                      })
-                     .catch((err) =>
-                        console.error("[공시지가 조회 실패]", err),
-                     );
+                     .catch(() => {});
                }
             }
          });
          return true;
       },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       [dongMode, visibleCats, selectedQtr],
-   ); // eslint-disable-line react-hooks/exhaustive-deps
+   );
 
    // ── 클릭 최상위 조정자 ──────────────────────────────────────────────
    const clickHandler = useCallback(
@@ -640,7 +624,7 @@ export default function MapView() {
                   .then((d) => {
                      if (d.data?.length) setLandValue(d.data);
                   })
-                  .catch((err) => console.error("[공시지가 조회 실패]", err));
+                  .catch(() => {});
             }
             return;
          }
@@ -658,8 +642,9 @@ export default function MapView() {
          }
          // 빈 영역 클릭 시 아무것도 안 함 (폴리곤 선택으로만 상가 검색)
       },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       [handleMarkerClick, handlePolygonClick],
-   ); // eslint-disable-line react-hooks/exhaustive-deps
+   );
 
    // ── 지도 초기화 + pointermove 등록 (마운트 1회) ────────────────────
    useEffect(() => {
@@ -751,7 +736,7 @@ export default function MapView() {
       if (!map) return;
       map.on("click", clickHandler);
       return () => map.un("click", clickHandler);
-   }, [clickHandler]);
+   }, [clickHandler]); // eslint-disable-line react-hooks/exhaustive-deps
 
    // ── JSX 렌더 ───────────────────────────────────────────────────
    return (
@@ -861,12 +846,6 @@ export default function MapView() {
             }}
          />
          <div className="mv-top-right-controls">
-            <a href="/user" className="mv-nav-btn">
-               ← 상담
-            </a>
-            <a href="/features" className="mv-nav-btn">
-               기능
-            </a>
             <ThemeToggle />
             <button
                className="mv-layer-btn"
@@ -879,10 +858,8 @@ export default function MapView() {
             <div className="mv-layer-panel-wrap">
                <Layerpanel
                   map={mapInstance.current}
-                  mapReady={mapReady}
                   vworldKey={import.meta.env.VITE_VWORLD_API_KEY}
                   wmsLayerRef={wmsLayerRef}
-                  currentZoom={currentZoom}
                   dongModeOn={dongMode}
                   landmarkLayerRef={landmarkLayerRef}
                   festivalLayerRef={festivalLayerRef}
@@ -1005,9 +982,7 @@ export default function MapView() {
                            .then((lv) => {
                               if (lv.data?.length) setLandValue(lv.data);
                            })
-                           .catch((err) =>
-                              console.error("[공시지가 조회 실패]", err),
-                           );
+                           .catch(() => {});
                      }
                   })
                   .catch(() => {
@@ -1022,17 +997,24 @@ export default function MapView() {
                setKakaoDetail(null);
                setBuildingStores([]);
                setLoadingDetail(true);
+               // 팝업 리스트에서 상가 선택 → zoom 19 이동 후 해당 마커 하이라이트
                if (s.LNG && s.LAT) {
                   const map = mapInstance.current;
+                  const storeId = s.STORE_ID || s.store_id;
                   if (map) {
-                     map.getView().animate({
-                        center: fromLonLat([
-                           parseFloat(s.LNG),
-                           parseFloat(s.LAT),
-                        ]),
-                        zoom: Math.max(map.getView().getZoom() || 17, 17),
-                        duration: 500,
-                     });
+                     map.getView().animate(
+                        {
+                           center: fromLonLat([
+                              parseFloat(s.LNG),
+                              parseFloat(s.LAT),
+                           ]),
+                           zoom: 19,
+                           duration: 500,
+                        },
+                        () => {
+                           if (storeId) highlightById(storeId);
+                        },
+                     );
                   }
                }
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
@@ -1060,11 +1042,7 @@ export default function MapView() {
          />
          <DongPanel
             dongPanel={dongPanel}
-            onClose={() => {
-               setDongPanel(null);
-               setSvcData([]);
-               setSelectedSvc("");
-            }}
+            onClose={() => setDongPanel(null)}
             svcData={svcData}
             selectedSvc={selectedSvc}
             onSvcChange={setSelectedSvc}
