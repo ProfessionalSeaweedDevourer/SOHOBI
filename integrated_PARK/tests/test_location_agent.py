@@ -1,5 +1,5 @@
 """
-T-LA-01 ~ T-LA-19: LocationAgent / LocationPlugin 단위 테스트
+T-LA-01 ~ T-LA-14: LocationAgent 단위 테스트
 
 실행:
     cd integrated_PARK
@@ -8,7 +8,6 @@ T-LA-01 ~ T-LA-19: LocationAgent / LocationPlugin 단위 테스트
 Azure LLM·PostgreSQL DB 호출 없이 mock만 사용합니다.
 
 발견된 버그:
-  Bug-1 (T-LA-15): location_plugin.py → str 주석이지만 dict 반환 (SK 직렬화 오류)
   Bug-2 (T-LA-13): _call_llm content_filter 재시도 시 user_msg 누락
   Bug-3 (T-LA-09): analyze()에서 trdar_name 키 접근 → KeyError (올바른 키: adm_name)
 
@@ -457,64 +456,6 @@ class TestCallLlm:
 
         with pytest.raises(ValueError, match="빈 응답"):
             await agent._call_llm("sys", "user")
-
-
-# ────────────────────────────────────────────────────────────────────────────
-# T-LA-15 ~ T-LA-17: LocationPlugin 검증
-# ────────────────────────────────────────────────────────────────────────────
-
-
-class TestPlugin:
-    """location_plugin.py SK Plugin 동작 검증"""
-
-    @pytest.mark.asyncio
-    async def test_15_analyze_returns_str(self, fake_kernel, mock_repo):
-        """T-LA-15 [Bug-1]: analyze_commercial_area 반환값이 str 인지 확인
-
-        Bug: self._agent.analyze() → dict 반환 → SK Plugin 직렬화 오류
-        Fix: json.dumps()로 str 변환 필요
-        """
-        from plugins.location_plugin import LocationPlugin
-
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
-            plugin = LocationPlugin(fake_kernel)
-
-        result = await plugin.analyze_commercial_area("홍대", "카페", "20244")
-        assert isinstance(result, str), (
-            f"Bug-1: analyze_commercial_area가 str이 아닌 {type(result).__name__}을 반환합니다. "
-            "json.dumps()로 직렬화해야 합니다."
-        )
-        # JSON 파싱 가능한 문자열이어야 함
-        parsed = json.loads(result)
-        assert "draft" in parsed
-
-    @pytest.mark.asyncio
-    async def test_16_compare_locations_comma_split(self, fake_kernel, mock_repo):
-        """T-LA-16: compare_commercial_areas 쉼표 파싱 정상 동작"""
-        from plugins.location_plugin import LocationPlugin
-
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
-            plugin = LocationPlugin(fake_kernel)
-
-        result = await plugin.compare_commercial_areas("홍대,강남,잠실", "카페", "20244")
-        assert isinstance(result, str), (
-            f"Bug-1: compare_commercial_areas가 str이 아닌 {type(result).__name__}을 반환합니다."
-        )
-        parsed = json.loads(result)
-        assert "draft" in parsed
-
-    @pytest.mark.asyncio
-    async def test_17_compare_locations_with_spaces(self, fake_kernel, mock_repo):
-        """T-LA-17: 쉼표+공백 구분자 처리 (예: '홍대, 강남, 잠실')"""
-        from plugins.location_plugin import LocationPlugin
-
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
-            plugin = LocationPlugin(fake_kernel)
-
-        result = await plugin.compare_commercial_areas("홍대, 강남, 잠실", "카페", "20244")
-        assert isinstance(result, str)
-        parsed = json.loads(result)
-        assert "draft" in parsed
 
 
 # ────────────────────────────────────────────────────────────────────────────

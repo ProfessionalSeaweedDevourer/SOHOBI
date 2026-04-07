@@ -472,7 +472,6 @@ integrated_PARK/
 │   ├── legal_search_plugin.py       # Azure AI Search 법령 RAG
 │   ├── gov_support_plugin.py        # 정부지원사업 하이브리드 검색 RAG (5600건+)
 │   ├── food_business_plugin.py      # 영업 신고서 PDF 생성 (NAM)
-│   └── location_plugin.py           # 상권분析 SK Plugin 래퍼
 ├── signoff/
 │   └── signoff_agent.py          # Sign-off 판정 엔진 — grade A/B/C (PARK)
 ├── prompts/                      # 도메인별 Sign-off 평가 루브릭
