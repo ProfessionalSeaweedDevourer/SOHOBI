@@ -7,7 +7,7 @@ import VectorSource from "ol/source/Vector";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import { fromLonLat } from "ol/proj";
-import { Style, Circle as CircleStyle, Fill, Stroke } from "ol/style";
+import { Style, Circle as CircleStyle, Fill, Stroke, Text } from "ol/style";
 
 const MAP_URL = import.meta.env.VITE_MAP_URL || "/map-api";
 const _API_KEY = import.meta.env.VITE_API_KEY || "";
@@ -15,23 +15,33 @@ const _mapHeaders = _API_KEY ? { "X-API-Key": _API_KEY } : {};
 
 // ── 타입별 스타일 설정 ────────────────────────────────────────
 const TYPE_STYLE = {
-   12: { color: "#f59e0b", label: "관광" }, // 관광지 - 노랑
-   14: { color: "#8b5cf6", label: "문화" }, // 문화시설 - 보라
-   15: { color: "#ef4444", label: "축제" }, // 축제 - 빨강
-   school: { color: "#10b981", label: "학교" }, // 학교 - 초록
+   12: { color: "#f59e0b", label: "관광" },
+   14: { color: "#8b5cf6", label: "문화" },
+   15: { color: "#ef4444", label: "축제" },
+   school: { color: "#10b981", label: "학교" },
 };
 
 function makeStyle(typeKey, selected = false) {
-   const { color } = TYPE_STYLE[typeKey] || { color: "#999" };
+   const { color, label } = TYPE_STYLE[typeKey] || { color: "#999", label: "" };
+   const radius = selected ? 14 : 10;
    return new Style({
       image: new CircleStyle({
-         radius: selected ? 10 : 7,
+         radius,
          fill: new Fill({ color: selected ? "#fff" : color }),
          stroke: new Stroke({
             color: selected ? color : "#fff",
-            width: selected ? 3 : 2,
+            width: selected ? 4 : 2,
          }),
       }),
+      text: label
+         ? new Text({
+              text: label,
+              offsetY: -(radius + 6),
+              font: selected ? "bold 12px sans-serif" : "bold 11px sans-serif",
+              fill: new Fill({ color }),
+              stroke: new Stroke({ color: "#fff", width: 3 }),
+           })
+         : null,
    });
 }
 

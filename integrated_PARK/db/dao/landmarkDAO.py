@@ -47,13 +47,13 @@ class LandmarkDAO(BaseDAO):
         try:
             if content_types:
                 placeholders = ",".join([f"%(t{i})s" for i in range(len(content_types))])
-                params = {f"t{i}": str(v) for i, v in enumerate(content_types)}
+                params = {f"t{i}": int(v) for i, v in enumerate(content_types)}
                 params["sgg_cd"] = sgg_cd
                 sql = f"""
                     {SELECT_LANDMARK}
                     FROM landmark
                     WHERE sigungu_code = %(sgg_cd)s
-                      AND content_type_id IN ({placeholders})
+                      AND content_type_id::integer IN ({placeholders})
                     ORDER BY title
                 """
             else:
@@ -73,18 +73,18 @@ class LandmarkDAO(BaseDAO):
             logger.error(f"[LandmarkDAO] get_by_adm_cd: {e}")
             return []
 
-    def get_all(self, content_types: list = None, limit: int = 500) -> list:
+    def get_all(self, content_types: list = None, limit: int = 2000) -> list:
         """서울 전체 랜드마크 조회 (최대 limit건)"""
         try:
             if content_types:
                 # content_type_id는 varchar → 문자열로 캐스트
                 placeholders = ",".join([f"%(t{i})s" for i in range(len(content_types))])
-                params = {f"t{i}": str(v) for i, v in enumerate(content_types)}
+                params = {f"t{i}": int(v) for i, v in enumerate(content_types)}
                 params["limit"] = limit
                 sql = f"""
                     {SELECT_LANDMARK}
                     FROM landmark
-                    WHERE content_type_id IN ({placeholders})
+                    WHERE content_type_id::integer IN ({placeholders})
                     ORDER BY content_type_id, title
                     LIMIT %(limit)s
                 """

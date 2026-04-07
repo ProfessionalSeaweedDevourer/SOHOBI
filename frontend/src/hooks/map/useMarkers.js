@@ -122,11 +122,12 @@ export function useMarkers(mapInstance, visibleCats) {
          zIndex: 200,
          style: (feature) => {
             const members = feature.get("features") || [];
+            const isSel = selectedFeatRef.current === feature;
+
             if (members.length === 1) {
                const store = members[0].get("store");
-               return makeMarkerStyle(store?.CAT_CD);
+               return makeMarkerStyle(store?.CAT_CD, isSel);
             }
-            // 클러스터 - 대표 카테고리 색상
             const cats = members
                .map((f) => f.get("store")?.CAT_CD)
                .filter(Boolean);
@@ -136,6 +137,22 @@ export function useMarkers(mapInstance, visibleCats) {
                   cats.filter((c) => c === a).length,
             )[0];
             const color = CAT_COLORS[topCat] || "#888";
+            if (isSel) {
+               const radius =
+                  members.length > 99 ? 18 : members.length > 9 ? 15 : 12;
+               return new Style({
+                  image: new CircleStyle({
+                     radius: radius + 3,
+                     fill: new Fill({ color: "#fff" }),
+                     stroke: new Stroke({ color, width: 3 }),
+                  }),
+                  text: new Text({
+                     text: String(members.length),
+                     fill: new Fill({ color }),
+                     font: `bold ${radius}px sans-serif`,
+                  }),
+               });
+            }
             return makeClusterStyle(members.length, color);
          },
       });
@@ -144,62 +161,34 @@ export function useMarkers(mapInstance, visibleCats) {
       clusterLayerRef.current = layer;
    };
 
-   const selectMarker = (feature) => {
-      // 이전 선택 복원
-      if (selectedFeatRef.current) {
-         const prev = selectedFeatRef.current;
-         const prevMembers = prev.get("features") || [];
-         if (prevMembers.length > 1) {
-            // 클러스터: 빈도 기반 대표 색상으로 복원
-            const cats = prevMembers
-               .map((f) => f.get("store")?.CAT_CD)
-               .filter(Boolean);
-            const topCat = cats.sort(
-               (a, b) =>
-                  cats.filter((c) => c === b).length -
-                  cats.filter((c) => c === a).length,
-            )[0];
-            const color = CAT_COLORS[topCat] || "#888";
-            prev.setStyle(makeClusterStyle(prevMembers.length, color));
-         } else {
-            prev.setStyle(makeMarkerStyle(prev.get("store")?.CAT_CD));
-         }
-         selectedFeatRef.current = null;
-      }
-      if (!feature) return;
+   // 클러스터/단일 모두 대응: cluster feature는 "features" 배열 안에 store가 있음
+   const _getCatCd = (feat) => {
+      if (!feat) return undefined;
+      const direct = feat.get("store");
+      if (direct) return direct.CAT_CD;
+      const members = feat.get("features");
+      return members?.[0]?.get("store")?.CAT_CD;
+   };
 
-      // 새 선택 강조
-      const members = feature.get("features") || [];
-      if (members.length > 1) {
-         const cats = members
-            .map((f) => f.get("store")?.CAT_CD)
-            .filter(Boolean);
-         const topCat = cats.sort(
-            (a, b) =>
-               cats.filter((c) => c === b).length -
-               cats.filter((c) => c === a).length,
-         )[0];
-         const color = CAT_COLORS[topCat] || "#888";
-         const radius = members.length > 99 ? 18 : members.length > 9 ? 15 : 12;
-         feature.setStyle(
-            new Style({
-               image: new CircleStyle({
-                  radius,
-                  fill: new Fill({ color }),
-                  stroke: new Stroke({ color: "#fff", width: 3 }),
-               }),
-               text: new Text({
-                  text: String(members.length),
-                  fill: new Fill({ color: "#fff" }),
-                  font: "bold 11px sans-serif",
-               }),
-            }),
-         );
-      } else {
-         const store = feature.get("store");
-         feature.setStyle(makeMarkerStyle(store?.CAT_CD, true));
+   const _highlightById = (storeId) => {
+      if (!storeId || !clusterSourceRef?.current) return;
+      const wrappers = clusterSourceRef.current.getFeatures();
+      for (const wf of wrappers) {
+         const match = (wf.get("features") || []).find((f) => {
+            const s = f.get("store");
+            return (s?.STORE_ID || s?.store_id) === storeId;
+         });
+         if (match) {
+            selectedFeatRef.current = wf;
+            clusterLayerRef.current?.changed();
+            return;
+         }
       }
-      selectedFeatRef.current = feature;
+   };
+
+   const selectMarker = (feature) => {
+      selectedFeatRef.current = feature || null;
+      clusterLayerRef.current?.changed();
    };
 
    const clearMarkers = () => {
@@ -239,6 +228,7 @@ export function useMarkers(mapInstance, visibleCats) {
       drawMarkers,
       clearMarkers,
       selectMarker,
+      highlightById: _highlightById,
       getSingleFeature,
    };
 }
