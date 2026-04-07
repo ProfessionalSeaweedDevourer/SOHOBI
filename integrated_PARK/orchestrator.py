@@ -100,6 +100,35 @@ async def run(
         )
         agent_ms = round((time.monotonic() - t_agent) * 1000)
 
+        # partial 응답 감지: signoff 없이 즉시 반환
+        if isinstance(raw, dict) and raw.get("is_partial"):
+            partial_context = {
+                "location_name": raw.get("location_name", ""),
+                "business_type": raw.get("business_type", ""),
+            }
+            return {
+                "status":            "approved",
+                "grade":             "A",
+                "confidence_note":   "",
+                "retry_count":       0,
+                "request_id":        request_id,
+                "session_id":        session_id,
+                "agent_ms":          agent_ms,
+                "signoff_ms":        0,
+                "message":           "",
+                "rejection_history": [],
+                "draft":             raw.get("draft", ""),
+                "chart":             None,
+                "charts":            [],
+                "updated_params":    None,
+                "adm_codes":         [],
+                "analysis_type":     raw.get("type", ""),
+                "updated_context":   partial_context,
+                "checked_items":     [],
+                "suggested_actions": raw.get("suggested_actions", []),
+                "is_partial":        True,
+            }
+
         # finance/location 에이전트는 dict를 반환
         if isinstance(raw, dict):
             draft = raw.get("draft", "")
@@ -296,6 +325,38 @@ async def run_stream(
             **extra,
         )
         agent_ms = round((time.monotonic() - t_agent) * 1000)
+
+        # partial 응답 감지: signoff 없이 즉시 complete yield
+        if isinstance(raw, dict) and raw.get("is_partial"):
+            partial_context = {
+                "location_name": raw.get("location_name", ""),
+                "business_type": raw.get("business_type", ""),
+            }
+            yield {"event": "agent_done", "attempt": attempt, "agent_ms": agent_ms}
+            yield {
+                "event":             "complete",
+                "status":            "approved",
+                "grade":             "A",
+                "confidence_note":   "",
+                "retry_count":       0,
+                "request_id":        request_id,
+                "session_id":        session_id,
+                "agent_ms":          agent_ms,
+                "signoff_ms":        0,
+                "message":           "",
+                "rejection_history": [],
+                "draft":             raw.get("draft", ""),
+                "chart":             None,
+                "charts":            [],
+                "updated_params":    None,
+                "adm_codes":         [],
+                "analysis_type":     raw.get("type", ""),
+                "updated_context":   partial_context,
+                "checked_items":     [],
+                "suggested_actions": raw.get("suggested_actions", []),
+                "is_partial":        True,
+            }
+            return
 
         if isinstance(raw, dict):
             draft = raw.get("draft", "")

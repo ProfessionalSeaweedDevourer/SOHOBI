@@ -875,3 +875,15 @@ class CommercialRepository:
 
     def get_supported_industries(self) -> list:
         return list(INDUSTRY_CODE_MAP.keys())
+
+    def get_primary_industries(self) -> list[str]:
+        """중복 코드 없이 대표 업종명만 반환 (버튼 목록용, 최대 10개)"""
+        seen_codes: set = set()
+        primary: list[str] = []
+        for name, code in INDUSTRY_CODE_MAP.items():
+            if code not in seen_codes:
+                seen_codes.add(code)
+                primary.append(name)
+            if len(primary) >= 10:
+                break
+        return primary

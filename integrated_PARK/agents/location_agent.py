@@ -146,7 +146,8 @@ _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 상권 분석 질문을
   "mode": "analyze" 또는 "compare",
   "locations": ["지역명1", "지역명2", ...],
   "business_type": "업종명",
-  "quarter": "YYYYQ"
+  "quarter": "YYYYQ",
+  "missing_params": []
 }}
 
 규칙:
@@ -154,6 +155,9 @@ _PARAM_EXTRACT_PROMPT = """사용자가 다음과 같은 상권 분석 질문을
 - 지역명은 한국어 원문 그대로 (예: "홍대", "강남", "잠실")
 - 업종명은 한국어 원문 그대로 (예: "카페", "한식", "치킨")
 - 분기가 언급되지 않으면 "20254" 사용
+- 지역명이 언급되지 않으면 missing_params에 "location" 포함
+- 업종명이 언급되지 않으면 missing_params에 "business_type" 포함
+- 이전 컨텍스트에서 지역/업종을 이미 파악했다면 missing_params에서 제외
 - JSON 외 다른 텍스트 절대 출력 금지"""
 
 # ── LLM 분석 지시 프롬프트 ────────────────────────────────────────────
@@ -291,8 +295,13 @@ class LocationAgent:
 
     # ── 파라미터 추출 ───────────────────────────────────────────
 
-    async def _extract_params(self, question: str, prior_history: list[dict] | None = None) -> dict:
-        """자연어 질문 → {mode, locations, business_type, quarter}"""
+    async def _extract_params(
+        self,
+        question: str,
+        prior_history: list[dict] | None = None,
+        context: dict | None = None,
+    ) -> dict:
+        """자연어 질문 → {mode, locations, business_type, quarter, missing_params}"""
         history_ctx = ""
         if prior_history:
             lines = []
@@ -300,9 +309,20 @@ class LocationAgent:
                 role_label = "사용자" if msg["role"] == "user" else "에이전트"
                 lines.append(f"[{role_label}] {msg['content']}")
             history_ctx = "이전 대화 맥락:\n" + "\n".join(lines) + "\n\n"
+
+        ctx_hint = ""
+        if context:
+            hints = []
+            if context.get("location_name"):
+                hints.append(f"직전 분석 지역: {context['location_name']}")
+            if context.get("business_type"):
+                hints.append(f"직전 분석 업종: {context['business_type']}")
+            if hints:
+                ctx_hint = "[이전 컨텍스트]\n" + "\n".join(hints) + "\n\n"
+
         raw = await self._call_llm(
             "You are a parameter extractor. Output JSON only.",
-            history_ctx + _PARAM_EXTRACT_PROMPT.format(user_input=question),
+            history_ctx + ctx_hint + _PARAM_EXTRACT_PROMPT.format(user_input=question),
         )
         m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", raw)
         clean = m.group(1) if m else raw.strip()
@@ -312,10 +332,53 @@ class LocationAgent:
             params = {}
 
         return {
-            "mode": params.get("mode", "analyze"),
-            "locations": params.get("locations", []),
-            "business_type": params.get("business_type", ""),
-            "quarter": params.get("quarter", "20254"),
+            "mode":           params.get("mode", "analyze"),
+            "locations":      params.get("locations", []),
+            "business_type":  params.get("business_type", ""),
+            "quarter":        params.get("quarter", "20254"),
+            "missing_params": params.get("missing_params", []),
+        }
+
+    # ── partial 응답 헬퍼 ──────────────────────────────────────
+
+    def _build_business_type_partial(self, location: str, quarter: str, mode: str) -> dict:
+        """지역만 있고 업종 없을 때 → 업종 선택 버튼 목록 반환"""
+        industries = self._repo.get_primary_industries()
+        suggested_actions = [
+            {"label": ind, "value": f"{location} {ind} 분석해줘"}
+            for ind in industries
+        ]
+        return {
+            "draft":             f"**{location}** 상권에서 어떤 업종을 분석할까요?",
+            "suggested_actions": suggested_actions,
+            "is_partial":        True,
+            "adm_codes":         [],
+            "type":              mode,
+            "business_type":     "",
+            "location_name":     location,
+            "locations":         [location] if location else [],
+            "quarter":           quarter,
+            "charts":            [],
+        }
+
+    def _build_location_partial(self, business_type: str, quarter: str, mode: str) -> dict:
+        """업종만 있고 지역 없을 때 → 고정 인기 지역 버튼 목록 반환"""
+        popular = ["홍대", "강남", "역삼", "잠실", "이태원", "신촌", "성수", "종로"]
+        suggested_actions = [
+            {"label": loc, "value": f"{loc} {business_type} 분석해줘"}
+            for loc in popular
+        ]
+        return {
+            "draft":             f"**{business_type}** 창업을 고려하고 계시군요! 어느 지역을 분석해드릴까요?",
+            "suggested_actions": suggested_actions,
+            "is_partial":        True,
+            "adm_codes":         [],
+            "type":              mode,
+            "business_type":     business_type,
+            "location_name":     "",
+            "locations":         [],
+            "quarter":           quarter,
+            "charts":            [],
         }
 
     # ── DB 조회 + LLM 단일 지역 분석 ───────────────────────────
@@ -605,7 +668,7 @@ class LocationAgent:
                 }
 
         # ── 전체 파이프라인 (첫 시도 또는 retry 빠른 경로 불가) ──────────
-        params = await self._extract_params(question, prior_history=prior_history)
+        params = await self._extract_params(question, prior_history=prior_history, context=ctx)
         mode = params["mode"]
         quarter = params["quarter"]
 
@@ -621,7 +684,7 @@ class LocationAgent:
             locations.append(normed if normed else raw_loc)
         business_type = _normalize_business_type(raw_business_type) or raw_business_type
 
-        if not locations or not business_type:
+        if not locations and not business_type:
             return {
                 "draft": (
                     "분석할 지역명과 업종을 명시해 주십시오.\n"
@@ -629,11 +692,15 @@ class LocationAgent:
                 ),
                 "adm_codes": [],
                 "type": mode,
-                "business_type": business_type,
+                "business_type": "",
                 "location_name": "",
                 "locations":     [],
                 "quarter":       quarter,
             }
+        elif not business_type:
+            return self._build_business_type_partial(locations[0], quarter, mode)
+        elif not locations:
+            return self._build_location_partial(business_type, quarter, mode)
 
         # draft 생성
         try:

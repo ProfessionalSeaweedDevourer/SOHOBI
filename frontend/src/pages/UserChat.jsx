@@ -165,6 +165,11 @@ export default function UserChat({ devMode = false }) {
     regenerate(index, messages[index].question).finally(() => setRegeneratingIndex(null));
   }
 
+  function handleSuggestedAction(value, messageIndex) {
+    updateAt(messageIndex, { suggestedActions: [], isPartial: false });
+    handleSubmit(value);
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* 헤더 */}
@@ -312,6 +317,9 @@ export default function UserChat({ devMode = false }) {
                   onRegenerate={devMode ? undefined : () => handleRegenerate(i)}
                   regenerated={devMode ? undefined : !!msg.regenerated}
                   isLoading={loading}
+                  suggestedActions={msg.suggestedActions || []}
+                  onSuggestedAction={(value) => handleSuggestedAction(value, i)}
+                  actionsDisabled={loading}
                 />
 
                 {/* dev 전용: SignoffPanel */}
