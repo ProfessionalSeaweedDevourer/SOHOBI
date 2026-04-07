@@ -20,9 +20,25 @@ from dotenv import load_dotenv
 from openai import AzureOpenAI
 from semantic_kernel.functions import kernel_function
 
+import re
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+_AMT_RE = re.compile(r'(\d[\d,]*)\s*(만원|천만원|백만원|억원|억|만)')
+_AMT_UNIT = {"만원": 10000, "만": 10000, "천만원": 10000000, "백만원": 1000000, "억원": 100000000, "억": 100000000}
+
+
+def _parse_amount(text: str) -> int:
+    # 첫 번째 금액 단위만 파싱 ("1억 5천만원" → 1억만 반환)
+    # min_amount 필터 용도상 과소 필터링(노이즈 증가)이므로 치명적이지 않음
+    if not text or text == "미정":
+        return 0
+    m = _AMT_RE.search(text)
+    if not m:
+        return 0
+    return int(int(m.group(1).replace(",", "")) * _AMT_UNIT.get(m.group(2), 1))
 
 REGION_MAP = {
     "서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천",
@@ -35,13 +51,13 @@ REGION_MAP = {
 RECOMMEND_CATEGORIES = [
     {
         "name": "보조금/창업패키지",
-        "query_template": "{업종} {지역} {창업단계} 창업 지원사업 보조금 패키지",
+        "query_template": "{업종} {지역} {창업단계} 소상공인 창업 지원사업 보조금 사업화 패키지",
         "trigger_keywords": ["보조금", "지원금", "패키지", "창업지원", "지원사업", "창업"],
     },
     {
         "name": "대출/융자",
-        "query_template": "{업종} 소상공인 정책자금 대출 융자 {자금용도}",
-        "trigger_keywords": ["대출", "융자", "정책자금", "자금", "운전자금", "시설자금"],
+        "query_template": "{업종} 소상공인 정책자금 대출 융자 {자금용도} 경영안정자금",
+        "trigger_keywords": ["대출", "융자", "정책자금", "자금", "운전자금", "시설자금", "인테리어"],
     },
     {
         "name": "신용보증",
@@ -60,8 +76,8 @@ RECOMMEND_CATEGORIES = [
     },
     {
         "name": "외식업/F&B 특화",
-        "query_template": "{업종} 외식업 위생 HACCP 배달 공유주방 식품",
-        "trigger_keywords": ["위생", "HACCP", "배달", "공유주방", "외식", "식품", "음식점", "카페"],
+        "query_template": "{업종} 외식업 음식점 카페 소상공인 {창업단계} 지원사업 {지역}",
+        "trigger_keywords": ["위생", "HACCP", "배달", "공유주방", "외식", "식품", "음식점", "카페", "베이커리", "제과"],
     },
 ]
 
@@ -114,7 +130,17 @@ class GovSupportPlugin:
     # reranker score 임계값 — 0~4 범위에서 1.2 미만은 부적합으로 판단
     RERANKER_THRESHOLD = 1.2
 
-    def _search_one(self, query: str, region: str, top_k: int = 5, apply_threshold: bool = True) -> list[dict]:
+    def _search_one(
+        self,
+        query: str,
+        region: str,
+        top_k: int = 5,
+        apply_threshold: bool = True,
+        startup_stage: str = "",
+        support_type_filter: str = "",  # TODO: recommend_programs에서 카테고리별 지원유형 필터링 시 활용 예정
+        min_amount: int = 0,
+        exclude_industries: list[str] | None = None,
+    ) -> list[dict]:
         """단일 쿼리 하이브리드+시맨틱 검색. apply_threshold=True이면 reranker score 필터링 후 상위 top_k 반환."""
         resp = self._ai_client.embeddings.create(
             input=query, model=self._embedding_deployment
@@ -123,9 +149,34 @@ class GovSupportPlugin:
         vector_query = VectorizedQuery(
             vector=vector, k_nearest_neighbors=top_k * 4, fields="embedding"
         )
-        filter_str = None
+
+        filters = []
         if region:
-            filter_str = f"(target_region eq '{region}' or target_region eq '전국')"
+            filters.append(f"(target_region eq '{region}' or target_region eq '전국')")
+
+        if startup_stage:
+            stage_map = {
+                "예비창업": "예비창업", "예비": "예비창업",
+                "초기창업": "초기창업", "초기": "초기창업",
+                "운영중": "운영중", "운영": "운영중",
+                "폐업": "폐업재기", "재창업": "폐업재기",
+            }
+            mapped = stage_map.get(startup_stage, "")
+            if mapped:
+                filters.append(
+                    f"(startup_stages/any(s: s eq '{mapped}') or startup_stages/any(s: s eq '전체'))"
+                )
+
+        if support_type_filter:
+            filters.append(f"support_types/any(t: t eq '{support_type_filter}')")
+
+        if min_amount > 0:
+            filters.append(f"max_amount ge {min_amount}")
+
+        for ind in (exclude_industries or []):
+            filters.append(f"not industries/any(i: i eq '{ind}')")
+
+        filter_str = " and ".join(filters) if filters else None
 
         results = self._search_client.search(
             search_text=query,
@@ -138,7 +189,9 @@ class GovSupportPlugin:
                 "program_name", "field", "summary", "target",
                 "support_content", "criteria", "apply_deadline",
                 "apply_method", "org_name", "phone", "url",
-                "support_type", "target_region"
+                "support_type", "target_region",
+                "startup_stages", "industries", "support_types",
+                "max_amount", "quality_score",
             ],
             top=top_k * 3,
         )
@@ -158,7 +211,7 @@ class GovSupportPlugin:
         return scored[:top_k]
 
     @staticmethod
-    def _select_categories(business_type: str, funding_purpose: str, additional_info: str) -> list[dict]:
+    def _select_categories(business_type: str, funding_purpose: str, additional_info: str, startup_stage: str = "") -> list[dict]:
         """사용자 입력에서 관련 카테고리만 선택. 매칭 없으면 보조금+대출 기본 제공."""
         context = f"{business_type} {funding_purpose} {additional_info}".lower()
         matched = [
@@ -166,8 +219,14 @@ class GovSupportPlugin:
             if any(kw in context for kw in cat["trigger_keywords"])
         ]
         if not matched:
-            # 기본: 보조금 + 대출 (가장 범용적인 2개)
             matched = [c for c in RECOMMEND_CATEGORIES if c["name"] in ("보조금/창업패키지", "대출/융자")]
+
+        # 예비창업/초기창업이면 보조금/창업패키지 강제 포함
+        if startup_stage in ("예비창업", "예비", "초기창업", "초기"):
+            subsidy = next((c for c in RECOMMEND_CATEGORIES if c["name"] == "보조금/창업패키지"), None)
+            if subsidy and subsidy not in matched:
+                matched.insert(0, subsidy)
+
         # 최대 3개 카테고리로 제한 (속도 + 품질)
         return matched[:3]
 
@@ -215,14 +274,23 @@ class GovSupportPlugin:
                 profile_summary += f", 기타: {additional_info}"
 
             # 관련 카테고리만 선택 (최대 3개)
-            selected_cats = self._select_categories(business_type, funding_purpose, additional_info)
+            selected_cats = self._select_categories(business_type, funding_purpose, additional_info, startup_stage)
 
             flat_results = []
             seen_names = set()
 
+            # 외식업 계열이면 제조업 전용 사업 제외
+            _FB_TYPES = ["카페", "음식점", "식당", "베이커리", "제과", "푸드트럭", "주점", "외식"]
+            exclude_inds = ["제조업"] if any(t in business_type for t in _FB_TYPES) else []
+
             for cat in selected_cats:
                 query = cat["query_template"].format(**profile)
-                results = self._search_one(query, extracted_region, top_k=8)
+                results = self._search_one(
+                    query, extracted_region, top_k=8,
+                    startup_stage=startup_stage if startup_stage != "미정" else "",
+                    min_amount=_parse_amount(funding_needed),
+                    exclude_industries=exclude_inds,
+                )
                 for r in results:
                     name = r.get("program_name", "")
                     if name in seen_names:
@@ -232,6 +300,25 @@ class GovSupportPlugin:
 
             if not flat_results:
                 return f"{profile_summary}\n\n조건에 맞는 지원사업을 찾을 수 없습니다. (검색 결과가 관련성 기준 score {self.RERANKER_THRESHOLD} 을 충족하지 못했습니다)"
+
+            # 창업단계 불일치 후처리 필터
+            # (startup_stages가 "전체" 태깅이어서 OData 필터를 통과했지만 실제로는 다른 단계 전용인 경우)
+            _STAGE_EXCLUSION = {
+                "예비창업": ["폐업재기"],
+                "예비": ["폐업재기"],
+                "초기창업": ["폐업재기"],
+                "초기": ["폐업재기"],
+            }
+            exclude_stages = _STAGE_EXCLUSION.get(startup_stage, [])
+            if exclude_stages:
+                filtered = []
+                for r in flat_results:
+                    stages = r.get("startup_stages") or []
+                    # 태깅 없는 프로그램은 범용 지원으로 간주 — 필터 대상 제외
+                    if stages and set(stages) <= set(exclude_stages) and "전체" not in stages:
+                        continue
+                    filtered.append(r)
+                flat_results = filtered
 
             # reranker score 기준 전역 정렬 후 상위 5개만 선별
             flat_results.sort(key=lambda x: x.get("_reranker_score", 0.0), reverse=True)
