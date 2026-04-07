@@ -35,8 +35,8 @@ export function parseWmsProps(p, layerType) {
          remark: p.remark || "",
          tel: "",
          hours: "",
-         jiga: p.jiga || p.pblntfPclnd || "",
-         gosi_year: p.gosi_year || p.stdrYear || "",
+         jiga: p.pblntfPclnd || p.jiga || p.land_price || p.pnu_price || "",
+         gosi_year: p.stdrYear || p.gosi_year || p.pub_year || "",
          gosi_month: p.gosi_month || "",
       };
    }
@@ -136,8 +136,15 @@ export async function handleWmsClick(map, coordinate) {
       try {
          const urlObj = new URL(url, window.location.origin);
          urlObj.searchParams.set("REQUEST", "GetFeatureInfo");
+         urlObj.searchParams.set("BUFFER", "10");
+         // QUERY_LAYERS: 공시지가 레이어만 조회
+         urlObj.searchParams.set(
+            "QUERY_LAYERS",
+            "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+         );
          const res = await fetch(urlObj.pathname + urlObj.search);
          const text = await res.text();
+         console.log("[WMS Response]", text.slice(0, 500));
          let feat = null;
          try {
             feat = JSON.parse(text).features?.[0];

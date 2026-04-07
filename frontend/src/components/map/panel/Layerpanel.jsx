@@ -4,7 +4,6 @@
 import React, { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
-import "./Layerpanel.css";
 
 export default function LayerPanel({
    map,
@@ -23,28 +22,21 @@ export default function LayerPanel({
    const [festivalOn, setFestivalOn] = useState(true);
    const [schoolOn, setSchoolOn] = useState(true);
 
-   // ── 지적도: Layerpanel이 단독 관리, zoom 19+ 에서만 표시 ──
-   // ── 지적도 레이어 초기 생성 (마운트 1회) ───────────────────
+   // 초기 레이어 자동 추가
+   const initDoneRef = React.useRef(false);
    React.useEffect(() => {
-      if (!map || !mapReady) return;
-      // 이미 cadastral 레이어가 있으면 ref만 연결
-      const existing = map
-         .getLayers()
-         .getArray()
-         .find((l) => l.get("name") === "cadastral");
-      if (existing) {
-         wmsLayerRef.current = existing;
-         return;
-      }
+      if (!map || !mapReady || initDoneRef.current) return;
+      initDoneRef.current = true;
+      // 지적도 초기 ON
       const layer = new TileLayer({
          source: new TileWMS({
-            url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
+            url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
             params: {
                SERVICE: "WMS",
                VERSION: "1.3.0",
                REQUEST: "GetMap",
                LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-               STYLES: ",",
+               STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
                FORMAT: "image/png",
                TRANSPARENT: "TRUE",
                CRS: "EPSG:3857",
@@ -52,40 +44,51 @@ export default function LayerPanel({
             crossOrigin: "anonymous",
             transition: 0,
          }),
-         visible: false,
          opacity: 0.7,
          zIndex: 50,
+         minZoom: 19,
       });
       layer.set("name", "cadastral");
       map.addLayer(layer);
       wmsLayerRef.current = layer;
-      // 초기 zoom 체크
-      const zoom = map.getView().getZoom() ?? 0;
-      layer.setVisible(zoom >= 17);
    }, [map, mapReady]); // eslint-disable-line
 
-   // ── zoom 변경 시 지적도 visibility 갱신 ─────────────────────
-   React.useEffect(() => {
-      if (!map || !mapReady) return;
-      const updateVisibility = () => {
-         const layer = wmsLayerRef.current;
-         if (!layer) return;
-         const zoom = map.getView().getZoom() ?? 0;
-         layer.setVisible(cadastralOn && zoom >= 17);
-      };
-      map.getView().on("change:resolution", updateVisibility);
-      return () => map.getView().un("change:resolution", updateVisibility);
-   }, [map, mapReady, cadastralOn]); // eslint-disable-line
-
-   // ── 지적도 토글 ─────────────────────────────────────────────
+   // ── 지적도 ──────────────────────────────────────────────────
    const toggleCadastral = () => {
-      const next = !cadastralOn;
-      const layer = wmsLayerRef.current;
-      if (layer) {
-         const zoom = map.getView().getZoom() ?? 0;
-         layer.setVisible(next && zoom >= 17);
+      if (cadastralOn) {
+         // name 기준으로 모든 지적도 레이어 제거 (중복 방지)
+         map.getLayers()
+            .getArray()
+            .filter((l) => l.get("name") === "cadastral")
+            .forEach((l) => map.removeLayer(l));
+         wmsLayerRef.current = null;
+         setCadastralOn(false);
+      } else {
+         const layer = new TileLayer({
+            source: new TileWMS({
+               url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=localhost`,
+               params: {
+                  SERVICE: "WMS",
+                  VERSION: "1.3.0",
+                  REQUEST: "GetMap",
+                  LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+                  STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+                  FORMAT: "image/png",
+                  TRANSPARENT: "TRUE",
+                  CRS: "EPSG:3857",
+               },
+               crossOrigin: "anonymous",
+               transition: 0,
+            }),
+            opacity: 0.7,
+            zIndex: 50,
+            minZoom: 19,
+         });
+         layer.set("name", "cadastral");
+         map.addLayer(layer);
+         wmsLayerRef.current = layer;
+         setCadastralOn(true);
       }
-      setCadastralOn(next);
    };
 
    // ── 관광지·문화시설 (KTO DB 마커) ───────────────────────────
