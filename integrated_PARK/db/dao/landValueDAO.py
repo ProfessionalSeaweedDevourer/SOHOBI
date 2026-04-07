@@ -21,6 +21,7 @@ class LandValueDAO:
         current_year = datetime.now().year
         results = []
 
+        _logged_vworld_err = False  # VWorld 인증/네트워크 오류는 첫 번째만 로깅
         async with httpx.AsyncClient(timeout=15) as client:
             for i in range(years):
                 year = str(current_year - i)
@@ -35,9 +36,22 @@ class LandValueDAO:
                     res = await client.get(url)
                     raw = res.text.strip()
                     if not raw or raw.startswith("<"):
+                        if not _logged_vworld_err:
+                            logger.error(
+                                f"[LandValueDAO] VWorld HTML/빈응답 (HTTP {res.status_code}) "
+                                f"pnu={pnu} year={year} — IP 미등록 또는 네트워크 차단 의심"
+                            )
+                            _logged_vworld_err = True
                         continue
                     d = res.json()
                     if d.get("response", {}).get("status") != "OK":
+                        if not _logged_vworld_err:
+                            err = d.get("response", {}).get("error", {})
+                            logger.error(
+                                f"[LandValueDAO] VWorld ERROR code={err.get('code')} "
+                                f"text={err.get('text')} pnu={pnu} year={year}"
+                            )
+                            _logged_vworld_err = True
                         continue
                     features = (
                         d.get("response", {})

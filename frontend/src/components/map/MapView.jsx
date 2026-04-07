@@ -921,7 +921,7 @@ export default function MapView() {
                            .then((lv) => {
                               if (lv.data?.length) setLandValue(lv.data);
                            })
-                           .catch(() => {});
+                           .catch((err) => console.error("[공시지가 조회 실패]", err));
                      }
                   })
                   .catch(() => {
