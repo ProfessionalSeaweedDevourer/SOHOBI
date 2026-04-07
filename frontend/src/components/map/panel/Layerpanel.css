@@ -1,103 +1,115 @@
-/* ── 레이어 패널 ──────────────────────────────────────── */
+/* ============================================================
+   Layerpanel.css  –  레이어 패널 (SOHOBI 톤앤매너)
+   ============================================================ */
+
 .lp-panel {
-   background: #fff;
-   border: 1px solid #ddd;
-   border-radius: 10px;
-   padding: 16px;
-   min-width: 230px;
-   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+   background: var(--surface);
+   border: 1px solid var(--border);
+   border-radius: var(--radius-md);
+   padding: 14px;
+   min-width: 220px;
+   box-shadow: var(--shadow-md);
 }
 .dark .lp-panel {
-   background: var(--card);
+   background: var(--surface-2);
    border-color: var(--border);
 }
 
 .lp-title {
-   font-size: 13px;
+   font-size: 12px;
    font-weight: 700;
-   color: #111;
-   margin-bottom: 12px;
+   color: var(--text-primary);
+   margin-bottom: 10px;
    padding-bottom: 8px;
-   border-bottom: 1px solid #f0f0f0;
-}
-.dark .lp-title {
-   color: var(--foreground);
-   border-bottom-color: var(--border);
+   border-bottom: 1px solid var(--border);
+   display: flex;
+   align-items: center;
+   gap: 6px;
 }
 
 .lp-section-label {
    font-size: 10px;
    font-weight: 700;
-   color: #aaa;
+   color: var(--text-muted);
    text-transform: uppercase;
-   letter-spacing: 1px;
+   letter-spacing: 0.8px;
    margin: 10px 0 4px 2px;
 }
-.dark .lp-section-label {
-   color: var(--muted-foreground);
-}
 
-/* ── 레이어 행 ──────────────────────────────────────── */
+/* ── 레이어 행 ──────────────────────────────────────────── */
 .lp-row {
    display: flex;
    align-items: center;
-   gap: 12px;
-   padding: 10px;
-   background: #f9f9f9;
-   border-radius: 8px;
-   margin-bottom: 6px;
+   gap: 10px;
+   padding: 9px 10px;
+   background: var(--surface-2);
+   border-radius: var(--radius-sm);
+   margin-bottom: 5px;
+   transition: background var(--transition);
 }
 .dark .lp-row {
-   background: var(--secondary);
+   background: var(--surface-3);
 }
 
 .lp-layer-name {
    font-size: 13px;
    font-weight: 600;
-   color: #333;
+   color: var(--text-primary);
+   flex: 1;
 }
-.dark .lp-layer-name {
-   color: var(--foreground);
-}
-
 .lp-layer-desc {
    font-size: 11px;
-   color: #999;
+   color: var(--text-muted);
    margin-top: 2px;
 }
-.dark .lp-layer-desc {
-   color: var(--muted-foreground);
-}
 
-/* OFF 상태 토글 버튼 */
+/* 토글 버튼 */
 .lp-toggle {
    border: none;
    border-radius: 6px;
-   padding: 6px 14px;
-   font-size: 12px;
+   padding: 5px 12px;
+   font-size: 11px;
    font-weight: 700;
    flex-shrink: 0;
-   transition: all 0.2s;
+   cursor: pointer;
+   transition: all var(--transition);
+   min-height: 28px;
+   -webkit-tap-highlight-color: transparent;
 }
 .lp-toggle--off {
-   background: #e0e0e0;
-   color: #555;
+   background: var(--surface-3);
+   color: var(--text-secondary);
 }
 .dark .lp-toggle--off {
-   background: var(--muted);
-   color: var(--muted-foreground);
+   background: var(--surface);
+   color: var(--text-muted);
 }
 
 .lp-notice {
    font-size: 11px;
-   color: #bbb;
+   color: var(--text-muted);
    padding: 8px;
-   background: #f9f9f9;
+   background: var(--surface-2);
    border-radius: 6px;
    text-align: center;
    margin-top: 4px;
 }
 .dark .lp-notice {
-   color: var(--muted-foreground);
-   background: var(--secondary);
+   background: var(--surface-3);
+}
+
+/* 모바일 */
+@media (max-width: 640px) {
+   .lp-panel {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: var(--radius-md);
+      max-height: 60dvh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+   }
+   .lp-toggle {
+      min-height: 32px;
+      padding: 5px 14px;
+   }
 }

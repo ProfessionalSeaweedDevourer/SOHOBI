@@ -187,7 +187,7 @@ def getLandmarks(
         elif adm_cd:
             result = lmDAO.get_by_adm_cd(adm_cd, type_list)
         else:
-            result = lmDAO.get_all(type_list, limit=500)
+            result = lmDAO.get_all(type_list, limit=2000)
         if type_list and adm_cd:
             result = [r for r in result if str(r["content_type_id"]) in type_list]
         return {"count": len(result), "landmarks": result}
@@ -435,34 +435,6 @@ async def cacheStatus():
 # ════════════════════════════════════════════════════════════════
 # 4. 외부 API 프록시
 # ════════════════════════════════════════════════════════════════
-
-@router.get("/map/pnu-by-coord")
-async def getPnuByCoord(lng: float, lat: float):
-    """좌표 → PNU 조회 (VWorld LP_PA_CBND_BUBUN 지적도 필지 경계)"""
-    url = (
-        "https://api.vworld.kr/req/data"
-        "?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN"
-        f"&key={VWORLD_KEY}&format=json&size=1"
-        f"&geomFilter=point({lng} {lat})&geometry=false&attribute=true"
-        "&columns=pnu,pblntfPclnd,stdrYear"
-    )
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            res = await client.get(url)
-        features = (
-            res.json()
-            .get("response", {})
-            .get("result", {})
-            .get("featureCollection", {})
-            .get("features", [])
-        )
-        if not features:
-            return {"pnu": ""}
-        props = features[0].get("properties", {})
-        return {"pnu": props.get("pnu", "")}
-    except Exception as e:
-        return {"pnu": "", "error": str(e)}
-
 
 @router.get("/map/land-use")
 async def getLandUse(pnu: str):
