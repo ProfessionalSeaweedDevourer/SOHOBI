@@ -82,7 +82,7 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed"
           >
-            행정, 상권분석, 재무까지. 세 명의 전문 AI 에이전트가
+            행정, 상권분석, 재무까지. 다섯 전문 AI 에이전트가
             당신의 성공적인 창업을 도와드립니다.
           </motion.p>
 
@@ -207,7 +207,7 @@ export default function Landing() {
               <Zap size={14} className="text-[var(--brand-blue)]" />
               <span className="text-muted-foreground">전문가 에이전트</span>
             </div>
-            <h2 className="text-4xl md:text-5xl gradient-text">네 명의 AI 전문가</h2>
+            <h2 className="text-4xl md:text-5xl gradient-text">5가지 전문 AI 에이전트</h2>
           </motion.div>
 
           <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -215,6 +215,9 @@ export default function Landing() {
               <AgentCard key={agent.id} agent={agent} index={idx} />
             ))}
           </div>
+          <p className="text-xs text-muted-foreground text-center mt-6 opacity-60">
+            * 흐리게 표시된 카드는 출시 예정 기능입니다
+          </p>
         </div>
       </section>
 
