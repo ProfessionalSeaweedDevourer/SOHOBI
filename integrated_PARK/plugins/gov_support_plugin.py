@@ -31,6 +31,8 @@ _AMT_UNIT = {"만원": 10000, "만": 10000, "천만원": 10000000, "백만원": 
 
 
 def _parse_amount(text: str) -> int:
+    # 첫 번째 금액 단위만 파싱 ("1억 5천만원" → 1억만 반환)
+    # min_amount 필터 용도상 과소 필터링(노이즈 증가)이므로 치명적이지 않음
     if not text or text == "미정":
         return 0
     m = _AMT_RE.search(text)
@@ -135,7 +137,7 @@ class GovSupportPlugin:
         top_k: int = 5,
         apply_threshold: bool = True,
         startup_stage: str = "",
-        support_type_filter: str = "",
+        support_type_filter: str = "",  # TODO: recommend_programs에서 카테고리별 지원유형 필터링 시 활용 예정
         min_amount: int = 0,
         exclude_industries: list[str] | None = None,
     ) -> list[dict]:
@@ -309,13 +311,14 @@ class GovSupportPlugin:
             }
             exclude_stages = _STAGE_EXCLUSION.get(startup_stage, [])
             if exclude_stages:
-                flat_results = [
-                    r for r in flat_results
-                    if not (
-                        set(r.get("startup_stages") or []) <= set(exclude_stages)
-                        and "전체" not in (r.get("startup_stages") or [])
-                    )
-                ]
+                filtered = []
+                for r in flat_results:
+                    stages = r.get("startup_stages") or []
+                    # 태깅 없는 프로그램은 범용 지원으로 간주 — 필터 대상 제외
+                    if stages and set(stages) <= set(exclude_stages) and "전체" not in stages:
+                        continue
+                    filtered.append(r)
+                flat_results = filtered
 
             # reranker score 기준 전역 정렬 후 상위 5개만 선별
             flat_results.sort(key=lambda x: x.get("_reranker_score", 0.0), reverse=True)
