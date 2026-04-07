@@ -144,6 +144,7 @@ export async function handleWmsClick(map, coordinate) {
          );
          const res = await fetch(urlObj.pathname + urlObj.search);
          const text = await res.text();
+         console.log("[WMS Response]", text.slice(0, 500));
          let feat = null;
          try {
             feat = JSON.parse(text).features?.[0];
@@ -151,7 +152,6 @@ export async function handleWmsClick(map, coordinate) {
             /* ignore */
          }
          const layerType = wmsLayer.get("name");
-         // feat 없어도 cadastral이면 좌표 기반 팝업 표시
          if (!feat) {
             if (layerType === "cadastral") {
                return {

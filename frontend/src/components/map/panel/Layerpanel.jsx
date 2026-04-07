@@ -1,4 +1,5 @@
-// 공식 프론트 위치: frontend/src/components/map/panel/Layerpanel.jsx
+// 개발 프론트 위치: TERRY\p02_frontEnd_React\src\panel\Layerpanel.jsx
+// 공식 프론트 위치: frontend\src\components\map\panel\Layerpanel.jsx
 
 import React, { useState } from "react";
 import TileLayer from "ol/layer/Tile";
@@ -21,21 +22,48 @@ export default function LayerPanel({
    const [festivalOn, setFestivalOn] = useState(true);
    const [schoolOn, setSchoolOn] = useState(true);
 
-   // 지적도 초기 연결 (MapView에서 dynamic import로 추가된 레이어 ref 연결)
+   // 초기 레이어 자동 추가
    const initDoneRef = React.useRef(false);
    React.useEffect(() => {
       if (!map || !mapReady || initDoneRef.current) return;
-      const t = setTimeout(() => {
-         initDoneRef.current = true;
-         const existing = map
-            .getLayers()
+      initDoneRef.current = true;
+      // 지적도 초기 ON
+      const layer = new TileLayer({
+         source: new TileWMS({
+            url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
+            params: {
+               SERVICE: "WMS",
+               VERSION: "1.3.0",
+               REQUEST: "GetMap",
+               LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+               STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+               FORMAT: "image/png",
+               TRANSPARENT: "TRUE",
+               CRS: "EPSG:3857",
+            },
+            crossOrigin: "anonymous",
+            transition: 0,
+         }),
+         opacity: 0.7,
+         zIndex: 50,
+         minZoom: 17,
+      });
+      layer.set("name", "cadastral");
+      map.addLayer(layer);
+      wmsLayerRef.current = layer;
+   }, [map, mapReady]); // eslint-disable-line
+
+   // ── 지적도 ──────────────────────────────────────────────────
+   const toggleCadastral = () => {
+      if (cadastralOn) {
+         // name 기준으로 모든 지적도 레이어 제거 (중복 방지)
+         map.getLayers()
             .getArray()
-            .find((l) => l.get("name") === "cadastral");
-         if (existing) {
-            wmsLayerRef.current = existing;
-            return;
-         }
-         // fallback: MapView dynamic import 완료 전이면 직접 생성
+            .filter((l) => l.get("name") === "cadastral")
+            .forEach((l) => map.removeLayer(l));
+         wmsLayerRef.current = null;
+         setCadastralOn(false);
+      } else {
          const layer = new TileLayer({
             source: new TileWMS({
                url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
@@ -44,7 +72,7 @@ export default function LayerPanel({
                   VERSION: "1.3.0",
                   REQUEST: "GetMap",
                   LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-                  STYLES: ",",
+                  STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
                   FORMAT: "image/png",
                   TRANSPARENT: "TRUE",
                   CRS: "EPSG:3857",
@@ -59,23 +87,11 @@ export default function LayerPanel({
          layer.set("name", "cadastral");
          map.addLayer(layer);
          wmsLayerRef.current = layer;
-      }, 500);
-      return () => clearTimeout(t);
-   }, [map, mapReady]); // eslint-disable-line
-
-   const toggleCadastral = () => {
-      const layer =
-         map
-            .getLayers()
-            .getArray()
-            .find((l) => l.get("name") === "cadastral") ?? wmsLayerRef.current;
-      if (!layer) return;
-      const next = !cadastralOn;
-      layer.setVisible(next);
-      wmsLayerRef.current = layer;
-      setCadastralOn(next);
+         setCadastralOn(true);
+      }
    };
 
+   // ── 관광지·문화시설 (KTO DB 마커) ───────────────────────────
    const toggleLandmark = () => {
       if (!landmarkLoaded || !landmarkLayerRef?.current) return;
       const next = !landmarkOn;
@@ -148,7 +164,7 @@ function LayerRow({ label, desc, on, color, onClick, disabled }) {
       <div style={{ ...S.row, opacity: disabled ? 0.4 : 1 }}>
          <div style={{ flex: 1 }}>
             <div style={S.layerName}>{label}</div>
-            {desc && <div style={S.layerDesc}>{desc}</div>}
+            <div style={S.layerDesc}>{desc}</div>
          </div>
          <button
             onClick={disabled ? undefined : onClick}

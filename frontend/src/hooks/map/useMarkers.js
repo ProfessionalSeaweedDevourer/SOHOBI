@@ -60,7 +60,7 @@ export function useMarkers(mapInstance, visibleCats) {
    const clusterLayerRef = useRef(null);
    const circleLayerRef = useRef(null);
    const allStoresRef = useRef([]);
-   const selectedFeatRef = useRef(null);
+   const selectedFeatRef = useRef(null); // 선택된 STORE_ID (feature 참조 대신 ID로 비교)
    const clusterSourceRef = useRef(null);
    const vectorSourceRef = useRef(null);
 
@@ -122,12 +122,20 @@ export function useMarkers(mapInstance, visibleCats) {
          zIndex: 200,
          style: (feature) => {
             const members = feature.get("features") || [];
-            const isSel = selectedFeatRef.current === feature;
+            // feature 참조 대신 STORE_ID로 비교 (zoom 변경 시 cluster가 feature 재생성)
+            const selId = selectedFeatRef.current;
+            const isSel =
+               selId != null &&
+               members.some((f) => {
+                  const s = f.get("store");
+                  return (s?.STORE_ID || s?.store_id) === selId;
+               });
 
             if (members.length === 1) {
                const store = members[0].get("store");
                return makeMarkerStyle(store?.CAT_CD, isSel);
             }
+            // 클러스터 - 대표 카테고리 색상
             const cats = members
                .map((f) => f.get("store")?.CAT_CD)
                .filter(Boolean);
@@ -138,6 +146,7 @@ export function useMarkers(mapInstance, visibleCats) {
             )[0];
             const color = CAT_COLORS[topCat] || "#888";
             if (isSel) {
+               // 선택된 클러스터: 색 반전 (배경=흰색, 글자=원래색, 테두리=원래색)
                const radius =
                   members.length > 99 ? 18 : members.length > 9 ? 15 : 12;
                return new Style({
@@ -170,25 +179,26 @@ export function useMarkers(mapInstance, visibleCats) {
       return members?.[0]?.get("store")?.CAT_CD;
    };
 
+   // 스토어 ID로 클러스터 소스에서 feature 찾아 하이라이트
    const _highlightById = (storeId) => {
-      if (!storeId || !clusterSourceRef?.current) return;
-      const wrappers = clusterSourceRef.current.getFeatures();
-      for (const wf of wrappers) {
-         const match = (wf.get("features") || []).find((f) => {
-            const s = f.get("store");
-            return (s?.STORE_ID || s?.store_id) === storeId;
-         });
-         if (match) {
-            selectedFeatRef.current = wf;
-            clusterLayerRef.current?.changed();
-            return;
-         }
-      }
+      if (!storeId) return;
+      selectedFeatRef.current = storeId;
+      clusterLayerRef.current?.changed();
    };
 
    const selectMarker = (feature) => {
-      selectedFeatRef.current = feature || null;
+      if (!feature) {
+         selectedFeatRef.current = null;
+      } else {
+         // cluster wrapper에서 STORE_ID 추출해서 저장 (zoom 변경 시 feature 재생성에 대응)
+         const members = feature.get("features") || [];
+         const store = members[0]?.get("store");
+         selectedFeatRef.current = store?.STORE_ID || store?.store_id || null;
+      }
       clusterLayerRef.current?.changed();
+
+      // 지도 이동은 하지 않음
+      // 이동이 필요한 경우(클러스터 팝업 상가 선택)는 MapView에서 직접 처리
    };
 
    const clearMarkers = () => {

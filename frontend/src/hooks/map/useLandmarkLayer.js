@@ -7,7 +7,14 @@ import VectorSource from "ol/source/Vector";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import { fromLonLat } from "ol/proj";
-import { Style, Circle as CircleStyle, Fill, Stroke, Text } from "ol/style";
+import {
+   Style,
+   Circle as CircleStyle,
+   Fill,
+   Stroke,
+   Text,
+   Icon,
+} from "ol/style";
 
 const MAP_URL = import.meta.env.VITE_MAP_URL || "/map-api";
 const _API_KEY = import.meta.env.VITE_API_KEY || "";
@@ -15,30 +22,33 @@ const _mapHeaders = _API_KEY ? { "X-API-Key": _API_KEY } : {};
 
 // ── 타입별 스타일 설정 ────────────────────────────────────────
 const TYPE_STYLE = {
-   12: { color: "#f59e0b", label: "관광" },
-   14: { color: "#8b5cf6", label: "문화" },
-   15: { color: "#ef4444", label: "축제" },
-   school: { color: "#10b981", label: "학교" },
+   12: { color: "#f59e0b", label: "관광" }, // 관광지 - 노랑
+   14: { color: "#8b5cf6", label: "문화" }, // 문화시설 - 보라
+   15: { color: "#ef4444", label: "축제" }, // 축제 - 빨강
+   school: { color: "#10b981", label: "학교" }, // 학교 - 초록
 };
 
 function makeStyle(typeKey, selected = false) {
    const { color, label } = TYPE_STYLE[typeKey] || { color: "#999", label: "" };
    const radius = selected ? 14 : 10;
-   return new Style({
-      image: new CircleStyle({
-         radius,
-         fill: new Fill({ color: selected ? "#fff" : color }),
-         stroke: new Stroke({
-            color: selected ? color : "#fff",
-            width: selected ? 4 : 2,
-         }),
+   // 선택 시 색 반전: 배경=색상, 테두리=흰색 → 배경=흰색, 테두리=색상+두껍게
+   // CORS 이슈로 외부 이미지 Canvas 처리 불가 → CircleStyle만 사용
+   const imageStyle = new CircleStyle({
+      radius,
+      fill: new Fill({ color: selected ? "#fff" : color }),
+      stroke: new Stroke({
+         color: selected ? color : "#fff",
+         width: selected ? 4 : 2,
       }),
+   });
+   return new Style({
+      image: imageStyle,
       text: label
          ? new Text({
               text: label,
               offsetY: -(radius + 6),
               font: selected ? "bold 12px sans-serif" : "bold 11px sans-serif",
-              fill: new Fill({ color }),
+              fill: new Fill({ color: selected ? color : color }),
               stroke: new Stroke({ color: "#fff", width: 3 }),
            })
          : null,
@@ -62,7 +72,7 @@ export function useLandmarkLayer(mapInstance) {
             });
             f.set("lmData", d);
             f.set("lmType", typeKey);
-            f.setStyle(makeStyle(typeKey));
+            f.setStyle(makeStyle(typeKey, false));
             return f;
          });
 
@@ -73,7 +83,7 @@ export function useLandmarkLayer(mapInstance) {
       const layer = new VectorLayer({
          source: new VectorSource({ features }),
          zIndex,
-         minZoom: 16,
+         minZoom: 16, // 줌 16 미만이면 자동 숨김
       });
       map.addLayer(layer);
       return layer;
@@ -96,7 +106,7 @@ export function useLandmarkLayer(mapInstance) {
                });
                f.set("lmData", d);
                f.set("lmType", typeKey);
-               f.setStyle(makeStyle(typeKey));
+               f.setStyle(makeStyle(typeKey, false));
                return f;
             });
          if (landmarkLayerRef.current) {
@@ -157,7 +167,7 @@ export function useLandmarkLayer(mapInstance) {
    const selectLandmark = (feature) => {
       if (selectedFeatRef.current) {
          const prev = selectedFeatRef.current;
-         prev.setStyle(makeStyle(prev.get("lmType")));
+         prev.setStyle(makeStyle(prev.get("lmType"), false));
       }
       if (!feature) {
          selectedFeatRef.current = null;
