@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { streamQuery } from "../../api";
 import ProgressPanel from "../ProgressPanel";
+import ActionButtons from "../ActionButtons";
 import "./ChatPanel.css";
 
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
@@ -21,7 +22,7 @@ const AREA_KEYWORDS = [
   "대학로", "을지로", "명동", "남대문", "북촌", "서촌", "익선동",
 ];
 
-export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, onClearContext, onHighlightArea, onSearchArea }) {
+export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate, mapContext, onClearContext, onHighlightArea, onSearchArea }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -96,8 +97,8 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
     [onNavigate]
   );
 
-  const handleSend = useCallback(async () => {
-    const text = input.trim();
+  const handleSend = useCallback(async (directText) => {
+    const text = (typeof directText === "string" ? directText : input).trim();
     if (!text || loading) return;
 
     // 유저 메시지 추가
@@ -105,7 +106,7 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
       ...prev,
       { id: crypto.randomUUID(), role: "user", content: text },
     ]);
-    setInput("");
+    if (typeof directText !== "string") setInput("");
 
     // 지도 이동 패턴 체크
     const navMatch = text.match(NAV_PATTERN);
@@ -198,9 +199,10 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           if (data.session_id) setSessionId(data.session_id);
           const draft = data.draft || accumulated || "응답을 받지 못했습니다.";
           const charts = data.charts || [];
+          const suggestedActions = data.suggested_actions || [];
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === streamMsgId ? { ...m, content: draft, charts } : m,
+              m.id === streamMsgId ? { ...m, content: draft, charts, suggestedActions } : m,
             ),
           );
           // 지도 하이라이트
@@ -260,13 +262,26 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
     <>
       {/* 토글 버튼 */}
       {!isOpen && (
-        <button className="mv-chat-toggle" onClick={onToggle} title="상권분석 채팅">
-          💬
+        <button
+          className="group absolute bottom-[110px] right-[14px] z-[450] bg-gradient-to-br from-[#0891b2] to-[#06b6d4] hover:from-[#0e7490] hover:to-[#0891b2] dark:from-[#06b6d4] dark:to-[#0891b2] dark:hover:from-[#22d3ee] dark:hover:to-[#06b6d4] rounded-full shadow-lg hover:shadow-xl dark:shadow-[0_8px_30px_rgba(6,182,212,0.4)] dark:hover:shadow-[0_10px_40px_rgba(34,211,238,0.5)] transition-all duration-300 ease-in-out hover:scale-105 flex items-center gap-3 px-5 py-3.5 cursor-pointer border-2 border-white/20 dark:border-white/30"
+          onClick={onToggle}
+          title="에이전트와 대화"
+        >
+          <div className="flex-shrink-0 w-10 h-10 bg-white dark:bg-gray-800 rounded-lg p-0.5 shadow-sm dark:shadow-md">
+            <img
+              src="/sohobi_logo_small.png"
+              alt="소호비 로고"
+              className="w-full h-full object-contain dark:brightness-110"
+            />
+          </div>
+          <span className="text-white font-semibold text-base whitespace-nowrap pr-1 drop-shadow-sm">
+            에이전트와 대화
+          </span>
         </button>
       )}
 
       {/* 패널 */}
-      <div className={`mv-chat-panel ${isOpen ? "" : "mv-chat-panel--closed"}`}>
+      <div className={`mv-chat-panel ${isOpen ? "" : "mv-chat-panel--closed"} ${dongPanelOpen ? "mv-chat-panel--dong-open" : ""}`}>
         <div className="mv-chat-header">
           <span>상권분석 AI</span>
           <button className="mv-chat-header__close" onClick={onToggle}>
@@ -304,7 +319,16 @@ export default function ChatPanel({ isOpen, onToggle, onNavigate, mapContext, on
           {messages.map((msg) => (
             <div key={msg.id} className={`mv-chat-msg mv-chat-msg--${msg.role}`}>
               {msg.role === "assistant" ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                <>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  {msg.suggestedActions?.length > 0 && (
+                    <ActionButtons
+                      actions={msg.suggestedActions}
+                      onAction={handleSend}
+                      disabled={loading}
+                    />
+                  )}
+                </>
               ) : (
                 msg.content
               )}
