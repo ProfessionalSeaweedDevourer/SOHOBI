@@ -494,7 +494,7 @@ export default function UserChat() {
                 retryCount={msg.retryCount}
                 chart={msg.chart}
                 charts={msg.charts || []}
-                displayMode="grade"
+                displayMode="full"
                 sessionId={msg.sessionId}
                 messageId={msg.requestId}
               />
