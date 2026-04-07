@@ -688,8 +688,7 @@ export default function MapView() {
                         ? fetch(
                              `${FASTAPI_URL}/map/stores-by-building?road_addr=${encodeURIComponent(roadAddr)}&store_nm=${encodeURIComponent(store.STORE_NM || "")}&exclude_id=${encodeURIComponent(store.STORE_ID || "")}`,
                              { headers: _mapHeaders },
-                          )
-                             .then((r) => r.json())
+                          ).then((r) => r.json())
                         : Promise.resolve(),
                   ]);
                   setKakaoDetail(detail);
@@ -892,20 +891,39 @@ export default function MapView() {
             if (!wmsResult.landValue) {
                const _pnu = wmsResult.parsed.pnu;
                if (_pnu) {
-                  fetch(`${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(_pnu)}`, { headers: _mapHeaders })
-                     .then((r) => r.json()).then((d) => { if (d.data?.length) setLandValue(d.data); }).catch(() => {});
+                  fetch(
+                     `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(_pnu)}`,
+                     { headers: _mapHeaders },
+                  )
+                     .then((r) => r.json())
+                     .then((d) => {
+                        if (d.data?.length) setLandValue(d.data);
+                     })
+                     .catch(() => {});
                } else {
                   const [_cLng, _cLat] = toLonLat(e.coordinate);
-                  fetch(`${FASTAPI_URL}/map/pnu-by-coord?lng=${_cLng}&lat=${_cLat}`, { headers: _mapHeaders })
+                  fetch(
+                     `${FASTAPI_URL}/map/pnu-by-coord?lng=${_cLng}&lat=${_cLat}`,
+                     { headers: _mapHeaders },
+                  )
                      .then((r) => r.json())
                      .then((d) => {
                         const pnu = d.pnu || "";
                         if (pnu) {
-                           setWmsPopup((prev) => prev ? { ...prev, pnu } : prev);
-                           return fetch(`${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(pnu)}`, { headers: _mapHeaders })
-                              .then((r) => r.json()).then((d) => { if (d.data?.length) setLandValue(d.data); });
+                           setWmsPopup((prev) =>
+                              prev ? { ...prev, pnu } : prev,
+                           );
+                           return fetch(
+                              `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(pnu)}`,
+                              { headers: _mapHeaders },
+                           )
+                              .then((r) => r.json())
+                              .then((d) => {
+                                 if (d.data?.length) setLandValue(d.data);
+                              });
                         }
-                     }).catch(() => {});
+                     })
+                     .catch(() => {});
                }
             }
             return;
@@ -1099,11 +1117,17 @@ export default function MapView() {
                   if (map) {
                      map.getView().animate(
                         {
-                           center: fromLonLat([parseFloat(s.LNG), parseFloat(s.LAT)]),
+                           center: fromLonLat([
+                              parseFloat(s.LNG),
+                              parseFloat(s.LAT),
+                           ]),
                            zoom: 19,
                            duration: 500,
                         },
-                        () => { if (s.STORE_ID || s.store_id) highlightById(s.STORE_ID || s.store_id); }
+                        () => {
+                           if (s.STORE_ID || s.store_id)
+                              highlightById(s.STORE_ID || s.store_id);
+                        },
                      );
                   }
                }
@@ -1116,8 +1140,7 @@ export default function MapView() {
                   fetch(
                      `${FASTAPI_URL}/map/stores-by-building?road_addr=${encodeURIComponent(s.ROAD_ADDR)}&store_nm=${encodeURIComponent(s.STORE_NM || "")}&exclude_id=${encodeURIComponent(s.STORE_ID || "")}`,
                      { headers: _mapHeaders },
-                  )
-                     .then((r) => r.json());
+                  ).then((r) => r.json());
                }
             }}
             clusterStores={clusterPopup?.stores || lastClusterStoresRef.current}
@@ -1216,8 +1239,7 @@ export default function MapView() {
                   fetch(
                      `${FASTAPI_URL}/map/stores-by-building?road_addr=${encodeURIComponent(s.ROAD_ADDR)}&store_nm=${encodeURIComponent(s.STORE_NM || "")}&exclude_id=${encodeURIComponent(s.STORE_ID || "")}`,
                      { headers: _mapHeaders },
-                  )
-                     .then((r) => r.json());
+                  ).then((r) => r.json());
                }
             }}
             onClose={() => {
