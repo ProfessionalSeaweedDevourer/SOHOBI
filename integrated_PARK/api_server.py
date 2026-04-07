@@ -212,7 +212,7 @@ async def health():
         "status": "ok",
         "version": "1.1.0",
         "domains": ["admin", "finance", "legal", "location", "chat"],
-        "plugins": ["SeoulCommercial", "FinanceSim", "LegalSearch", "BusinessDoc"],
+        "plugins": ["FinanceSim", "LegalSearch", "BusinessDoc"],
     }
 
 

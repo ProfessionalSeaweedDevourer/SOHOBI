@@ -21,14 +21,8 @@ export default defineConfig({
             rewrite: (path) => path.replace(/^\/map-api/, ""),
          },
          // /map/stores-*: MapView.jsx API 경로 (React Router /map 페이지와 충돌 방지)
-         "/map/stores-by-dong": {
-            target: "http://localhost:8000",
-            changeOrigin: true,
-         },
-         "/map/stores-by-building": {
-            target: "http://localhost:8000",
-            changeOrigin: true,
-         },
+         "/map/stores-by-dong": { target: "http://localhost:8000", changeOrigin: true },
+         "/map/stores-by-building": { target: "http://localhost:8000", changeOrigin: true },
 
          // 지도: 부동산/상권 데이터 API (integrated_PARK 통합 서버, 포트 8000)
          "/realestate": {

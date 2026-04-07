@@ -1,7 +1,6 @@
 """
-행정 에이전트 (강화)
+행정 에이전트
 - 기반: PARK/Code_EJP/agents/admin_agent.py
-- 추가: SeoulCommercialPlugin (CHOI) — 지역·업종별 상권 데이터 자동 조회
 """
 
 import asyncio
@@ -18,7 +17,6 @@ from semantic_kernel.functions import kernel_function
 
 logger = logging.getLogger(__name__)
 
-from plugins.seoul_commercial_plugin import SeoulCommercialPlugin
 from plugins.admin_procedure_plugin import AdminProcedurePlugin
 from plugins.gov_support_plugin import GovSupportPlugin
 
@@ -70,8 +68,6 @@ PROFILE_PREFIX = """[창업자 상황]
 class AdminAgent:
     def __init__(self, kernel: Kernel):
         self._kernel = kernel
-        if "SeoulCommercial" not in self._kernel.plugins:
-            self._kernel.add_plugin(SeoulCommercialPlugin(), plugin_name="SeoulCommercial")
         if "AdminProcedure" not in self._kernel.plugins:
             self._kernel.add_plugin(AdminProcedurePlugin(), plugin_name="AdminProcedure")
         if "GovSupport" not in self._kernel.plugins:
