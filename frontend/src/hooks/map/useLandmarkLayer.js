@@ -7,14 +7,7 @@ import VectorSource from "ol/source/Vector";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import { fromLonLat } from "ol/proj";
-import {
-   Style,
-   Circle as CircleStyle,
-   Fill,
-   Stroke,
-   Text,
-   Icon,
-} from "ol/style";
+import { Style, Circle as CircleStyle, Fill, Stroke } from "ol/style";
 
 const MAP_URL = import.meta.env.VITE_MAP_URL || "/map-api";
 const _API_KEY = import.meta.env.VITE_API_KEY || "";
@@ -29,29 +22,16 @@ const TYPE_STYLE = {
 };
 
 function makeStyle(typeKey, selected = false) {
-   const { color, label } = TYPE_STYLE[typeKey] || { color: "#999", label: "" };
-   const radius = selected ? 14 : 10;
-   // 선택 시 색 반전: 배경=색상, 테두리=흰색 → 배경=흰색, 테두리=색상+두껍게
-   // CORS 이슈로 외부 이미지 Canvas 처리 불가 → CircleStyle만 사용
-   const imageStyle = new CircleStyle({
-      radius,
-      fill: new Fill({ color: selected ? "#fff" : color }),
-      stroke: new Stroke({
-         color: selected ? color : "#fff",
-         width: selected ? 4 : 2,
-      }),
-   });
+   const { color } = TYPE_STYLE[typeKey] || { color: "#999" };
    return new Style({
-      image: imageStyle,
-      text: label
-         ? new Text({
-              text: label,
-              offsetY: -(radius + 6),
-              font: selected ? "bold 12px sans-serif" : "bold 11px sans-serif",
-              fill: new Fill({ color: selected ? color : color }),
-              stroke: new Stroke({ color: "#fff", width: 3 }),
-           })
-         : null,
+      image: new CircleStyle({
+         radius: selected ? 10 : 7,
+         fill: new Fill({ color: selected ? "#fff" : color }),
+         stroke: new Stroke({
+            color: selected ? color : "#fff",
+            width: selected ? 3 : 2,
+         }),
+      }),
    });
 }
 
@@ -72,7 +52,7 @@ export function useLandmarkLayer(mapInstance) {
             });
             f.set("lmData", d);
             f.set("lmType", typeKey);
-            f.setStyle(makeStyle(typeKey, false));
+            f.setStyle(makeStyle(typeKey));
             return f;
          });
 
@@ -83,7 +63,7 @@ export function useLandmarkLayer(mapInstance) {
       const layer = new VectorLayer({
          source: new VectorSource({ features }),
          zIndex,
-         minZoom: 16, // 줌 16 미만이면 자동 숨김
+         minZoom: 16,
       });
       map.addLayer(layer);
       return layer;
@@ -106,7 +86,7 @@ export function useLandmarkLayer(mapInstance) {
                });
                f.set("lmData", d);
                f.set("lmType", typeKey);
-               f.setStyle(makeStyle(typeKey, false));
+               f.setStyle(makeStyle(typeKey));
                return f;
             });
          if (landmarkLayerRef.current) {
@@ -167,7 +147,7 @@ export function useLandmarkLayer(mapInstance) {
    const selectLandmark = (feature) => {
       if (selectedFeatRef.current) {
          const prev = selectedFeatRef.current;
-         prev.setStyle(makeStyle(prev.get("lmType"), false));
+         prev.setStyle(makeStyle(prev.get("lmType")));
       }
       if (!feature) {
          selectedFeatRef.current = null;

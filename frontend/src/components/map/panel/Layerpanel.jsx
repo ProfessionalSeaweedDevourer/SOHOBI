@@ -4,12 +4,63 @@
 import React, { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
+import "./Layerpanel.css";
+
+function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
+   const layer = new TileLayer({
+      source: new TileWMS({
+         url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
+         params: {
+            SERVICE: "WMS",
+            VERSION: "1.3.0",
+            REQUEST: "GetMap",
+            LAYERS: layerName,
+            STYLES: "",
+            FORMAT: "image/png",
+            TRANSPARENT: "TRUE",
+            CRS: "EPSG:3857",
+         },
+         crossOrigin: "anonymous",
+         transition: 0,
+      }),
+      opacity: 1,
+      zIndex,
+   });
+   layer.set("name", layerKey);
+   return layer;
+}
+
+function makeCadastralLayer(vworldKey) {
+   const layer = new TileLayer({
+      source: new TileWMS({
+         url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
+         params: {
+            SERVICE: "WMS",
+            VERSION: "1.3.0",
+            REQUEST: "GetMap",
+            LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+            STYLES: ",",
+            FORMAT: "image/png",
+            TRANSPARENT: "TRUE",
+            CRS: "EPSG:3857",
+         },
+         crossOrigin: "anonymous",
+         transition: 0,
+      }),
+      opacity: 0.7,
+      zIndex: 50,
+      minZoom: 17,
+   });
+   layer.set("name", "cadastral");
+   return layer;
+}
 
 export default function LayerPanel({
    map,
    mapReady,
    vworldKey,
    wmsLayerRef,
+   currentZoom,
    landmarkLayerRef,
    festivalLayerRef,
    schoolLayerRef,
@@ -18,6 +69,7 @@ export default function LayerPanel({
    schoolLoaded,
 }) {
    const [cadastralOn, setCadastralOn] = useState(true);
+   const [touristInfoOn, setTouristInfoOn] = useState(true);
    const [landmarkOn, setLandmarkOn] = useState(true);
    const [festivalOn, setFestivalOn] = useState(true);
    const [schoolOn, setSchoolOn] = useState(true);
@@ -27,68 +79,47 @@ export default function LayerPanel({
    React.useEffect(() => {
       if (!map || !mapReady || initDoneRef.current) return;
       initDoneRef.current = true;
-      // 지적도 초기 ON
-      const layer = new TileLayer({
-         source: new TileWMS({
-            url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
-            params: {
-               SERVICE: "WMS",
-               VERSION: "1.3.0",
-               REQUEST: "GetMap",
-               LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-               STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-               FORMAT: "image/png",
-               TRANSPARENT: "TRUE",
-               CRS: "EPSG:3857",
-            },
-            crossOrigin: "anonymous",
-            transition: 0,
-         }),
-         opacity: 0.7,
-         zIndex: 50,
-         minZoom: 17,
-      });
-      layer.set("name", "cadastral");
-      map.addLayer(layer);
-      wmsLayerRef.current = layer;
+      // 관광안내소 초기 ON
+      map.addLayer(
+         makeWmsLayer("lt_p_dgtouristinfo", "tourist_info", 215, vworldKey),
+      );
+      // 지적도: MapView useEffect([mapReady])에서 동적 import로 생성 — 500ms 후 ref 연결
+      const t = setTimeout(() => {
+         const existing = map.getLayers().getArray()
+            .find((l) => l.get("name") === "cadastral");
+         if (existing) {
+            wmsLayerRef.current = existing;
+            return;
+         }
+         // MapView 동적 import가 아직 완료 안 됐으면 직접 생성 (fallback)
+         const layer = makeCadastralLayer(vworldKey);
+         map.addLayer(layer);
+         wmsLayerRef.current = layer;
+      }, 500);
+      return () => clearTimeout(t);
    }, [map, mapReady]); // eslint-disable-line
 
    // ── 지적도 ──────────────────────────────────────────────────
    const toggleCadastral = () => {
-      if (cadastralOn) {
-         // name 기준으로 모든 지적도 레이어 제거 (중복 방지)
-         map.getLayers()
-            .getArray()
-            .filter((l) => l.get("name") === "cadastral")
-            .forEach((l) => map.removeLayer(l));
-         wmsLayerRef.current = null;
-         setCadastralOn(false);
-      } else {
-         const layer = new TileLayer({
-            source: new TileWMS({
-               url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vworldKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
-               params: {
-                  SERVICE: "WMS",
-                  VERSION: "1.3.0",
-                  REQUEST: "GetMap",
-                  LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-                  STYLES: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-                  FORMAT: "image/png",
-                  TRANSPARENT: "TRUE",
-                  CRS: "EPSG:3857",
-               },
-               crossOrigin: "anonymous",
-               transition: 0,
-            }),
-            opacity: 0.7,
-            zIndex: 50,
-            minZoom: 17,
-         });
-         layer.set("name", "cadastral");
-         map.addLayer(layer);
-         wmsLayerRef.current = layer;
-         setCadastralOn(true);
-      }
+      const layer =
+         map.getLayers().getArray().find((l) => l.get("name") === "cadastral") ??
+         wmsLayerRef.current;
+      if (!layer) return;
+      const next = !cadastralOn;
+      layer.setVisible(next);
+      wmsLayerRef.current = layer;
+      setCadastralOn(next);
+   };
+
+   // ── 관광안내소 (VWorld WMS) ──────────────────────────────────
+   const toggleTouristInfo = () => {
+      const layer =
+         map.getLayers().getArray().find((l) => l.get("name") === "tourist_info") ??
+         null;
+      if (!layer) return;
+      const next = !touristInfoOn;
+      layer.setVisible(next);
+      setTouristInfoOn(next);
    };
 
    // ── 관광지·문화시설 (KTO DB 마커) ───────────────────────────
@@ -114,19 +145,30 @@ export default function LayerPanel({
    };
 
    return (
-      <div style={S.panel}>
-         <div style={S.title}>🗂️ 레이어 관리</div>
+      <div className="lp-panel">
+         <div className="lp-title">🗂️ 레이어 관리</div>
 
-         <div style={S.sectionLabel}>VWorld</div>
+         <div className="lp-section-label">VWorld</div>
          <LayerRow
             label="📋 지적도"
-            desc="토지 경계 · 공시지가"
+            desc={
+               cadastralOn && currentZoom < 17
+                  ? `줌 ${Math.floor(currentZoom)}/17 — 더 확대하면 표시`
+                  : "토지 경계 (줌 17+ 필요)"
+            }
             on={cadastralOn}
             color="#2196F3"
             onClick={toggleCadastral}
          />
+         <LayerRow
+            label="ℹ️ 관광안내소"
+            desc="VWorld WMS"
+            on={touristInfoOn}
+            color="#0288D1"
+            onClick={toggleTouristInfo}
+         />
 
-         <div style={S.sectionLabel}>한국관광공사</div>
+         <div className="lp-section-label">한국관광공사</div>
          <LayerRow
             label="🏛️ 관광지·문화"
             desc="DB 마커 (관광지+문화시설)"
@@ -144,7 +186,7 @@ export default function LayerPanel({
             disabled={!festivalLoaded}
          />
 
-         <div style={S.sectionLabel}>교육</div>
+         <div className="lp-section-label">교육</div>
          <LayerRow
             label="🏫 학교"
             desc="DB 마커"
@@ -154,24 +196,24 @@ export default function LayerPanel({
             disabled={!schoolLoaded}
          />
 
-         <div style={S.notice}>💡 동 클릭 시 해당 구역 마커 자동 로드</div>
+         <div className="lp-notice">💡 동 클릭 시 해당 구역 마커 자동 로드</div>
       </div>
    );
 }
 
 function LayerRow({ label, desc, on, color, onClick, disabled }) {
    return (
-      <div style={{ ...S.row, opacity: disabled ? 0.4 : 1 }}>
+      <div className="lp-row" style={{ opacity: disabled ? 0.4 : 1 }}>
          <div style={{ flex: 1 }}>
-            <div style={S.layerName}>{label}</div>
-            <div style={S.layerDesc}>{desc}</div>
+            <div className="lp-layer-name">{label}</div>
+            <div className="lp-layer-desc">{desc}</div>
          </div>
          <button
             onClick={disabled ? undefined : onClick}
+            className={`lp-toggle ${on ? "" : "lp-toggle--off"}`}
             style={{
-               ...S.toggle,
-               background: on ? color : "#e0e0e0",
-               color: on ? "#fff" : "#555",
+               background: on ? color : undefined,
+               color: on ? "#fff" : undefined,
                cursor: disabled ? "default" : "pointer",
             }}
          >
@@ -180,59 +222,3 @@ function LayerRow({ label, desc, on, color, onClick, disabled }) {
       </div>
    );
 }
-
-const S = {
-   panel: {
-      background: "#fff",
-      border: "1px solid #ddd",
-      borderRadius: 10,
-      padding: 16,
-      minWidth: 230,
-      boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-   },
-   title: {
-      fontSize: 13,
-      fontWeight: 700,
-      color: "#111",
-      marginBottom: 12,
-      paddingBottom: 8,
-      borderBottom: "1px solid #f0f0f0",
-   },
-   sectionLabel: {
-      fontSize: 10,
-      fontWeight: 700,
-      color: "#aaa",
-      textTransform: "uppercase",
-      letterSpacing: 1,
-      margin: "10px 0 4px 2px",
-   },
-   row: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      padding: 10,
-      background: "#f9f9f9",
-      borderRadius: 8,
-      marginBottom: 6,
-   },
-   layerName: { fontSize: 13, fontWeight: 600, color: "#333" },
-   layerDesc: { fontSize: 11, color: "#999", marginTop: 2 },
-   toggle: {
-      border: "none",
-      borderRadius: 6,
-      padding: "6px 14px",
-      fontSize: 12,
-      fontWeight: 700,
-      flexShrink: 0,
-      transition: "all 0.2s",
-   },
-   notice: {
-      fontSize: 11,
-      color: "#bbb",
-      padding: 8,
-      background: "#f9f9f9",
-      borderRadius: 6,
-      textAlign: "center",
-      marginTop: 4,
-   },
-};
