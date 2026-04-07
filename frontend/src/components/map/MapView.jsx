@@ -66,7 +66,7 @@ export default function MapView() {
    const wmsLayerRef = useRef(null);
 
    const [coords, setCoords] = useState({ lat: "37.5665", lng: "126.9780" });
-   const [chatOpen, setChatOpen] = useState(false);
+   const [chatOpen, setChatOpen] = useState(true);
    const [chatContext, setChatContext] = useState(null);
    const [landmarkLoaded, setLandmarkLoaded] = useState(false);
    const [landmarkPopup, setLandmarkPopup] = useState(null);
@@ -1001,6 +1001,7 @@ export default function MapView() {
          <ChatPanel
             isOpen={chatOpen}
             onToggle={() => setChatOpen((prev) => !prev)}
+            dongPanelOpen={!!dongPanel}
             mapContext={chatContext}
             onNavigate={handleChatNavigate}
             onHighlightArea={handleHighlightArea}
