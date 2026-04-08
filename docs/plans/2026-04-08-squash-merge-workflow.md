@@ -45,15 +45,15 @@ git reset --hard origin/main && git push --force-with-lease
 ```bash
 # PR 시작 시
 git fetch origin
-git checkout -b PARK/fix-refresh-button origin/main
+git checkout -b PARK-fix-refresh-button origin/main
 
 # 작업 → 커밋
 
 # PR 전 rebase (이미 main 기반이므로 --skip 없음)
 git rebase origin/main
-git push origin PARK/fix-refresh-button
+git push origin PARK-fix-refresh-button
 
-# PR: PARK/fix-refresh-button → main
+# PR: PARK-fix-refresh-button → main
 ```
 
 **효과:**
@@ -62,8 +62,13 @@ git push origin PARK/fix-refresh-button
 - 팀 브랜치(PARK)는 건드리지 않으므로 영구 보존 규칙 유지
 
 **단점:**
-- 브랜치 명명 규칙 추가 필요 (`PARK/작업명` 패턴)
+
+- 브랜치 명명 규칙 추가 필요 (`PARK-작업명` 패턴 — 슬래시 불가)
 - CLAUDE.md의 "작업 브랜치는 팀원 브랜치 사용" 규칙 개정 필요
+
+> **git ref 제약**: `PARK` 브랜치가 존재하면 `PARK/작업명`(슬래시) 패턴으로 브랜치 생성 불가.  
+> git은 refs를 파일시스템 경로로 저장하므로 `PARK`(파일)와 `PARK/`(디렉토리)가 공존할 수 없다.  
+> 반드시 **대시(`PARK-작업명`)** 패턴을 사용한다.
 
 ---
 
@@ -87,16 +92,16 @@ git push origin PARK/fix-refresh-button
 ```bash
 # 1. main 기반 브랜치 생성
 git fetch origin
-git checkout -b PARK/<작업명> origin/main
+git checkout -b PARK-<작업명> origin/main
 
 # 2. 작업 및 커밋
 
 # 3. PR 직전 rebase (충돌 없음)
 git rebase origin/main
-git push origin PARK/<작업명>
+git push origin PARK-<작업명>
 
 # 4. PR 생성 후 머지
-# 5. 브랜치 삭제 여부: PARK/<작업명>은 단명 브랜치이므로 머지 후 삭제 가능
+# 5. 브랜치 삭제 여부: PARK-<작업명>은 단명 브랜치이므로 머지 후 삭제 가능
 #    (팀원 기준 브랜치 PARK 자체는 유지)
 ```
 
@@ -107,7 +112,7 @@ git push origin PARK/<작업명>
 1. 새 브랜치 `PARK/test-workflow`를 `origin/main` 기반으로 생성
 2. 더미 커밋 추가 후 PR 생성
 3. squash merge 후 동일 브랜치에서 `git rebase origin/main` 재실행 → `--skip` 없이 완료되는지 확인
-4. 병행 세션 시뮬레이션: 두 터미널에서 각기 `PARK/session1`, `PARK/session2` 브랜치로 작업 → 간섭 없음 확인
+4. 병행 세션 시뮬레이션: 두 터미널에서 각기 `PARK-session1`, `PARK-session2` 브랜치로 작업 → 간섭 없음 확인
 
 ---
 
