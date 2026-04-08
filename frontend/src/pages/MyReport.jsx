@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { trackEvent } from "../utils/trackEvent";
 import { ThemeToggle } from "../components/ThemeToggle";
 import ReportSummary from "../components/report/ReportSummary";
@@ -19,6 +20,7 @@ const _HEADERS = {
 const SESSION_KEY = "sohobi_session_id";
 
 export default function MyReport() {
+  const { user, loading: authLoading } = useAuth();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -29,12 +31,22 @@ export default function MyReport() {
       : null;
 
   useEffect(() => {
-    if (!sessionId) {
+    if (authLoading) return;
+
+    let url, headers;
+    if (user?.token) {
+      url = `${BASE_URL}/api/report/me`;
+      headers = { ..._HEADERS, Authorization: `Bearer ${user.token}` };
+    } else if (sessionId) {
+      url = `${BASE_URL}/api/report/${sessionId}`;
+      headers = _HEADERS;
+    } else {
       setLoading(false);
       return;
     }
+
     const controller = new AbortController();
-    fetch(`${BASE_URL}/api/report/${sessionId}`, { headers: _HEADERS, signal: controller.signal })
+    fetch(url, { headers, signal: controller.signal })
       .then((res) => {
         if (res.status === 403) return null;
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -47,7 +59,7 @@ export default function MyReport() {
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [sessionId]);
+  }, [user, sessionId, authLoading]);
 
   return (
     <div className="min-h-screen flex flex-col relative">
@@ -115,7 +127,7 @@ export default function MyReport() {
             className="text-sm"
             style={{ color: "var(--muted-foreground)" }}
           >
-            이번 세션의 창업 준비 현황을 요약합니다
+            {user ? "나의 전체 창업 준비 현황을 요약합니다" : "이번 세션의 창업 준비 현황을 요약합니다"}
           </motion.p>
         </div>
 
