@@ -133,6 +133,7 @@ export default function UserChat() {
     messages, sessionId, setSessionId, latestParams, setLatestParams,
     addMessage, updateAt, restoreFromApi,
   } = useChatMessages();
+  const layer2Fetched = useRef(false);
 
   const { items: checklistItems, progress: checklistProgress, toggleItem, syncFromDraft } = useChecklistState(sessionId, messages.length > 0);
 
@@ -178,9 +179,11 @@ export default function UserChat() {
   // Layer 2: 백엔드에서 메시지 복원 (로그인 사용자, sessionStorage 비어있을 때)
   useEffect(() => {
     if (messages.length > 0 || !user || !sessionId) return;
+    if (layer2Fetched.current) return;
     const token = localStorage.getItem("sohobi_jwt");
     if (!token) return;
 
+    layer2Fetched.current = true;
     let cancelled = false;
     (async () => {
       try {
@@ -198,7 +201,8 @@ export default function UserChat() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);  // mount 시 1회만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, sessionId]);  // user 비동기 로드 완료 시 재평가
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

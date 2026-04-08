@@ -68,6 +68,7 @@ async def get_session_history(
     ]
 
     if not include_messages:
+        # TODO: 응답 포맷 통일 — MyLogs와 함께 항상 dict 반환으로 변환 예정
         return filtered  # 하위 호환: 기존 flat array
 
     messages = await session_store.get_session_messages(session_id)

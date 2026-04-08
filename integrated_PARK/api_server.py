@@ -491,8 +491,10 @@ async def stream_query(req: QueryRequest, request: Request):
                     if ev.get("updated_context"):
                         session.setdefault("context", {}).update(ev["updated_context"])
 
-                    # 프론트 렌더링용 메시지 메타데이터 축적
-                    session.setdefault("messages", []).append({
+                    # 프론트 렌더링용 메시지 메타데이터 축적 (Cosmos 2MB 문서 한도 대비 cap)
+                    _MAX_SESSION_MESSAGES = 50
+                    msgs = session.setdefault("messages", [])
+                    msgs.append({
                         "question": req.question,
                         "domain": domain,
                         "grade": ev.get("grade", ""),
@@ -500,6 +502,8 @@ async def stream_query(req: QueryRequest, request: Request):
                         "confidence_note": ev.get("confidence_note", ""),
                         "suggested_actions": ev.get("suggested_actions", []),
                     })
+                    if len(msgs) > _MAX_SESSION_MESSAGES:
+                        session["messages"] = msgs[-_MAX_SESSION_MESSAGES:]
 
                     await save_query_session(sid, session)
 
