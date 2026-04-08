@@ -61,6 +61,7 @@ export function useMarkers(mapInstance, visibleCats) {
    const circleLayerRef = useRef(null);
    const allStoresRef = useRef([]);
    const selectedFeatRef = useRef(null);
+   const selectedStoreIdRef = useRef(null);
    const clusterSourceRef = useRef(null);
    const vectorSourceRef = useRef(null);
 
@@ -105,6 +106,7 @@ export function useMarkers(mapInstance, visibleCats) {
       // 레이어가 이미 존재하면 소스만 교체 (Layer 재생성 생략)
       if (clusterLayerRef.current && vectorSourceRef.current) {
          selectedFeatRef.current = null;
+         selectedStoreIdRef.current = null;
          vectorSourceRef.current.clear();
          vectorSourceRef.current.addFeatures(features);
          return;
@@ -122,11 +124,19 @@ export function useMarkers(mapInstance, visibleCats) {
          zIndex: 200,
          style: (feature) => {
             const members = feature.get("features") || [];
+            // STORE_ID로 비교 (zoom 변경 시 cluster 재생성 대응)
+            const selId = selectedStoreIdRef.current;
+            const isSel =
+               selId != null &&
+               members.some((f) => {
+                  const s = f.get("store");
+                  return (s?.STORE_ID || s?.store_id) === selId;
+               });
+
             if (members.length === 1) {
                const store = members[0].get("store");
-               return makeMarkerStyle(store?.CAT_CD);
+               return makeMarkerStyle(store?.CAT_CD, isSel);
             }
-            // 클러스터 - 대표 카테고리 색상
             const cats = members
                .map((f) => f.get("store")?.CAT_CD)
                .filter(Boolean);
@@ -136,6 +146,22 @@ export function useMarkers(mapInstance, visibleCats) {
                   cats.filter((c) => c === a).length,
             )[0];
             const color = CAT_COLORS[topCat] || "#888";
+            if (isSel) {
+               const radius =
+                  members.length > 99 ? 18 : members.length > 9 ? 15 : 12;
+               return new Style({
+                  image: new CircleStyle({
+                     radius: radius + 3,
+                     fill: new Fill({ color: "#fff" }),
+                     stroke: new Stroke({ color, width: 3 }),
+                  }),
+                  text: new Text({
+                     text: String(members.length),
+                     fill: new Fill({ color }),
+                     font: `bold ${radius}px sans-serif`,
+                  }),
+               });
+            }
             return makeClusterStyle(members.length, color);
          },
       });
@@ -144,62 +170,38 @@ export function useMarkers(mapInstance, visibleCats) {
       clusterLayerRef.current = layer;
    };
 
-   const selectMarker = (feature) => {
-      // 이전 선택 복원
-      if (selectedFeatRef.current) {
-         const prev = selectedFeatRef.current;
-         const prevMembers = prev.get("features") || [];
-         if (prevMembers.length > 1) {
-            // 클러스터: 빈도 기반 대표 색상으로 복원
-            const cats = prevMembers
-               .map((f) => f.get("store")?.CAT_CD)
-               .filter(Boolean);
-            const topCat = cats.sort(
-               (a, b) =>
-                  cats.filter((c) => c === b).length -
-                  cats.filter((c) => c === a).length,
-            )[0];
-            const color = CAT_COLORS[topCat] || "#888";
-            prev.setStyle(makeClusterStyle(prevMembers.length, color));
-         } else {
-            prev.setStyle(makeMarkerStyle(prev.get("store")?.CAT_CD));
+   const _highlightById = (storeId) => {
+      if (!storeId) return;
+      selectedStoreIdRef.current = storeId;
+      selectedFeatRef.current = null;
+      clusterLayerRef.current?.changed();
+      // clusterSource 준비됐으면 feature 참조도 같이 저장 (선택적)
+      if (clusterSourceRef?.current) {
+         const wrappers = clusterSourceRef.current.getFeatures();
+         for (const wf of wrappers) {
+            const match = (wf.get("features") || []).find((f) => {
+               const s = f.get("store");
+               return (s?.STORE_ID || s?.store_id) === storeId;
+            });
+            if (match) {
+               selectedFeatRef.current = wf;
+               break;
+            }
          }
-         selectedFeatRef.current = null;
       }
-      if (!feature) return;
+   };
 
-      // 새 선택 강조
-      const members = feature.get("features") || [];
-      if (members.length > 1) {
-         const cats = members
-            .map((f) => f.get("store")?.CAT_CD)
-            .filter(Boolean);
-         const topCat = cats.sort(
-            (a, b) =>
-               cats.filter((c) => c === b).length -
-               cats.filter((c) => c === a).length,
-         )[0];
-         const color = CAT_COLORS[topCat] || "#888";
-         const radius = members.length > 99 ? 18 : members.length > 9 ? 15 : 12;
-         feature.setStyle(
-            new Style({
-               image: new CircleStyle({
-                  radius,
-                  fill: new Fill({ color }),
-                  stroke: new Stroke({ color: "#fff", width: 3 }),
-               }),
-               text: new Text({
-                  text: String(members.length),
-                  fill: new Fill({ color: "#fff" }),
-                  font: "bold 11px sans-serif",
-               }),
-            }),
-         );
+   const selectMarker = (feature) => {
+      if (!feature) {
+         selectedFeatRef.current = null;
+         selectedStoreIdRef.current = null;
       } else {
-         const store = feature.get("store");
-         feature.setStyle(makeMarkerStyle(store?.CAT_CD, true));
+         const members = feature.get("features") || [];
+         const store = members[0]?.get("store");
+         selectedFeatRef.current = feature;
+         selectedStoreIdRef.current = store?.STORE_ID || store?.store_id || null;
       }
-      selectedFeatRef.current = feature;
+      clusterLayerRef.current?.changed();
    };
 
    const clearMarkers = () => {
@@ -216,6 +218,7 @@ export function useMarkers(mapInstance, visibleCats) {
       vectorSourceRef.current = null;
       clusterSourceRef.current = null;
       selectedFeatRef.current = null;
+      selectedStoreIdRef.current = null;
       allStoresRef.current = [];
    };
 
@@ -239,6 +242,7 @@ export function useMarkers(mapInstance, visibleCats) {
       drawMarkers,
       clearMarkers,
       selectMarker,
+      highlightById: _highlightById,
       getSingleFeature,
    };
 }

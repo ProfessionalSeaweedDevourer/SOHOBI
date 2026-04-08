@@ -495,7 +495,7 @@ export default function StorePopup({
             style={{
                position: "absolute",
                bottom: 20,
-               ...(hasDongPanel ? { left: 16 } : { right: 16 }),
+               ...(hasDongPanel ? { right: "calc(var(--dong-panel-width) + 16px)" } : { right: 16 }),
                zIndex: 300,
                width: 300,
                background: "#fff",
@@ -523,7 +523,7 @@ export default function StorePopup({
             style={{
                position: "absolute",
                bottom: 20,
-               ...(hasDongPanel ? { left: 16 } : { right: 16 }),
+               ...(hasDongPanel ? { right: "calc(var(--dong-panel-width) + 16px)" } : { right: 16 }),
                zIndex: 300,
                width: 300,
                background: "#fff",
@@ -551,7 +551,7 @@ export default function StorePopup({
          style={{
             position: "absolute",
             bottom: 20,
-            ...(hasDongPanel ? { left: 16 } : { right: 16 }),
+            ...(hasDongPanel ? { right: "calc(var(--dong-panel-width) + 16px)" } : { right: 16 }),
             zIndex: 300,
             width: 300,
             background: "#fff",

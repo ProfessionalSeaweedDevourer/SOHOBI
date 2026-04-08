@@ -187,12 +187,20 @@ function PlaceContent({ wmsPopup }) {
 }
 
 // ── 메인 컴포넌트: WMS 레이어 클릭 팝업 ──────────────────────
-export default function WmsPopup({ wmsPopup, landValue, onClose, onBack }) {
+export default function WmsPopup({
+   wmsPopup,
+   landValue,
+   onClose,
+   onBack,
+   hasDongPanel,
+}) {
    if (!wmsPopup) return null;
    const meta = LAYER_META[wmsPopup.type] || LAYER_META.cadastral;
 
    return (
-      <div className="mv-wms-popup">
+      <div
+         className={`mv-wms-popup${hasDongPanel ? " mv-wms-popup--dong-open" : ""}`}
+      >
          <div style={{ height: 4, background: meta.color }} />
          <div style={{ padding: "12px 16px 16px" }}>
             <div
