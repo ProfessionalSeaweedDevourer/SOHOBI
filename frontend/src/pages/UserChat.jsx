@@ -112,6 +112,7 @@ export default function UserChat({ devMode = false }) {
     () => PLACEHOLDER_QUESTIONS[Math.floor(Math.random() * PLACEHOLDER_QUESTIONS.length)]
   );
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
+  const [loadingElapsed, setLoadingElapsed] = useState(0);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -154,12 +155,25 @@ export default function UserChat({ devMode = false }) {
   }, [userMenuOpen, navOpen]);
 
   useEffect(() => {
+    if (!loading) { setLoadingElapsed(0); return; }
+    const interval = setInterval(() => setLoadingElapsed(s => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  useEffect(() => {
     if (!devMode) trackEvent("feature_discovery", { page: "user_chat" });
   }, [devMode]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  function getSlowMessage(elapsed) {
+    if (elapsed >= 30) return "거의 다 됐어요, 조금만 더 기다려 주세요 🙏";
+    if (elapsed >= 20) return "복잡한 내용을 꼼꼼히 검토하고 있어요…";
+    if (elapsed >= 10) return "더 좋은 답변을 위해 조금 더 생각하는 중이에요…";
+    return null;
+  }
 
   function handleSubmit(question) {
     if (!devMode) trackEvent("agent_query", { session_id: sessionId, page: "user_chat" });
@@ -429,6 +443,16 @@ export default function UserChat({ devMode = false }) {
                     <span className="inline-block w-3 h-3 border-2 border-[var(--border)] border-t-[var(--brand-blue)] rounded-full animate-spin" />
                     {devMode ? "도메인 분류 중…" : "분석 준비 중…"}
                   </div>
+                )}
+                {!devMode && getSlowMessage(loadingElapsed) && (
+                  <motion.div
+                    key={getSlowMessage(loadingElapsed)}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-2 text-xs text-muted-foreground italic"
+                  >
+                    {getSlowMessage(loadingElapsed)}
+                  </motion.div>
                 )}
               </div>
             )}

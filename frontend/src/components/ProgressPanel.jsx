@@ -10,6 +10,14 @@ const DOMAIN_LABEL = {
   chat:     "안내",
 };
 
+const SIGNOFF_MSG = {
+  finance:  "수치·단위·가정 전제를 검토하는 중이에요…",
+  legal:    "법령 인용과 조문 근거를 확인하는 중이에요…",
+  location: "상권 데이터와 출처를 점검하는 중이에요…",
+  admin:    "행정 절차와 서류 요건을 검증하는 중이에요…",
+  chat:     "답변의 완결성을 확인하는 중이에요…",
+};
+
 const GRADE_COLOR = {
   A: "var(--grade-a)",
   B: "var(--grade-b)",
@@ -106,7 +114,7 @@ export default function ProgressPanel({ events = [], detailed = false }) {
                     ? (signoffResult.approved
                         ? `검증 통과`
                         : (detailed ? `반려` : `재시도`))
-                    : "검증 중…"}
+                    : (SIGNOFF_MSG[domain] || "답변 품질을 검증하는 중이에요…")}
                 </span>
                 {signoffResult && (
                   <span className="font-semibold" style={{ color: GRADE_COLOR[signoffResult.grade] }}>
