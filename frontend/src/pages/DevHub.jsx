@@ -9,14 +9,14 @@ const TOOLS = [
   {
     path: "/dev/logs",
     icon: ClipboardList,
-    color: "var(--brand-blue)",
+    color: "#0891b2",
     label: "로그 뷰어",
     desc: "전체 요청·거부 이력·응답 오류·투표 집계를 확인합니다.",
   },
   {
     path: "/dev/stats",
     icon: BarChart3,
-    color: "var(--brand-teal)",
+    color: "#14b8a6",
     label: "성능 통계",
     desc: "에이전트별 응답 시간, 등급 분포, 상태 현황을 모니터링합니다.",
   },
@@ -33,7 +33,7 @@ export default function DevHub() {
       <motion.header
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="glass border-b border-white/20 backdrop-blur-xl sticky top-0 z-50"
+        className="glass border-b border-[var(--border)] backdrop-blur-xl sticky top-0 z-50"
       >
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <Link
@@ -113,10 +113,9 @@ export default function DevHub() {
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
                 whileHover="cardHover"
                 variants={{ cardHover: { y: -8 } }}
-                className="group cursor-pointer"
-                onClick={() => navigate(tool.path)}
+                className="group"
               >
-                <div className="glass rounded-2xl p-8 text-center shadow-elevated transition-glow hover-lift relative overflow-hidden h-full">
+                <Link to={tool.path} className="block glass rounded-2xl p-8 text-center shadow-elevated transition-glow hover-lift relative overflow-hidden h-full">
                   <div
                     className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300"
                     style={{ backgroundColor: tool.color }}
@@ -139,7 +138,7 @@ export default function DevHub() {
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {tool.desc}
                   </p>
-                </div>
+                </Link>
               </motion.div>
             );
           })}
@@ -147,7 +146,7 @@ export default function DevHub() {
       </section>
 
       {/* Footer */}
-      <footer className="glass border-t border-white/20 py-8 backdrop-blur-xl">
+      <footer className="glass border-t border-[var(--border)] py-8 backdrop-blur-xl">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>SOHOBI 개발자 도구</p>
         </div>

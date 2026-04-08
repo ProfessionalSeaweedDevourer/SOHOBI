@@ -236,7 +236,7 @@ export default function StatsPage() {
       <motion.header
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="glass border-b border-white/20 backdrop-blur-xl sticky top-0 z-50"
+        className="glass border-b border-[var(--border)] backdrop-blur-xl sticky top-0 z-50"
       >
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <Link
@@ -353,25 +353,25 @@ export default function StatsPage() {
           <div className="flex flex-col gap-6">
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <SummaryCard label="총 요청" value={data.total} icon={Hash} color="var(--brand-blue)" />
-              <SummaryCard label="평균 응답" value={ms2s(data.overall?.avg_ms)} sub={`n=${data.overall?.n ?? 0}`} icon={Clock} color="var(--brand-teal)" />
-              <SummaryCard label="P90" value={ms2s(data.overall?.p90_ms)} icon={Gauge} color="var(--brand-orange)" />
-              <SummaryCard label="에러율" value={`${(Math.min(data.error_rate ?? 0, 1) * 100).toFixed(1)}%`} sub={`${data.error_count}건`} icon={AlertTriangle} color="var(--grade-c)" />
+              <SummaryCard label="총 요청" value={data.total} icon={Hash} color="#0891b2" />
+              <SummaryCard label="평균 응답" value={ms2s(data.overall?.avg_ms)} sub={`n=${data.overall?.n ?? 0}`} icon={Clock} color="#14b8a6" />
+              <SummaryCard label="P90" value={ms2s(data.overall?.p90_ms)} icon={Gauge} color="#f97316" />
+              <SummaryCard label="에러율" value={`${(Math.min(data.error_rate ?? 0, 1) * 100).toFixed(1)}%`} sub={`${data.error_count}건`} icon={AlertTriangle} color="#ef4444" />
             </div>
 
             <LatencyBarChart byDomain={data.by_domain} />
 
             {/* Doughnut Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <DoughnutChart title="등급 분포" dataMap={gradeLabeled} colorMap={gradeLabeledColors} icon={PieChart} iconColor="var(--brand-teal)" />
-              <DoughnutChart title="상태 분포" dataMap={data.by_status} colorMap={STATUS_COLORS} icon={Activity} iconColor="var(--brand-blue)" />
+              <DoughnutChart title="등급 분포" dataMap={gradeLabeled} colorMap={gradeLabeledColors} icon={PieChart} iconColor="#14b8a6" />
+              <DoughnutChart title="상태 분포" dataMap={data.by_status} colorMap={STATUS_COLORS} icon={Activity} iconColor="#0891b2" />
             </div>
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="glass border-t border-white/20 py-8 backdrop-blur-xl">
+      <footer className="glass border-t border-[var(--border)] py-8 backdrop-blur-xl">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>SOHOBI 개발자 도구</p>
         </div>
