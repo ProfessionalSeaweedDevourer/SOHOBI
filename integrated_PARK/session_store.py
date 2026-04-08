@@ -20,6 +20,7 @@ Cosmos DB 구조:
 """
 
 import os
+from collections import OrderedDict
 from typing import Any
 
 from semantic_kernel.contents import ChatHistory
@@ -97,16 +98,15 @@ def _deserialize_history(data: list[dict]) -> ChatHistory:
 
 
 # ── 인메모리 폴백 ───────────────────────────────────────────────
-_memory: dict[str, dict] = {}
-_MEMORY_MAX = 500  # 세션 수 상한 — 초과 시 가장 오래된 항목 제거
+_memory: OrderedDict[str, dict] = OrderedDict()
+_MEMORY_MAX = 500  # 세션 수 상한 — 초과 시 가장 오래 미접근 항목 제거
 
 
 def _evict_if_needed() -> None:
     if len(_memory) >= _MEMORY_MAX:
-        # dict는 삽입 순서를 유지하므로 앞쪽(오래된 것)을 제거
         evict_count = len(_memory) - _MEMORY_MAX + 1
-        for key in list(_memory.keys())[:evict_count]:
-            del _memory[key]
+        for _ in range(evict_count):
+            _memory.popitem(last=False)  # 가장 오래 미접근 항목 제거 (LRU)
 
 
 _EMPTY_CONTEXT = {"adm_codes": [], "business_type": "", "location_name": ""}
@@ -134,6 +134,7 @@ async def get_query_session(session_id: str) -> dict:
         if session_id not in _memory:
             _evict_if_needed()
             _memory[session_id] = _empty_query_session()
+        _memory.move_to_end(session_id)
         return _memory[session_id]
 
     try:
@@ -171,6 +172,7 @@ async def save_query_session(session_id: str, session: dict) -> None:
         if session_id not in _memory:
             _evict_if_needed()
         _memory[session_id] = session
+        _memory.move_to_end(session_id)
         return
 
     await container.upsert_item({
@@ -203,8 +205,10 @@ async def get_doc_history(session_id: str) -> list[dict]:
     container = await _get_container()
 
     if container is None:
-        raw = _memory.get(f"doc:{session_id}", [])
-        return raw
+        key = f"doc:{session_id}"
+        if key in _memory:
+            _memory.move_to_end(key)
+        return _memory.get(key, [])
 
     try:
         item = await container.read_item(item=f"doc:{session_id}", partition_key=f"doc:{session_id}")
@@ -223,6 +227,7 @@ async def save_doc_history(session_id: str, history_raw: list[dict]) -> None:
         if key not in _memory:
             _evict_if_needed()
         _memory[key] = history_raw
+        _memory.move_to_end(key)
         return
 
     await container.upsert_item({

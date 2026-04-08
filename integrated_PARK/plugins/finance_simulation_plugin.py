@@ -3,6 +3,8 @@
 출처: CHANG/user_functions.py — FinanceSimulationSkill
 """
 
+import asyncio
+import concurrent.futures
 import math
 import random
 from semantic_kernel.functions import kernel_function
@@ -58,6 +60,8 @@ class FinanceSimulationPlugin:
     월매출 데이터를 기반으로 순이익 분포, 손실 확률, 손익분기점,
     투자 회수 기간을 산출한다. 업종별 비용 비율은 INDUSTRY_RATIO 참조.
     """
+    _executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+
     def _calculate_salary(self, salary: float, hours: float = None) -> float:
         return salary if hours is None else salary * hours
 
@@ -193,6 +197,14 @@ class FinanceSimulationPlugin:
             "actual_fee":         round(fee),
             "chart":              chart,
         }
+
+    async def monte_carlo_simulation_async(self, **kwargs) -> dict:
+        """monte_carlo_simulation의 비동기 래퍼 — 10,000회 루프를 스레드 풀에서 실행."""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            self._executor,
+            lambda: self.monte_carlo_simulation(**kwargs),
+        )
 
     @kernel_function(
         name="investment_recovery",
