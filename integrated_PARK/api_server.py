@@ -265,7 +265,7 @@ async def health():
 
 
 @app.get("/api/v1/my-ip")
-@limiter.exempt
+@limiter.limit("30/minute")
 async def my_ip(request: Request):
     """서버가 인식하는 클라이언트 IP 반환 (RATE_LIMIT_EXEMPT_IPS 등록용)."""
     return {"ip": _get_client_ip(request)}
