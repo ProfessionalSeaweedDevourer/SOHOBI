@@ -130,7 +130,7 @@ export default function UserChat({ devMode = false }) {
     addMessage, updateAt,
   } = useChatMessages();
 
-  const { items: checklistItems, progress: checklistProgress, toggleItem, syncFromDraft } = useChecklistState(sessionId);
+  const { items: checklistItems, progress: checklistProgress, toggleItem, syncFromDraft } = useChecklistState(sessionId, messages.length > 0);
 
   const handleSessionId = useCallback((id) => {
     setSessionId(id);

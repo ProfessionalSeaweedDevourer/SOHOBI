@@ -19,13 +19,13 @@ function defaultItems() {
  * @param {string|null} sessionId
  * @returns {{ items, progress, toggleItem, syncFromDraft, loading }}
  */
-export function useChecklistState(sessionId) {
+export function useChecklistState(sessionId, enabled = true) {
   const [items, setItems] = useState(defaultItems);
   const [loading, setLoading] = useState(false);
 
-  // sessionId 생기면 서버에서 현재 상태 로드
+  // 세션이 백엔드에 저장된 후에만 체크리스트 로드 (enabled 가드)
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !enabled) return;
 
     setLoading(true);
     fetch(`${BASE_URL}/api/checklist/${sessionId}`, { headers: _HEADERS })
@@ -37,7 +37,7 @@ export function useChecklistState(sessionId) {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [sessionId]);
+  }, [sessionId, enabled]);
 
   // 수동 토글 — 낙관적 업데이트, 실패 시 롤백
   const toggleItem = useCallback(
