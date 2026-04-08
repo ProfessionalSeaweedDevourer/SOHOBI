@@ -1,13 +1,23 @@
 # SOHOBI: 소상공인 창업 지원 다중 에이전트 AI 시스템
 
-> **MS SAY 2-2 팀** | 2026년 2월 25일 ~ 2026년 4월 10일
+> **MS SAY 2-2 팀** | 2026년 2월 25일 ~ 2026년 4월 10일  
+> **라이브 서비스**: [sohobi.net](https://sohobi.net)
 
 ---
 
 ## 프로젝트 개요
 
 소규모 자영업자(식음료·카페·푸드트럭 등 F&B 업종)를 위한 **다중 에이전트 AI 플랫폼**입니다.
-창업을 준비하는 소상공인이 자연어로 질문하면, 전문 하위 에이전트들이 협력하여 법률·세무·상권 분석·재무 시뮬레이션 등 검증된 답변과 실질적인 문서를 제공합니다.
+창업을 준비하는 소상공인이 자연어로 질문하면, **5개 전문 하위 에이전트**가 협력하여 법률·세무·상권 분석·재무 시뮬레이션·행정 절차 안내 등 **검증된 답변과 실질적인 문서**를 제공합니다.
+
+### 핵심 가치
+
+| 기존 방식 | SOHOBI |
+|-----------|--------|
+| 변호사·세무사·부동산 개별 상담 (수십~수백만원) | 5개 AI 전문 에이전트가 원스톱 무료 컨설팅 |
+| 5,600+ 정부 지원 프로그램 중 본인 해당 여부 파악 불가 | 하이브리드 RAG로 수혜 가능 프로그램 자동 매칭 |
+| 감에 의존한 수익 판단 | Monte Carlo 10,000회 시뮬레이션 확률 분포 |
+| 행정 서류 작성법 모름 | 대화형 정보 수집 → PDF 자동 생성 |
 
 ---
 
@@ -34,9 +44,13 @@
 │         FastAPI  (api_server.py)     │
 │                                     │
 │  POST /api/v1/query   ─┐            │
-│  POST /api/v1/doc/chat  ├── 진입점  │
+│  POST /api/v1/stream    ├── 진입점  │
+│  POST /api/v1/doc/chat  │           │
 │  POST /api/v1/signoff  ─┘           │
+│  GET  /api/v1/stats                 │
 │  GET  /api/v1/logs                  │
+│  + auth / map / feedback / roadmap  │
+│    checklist / report 라우터        │
 └──────────────┬──────────────────────┘
                │
                ▼
@@ -132,7 +146,7 @@
 
 #### 재무 엔진 에이전트 (`agents/finance_agent.py`)
 
-- **플러그인**: `FinanceSimulationPlugin` — 몬테카를로 10,000회 시뮬레이션
+- **플러그인**: `FinanceSimulationPlugin` — 몬테카를로 10,000회 시뮬레이션 (ThreadPoolExecutor 비동기)
 - **동작 4단계 파이프라인**:
   1. LLM으로 질문에서 시뮬레이션 파라미터 JSON 추출 (revenue, cost, rent, initial_investment 등)
   2. `FinanceSimulationPlugin` 실행 → 수치 결과 (P5·P20·P95·손실확률·안전마진) + base64 히스토그램 차트
@@ -152,43 +166,126 @@
 
 ---
 
+## 주요 기능
+
+### AI 에이전트
+
+- **법령 RAG** — 생활법령정보 기반 검색 증강 생성으로 최신 법규 정확 인용
+- **상권 분석** — 서울 2024 Q4 데이터 기반 매출 현황, 시간대·성별·연령대별 분석, 유사 상권 추천
+- **재무 시뮬레이션** — 몬테카를로 10,000회 기반 창업 리스크 수치 분석 및 히스토그램 차트 반환
+- **정부지원사업 추천** — 창업자 상황 맞춤 보조금·대출·신용보증·고용지원 하이브리드 검색 (5,600+건)
+- **행정 서류 자동 생성** — 대화형 정보 수집 후 식품영업신고서 PDF 출력
+- **Sign-off 검증** — 응답 품질 사후 평가 (grade A/B/C), 기준 미달 시 최대 3회 재처리
+
+### 프론트엔드
+
+- **인터랙티브 지도** — OpenLayers 기반 서울 행정동 상권 지도 (업종별 점포, 매출, 인구, 지적도, 공시지가 레이어)
+- **창업 체크리스트** — 8개 항목(업종 결정~임대차계약) 자동 진행률 추적, 에이전트 답변 기반 자동 체크
+- **재무 시뮬레이션 차트** — Monte Carlo 히스토그램 (손실/위험/수익 구간 시각화)
+- **SSE 스트리밍** — 에이전트 응답 실시간 표시
+- **사용자 인증** — Google OAuth 로그인, 세션별 대화 이력 관리
+- **로드맵 투표** — 사용자가 원하는 기능에 투표, 개발 우선순위 반영
+- **My Report** — 세션 통계, 에이전트 사용 분석, 체크리스트 기반 추천
+- **My Logs** — 인증된 사용자의 과거 세션 이력 열람
+
+### 개발자 도구
+
+- **DevChat** — Sign-off 검증 상세 (등급, 루브릭 결과, 재시도 이력) 실시간 확인
+- **LogViewer** — 에이전트 처리 과정 JSONL 로그 조회
+- **StatsPage** — 에이전트별 레이턴시, 등급 분포, 에러율 모니터링 대시보드
+- **Changelog** — GitHub 커밋 히스토리 자동 표시
+
+---
+
 ## 기술 스택
 
 ### 백엔드 (`integrated_PARK/`)
 
 | 분류 | 기술 |
 |------|------|
-| AI 오케스트레이션 | Semantic Kernel 1.40.0 |
+| AI 오케스트레이션 | Semantic Kernel 1.41.1 |
 | AI 모델 플랫폼 | Azure AI Foundry (GPT-4o) |
-| API 서버 | FastAPI 0.115 + Uvicorn |
-| RAG 파이프라인 | Azure AI Search |
+| API 서버 | FastAPI 0.135 + Uvicorn 0.42 |
+| RAG 파이프라인 | Azure AI Search 11.6 |
 | 세션 저장소 | Azure Cosmos DB |
 | 로그 저장소 | Azure Blob Storage |
 | 상권 DB | Azure PostgreSQL Flexible Server |
-| PDF 생성 | ReportLab + pdfkit + Jinja2 |
-| 재무 시각화 | Matplotlib + NumPy |
-| 배포 | Azure Container Apps |
+| PDF 생성 | ReportLab 4.4 + pdfkit + Jinja2 3.1 |
+| 재무 시각화 | Matplotlib 3.10 + NumPy 2.4 |
+| 인증 | Authlib 1.3 + python-jose (JWT) |
+| Rate Limiting | slowapi 0.1.9 |
+| 배포 | Azure Container Apps + GitHub Actions CI/CD |
 
 ### 프론트엔드 (`frontend/`)
 
 | 분류 | 기술 |
 |------|------|
 | UI 프레임워크 | React 19 + Vite 7 |
-| 스타일링 | Tailwind CSS 3 |
+| 스타일링 | Tailwind CSS 4 |
 | 라우팅 | React Router DOM 7 |
-| 마크다운 렌더링 | react-markdown 10 |
+| 지도 | OpenLayers 10.8 + Turf.js 7.3 |
+| 차트 | Chart.js 4.5 |
+| 마크다운 렌더링 | react-markdown 10 + remark-gfm |
+| UI 컴포넌트 | Radix UI (select, tabs, collapsible, tooltip 등) |
+| 애니메이션 | Motion 12.38 (Framer Motion) |
+| HTTP 클라이언트 | Axios 1.13 |
+| SEO | react-helmet-async, JSON-LD, sitemap |
+| 호스팅 | Azure Static Web Apps |
 
 ---
 
-## 주요 기능
+## API 엔드포인트
 
-- **법령 RAG** — 생활법령정보 기반 검색 증강 생성으로 최신 법규 정확 인용
-- **상권 분석** — 서울 2024 Q4 데이터 기반 매출 현황, 시간대·성별·연령대별 분석, 유사 상권 추천
-- **재무 시뮬레이션** — 몬테카를로 10,000회 기반 창업 리스크 수치 분석 및 히스토그램 차트 반환
-- **정부지원사업 추천** — 창업자 상황 맞춤 보조금·대출·신용보증·고용지원 하이브리드 검색
-- **행정 서류 자동 생성** — 대화형 정보 수집 후 식품영업신고서 PDF 출력
-- **Sign-off 검증** — 응답 품질 사후 평가 (grade A/B/C), 기준 미달 시 최대 3회 재처리
-- **로그 뷰어** — 에이전트 처리 과정 JSONL 로그 실시간 조회
+### 핵심 API (`api_server.py`)
+
+| 메서드 | 경로 | 설명 |
+| ------ | ---- | ---- |
+| `GET` | `/health` | 헬스 체크 |
+| `POST` | `/api/v1/query` | 자연어 질문 → 에이전트 처리 → Sign-off |
+| `POST` | `/api/v1/stream` | SSE 스트리밍 응답 |
+| `POST` | `/api/v1/signoff` | draft 단독 Sign-off 검증 |
+| `POST` | `/api/v1/doc/chat` | 문서 생성 대화 (식품영업신고서 PDF) |
+| `GET` | `/api/v1/stats` | 에이전트별 레이턴시·등급 통계 |
+| `GET` | `/api/v1/logs` | JSONL 로그 조회 |
+| `GET` | `/api/v1/logs/export` | 로그 내보내기 |
+| `GET` | `/api/v1/logs/users` | 사용자별 로그 조회 |
+
+### 라우터 모듈
+
+| 라우터 | 경로 접두사 | 설명 |
+| ------ | ----------- | ---- |
+| `auth_router` | `/auth` | Google OAuth 로그인/콜백 |
+| `my_router` | `/my` | 사용자 세션·이력 관리 |
+| `map_router` | `/map` | 지도 타일·행정동 데이터 |
+| `map_data_router` | `/map-data` | 상권 상세 데이터 (점포, 매출, 인구) |
+| `realestate_router` | `/realestate` | 부동산 시세·공시지가 |
+| `feedback_router` | `/feedback` | 사용자 피드백 수집 |
+| `event_router` | `/event` | 이벤트 트래킹 |
+| `checklist_router` | `/checklist` | 창업 체크리스트 CRUD |
+| `report_router` | `/report` | 세션 리포트 생성 |
+| `roadmap_router` | `/roadmap` | 로드맵 기능 투표 |
+
+---
+
+## 프론트엔드 페이지
+
+| 경로 | 페이지 | 설명 |
+|------|--------|------|
+| `/` | Landing | 랜딩 페이지 (제품 소개, CTA) |
+| `/home` | Home | 모드 선택 (사용자/지도/개발자) |
+| `/user` | UserChat | 메인 AI 채팅 인터페이스 + 체크리스트 |
+| `/map` | MapPage | 인터랙티브 서울 상권 지도 |
+| `/features` | Features | 기능 상세 소개 |
+| `/my-report` | MyReport | 세션 통계·에이전트 사용 분석 |
+| `/my-logs` | MyLogs | 과거 세션 이력 (인증 필요) |
+| `/roadmap` | Roadmap | 기능 로드맵 + 투표 |
+| `/changelog` | Changelog | Git 커밋 히스토리 |
+| `/privacy` | PrivacyPolicy | 개인정보처리방침 |
+| `/auth/callback` | AuthCallback | OAuth 콜백 |
+| `/dev/login` | DevLogin | 개발자 인증 |
+| `/dev` | DevChat | 개발자 디버그 채팅 (인증 필요) |
+| `/dev/logs` | LogViewer | 에이전트 로그 뷰어 (인증 필요) |
+| `/dev/stats` | StatsPage | 성능 모니터링 대시보드 (인증 필요) |
 
 ---
 
@@ -196,35 +293,50 @@
 
 ```text
 SOHOBI/
-├── integrated_PARK/          # 메인 통합 백엔드
-│   ├── api_server.py         # FastAPI 진입점
-│   ├── orchestrator.py       # Semantic Kernel 오케스트레이션
-│   ├── domain_router.py      # 질문 → 에이전트 라우팅
-│   ├── map_router.py         # 지도 데이터 API (행정동 매출·점포수)
-│   ├── agents/               # 하위 에이전트
-│   │   ├── chat_agent.py     # 안내 (Sign-off 바이패스)
-│   │   ├── legal_agent.py    # 법률·세무
-│   │   ├── location_agent.py # 상권 분석
-│   │   ├── finance_agent.py  # 재무 시뮬레이션
-│   │   └── admin_agent.py    # 행정 서류
-│   ├── signoff/              # Sign-off 검증 에이전트
-│   ├── db/                   # CommercialRepository (Azure PostgreSQL)
-│   ├── prompts/              # 도메인별 Sign-off 루브릭
-│   ├── plugins/              # Semantic Kernel 플러그인
+├── integrated_PARK/              # 메인 통합 백엔드
+│   ├── api_server.py             # FastAPI 진입점
+│   ├── orchestrator.py           # Semantic Kernel 오케스트레이션
+│   ├── domain_router.py          # 질문 → 에이전트 라우팅
+│   ├── kernel_setup.py           # Semantic Kernel 초기화
+│   ├── session_store.py          # Cosmos DB 세션 관리 (LRU 폴백)
+│   ├── auth.py / auth_router.py  # OAuth 인증
+│   ├── map_router.py             # 지도 타일·행정동 API
+│   ├── map_data_router.py        # 상권 상세 데이터 API
+│   ├── realestate_router.py      # 부동산·공시지가 API
+│   ├── checklist_router.py       # 체크리스트 CRUD
+│   ├── feedback_router.py        # 사용자 피드백
+│   ├── report_router.py          # 세션 리포트
+│   ├── roadmap_router.py         # 로드맵 투표
+│   ├── event_router.py           # 이벤트 트래킹
+│   ├── agents/                   # 하위 에이전트
+│   │   ├── chat_agent.py         # 안내 (Sign-off 바이패스)
+│   │   ├── legal_agent.py        # 법률·세무
+│   │   ├── location_agent.py     # 상권 분석
+│   │   ├── finance_agent.py      # 재무 시뮬레이션
+│   │   └── admin_agent.py        # 행정 서류
+│   ├── signoff/                  # Sign-off 검증 에이전트
+│   ├── db/                       # CommercialRepository (Azure PostgreSQL)
+│   ├── prompts/                  # 도메인별 Sign-off 루브릭
+│   ├── plugins/                  # Semantic Kernel 플러그인
+│   ├── scripts/                  # 분석 스크립트 (analyze_logs.py 등)
+│   ├── chart/                    # 차트 생성 유틸리티
 │   └── requirements.txt
-├── frontend/                 # React + Vite 프론트엔드
+├── frontend/                     # React + Vite 프론트엔드
 │   └── src/
-│       ├── pages/
-│       │   ├── Home.jsx      # 메인 랜딩
-│       │   ├── UserChat.jsx  # 사용자 챗 인터페이스
-│       │   ├── DevChat.jsx   # 개발자 디버그 챗
-│       │   └── LogViewer.jsx # 에이전트 로그 뷰어
-│       └── components/       # 공통 UI 컴포넌트
+│       ├── pages/                # 15개 페이지 컴포넌트
+│       ├── components/           # 공통 UI 컴포넌트
+│       │   ├── checklist/        # 체크리스트 컴포넌트
+│       │   ├── feedback/         # 피드백 컴포넌트
+│       │   ├── map/              # 지도 컴포넌트 (레이어, 패널, 팝업)
+│       │   ├── report/           # 리포트 컴포넌트
+│       │   └── ui/               # Radix UI 기반 공통 UI
+│       └── contexts/             # React Context (AuthContext 등)
 ├── docs/
-│   ├── session-reports/      # 세션 리포트 (날짜별)
-│   ├── architecture/         # 아키텍처 다이어그램 (HTML)
-│   └── plans/                # 개선·테스트 플랜 문서
-└── CHANG/ CHOI/ NAM/ PARK/ TERRY/  # 팀원별 개발 폴더
+│   ├── plans/                    # 개선·테스트 플랜 문서
+│   ├── session-reports/          # 세션 인수인계 리포트 (44건+)
+│   ├── test-reports/             # 테스트·성능 베이스라인 리포트
+│   └── guides/                   # 운영 가이드 (로그 조회 등)
+└── CLAUDE.md                     # Claude Code 영구 지시
 ```
 
 ---
@@ -235,7 +347,7 @@ SOHOBI/
 
 - Python 3.12
 - Node.js 18+
-- `.env` 파일 (Azure API 키 등, `.env.example` 참고)
+- `.env` 파일 (Azure API 키 등)
 
 ### 백엔드
 
@@ -269,23 +381,39 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 
 ---
 
-## API 엔드포인트
+## 성능 지표
 
-| 메서드 | 경로 | 설명 |
-| ------ | ---- | ---- |
-| `GET` | `/health` | 헬스 체크 |
-| `POST` | `/api/v1/query` | 자연어 질문 → 에이전트 처리 → Sign-off |
-| `POST` | `/api/v1/signoff` | draft 단독 Sign-off 검증 |
-| `POST` | `/api/v1/doc/chat` | 문서 생성 대화 (식품영업신고서 PDF) |
-| `GET` | `/api/v1/logs` | JSONL 로그 조회 |
+5단계 체계적 최적화를 통해 전체 응답 레이턴시 **63.6% 감소**를 달성했습니다.
+
+### 응답 시간 (Before → After)
+
+| 지표 | Before (n=532) | After (n=416) | 개선율 |
+|------|----------------|---------------|--------|
+| 전체 avg | 32.7s | 11.9s | **-63.6%** |
+| p90 | 68.2s | 21.2s | **-68.9%** |
+| max | 612.0s | 64.2s | **-89.5%** |
+| 상권분석 avg | 46.5s | 11.2s | **-75.9%** |
+
+### 품질 등급 (최적화 후 100건)
+
+| 에이전트 | 승인률 | Grade A |
+|----------|--------|---------|
+| 행정 (admin) | 100% | 84% |
+| 대화 (chat) | 100% | 100% |
+| 재무 (finance) | 100% | 100% |
+| 상권 (location) | 96% | 92% |
 
 ---
 
-## 개발 환경
+## 배포 환경
 
-- Azure 테넌트: `soldeskms.onmicrosoft.com`
-- 배포: Azure Container Apps
-- 협업: Slack (`mssay2-2.slack.com`), GitHub, Trello
+| 구성 요소 | 서비스 |
+|-----------|--------|
+| 백엔드 | Azure Container Apps |
+| 프론트엔드 | Azure Static Web Apps |
+| 도메인 | sohobi.net (Azure DNS) |
+| CI/CD | GitHub Actions (main push 시 자동 배포) |
+| 인증 | Google OAuth + Azure Entra ID (개발자) |
 
 ---
 
@@ -293,4 +421,5 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 
 - MVP 범위: **서울 기반 F&B 업종** → 이후 전국 및 타 업종으로 확장 예정
 - 에이전트 간 정보 공유는 Semantic Kernel 기반 구조적 처리
-- 버전은 `==`으로 고정하여 재현성 보장 (Python 3.12)
+- 의존성 버전은 `==`으로 고정하여 재현성 보장 (Python 3.12)
+- `.env` 파일에 Azure API 키 포함 — 절대 커밋 금지
