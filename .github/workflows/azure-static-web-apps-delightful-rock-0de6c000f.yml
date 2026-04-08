@@ -100,7 +100,7 @@ jobs:
           VITE_KAKAO_JS_KEY: ${{ secrets.VITE_KAKAO_JS_KEY }}
           VITE_KAKAO_API_KEY: ${{ secrets.VITE_KAKAO_API_KEY }}
           VITE_VWORLD_API_KEY: ${{ secrets.VITE_VWORLD_API_KEY }}
-          VITE_VWORLD_DOMAIN: https://sohobi.net
+          VITE_VWORLD_DOMAIN: sohobi.net
           VITE_MAP_URL: ${{ secrets.VITE_MAP_URL }}
           VITE_REALESTATE_URL: ${{ secrets.VITE_REALESTATE_URL }}
         with:
