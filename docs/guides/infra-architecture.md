@@ -8,16 +8,16 @@
     ▼
 [Azure Static Web Apps (Free)] ── sohobi.net
 │   • 프론트엔드: React + Vite 정적 빌드
-│   • 리소스: delightful-rock-0de6c000f / rg-ejp-9638
+│   • 리소스: <SWA_RESOURCE_NAME> / <RESOURCE_GROUP>
 │   • ⚠️ Free 티어 — 역방향 프록시(route rewrite) 미지원
 │   • 보안 헤더: HSTS, X-Frame-Options, X-Content-Type-Options
 │
 │  (브라우저가 Container Apps URL을 직접 호출 — SWA 프록시 경유 아님)
 │
     ▼
-[Azure Container Apps] ── sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io
+[Azure Container Apps] ── <BACKEND_HOST> (`.env` 참조)
     • 백엔드: FastAPI + Uvicorn (Python 3.12)
-    • 리소스: sohobi-backend / rg-ejp-9638
+    • 리소스: <CONTAINER_APP_NAME> / <RESOURCE_GROUP>
     • 환경변수는 Azure Portal 또는 az CLI로 관리 (로컬 .env와 별개)
     • Docker 이미지: ACR → GitHub Actions 자동 배포
 ```
@@ -37,14 +37,14 @@
 ```bash
 # 프로덕션 환경변수 변경
 az containerapp update \
-  --name sohobi-backend \
-  --resource-group rg-ejp-9638 \
+  --name <CONTAINER_APP_NAME> \
+  --resource-group <RESOURCE_GROUP> \
   --set-env-vars "변수명=값"
 
 # 프로덕션 환경변수 현재 값 확인
 az containerapp show \
-  --name sohobi-backend \
-  --resource-group rg-ejp-9638 \
+  --name <CONTAINER_APP_NAME> \
+  --resource-group <RESOURCE_GROUP> \
   --query "properties.template.containers[0].env" -o table
 ```
 
@@ -71,8 +71,8 @@ curl -s $BACKEND_HOST/api/v1/my-ip
 
 # 팀원 IP 등록
 az containerapp ingress access-restriction set \
-  --name sohobi-backend \
-  --resource-group rg-ejp-9638 \
+  --name <CONTAINER_APP_NAME> \
+  --resource-group <RESOURCE_GROUP> \
   --rule-name "allow-dev-PARK" \
   --ip-address <공인IP>/32 \
   --action Allow
@@ -89,7 +89,7 @@ az containerapp ingress access-restriction set \
 
 | 리소스 | 이름 | 리소스 그룹 |
 |--------|------|-------------|
-| Container Apps | `sohobi-backend` | `rg-ejp-9638` |
-| Static Web Apps | `delightful-rock-0de6c000f` | `rg-ejp-9638` |
-| DNS zone | `sohobi.net` | `rg-ejp-9638` |
-| Subscription | `5919b1b2-b639-42e1-8678-c28553b1661b` | — |
+| Container Apps | `.env`의 `BACKEND_HOST` 참조 | `.env` 참조 |
+| Static Web Apps | Azure Portal 참조 | 동일 |
+| DNS zone | `sohobi.net` | 동일 |
+| Subscription | Azure Portal 참조 | — |
