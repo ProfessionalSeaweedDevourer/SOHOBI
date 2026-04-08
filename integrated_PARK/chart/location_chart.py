@@ -95,7 +95,7 @@ def _chart_day(sales_summary: dict, title_prefix: str = "") -> str | None:
             bar_colors[day_vals.index(max(day_vals))] = _BAR_HIGHLIGHT
 
         bars = ax.bar(day_labels, day_vals, color=bar_colors, width=0.55, edgecolor="none")
-        ax.set_title("📅 요일별 평균 매출(일단위)", fontsize=13, fontweight="bold", pad=8)
+        ax.set_title("요일별 평균 매출(일단위)", fontsize=13, fontweight="bold", pad=8)
         ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
         ax.spines[["top", "right"]].set_visible(False)
         ax.tick_params(axis="x", labelsize=12)
@@ -145,7 +145,7 @@ def _chart_time(sales_summary: dict, title_prefix: str = "") -> str | None:
                 textcoords="offset points", xytext=(0, 12),
                 ha="center", fontsize=10, fontweight="bold", color=_BAR_HIGHLIGHT,
             )
-            ax.set_title("⏰ 시간대별 매출", fontsize=13, fontweight="bold", pad=8)
+            ax.set_title("시간대별 매출", fontsize=13, fontweight="bold", pad=8)
             ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
         else:
             wkday = sales_summary.get("weekday_sales_krw", 0) / 4
@@ -163,12 +163,12 @@ def _chart_time(sales_summary: dict, title_prefix: str = "") -> str | None:
                             fontsize=11, fontweight="bold", color="#475569",
                         )
                 ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
-                ax.set_title("📊 주중 / 주말 평균 매출(일단위)", fontsize=13, fontweight="bold", pad=8)
+                ax.set_title("주중 / 주말 평균 매출(일단위)", fontsize=13, fontweight="bold", pad=8)
             else:
                 ax.text(0.5, 0.5, "시간대 / 주중주말 데이터 없음",
                         transform=ax.transAxes, ha="center", va="center",
                         fontsize=12, color="#94a3b8")
-                ax.set_title("⏰ 시간대별 매출", fontsize=13, fontweight="bold", pad=8)
+                ax.set_title("시간대별 매출", fontsize=13, fontweight="bold", pad=8)
                 ax.axis("off")
 
         ax.spines[["top", "right"]].set_visible(False)
@@ -214,7 +214,7 @@ def _chart_age(sales_summary: dict, title_prefix: str = "") -> str | None:
             ax.text(0.5, 0.5, "데이터 없음", transform=ax.transAxes,
                     ha="center", va="center", fontsize=12, color="#94a3b8")
 
-        ax.set_title("🎂 연령대별 매출", fontsize=13, fontweight="bold", pad=8)
+        ax.set_title("연령대별 매출", fontsize=13, fontweight="bold", pad=8)
         ax.set_aspect("equal")
         plt.tight_layout()
         return _fig_to_base64(fig)
@@ -252,7 +252,7 @@ def _chart_gender(sales_summary: dict, title_prefix: str = "") -> str | None:
             ax.text(0.5, 0.5, "데이터 없음", transform=ax.transAxes,
                     ha="center", va="center", fontsize=12, color="#94a3b8")
 
-        ax.set_title("👤 성별 매출", fontsize=13, fontweight="bold", pad=8)
+        ax.set_title("성별 매출", fontsize=13, fontweight="bold", pad=8)
         ax.set_aspect("equal")
         plt.tight_layout()
         return _fig_to_base64(fig)
@@ -322,7 +322,7 @@ def generate_compare_charts(
                 ax.set_xticks(x)
                 ax.set_xticklabels(locations, fontsize=13)
                 ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
-                ax.set_title("💰 지역별 월매출 비교", fontsize=13, fontweight="bold", pad=8)
+                ax.set_title("지역별 월매출 비교", fontsize=13, fontweight="bold", pad=8)
                 ax.spines[["top", "right"]].set_visible(False)
 
                 for bar in bars1:
@@ -348,7 +348,7 @@ def generate_compare_charts(
                     ax.set_xticks(x)
                     ax.set_xticklabels(locations, fontsize=13)
                     ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
-                    ax.set_title("🏬 점포당 평균 매출 비교", fontsize=13, fontweight="bold", pad=8)
+                    ax.set_title("점포당 평균 매출 비교", fontsize=13, fontweight="bold", pad=8)
                     ax.spines[["top", "right"]].set_visible(False)
 
                     for bar in bars2:
@@ -376,7 +376,7 @@ def generate_compare_charts(
                     bars4 = ax.bar(x + w / 2, close_rates, w, label="폐업률", color="#e74c3c", alpha=0.85)
                     ax.set_xticks(x)
                     ax.set_xticklabels(locations, fontsize=13)
-                    ax.set_title("🏪 점포 지표 비교", fontsize=13, fontweight="bold", pad=8)
+                    ax.set_title("점포 지표 비교", fontsize=13, fontweight="bold", pad=8)
                     ax.set_ylabel("%", fontsize=11)
                     ax.legend(fontsize=10)
                     ax.spines[["top", "right"]].set_visible(False)
