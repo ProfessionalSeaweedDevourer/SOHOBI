@@ -63,6 +63,7 @@ export default function SignoffPanel({ status, grade, confidenceNote, retryCount
       <AnimatePresence>
         {open && (
           <motion.div
+            key="rejection-detail"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -124,6 +125,7 @@ function AttemptRow({ attempt, idx }) {
       <AnimatePresence>
         {detailOpen && (
           <motion.div
+            key="attempt-detail"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
