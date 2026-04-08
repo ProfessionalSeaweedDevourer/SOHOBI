@@ -491,6 +491,16 @@ async def stream_query(req: QueryRequest, request: Request):
                     if ev.get("updated_context"):
                         session.setdefault("context", {}).update(ev["updated_context"])
 
+                    # 프론트 렌더링용 메시지 메타데이터 축적
+                    session.setdefault("messages", []).append({
+                        "question": req.question,
+                        "domain": domain,
+                        "grade": ev.get("grade", ""),
+                        "draft": ev.get("draft", ""),
+                        "confidence_note": ev.get("confidence_note", ""),
+                        "suggested_actions": ev.get("suggested_actions", []),
+                    })
+
                     await save_query_session(sid, session)
 
                     # rejection_history 포맷 변환 후 complete 이벤트에 포함

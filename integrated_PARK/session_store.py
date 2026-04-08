@@ -146,6 +146,7 @@ async def get_query_session(session_id: str) -> dict:
             "context":     item.get("context", dict(_EMPTY_CONTEXT)),
             "user_id":     item.get("user_id", ""),
             "last_domain": item.get("last_domain", ""),
+            "messages":    item.get("messages", []),
         }
     except Exception:
         return _empty_query_session()
@@ -175,15 +176,20 @@ async def save_query_session(session_id: str, session: dict) -> None:
         _memory.move_to_end(session_id)
         return
 
-    await container.upsert_item({
+    doc: dict[str, Any] = {
         "id":          session_id,
         "profile":     session.get("profile", ""),
         "history":     _serialize_history(session.get("history", ChatHistory())),
         "extracted":   session.get("extracted", {}),
         "context":     session.get("context", dict(_EMPTY_CONTEXT)),
         "last_domain": session.get("last_domain", ""),
+        "messages":    session.get("messages", []),
         "ttl":         ttl,
-    })
+    }
+    # user_id가 세션에 있으면 보존 (link_session_to_user 이후 덮어쓰기 방지)
+    if session.get("user_id"):
+        doc["user_id"] = session["user_id"]
+    await container.upsert_item(doc)
 
 
 HISTORY_WINDOW = 14  # 에이전트에 주입할 최대 메시지 수 (user+assistant 쌍 5턴)
@@ -306,6 +312,23 @@ async def get_sessions_by_user(user_id: str) -> list[dict]:
             "_ts":           item.get("_ts", 0),
         })
     return results
+
+
+async def get_session_messages(session_id: str) -> list[dict]:
+    """특정 세션의 프론트 렌더링용 messages 메타데이터를 반환."""
+    container = await _get_container()
+
+    if container is None:
+        sess = _memory.get(session_id)
+        if sess is None or not isinstance(sess, dict):
+            return []
+        return sess.get("messages", [])
+
+    try:
+        item = await container.read_item(item=session_id, partition_key=session_id)
+        return item.get("messages", [])
+    except Exception:
+        return []
 
 
 async def get_session_history(session_id: str) -> list[dict]:

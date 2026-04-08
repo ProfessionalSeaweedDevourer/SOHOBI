@@ -12,6 +12,7 @@ import ChecklistProgress from "../components/checklist/ChecklistProgress";
 import { useChecklistState } from "../components/checklist/useChecklistState";
 import { useChatMessages } from "../hooks/chat/useChatMessages";
 import { useStreamQuery } from "../hooks/chat/useStreamQuery";
+import { BASE_URL } from "../api";
 import { motion } from "motion/react";
 import { ArrowLeft, MessageSquare, Menu, X } from "lucide-react";
 
@@ -130,7 +131,7 @@ export default function UserChat() {
 
   const {
     messages, sessionId, setSessionId, latestParams, setLatestParams,
-    addMessage, updateAt,
+    addMessage, updateAt, restoreFromApi,
   } = useChatMessages();
 
   const { items: checklistItems, progress: checklistProgress, toggleItem, syncFromDraft } = useChecklistState(sessionId, messages.length > 0);
@@ -173,6 +174,31 @@ export default function UserChat() {
   useEffect(() => {
     trackEvent("feature_discovery", { page: "user_chat" });
   }, []);
+
+  // Layer 2: 백엔드에서 메시지 복원 (로그인 사용자, sessionStorage 비어있을 때)
+  useEffect(() => {
+    if (messages.length > 0 || !user || !sessionId) return;
+    const token = localStorage.getItem("sohobi_jwt");
+    if (!token) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${BASE_URL}/api/my/sessions/${sessionId}/history?include_messages=true`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled && data.messages?.length) {
+          restoreFromApi(data.messages);
+        }
+      } catch {
+        // 네트워크 오류 — 빈 상태로 fallback
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);  // mount 시 1회만
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
