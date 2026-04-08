@@ -7,6 +7,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { ScrollReveal } from '../components/ScrollReveal';
 import { agentData } from '../data/mockData';
 import { MessageSquare, Shield, Zap, TrendingUp, Sparkles, ArrowRight } from 'lucide-react';
+import { GlowCTA } from '../components/GlowCTA';
 import { motion } from 'motion/react';
 import { trackEvent } from '../utils/trackEvent';
 
@@ -164,7 +165,8 @@ export default function Landing() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: feature.delay }}
-                whileHover={{ y: -8 }}
+                whileHover="cardHover"
+                variants={{ cardHover: { y: -8 } }}
                 className="group"
               >
                 <div className="glass rounded-2xl p-8 text-center shadow-elevated transition-glow hover-lift relative overflow-hidden">
@@ -176,7 +178,7 @@ export default function Landing() {
                   <motion.div
                     className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg relative"
                     style={{ backgroundColor: `${feature.color}15` }}
-                    whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.1 }}
+                    variants={{ cardHover: { rotate: [0, -10, 10, -10, 0], scale: 1.1 } }}
                     transition={{ duration: 0.5 }}
                   >
                     <div
@@ -230,29 +232,19 @@ export default function Landing() {
           transition={{ duration: 0.6 }}
           className="max-w-4xl mx-auto relative"
         >
-          <div className="glass rounded-3xl p-16 text-center shadow-elevated-lg relative overflow-hidden">
-            <div
-              className="absolute inset-0 bg-gradient-to-r from-[var(--brand-blue)] via-[var(--brand-teal)] to-[var(--brand-blue)] opacity-10 animate-shimmer"
-              style={{ backgroundSize: '200% 100%' }}
-            />
-
-            <div className="absolute top-0 left-1/4 w-64 h-64 bg-[var(--brand-blue)] rounded-full blur-3xl opacity-20 animate-float" />
-            <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-[var(--brand-teal)] rounded-full blur-3xl opacity-20 animate-float" style={{ animationDelay: '1s' }} />
-
-            <div className="relative z-10">
-              <h2 className="text-4xl md:text-5xl mb-6 gradient-text">지금 바로 시작해보세요</h2>
-              <p className="text-xl mb-10 text-muted-foreground">
-                무료로 모든 기능을 사용할 수 있습니다
-              </p>
-              <Link to="/user">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button size="lg" className="px-12 py-7 text-lg shadow-elevated-lg hover-glow-blue transition-glow">
-                    상담 시작하기
-                  </Button>
-                </motion.div>
-              </Link>
-            </div>
-          </div>
+          <GlowCTA orbSize="w-64 h-64" className="p-16 text-center shadow-elevated-lg">
+            <h2 className="text-4xl md:text-5xl mb-6 gradient-text">지금 바로 시작해보세요</h2>
+            <p className="text-xl mb-10 text-muted-foreground">
+              무료로 모든 기능을 사용할 수 있습니다
+            </p>
+            <Link to="/user">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button size="lg" className="px-12 py-7 text-lg shadow-elevated-lg hover-glow-blue transition-glow">
+                  상담 시작하기
+                </Button>
+              </motion.div>
+            </Link>
+          </GlowCTA>
         </motion.div>
       </section>
 

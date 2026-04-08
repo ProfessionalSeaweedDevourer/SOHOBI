@@ -29,7 +29,8 @@ export function AgentCard({ agent, index = 0 }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      whileHover={isComingSoon ? {} : { scale: 1.02, y: -8 }}
+      whileHover={isComingSoon ? undefined : "cardHover"}
+      variants={isComingSoon ? undefined : { cardHover: { scale: 1.02, y: -8 } }}
       className={`group${isComingSoon ? ' opacity-60' : ''}`}
     >
       <div className={`glass rounded-2xl p-6 border-2 border-white/20 shadow-elevated ${isComingSoon ? '' : `transition-glow hover-lift ${glowClass}`} relative overflow-hidden`}>
@@ -50,7 +51,7 @@ export function AgentCard({ agent, index = 0 }) {
           <motion.div
             className="p-3 rounded-xl shrink-0 shadow-lg relative"
             style={{ backgroundColor: `${agent.color}20` }}
-            whileHover={isComingSoon ? {} : { rotate: [0, -10, 10, -10, 0] }}
+            variants={isComingSoon ? undefined : { cardHover: { rotate: [0, -10, 10, -10, 0] } }}
             transition={{ duration: 0.5 }}
           >
             <div

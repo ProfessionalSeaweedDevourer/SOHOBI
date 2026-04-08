@@ -4,6 +4,7 @@ import { AnimatedBackground } from '../components/AnimatedBackground';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { MessageSquare, FileText, Shield, AlertTriangle, Globe, Users, Lock, RefreshCw, Mail, ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
+import { GlowCTA } from '../components/GlowCTA';
 
 const part1Articles = [
   {
@@ -595,26 +596,19 @@ export default function PrivacyPolicy() {
           transition={{ duration: 0.6 }}
           className="max-w-2xl mx-auto"
         >
-          <div className="glass rounded-3xl p-10 text-center shadow-elevated-lg relative overflow-hidden">
-            <div
-              className="absolute inset-0 bg-gradient-to-r from-[var(--brand-blue)] via-[var(--brand-teal)] to-[var(--brand-blue)] opacity-10 animate-shimmer"
-              style={{ backgroundSize: '200% 100%' }}
-            />
-            <div className="absolute top-0 left-1/4 w-48 h-48 bg-[var(--brand-blue)] rounded-full blur-3xl opacity-20 animate-float" />
-            <div className="relative z-10">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg relative" style={{ backgroundColor: 'var(--brand-blue)15' }}>
-                <div className="absolute inset-0 rounded-2xl blur-xl opacity-30" style={{ backgroundColor: 'var(--brand-blue)' }} />
-                <Mail size={28} style={{ color: 'var(--brand-blue)' }} className="relative z-10" />
-              </div>
-              <h2 className="text-2xl md:text-3xl mb-3 gradient-text">개인정보 관련 문의</h2>
-              <p className="text-muted-foreground mb-2">
-                <a href="mailto:support@sohobi.kr" className="hover:text-[var(--brand-blue)] transition-colors font-medium underline underline-offset-2">
-                  support@sohobi.kr
-                </a>
-              </p>
-              <p className="text-sm text-muted-foreground">접수 후 영업일 기준 3일 이내 회신</p>
+          <GlowCTA orbSize="w-48 h-48" className="p-10 text-center shadow-elevated-lg">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg relative" style={{ backgroundColor: 'var(--brand-blue)15' }}>
+              <div className="absolute inset-0 rounded-2xl blur-xl opacity-30" style={{ backgroundColor: 'var(--brand-blue)' }} />
+              <Mail size={28} style={{ color: 'var(--brand-blue)' }} className="relative z-10" />
             </div>
-          </div>
+            <h2 className="text-2xl md:text-3xl mb-3 gradient-text">개인정보 관련 문의</h2>
+            <p className="text-muted-foreground mb-2">
+              <a href="mailto:support@sohobi.kr" className="hover:text-[var(--brand-blue)] transition-colors font-medium underline underline-offset-2">
+                support@sohobi.kr
+              </a>
+            </p>
+            <p className="text-sm text-muted-foreground">접수 후 영업일 기준 3일 이내 회신</p>
+          </GlowCTA>
         </motion.div>
       </section>
 
