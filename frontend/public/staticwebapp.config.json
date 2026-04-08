@@ -1,8 +1,22 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/*.css", "/*.js", "/*.png", "/*.jpg", "/*.svg", "/*.ico"]
+    "exclude": ["/assets/*", "/*.css", "/*.js", "/*.png", "/*.jpg", "/*.svg", "/*.ico", "/robots.txt", "/sitemap.xml", "/manifest.json"]
   },
+  "routes": [
+    {
+      "route": "/robots.txt",
+      "headers": { "Content-Type": "text/plain; charset=utf-8" }
+    },
+    {
+      "route": "/sitemap.xml",
+      "headers": { "Content-Type": "application/xml; charset=utf-8" }
+    },
+    {
+      "route": "/manifest.json",
+      "headers": { "Content-Type": "application/manifest+json" }
+    }
+  ],
   "globalHeaders": {
     "Cache-Control": "no-cache",
     "X-Content-Type-Options": "nosniff",

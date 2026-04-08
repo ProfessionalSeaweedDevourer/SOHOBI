@@ -7,6 +7,7 @@ import UserChat from "./pages/UserChat";
 import RequireDevAuth from "./components/RequireDevAuth";
 import { CursorGlow } from "./components/CursorGlow";
 import { ToastProvider } from "./components/ToastProvider";
+import AutoSEO from "./components/AutoSEO";
 import { AuthProvider } from "./contexts/AuthContext";
 import { LoadingSpinner } from "./components/LoadingSpinner";
 
@@ -26,6 +27,7 @@ function AnimatedRoutes() {
   const location = useLocation();
   return (
     <Suspense fallback={<LoadingSpinner />}>
+      <AutoSEO />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Landing />} />

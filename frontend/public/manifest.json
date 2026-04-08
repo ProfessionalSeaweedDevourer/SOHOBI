@@ -1,0 +1,26 @@
+{
+  "name": "SOHOBI 소호비",
+  "short_name": "소호비",
+  "description": "AI 기반 외식업 창업 컨설팅 플랫폼",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0891b2",
+  "icons": [
+    {
+      "src": "/sohobi_logo_small.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/sohobi_logo_48w.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
