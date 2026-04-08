@@ -120,6 +120,7 @@ export default function MapView() {
       drawMarkers,
       clearMarkers,
       selectMarker,
+      highlightById,
       markerLayerRef,
    } = useMarkers(mapInstance, visibleCats);
 
@@ -314,16 +315,25 @@ export default function MapView() {
                   .filter(Boolean),
             ),
          ];
-         const uncached = admCds.filter((id) => !storesByAdmCdRef.current.has(id));
+         const uncached = admCds.filter(
+            (id) => !storesByAdmCdRef.current.has(id),
+         );
          Promise.all(
             uncached.map((admCd) =>
-               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, { headers: _mapHeaders })
+               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, {
+                  headers: _mapHeaders,
+               })
                   .then((r) => r.json())
-                  .then((d) => { storesByAdmCdRef.current.set(admCd, d.stores || []); return d.stores || []; })
+                  .then((d) => {
+                     storesByAdmCdRef.current.set(admCd, d.stores || []);
+                     return d.stores || [];
+                  })
                   .catch(() => []),
             ),
          ).then(() => {
-            const stores = admCds.flatMap((id) => storesByAdmCdRef.current.get(id) || []);
+            const stores = admCds.flatMap(
+               (id) => storesByAdmCdRef.current.get(id) || [],
+            );
             allStoresRef.current = stores;
             setNearbyCount(stores.length);
             const counts = {};
@@ -947,14 +957,20 @@ export default function MapView() {
                if (s.LNG && s.LAT) {
                   const map = mapInstance.current;
                   if (map) {
-                     map.getView().animate({
-                        center: fromLonLat([
-                           parseFloat(s.LNG),
-                           parseFloat(s.LAT),
-                        ]),
-                        zoom: Math.max(map.getView().getZoom() || 17, 17),
-                        duration: 500,
-                     });
+                     map.getView().animate(
+                        {
+                           center: fromLonLat([
+                              parseFloat(s.LNG),
+                              parseFloat(s.LAT),
+                           ]),
+                           zoom: 19,
+                           duration: 500,
+                        },
+                        () => {
+                           if (s.STORE_ID || s.store_id)
+                              highlightById(s.STORE_ID || s.store_id);
+                        },
+                     );
                   }
                }
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
@@ -1045,14 +1061,20 @@ export default function MapView() {
                if (s.LNG && s.LAT) {
                   const map = mapInstance.current;
                   if (map) {
-                     map.getView().animate({
-                        center: fromLonLat([
-                           parseFloat(s.LNG),
-                           parseFloat(s.LAT),
-                        ]),
-                        zoom: Math.max(map.getView().getZoom() || 17, 17),
-                        duration: 500,
-                     });
+                     map.getView().animate(
+                        {
+                           center: fromLonLat([
+                              parseFloat(s.LNG),
+                              parseFloat(s.LAT),
+                           ]),
+                           zoom: 19,
+                           duration: 500,
+                        },
+                        () => {
+                           if (s.STORE_ID || s.store_id)
+                              highlightById(s.STORE_ID || s.store_id);
+                        },
+                     );
                   }
                }
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
