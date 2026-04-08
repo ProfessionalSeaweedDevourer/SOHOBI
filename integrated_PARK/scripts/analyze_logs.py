@@ -16,7 +16,7 @@ import json
 import os
 import sys
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import requests
@@ -201,7 +201,8 @@ def filter_by_date(entries: list[dict], since: str = "", until: str = "") -> lis
     if since:
         result = [e for e in result if e.get("ts", "") >= since]
     if until:
-        result = [e for e in result if e.get("ts", "") < until + "T99"]
+        next_day = (date.fromisoformat(until) + timedelta(days=1)).isoformat()
+        result = [e for e in result if e.get("ts", "") < next_day]
     return result
 
 

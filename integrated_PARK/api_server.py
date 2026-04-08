@@ -697,7 +697,7 @@ async def get_stats(hours: int = Query(24, ge=1, le=168)):
         "by_status": by_status,
         "by_grade": by_grade,
         "error_count": len(errors),
-        "error_rate": round(len(errors) / total, 4) if total else 0.0,
+        "error_rate": round(len(errors) / len(queries), 4) if queries else 0.0,
     }
 
 
