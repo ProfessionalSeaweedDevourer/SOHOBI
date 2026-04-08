@@ -706,18 +706,21 @@ class LocationAgent:
             if unsupported_raw:
                 supported_locs = self._repo.get_supported_locations()
                 examples = ["강남", "홍대", "역삼", "마포", "잠실", "종로"]
+                names = "', '".join(unsupported_raw)
                 return {
                     "draft": (
-                        f"'{unsupported_raw[0]}' 지역은 현재 지원하지 않습니다.\n"
+                        f"'{names}' 지역은 현재 지원하지 않습니다.\n"
                         f"서울 주요 구·동 이름으로 질문해 주세요 (총 {len(supported_locs)}개 지역 지원).\n"
                         f"예: {', '.join(examples)} 등"
                     ),
-                    "adm_codes": [],
-                    "type": mode,
-                    "business_type": "",
-                    "location_name": unsupported_raw[0],
-                    "locations":     locations,
-                    "quarter":       quarter,
+                    "adm_codes":         [],
+                    "type":              mode,
+                    "business_type":     "",
+                    "location_name":     ", ".join(unsupported_raw),
+                    "locations":         locations,
+                    "quarter":           quarter,
+                    "suggested_actions": [],
+                    "is_partial":        False,
                 }
             return self._build_business_type_partial(locations[0], quarter, mode)
         elif not locations:
