@@ -9,6 +9,8 @@ import {
    extend as extendExtent,
    createEmpty as createEmptyExtent,
 } from "ol/extent";
+import TileLayer from "ol/layer/Tile";
+import TileWMS from "ol/source/TileWMS";
 
 // ── UI 컴포넌트 ────────────────────────────────────────────────
 import Layerpanel from "./panel/Layerpanel";
@@ -165,34 +167,29 @@ export default function MapView() {
             .getArray()
             .some((l) => l.get("name") === "cadastral")
       ) {
-         Promise.all([
-            import("ol/layer/Tile"),
-            import("ol/source/TileWMS"),
-         ]).then(([{ default: TileLayer }, { default: TileWMS }]) => {
-            const layer = new TileLayer({
-               source: new TileWMS({
-                  url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vKey}&DOMAIN=localhost`,
-                  params: {
-                     SERVICE: "WMS",
-                     VERSION: "1.3.0",
-                     REQUEST: "GetMap",
-                     LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-                     STYLES: ",",
-                     FORMAT: "image/png",
-                     TRANSPARENT: "TRUE",
-                     CRS: "EPSG:3857",
-                  },
-                  crossOrigin: "anonymous",
-                  transition: 0,
-               }),
-               opacity: 0.7,
-               zIndex: 50,
-               minZoom: 17,
-            });
-            layer.set("name", "cadastral");
-            map.addLayer(layer);
-            wmsLayerRef.current = layer;
+         const layer = new TileLayer({
+            source: new TileWMS({
+               url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vKey}&DOMAIN=${import.meta.env.VITE_VWORLD_DOMAIN || "localhost"}`,
+               params: {
+                  SERVICE: "WMS",
+                  VERSION: "1.3.0",
+                  REQUEST: "GetMap",
+                  LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+                  STYLES: ",",
+                  FORMAT: "image/png",
+                  TRANSPARENT: "TRUE",
+                  CRS: "EPSG:3857",
+               },
+               crossOrigin: "anonymous",
+               transition: 0,
+            }),
+            opacity: 0.7,
+            zIndex: 50,
+            minZoom: 17,
          });
+         layer.set("name", "cadastral");
+         map.addLayer(layer);
+         wmsLayerRef.current = layer;
       }
    }, [mapReady]); // eslint-disable-line
    const dongSelectedFeatRef = useRef(null); // 현재 선택(클릭)된 폴리곤
@@ -1017,6 +1014,12 @@ export default function MapView() {
                   dong: popup.ADM_NM,
                });
                if (map) {
+                  // 공시지가 조회 시 지적도 레이어가 꺼져 있으면 강제 활성화
+                  const cadastralLayer = map.getLayers().getArray()
+                     .find((l) => l.get("name") === "cadastral");
+                  if (cadastralLayer && !cadastralLayer.getVisible()) {
+                     cadastralLayer.setVisible(true);
+                  }
                   const coord = fromLonLat([lng, lat]);
                   const doWmsClick = () => {
                      handleWmsClick(map, coord, { skipZoomGuard: true }).then(
