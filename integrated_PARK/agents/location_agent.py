@@ -679,9 +679,14 @@ class LocationAgent:
 
         # 지역명/업종명 정규화 (CHOI): "강남역" → "강남", "치킨집" → "치킨"
         locations = []
+        unsupported_raw = []  # 정규화 실패(미지원) 지역 추적
         for raw_loc in raw_locations:
             normed = _normalize_location(raw_loc)
-            locations.append(normed if normed else raw_loc)
+            if normed:
+                locations.append(normed)
+            else:
+                locations.append(raw_loc)
+                unsupported_raw.append(raw_loc)
         business_type = _normalize_business_type(raw_business_type) or raw_business_type
 
         if not locations and not business_type:
@@ -698,6 +703,22 @@ class LocationAgent:
                 "quarter":       quarter,
             }
         elif not business_type:
+            if unsupported_raw:
+                supported_locs = self._repo.get_supported_locations()
+                examples = ["강남", "홍대", "역삼", "마포", "잠실", "종로"]
+                return {
+                    "draft": (
+                        f"'{unsupported_raw[0]}' 지역은 현재 지원하지 않습니다.\n"
+                        f"서울 주요 구·동 이름으로 질문해 주세요 (총 {len(supported_locs)}개 지역 지원).\n"
+                        f"예: {', '.join(examples)} 등"
+                    ),
+                    "adm_codes": [],
+                    "type": mode,
+                    "business_type": "",
+                    "location_name": unsupported_raw[0],
+                    "locations":     locations,
+                    "quarter":       quarter,
+                }
             return self._build_business_type_partial(locations[0], quarter, mode)
         elif not locations:
             return self._build_location_partial(business_type, quarter, mode)
