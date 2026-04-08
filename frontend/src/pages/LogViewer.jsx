@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchLogs, fetchFeedback, fetchRoadmapVotes, fetchLogUsers } from "../api";
 import LogTable from "../components/LogTable";
@@ -30,14 +30,18 @@ export default function LogViewer() {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("");
   const [sessionFilter, setSessionFilter] = useState("");
+  const feedbackCacheRef = useRef(null);
 
   async function load(type, userFilter) {
     setLoading(true);
     setError(null);
     try {
+      const fbPromise = feedbackCacheRef.current
+        ? Promise.resolve(feedbackCacheRef.current)
+        : fetchFeedback().then((r) => { feedbackCacheRef.current = r; return r; });
       const [data, fb] = await Promise.allSettled([
         fetchLogs(type, 500, userFilter ?? selectedUser),
-        fetchFeedback(),
+        fbPromise,
       ]);
       setEntries(data.status === "fulfilled" ? data.value.entries || [] : []);
       if (data.status === "rejected") throw new Error(data.reason?.message);

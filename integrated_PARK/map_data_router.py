@@ -449,6 +449,7 @@ async def getPnuByCoord(lng: float, lat: float):
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             res = await client.get(url)
+            print(f"[pnu-by-coord] status={res.status_code} body={res.text[:200]}") 
         features = (
             res.json()
             .get("response", {})

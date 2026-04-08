@@ -30,6 +30,14 @@ export function useStreamQuery({
   const [pendingQuestion, setPendingQuestion] = useState(null);
   const controllerRef = useRef(null);
 
+  // 콜백 ref: 리렌더 없이 항상 최신 함수 참조 유지 (stale closure 방지)
+  const onMessageRef = useRef(onMessage);
+  const onUpdateAtRef = useRef(onUpdateAt);
+  const onParamsRef = useRef(onParams);
+  useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
+  useEffect(() => { onUpdateAtRef.current = onUpdateAt; }, [onUpdateAt]);
+  useEffect(() => { onParamsRef.current = onParams; }, [onParams]);
+
   useEffect(() => {
     return () => controllerRef.current?.abort();
   }, []);
@@ -93,18 +101,18 @@ export function useStreamQuery({
         (finalResult) => {
           setPendingQuestion(null);
           if (!finalResult) return;
-          onMessage(_buildMsg(question, finalResult));
-          if (finalResult.updated_params) onParams(finalResult.updated_params);
+          onMessageRef.current(_buildMsg(question, finalResult));
+          if (finalResult.updated_params) onParamsRef.current(finalResult.updated_params);
           inputRef?.current?.clear();
         },
         (q, errMsg) => {
           setPendingQuestion(null);
-          onMessage({ question: q, status: "error", draft: interpretError(errMsg) });
+          onMessageRef.current({ question: q, status: "error", draft: interpretError(errMsg) });
           inputRef?.current?.clear();
         }
       );
     },
-    [_runStream, onMessage, onParams]
+    [_runStream]
   );
 
   const regenerate = useCallback(
@@ -113,15 +121,15 @@ export function useStreamQuery({
         question,
         (finalResult) => {
           if (!finalResult) return;
-          onUpdateAt(index, { ..._buildMsg(question, finalResult), regenerated: true });
-          if (finalResult.updated_params) onParams(finalResult.updated_params);
+          onUpdateAtRef.current(index, { ..._buildMsg(question, finalResult), regenerated: true });
+          if (finalResult.updated_params) onParamsRef.current(finalResult.updated_params);
         },
         (_q, errMsg) => {
-          onUpdateAt(index, { status: "error", draft: interpretError(errMsg) });
+          onUpdateAtRef.current(index, { status: "error", draft: interpretError(errMsg) });
         }
       );
     },
-    [_runStream, onUpdateAt, onParams]
+    [_runStream]
   );
 
   return { loading, activeEvents, pendingQuestion, submit, regenerate };
