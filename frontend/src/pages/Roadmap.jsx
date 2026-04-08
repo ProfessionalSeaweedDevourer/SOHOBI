@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { AnimatedBackground } from "../components/AnimatedBackground";
 import { GlowCTA } from "../components/GlowCTA";
@@ -90,6 +91,7 @@ export default function Roadmap() {
           })
           .sort((a, b) => b.vote_count - a.vote_count)
       );
+      toast.error("투표에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     }
   }
 
