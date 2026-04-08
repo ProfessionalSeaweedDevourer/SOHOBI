@@ -27,7 +27,6 @@ from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 from dotenv import load_dotenv
 
@@ -61,16 +60,31 @@ import checklist_store
 load_dotenv()
 
 
-# ── Rate Limiter ─────────────────────────────────────────────────
-def _get_client_ip_for_limiter(request: Request) -> str:
-    """X-Forwarded-For 우선, 없으면 직접 연결 IP 사용."""
+# ── 헬퍼 함수 (Rate Limiter + 로깅 공용) ────────────────────────
+def _get_client_ip(request: Request) -> str:
+    """X-Forwarded-For 마지막 hop → 실제 클라이언트 IP (Azure Container Apps 환경)."""
     forwarded = request.headers.get("X-Forwarded-For", "")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        # Azure Container Apps proxy가 append한 마지막 IP = 실제 클라이언트
+        return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
+
+# ── Rate Limiter ─────────────────────────────────────────────────
+_RATE_LIMIT_EXEMPT_IPS: set[str] = {"127.0.0.1", "::1"}
+
+_extra = os.getenv("RATE_LIMIT_EXEMPT_IPS", "")
+if _extra:
+    _RATE_LIMIT_EXEMPT_IPS.update(ip.strip() for ip in _extra.split(",") if ip.strip())
+
+
+def _rate_limit_key(request: Request) -> str:
+    """면제 IP → 빈 문자열(slowapi가 limit 체크 스킵), 그 외 → 실제 IP."""
+    ip = _get_client_ip(request)
+    return "" if ip in _RATE_LIMIT_EXEMPT_IPS else ip
+
 limiter = Limiter(
-    key_func=_get_client_ip_for_limiter,
+    key_func=_rate_limit_key,
     default_limits=["60/minute"],
 )
 
@@ -89,6 +103,7 @@ app.add_exception_handler(
     lambda req, exc: JSONResponse(
         status_code=429,
         content={"error": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."},
+        headers={"Retry-After": str(exc.limit.limit.get_expiry())},
     ),
 )
 app.add_middleware(SlowAPIMiddleware)
@@ -235,15 +250,6 @@ async def _extract_and_save(sid: str, session: dict, draft: str) -> None:
     except Exception as e:
         _logger.warning("재무 변수 백그라운드 추출 실패 sid=%s: %s", sid, e)
 
-
-# ── 헬퍼 함수 ────────────────────────────────────────────────
-
-def _get_client_ip(request: Request) -> str:
-    """X-Forwarded-For 헤더 → 실제 클라이언트 IP 추출 (Azure 로드밸런서 환경)."""
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else ""
 
 
 # ── 엔드포인트 ────────────────────────────────────────────────
