@@ -73,8 +73,9 @@ export default function MapControls({
                <button
                   onClick={onStoreSearch}
                   className="mv-refresh-btn"
+                  disabled={loading}
                >
-                  🔄
+                  {loading ? "⏳" : "🔄"}
                </button>
             )}
          </div>

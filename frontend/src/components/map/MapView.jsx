@@ -751,6 +751,7 @@ export default function MapView() {
                }
             }}
             onStoreSearch={() => {
+               if (loading) return;
                const feat = dongSelectedFeatRef.current;
                if (!feat) {
                   alert("먼저 폴리곤(동)을 클릭해서 선택해주세요.");
