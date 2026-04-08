@@ -18,7 +18,8 @@ KEYWORDS: dict[str, list[str]] = {
                  "사업자등록", "위생교육", "보건증", "식품위생", "세무서",
                  "소진공", "소상공인시장진흥공단", "융자", "정책대출",
                  "지원받", "지원 가능", "지원 신청", "지원 대상", "지원 혜택",
-                 "창업자금", "자금 지원", "혜택 받", "혜택 있"],
+                 "창업자금", "자금 지원", "혜택 받", "혜택 있",
+                 "스타트업", "지원 추천"],
     "finance":  ["재무", "금리", "수익", "비용", "투자", "시뮬레이션", "자본",
                  "손익분기점", "순이익", "영업이익", "인건비", "원가", "창업비용",
                  "초기비용", "초기투자", "투자비용", "수익률", "투자회수",
@@ -63,6 +64,8 @@ Classify the user query into exactly one of: admin, finance, legal, location, ch
 5. "창업 절차/신고/허가" → admin
 6. "지원받을 수 있어?", "지원 신청", "보조금 받을 수 있어?" 등 정부지원 문의 → admin (업종 무관)
 7. 맛집 추천, 시스템 질문, 상권분석 DB 미지원 지역(서울 외) 커버리지 문의 → chat
+8. "추천해줘" + 창업/사업/스타트업 맥락 → admin (지원사업/프로그램 추천 요청)
+9. 대화 맥락([대화 맥락] 블록)이 제공된 경우, 이전 턴의 도메인을 반드시 참고하여 분류하라. 이전 대화가 admin 주제였다면 후속 질문은 admin 우선 고려
 
 Respond ONLY in JSON: {"domain": "...", "confidence": 0.0~1.0, "reasoning": "..."}"""
 
@@ -88,13 +91,26 @@ def _keyword_classify(question: str) -> dict | None:
     return {"domain": best, "confidence": 0.85, "reasoning": f"키워드 매칭: {', '.join(matched)}"}
 
 
-async def _llm_classify(question: str) -> dict:
+async def _llm_classify(question: str, prior_history: list[dict] | None = None) -> dict:
     kernel = get_kernel()
     chat_service = kernel.get_service("router")
     settings = AzureChatPromptExecutionSettings(response_format={"type": "json_object"})
     history = ChatHistory()
     history.add_system_message(_SYSTEM_PROMPT)
-    history.add_user_message(question)
+
+    # 최근 2턴(최대 4개 메시지)을 대화 맥락으로 삽입하여 문맥 기반 분류 (레이턴시 최소화)
+    if prior_history:
+        recent = prior_history[-4:]
+        context_lines = []
+        for msg in recent:
+            role = "user" if msg["role"] == "user" else "assistant"
+            content = msg["content"][:200]  # 토큰 절약
+            context_lines.append(f"{role}: {content}")
+        context_block = "[대화 맥락 - 최근 대화]\n" + "\n".join(context_lines) + "\n\n[현재 질문]\n"
+        history.add_user_message(context_block + question)
+    else:
+        history.add_user_message(question)
+
     try:
         result = await asyncio.wait_for(
             chat_service.get_chat_message_content(chat_history=history, settings=settings),
@@ -106,8 +122,33 @@ async def _llm_classify(question: str) -> dict:
         return _FALLBACK
 
 
-async def classify(question: str) -> dict:
+async def classify(
+    question: str,
+    prior_history: list[dict] | None = None,
+    last_domain: str | None = None,
+) -> dict:
     if any(kw in question for kw in _PRIVACY_KEYWORDS):
         return {"domain": "chat", "confidence": 1.0, "reasoning": "개인정보처리방침 질문 — 안내 에이전트로 라우팅"}
     result = _keyword_classify(question)
-    return result if result else await _llm_classify(question)
+    if result:
+        return result
+    llm_result = await _llm_classify(question, prior_history)
+    # last_domain 방어선: LLM이 chat으로 분류했지만 확신이 낮고 이전 도메인이 실무 도메인이면 유지
+    # 단, 현재 질문에 다른 실무 도메인 키워드가 1개 이상 있으면 방어선 해제 (진짜 도메인 전환)
+    if (
+        llm_result.get("domain") == "chat"
+        and llm_result.get("confidence", 1.0) < 0.75
+        and last_domain in ("admin", "finance", "legal", "location")
+    ):
+        other_domain_signals = {
+            d: sum(kw in question for kw in kws)
+            for d, kws in KEYWORDS.items()
+            if d not in ("chat", last_domain)
+        }
+        if not any(c >= 1 for c in other_domain_signals.values()):
+            return {
+                "domain": last_domain,
+                "confidence": 0.55,
+                "reasoning": f"LLM chat 분류 확신 낮음({llm_result.get('confidence', '?')}) — 이전 도메인 '{last_domain}' 유지",
+            }
+    return llm_result
