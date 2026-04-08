@@ -60,7 +60,8 @@ export default function ReportSummary({ totalQueries, mostUsedAgent, checklist, 
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: idx * 0.1 }}
-              whileHover={{ y: -6 }}
+              whileHover="cardHover"
+              variants={{ cardHover: { y: -6 } }}
               className="group"
             >
               <div className="glass rounded-2xl p-6 shadow-elevated transition-glow hover-lift relative overflow-hidden flex flex-col gap-3">
@@ -74,7 +75,7 @@ export default function ReportSummary({ totalQueries, mostUsedAgent, checklist, 
                 <motion.div
                   className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg relative shrink-0"
                   style={{ backgroundColor: `${card.color}20` }}
-                  whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                  variants={{ cardHover: { rotate: [0, -10, 10, -10, 0] } }}
                   transition={{ duration: 0.5 }}
                 >
                   <div

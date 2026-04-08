@@ -5,6 +5,7 @@ import ReportSummary from "../components/report/ReportSummary";
 import AgentUsageChart from "../components/report/AgentUsageChart";
 import Recommendations from "../components/report/Recommendations";
 import { AnimatedBackground } from "../components/AnimatedBackground";
+import { GlowCTA } from "../components/GlowCTA";
 import { motion } from "motion/react";
 import { ArrowLeft, MessageSquare, BarChart2, ArrowRight } from "lucide-react";
 
@@ -145,16 +146,9 @@ export default function MyReport() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
-            className="relative"
           >
-            <div className="glass rounded-3xl p-12 text-center shadow-elevated-lg relative overflow-hidden">
-              <div
-                className="absolute inset-0 bg-gradient-to-r from-[var(--brand-blue)] via-[var(--brand-teal)] to-[var(--brand-blue)] opacity-10 animate-shimmer"
-                style={{ backgroundSize: "200% 100%" }}
-              />
-              <div className="absolute top-0 left-1/4 w-40 h-40 bg-[var(--brand-blue)] rounded-full blur-3xl opacity-20 animate-float" />
-              <div className="absolute bottom-0 right-1/4 w-40 h-40 bg-[var(--brand-teal)] rounded-full blur-3xl opacity-20 animate-float" style={{ animationDelay: "1s" }} />
-              <div className="relative z-10 flex flex-col items-center gap-4">
+            <GlowCTA orbSize="w-40 h-40" className="p-12 text-center shadow-elevated-lg">
+              <div className="flex flex-col items-center gap-4">
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
                   style={{ backgroundColor: "rgba(8,145,178,0.15)" }}
@@ -173,7 +167,7 @@ export default function MyReport() {
                   <ArrowRight size={14} />
                 </a>
               </div>
-            </div>
+            </GlowCTA>
           </motion.div>
         )}
 

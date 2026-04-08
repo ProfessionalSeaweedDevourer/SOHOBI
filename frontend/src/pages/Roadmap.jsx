@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { AnimatedBackground } from "../components/AnimatedBackground";
+import { GlowCTA } from "../components/GlowCTA";
 import { motion } from "motion/react";
 import { ArrowLeft, MessageSquare, Vote, Zap, CheckCircle2, ArrowRight } from "lucide-react";
 
@@ -213,33 +214,28 @@ export default function Roadmap() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
-            className="glass rounded-3xl p-10 text-center shadow-elevated-lg relative overflow-hidden"
           >
-            <div
-              className="absolute inset-0 bg-gradient-to-r from-[var(--brand-blue)] via-[var(--brand-teal)] to-[var(--brand-blue)] opacity-10 animate-shimmer"
-              style={{ backgroundSize: "200% 100%" }}
-            />
-            <div className="absolute top-0 left-1/3 w-32 h-32 bg-[var(--brand-blue)] rounded-full blur-3xl opacity-20 animate-float" />
-            <div className="absolute bottom-0 right-1/3 w-32 h-32 bg-[var(--brand-teal)] rounded-full blur-3xl opacity-20 animate-float" style={{ animationDelay: "1s" }} />
-            <div className="relative z-10 flex flex-col items-center gap-4">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
-                style={{ backgroundColor: "rgba(8,145,178,0.15)" }}
-              >
-                <span className="text-2xl">🗳️</span>
+            <GlowCTA orbSize="w-32 h-32" className="p-10 text-center shadow-elevated-lg">
+              <div className="flex flex-col items-center gap-4">
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+                  style={{ backgroundColor: "rgba(8,145,178,0.15)" }}
+                >
+                  <span className="text-2xl">🗳️</span>
+                </div>
+                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  투표하려면 먼저 AI 에이전트와 대화를 시작해 보세요
+                </p>
+                <a
+                  href="/user"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105"
+                  style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
+                >
+                  AI 에이전트와 대화하기
+                  <ArrowRight size={14} />
+                </a>
               </div>
-              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                투표하려면 먼저 AI 에이전트와 대화를 시작해 보세요
-              </p>
-              <a
-                href="/user"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105"
-                style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
-              >
-                AI 에이전트와 대화하기
-                <ArrowRight size={14} />
-              </a>
-            </div>
+            </GlowCTA>
           </motion.div>
         )}
 

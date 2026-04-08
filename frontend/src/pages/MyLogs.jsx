@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { AnimatedBackground } from "../components/AnimatedBackground";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, MessageSquare, ClipboardList, ChevronDown, ArrowRight } from "lucide-react";
+import { GlowCTA } from "../components/GlowCTA";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -47,7 +48,7 @@ const SessionCard = memo(function SessionCard({ session, token, index }) {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
+      transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.3) }}
       className="group"
     >
       <div className="glass rounded-2xl shadow-elevated overflow-hidden">
@@ -113,6 +114,7 @@ const SessionCard = memo(function SessionCard({ session, token, index }) {
         <AnimatePresence>
           {open && history !== null && (
             <motion.div
+              key="session-history"
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -265,40 +267,35 @@ export default function MyLogs() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="glass rounded-3xl p-12 text-center shadow-elevated-lg relative overflow-hidden"
           >
-            <div
-              className="absolute inset-0 bg-gradient-to-r from-[var(--brand-blue)] via-[var(--brand-teal)] to-[var(--brand-blue)] opacity-10 animate-shimmer"
-              style={{ backgroundSize: "200% 100%" }}
-            />
-            <div className="absolute top-0 left-1/4 w-40 h-40 bg-[var(--brand-blue)] rounded-full blur-3xl opacity-20 animate-float" />
-            <div className="absolute bottom-0 right-1/4 w-40 h-40 bg-[var(--brand-teal)] rounded-full blur-3xl opacity-20 animate-float" style={{ animationDelay: "1s" }} />
-            <div className="relative z-10 flex flex-col items-center gap-5">
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
-                style={{ backgroundColor: "rgba(8,145,178,0.15)" }}
-              >
-                <span className="text-3xl">🔐</span>
+            <GlowCTA orbSize="w-40 h-40" className="p-12 text-center shadow-elevated-lg">
+              <div className="flex flex-col items-center gap-5">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
+                  style={{ backgroundColor: "rgba(8,145,178,0.15)" }}
+                >
+                  <span className="text-3xl">🔐</span>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1" style={{ color: "var(--foreground)" }}>
+                    로그인이 필요합니다
+                  </p>
+                  <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                    질의응답 로그는 로그인 후 이용할 수 있습니다
+                  </p>
+                </div>
+                <motion.button
+                  onClick={login}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-lg hover-glow-blue transition-glow"
+                  style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
+                >
+                  Google로 로그인
+                  <ArrowRight size={14} />
+                </motion.button>
               </div>
-              <div>
-                <p className="font-semibold mb-1" style={{ color: "var(--foreground)" }}>
-                  로그인이 필요합니다
-                </p>
-                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                  질의응답 로그는 로그인 후 이용할 수 있습니다
-                </p>
-              </div>
-              <motion.button
-                onClick={login}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-lg hover-glow-blue transition-glow"
-                style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
-              >
-                Google로 로그인
-                <ArrowRight size={14} />
-              </motion.button>
-            </div>
+            </GlowCTA>
           </motion.div>
         )}
 
@@ -330,33 +327,28 @@ export default function MyLogs() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
-              className="glass rounded-3xl p-12 text-center shadow-elevated-lg relative overflow-hidden"
             >
-              <div
-                className="absolute inset-0 bg-gradient-to-r from-[var(--brand-blue)] via-[var(--brand-teal)] to-[var(--brand-blue)] opacity-10 animate-shimmer"
-                style={{ backgroundSize: "200% 100%" }}
-              />
-              <div className="absolute top-0 left-1/3 w-32 h-32 bg-[var(--brand-blue)] rounded-full blur-3xl opacity-20 animate-float" />
-              <div className="absolute bottom-0 right-1/3 w-32 h-32 bg-[var(--brand-teal)] rounded-full blur-3xl opacity-20 animate-float" style={{ animationDelay: "1s" }} />
-              <div className="relative z-10 flex flex-col items-center gap-4">
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
-                  style={{ backgroundColor: "rgba(8,145,178,0.15)" }}
-                >
-                  <span className="text-2xl">📭</span>
+              <GlowCTA orbSize="w-32 h-32" className="p-12 text-center shadow-elevated-lg">
+                <div className="flex flex-col items-center gap-4">
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+                    style={{ backgroundColor: "rgba(8,145,178,0.15)" }}
+                  >
+                    <span className="text-2xl">📭</span>
+                  </div>
+                  <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                    아직 로그인 상태에서 진행한 상담이 없습니다
+                  </p>
+                  <a
+                    href="/user"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105"
+                    style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
+                  >
+                    AI 에이전트와 대화하기
+                    <ArrowRight size={14} />
+                  </a>
                 </div>
-                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                  아직 로그인 상태에서 진행한 상담이 없습니다
-                </p>
-                <a
-                  href="/user"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105"
-                  style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
-                >
-                  AI 에이전트와 대화하기
-                  <ArrowRight size={14} />
-                </a>
-              </div>
+              </GlowCTA>
             </motion.div>
           ) : (
             <div className="flex flex-col gap-3">
