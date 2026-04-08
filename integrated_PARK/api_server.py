@@ -256,7 +256,13 @@ async def query(req: QueryRequest, request: Request):
 
         # ── 도메인 분류 ───────────────────────────────────────
         # 라우터는 항상 실행한다 (클라이언트 domain 지정 여부와 무관)
-        classification = await domain_router.classify(question)
+        # 세션 히스토리와 이전 도메인을 함께 전달해 대화 맥락 기반 분류 활성화
+        prior_history = get_recent_history(session["history"])
+        classification = await domain_router.classify(
+            question,
+            prior_history=prior_history,
+            last_domain=session.get("last_domain"),
+        )
         router_domain = classification["domain"]
         router_confidence = classification.get("confidence", 0.0)
 
@@ -281,7 +287,7 @@ async def query(req: QueryRequest, request: Request):
             question=question,
             profile=session["profile"],
             session_id=sid,
-            prior_history=get_recent_history(session["history"]),
+            prior_history=prior_history,
             max_retries=req.max_retries,
             current_params=params,
             context=session.get("context", {}),
@@ -294,6 +300,10 @@ async def query(req: QueryRequest, request: Request):
         # location agent가 context를 갱신했으면 세션에 반영
         if result.get("updated_context"):
             session.setdefault("context", {}).update(result["updated_context"])
+
+        # 마지막 실무 도메인 기록 (chat 제외) — 다음 요청의 도메인 연속성 방어선으로 활용
+        if domain != "chat":
+            session["last_domain"] = domain
 
         # 세션 저장 후, 재무 변수 추출은 백그라운드에서 처리 (사용자 응답 지연 없음)
         await save_query_session(sid, session)
@@ -394,10 +404,15 @@ async def stream_query(req: QueryRequest, request: Request):
         t0 = time.monotonic()
         try:
             # ── 도메인 분류 ───────────────────────────────────
+            prior_history_for_router = get_recent_history(session["history"])
             if req.domain in ("admin", "finance", "legal", "location", "chat"):
                 domain = req.domain
             else:
-                classification = await domain_router.classify(req.question)
+                classification = await domain_router.classify(
+                    req.question,
+                    prior_history=prior_history_for_router,
+                    last_domain=session.get("last_domain"),
+                )
                 domain = classification["domain"]
 
             yield f"event: domain_classified\ndata: {json.dumps({'domain': domain, 'session_id': sid})}\n\n"
@@ -410,6 +425,7 @@ async def stream_query(req: QueryRequest, request: Request):
                 question=req.question,
                 profile=session["profile"],
                 session_id=sid,
+                prior_history=prior_history_for_router,
                 max_retries=req.max_retries,
                 current_params=params,
                 context=session.get("context", {}),
@@ -420,6 +436,9 @@ async def stream_query(req: QueryRequest, request: Request):
                     # 세션 업데이트 및 저장
                     session["history"].add_user_message(req.question)
                     session["history"].add_assistant_message(ev["draft"])
+
+                    if domain != "chat":
+                        session["last_domain"] = domain
 
                     if ev.get("status") == "approved" and ev.get("draft"):
                         new_vars = await extract_financial_vars(ev["draft"])

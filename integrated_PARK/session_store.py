@@ -139,11 +139,12 @@ async def get_query_session(session_id: str) -> dict:
     try:
         item = await container.read_item(item=session_id, partition_key=session_id)
         return {
-            "profile":   item.get("profile", ""),
-            "history":   _deserialize_history(item.get("history", [])),
-            "extracted": item.get("extracted", {}),
-            "context":   item.get("context", dict(_EMPTY_CONTEXT)),
-            "user_id":   item.get("user_id", ""),
+            "profile":     item.get("profile", ""),
+            "history":     _deserialize_history(item.get("history", [])),
+            "extracted":   item.get("extracted", {}),
+            "context":     item.get("context", dict(_EMPTY_CONTEXT)),
+            "user_id":     item.get("user_id", ""),
+            "last_domain": item.get("last_domain", ""),
         }
     except Exception:
         return _empty_query_session()
@@ -173,12 +174,13 @@ async def save_query_session(session_id: str, session: dict) -> None:
         return
 
     await container.upsert_item({
-        "id":        session_id,
-        "profile":   session.get("profile", ""),
-        "history":   _serialize_history(session.get("history", ChatHistory())),
-        "extracted": session.get("extracted", {}),
-        "context":   session.get("context", dict(_EMPTY_CONTEXT)),
-        "ttl":       ttl,
+        "id":          session_id,
+        "profile":     session.get("profile", ""),
+        "history":     _serialize_history(session.get("history", ChatHistory())),
+        "extracted":   session.get("extracted", {}),
+        "context":     session.get("context", dict(_EMPTY_CONTEXT)),
+        "last_domain": session.get("last_domain", ""),
+        "ttl":         ttl,
     })
 
 

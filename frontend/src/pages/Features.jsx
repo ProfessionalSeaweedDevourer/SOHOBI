@@ -9,6 +9,7 @@ import {
   Landmark, Gift, CheckCircle2, Sparkles, Receipt, Users, UtensilsCrossed, ShieldCheck,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { GlowCTA } from '../components/GlowCTA';
 import { trackEvent } from '../utils/trackEvent';
 
 const features = [
@@ -235,6 +236,8 @@ export default function Features() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-60px' }}
                 transition={{ duration: 0.5, delay: idx * 0.05 }}
+                whileHover="cardHover"
+                variants={{ cardHover: {} }}
                 className="group"
               >
                 <div className="glass rounded-2xl p-8 shadow-elevated relative overflow-hidden">
@@ -248,7 +251,7 @@ export default function Features() {
                       <motion.div
                         className="p-3 rounded-xl shrink-0 shadow-lg relative"
                         style={{ backgroundColor: `${feature.color}20` }}
-                        whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                        variants={{ cardHover: { rotate: [0, -10, 10, -10, 0] } }}
                         transition={{ duration: 0.5 }}
                       >
                         <div
@@ -358,30 +361,22 @@ export default function Features() {
           transition={{ duration: 0.6 }}
           className="max-w-3xl mx-auto"
         >
-          <div className="glass rounded-3xl p-14 text-center shadow-elevated-lg relative overflow-hidden">
-            <div
-              className="absolute inset-0 bg-gradient-to-r from-[var(--brand-blue)] via-[var(--brand-teal)] to-[var(--brand-blue)] opacity-10 animate-shimmer"
-              style={{ backgroundSize: '200% 100%' }}
-            />
-            <div className="absolute top-0 left-1/4 w-48 h-48 bg-[var(--brand-blue)] rounded-full blur-3xl opacity-20 animate-float" />
-            <div className="absolute bottom-0 right-1/4 w-48 h-48 bg-[var(--brand-teal)] rounded-full blur-3xl opacity-20 animate-float" style={{ animationDelay: '1s' }} />
-            <div className="relative z-10">
-              <h2 className="text-3xl md:text-4xl mb-4 gradient-text">지금 바로 시작해보세요</h2>
-              <p className="text-muted-foreground mb-8">무료로 모든 기능을 이용할 수 있습니다</p>
-              <Link to="/user">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="inline-block"
-                >
-                  <Button size="lg" className="px-10 py-6 text-lg shadow-elevated-lg hover-glow-blue transition-glow">
-                    무료 상담 시작하기
-                    <ArrowRight size={18} className="ml-2" />
-                  </Button>
-                </motion.div>
-              </Link>
-            </div>
-          </div>
+          <GlowCTA orbSize="w-48 h-48" className="p-14 text-center shadow-elevated-lg">
+            <h2 className="text-3xl md:text-4xl mb-4 gradient-text">지금 바로 시작해보세요</h2>
+            <p className="text-muted-foreground mb-8">무료로 모든 기능을 이용할 수 있습니다</p>
+            <Link to="/user">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="inline-block"
+              >
+                <Button size="lg" className="px-10 py-6 text-lg shadow-elevated-lg hover-glow-blue transition-glow">
+                  무료 상담 시작하기
+                  <ArrowRight size={18} className="ml-2" />
+                </Button>
+              </motion.div>
+            </Link>
+          </GlowCTA>
         </motion.div>
       </section>
 
