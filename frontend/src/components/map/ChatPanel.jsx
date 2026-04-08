@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { streamQuery } from "../../api";
@@ -7,6 +7,34 @@ import ActionButtons from "../ActionButtons";
 import "./ChatPanel.css";
 
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
+
+// 응답 텍스트의 지역명을 클릭 가능한 span으로 변환
+const AREA_PATTERN = new RegExp(`(${[
+  "강남","강동","강북","강서","관악","광진","구로","금천",
+  "노원","도봉","동대문","동작","마포","서대문","서초","성동",
+  "성북","송파","양천","영등포","용산","은평","종로","중구",
+  "중랑","홍대","신촌","이태원","잠실","건대","압구정","청담",
+  "삼성","역삼","선릉","논현","신사","방배","사당","신림",
+  "여의도","목동","합정","망원","연남","성수","왕십리","혜화",
+  "대학로","을지로","명동","남대문","북촌","서촌","익선동",
+].join("|")})`, "g");
+
+// split에 캡처 그룹 사용 시 홀수 인덱스 = 매칭된 지역명
+function renderWithAreaLinks(text, onHighlight, keyBase) {
+  const parts = text.split(AREA_PATTERN);
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <span
+        key={`${keyBase}-${i}`}
+        className="mv-chat-area-link"
+        onClick={() => onHighlight?.(part)}
+        title={`${part} 지도에서 보기`}
+      >
+        {part}
+      </span>
+    ) : part
+  );
+}
 
 // "강남역 보여줘" 같은 지도 이동 패턴
 const NAV_PATTERN = /(.+?)\s*(보여줘|보여 줘|이동|찾아줘|찾아 줘|어디)/;
@@ -22,7 +50,8 @@ const AREA_KEYWORDS = [
   "대학로", "을지로", "명동", "남대문", "북촌", "서촌", "익선동",
 ];
 
-export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate, mapContext, onClearContext, onHighlightArea, onSearchArea }) {
+export default function ChatPanel({ chatState = false, onToggle, dongPanelOpen, onNavigate, mapContext, onClearContext, onHighlightArea, onFindAndHighlightByName, onSearchArea }) {
+  const isOpen = !!chatState;
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,6 +63,8 @@ export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate,
   const messagesEndRef = useRef(null);
   const timerRef = useRef(null);
   const prevContextRef = useRef(null);
+  const chipsRef = useRef(null);
+  const chipsDragRef = useRef({ dragging: false, moved: false, startX: 0, scrollLeft: 0 });
   const lastLocationRef = useRef(null);  // 직전 분석 지역 (대화 맥락 자동 보완)
   const lastBusinessRef = useRef(null);  // 직전 분석 업종 (대화 맥락 자동 보완)
 
@@ -53,7 +84,8 @@ export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate,
     return () => clearInterval(timerRef.current);
   }, [loading]);
 
-  // 지도 컨텍스트 변경 시 시스템 메시지
+  // 지도 컨텍스트 변경 시 시스템 메시지 + 지역 단독 쿼리 자동 전송
+  // → 백엔드가 _build_business_type_partial()로 10개 업종 버튼을 suggested_actions로 반환
   useEffect(() => {
     if (!mapContext || !mapContext.dongName) return;
     const key = `${mapContext.guName}_${mapContext.dongName}`;
@@ -61,7 +93,7 @@ export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate,
     prevContextRef.current = key;
 
     const label = mapContext.guName
-      ? `${mapContext.guName} ${mapContext.dongName}`
+      ? `${mapContext.guName.replace(/구$/, "")} ${mapContext.dongName}`
       : mapContext.dongName;
 
     setMessages((prev) => [
@@ -69,9 +101,12 @@ export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate,
       {
         id: crypto.randomUUID(),
         role: "system",
-        content: `${label} 선택됨`,
+        content: `${mapContext.guName ? `${mapContext.guName} ` : ""}${mapContext.dongName} 선택됨`,
       },
     ]);
+    // 지역만 담긴 쿼리 → 백엔드가 업종 선택 버튼 반환
+    handleSend(`${label} 상권 분석`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapContext]);
 
   // 카카오 키워드 검색으로 좌표 조회
@@ -258,6 +293,38 @@ export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate,
     ? `${contextLabel} 지역에 대해 질문하세요 (예: 카페 창업 분석)`
     : "상권 분석 질문을 입력하세요 (예: 홍대 카페 상권 분석)";
 
+  // 응답 텍스트 지역명 → 클릭 가능한 span (ReactMarkdown 커스텀 렌더러)
+  const markdownComponents = useMemo(() => ({
+    p: ({ children }) => {
+      const toArr = Array.isArray(children) ? children : [children];
+      const processed = toArr.flatMap((child, i) =>
+        typeof child === "string"
+          ? renderWithAreaLinks(child, onFindAndHighlightByName, i * 1000)
+          : [child]
+      );
+      return <p>{processed}</p>;
+    },
+  }), [onFindAndHighlightByName]);
+
+  // 빠른 쿼리 칩 — mapContext 유무에 따라 동적 생성
+  const areaLabel = mapContext?.dongName
+    ? mapContext.dongName.replace(/동$/, "")
+    : mapContext?.guName?.replace(/구$/, "") || "";
+  const quickChips = mapContext?.dongName
+    ? [
+        `${areaLabel} 카페 창업 가능성 분석`,
+        `${areaLabel} 한식 경쟁 분석`,
+        `${areaLabel} 매출 추이 분석`,
+        `${areaLabel} 인근 지역 비교`,
+      ]
+    : [
+        "홍대 카페 상권 분석",
+        "강남 한식 경쟁 분석",
+        "잠실 상권 현황",
+        "명동 관광 업종 분석",
+        "여의도 음식점 창업 전망",
+      ];
+
   return (
     <>
       {/* 토글 버튼 */}
@@ -284,9 +351,7 @@ export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate,
       <div className={`mv-chat-panel ${isOpen ? "" : "mv-chat-panel--closed"} ${dongPanelOpen ? "mv-chat-panel--dong-open" : ""}`}>
         <div className="mv-chat-header">
           <span>상권분석 AI</span>
-          <button className="mv-chat-header__close" onClick={onToggle}>
-            ✕
-          </button>
+          <button className="mv-chat-header__close" onClick={onToggle}>✕</button>
         </div>
 
         {/* ── 현재 선택된 지역 컨텍스트 표시 ── */}
@@ -320,7 +385,7 @@ export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate,
             <div key={msg.id} className={`mv-chat-msg mv-chat-msg--${msg.role}`}>
               {msg.role === "assistant" ? (
                 <>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{msg.content}</ReactMarkdown>
                   {msg.suggestedActions?.length > 0 && (
                     <ActionButtons
                       actions={msg.suggestedActions}
@@ -367,6 +432,36 @@ export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate,
 
           <div ref={messagesEndRef} />
         </div>
+
+        {/* ── 빠른 쿼리 칩 ── */}
+        {!loading && (
+          <div
+            className="mv-chat-chips"
+            ref={chipsRef}
+            onMouseDown={(e) => {
+              chipsDragRef.current = { dragging: true, moved: false, startX: e.pageX, scrollLeft: chipsRef.current.scrollLeft };
+            }}
+            onMouseMove={(e) => {
+              if (!chipsDragRef.current.dragging) return;
+              const dx = e.pageX - chipsDragRef.current.startX;
+              if (Math.abs(dx) > 4) chipsDragRef.current.moved = true;
+              chipsRef.current.scrollLeft = chipsDragRef.current.scrollLeft - dx;
+            }}
+            onMouseUp={() => { chipsDragRef.current.dragging = false; }}
+            onMouseLeave={() => { chipsDragRef.current.dragging = false; }}
+          >
+            {quickChips.map((chip) => (
+              <button
+                key={chip}
+                className="mv-chat-chip"
+                onClick={() => !chipsDragRef.current.moved && handleSend(chip)}
+                disabled={loading}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="mv-chat-input-area">
           <textarea

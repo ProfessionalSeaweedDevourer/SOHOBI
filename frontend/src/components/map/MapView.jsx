@@ -66,7 +66,10 @@ export default function MapView() {
    const wmsLayerRef = useRef(null);
 
    const [coords, setCoords] = useState({ lat: "37.5665", lng: "126.9780" });
-   const [chatOpen, setChatOpen] = useState(true);
+   // 동 hover 분석 제안 버블: { dongNm, guNm, admCd, x, y } | null
+   const [hoverBubble, setHoverBubble] = useState(null);
+   const hoverBubbleTimerRef = useRef(null);
+   const [chatState, setChatState] = useState(false);
    const [chatContext, setChatContext] = useState(null);
    const [landmarkLoaded, setLandmarkLoaded] = useState(false);
    const [landmarkPopup, setLandmarkPopup] = useState(null);
@@ -228,6 +231,32 @@ export default function MapView() {
          });
       }
    };
+
+   // ── 채팅 응답 지명 클릭 → 폴리곤 하이라이트 + 지도 이동 ───────
+   // ChatPanel에서 onFindAndHighlightByName(dongName) 형태로 호출
+   const handleFindAndHighlightByName = useCallback((name) => {
+      const layer = dongBoundaryLayerRef.current;
+      if (!layer?.getSource?.()?.getFeatures) return;
+      const features = layer.getSource().getFeatures();
+      const q = name.trim();
+      const matched = features.filter((f) => {
+         const nm = f.getProperties().adm_nm || f.getProperties().name || "";
+         return nm.includes(q) || q.includes(nm.replace(/동$/, ""));
+      });
+      if (matched.length === 0) return;
+      features.forEach((f) => f.setStyle(null));
+      matched.forEach((f) => f.setStyle(DONG_STYLE_SELECTED));
+      dongSearchFeatsRef.current = matched;
+      const extent = matched.reduce(
+         (acc, f) => extendExtent(acc, f.getGeometry().getExtent()),
+         createEmptyExtent(),
+      );
+      mapInstance.current?.getView().fit(extent, {
+         padding: [80, 480, 80, 80],
+         duration: 600,
+         maxZoom: 15,
+      });
+   }, []);
 
    // ── 구/동 검색 → 폴리곤 하이라이트 ────────────────────────────
    const handleSearch = async (query) => {
@@ -659,10 +688,18 @@ export default function MapView() {
             const p = feat.getProperties();
             const dongNm = p.adm_nm || p.name || "";
             const guNm = p.sig_kor_nm || p.sig_nm || p.sgg_nm || "";
+            const admCd = (p.adm_cd || "").trim();
             if (guNm) currentGuNmRef.current = guNm;
 
             if (dongNm !== dongHoverNameRef.current) {
                dongHoverNameRef.current = dongNm;
+               // 동이 바뀌면 버블 타이머 리셋 (1.2초 후 표시)
+               clearTimeout(hoverBubbleTimerRef.current);
+               setHoverBubble(null);
+               const px = e.pixel;
+               hoverBubbleTimerRef.current = setTimeout(() => {
+                  setHoverBubble({ dongNm, guNm, admCd, x: px[0], y: px[1] });
+               }, 1200);
             }
          } else {
             if (
@@ -675,6 +712,8 @@ export default function MapView() {
             dongHoverFeatRef.current = null;
             dongHoverNameRef.current = "";
             map.getTargetElement().style.cursor = "";
+            clearTimeout(hoverBubbleTimerRef.current);
+            setHoverBubble(null);
          }
       };
 
@@ -682,6 +721,7 @@ export default function MapView() {
       return () => {
          map.un("pointermove", moveHandler);
          if (map.getTargetElement()) map.getTargetElement().style.cursor = "";
+         clearTimeout(hoverBubbleTimerRef.current);
       };
    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -992,7 +1032,7 @@ export default function MapView() {
             onQuarterChange={(q) => setSelectedQtr(q)}
             onAiAnalyze={(ctx) => {
                setChatContext(ctx);
-               setChatOpen(true);
+               setChatState(true);
                setDongPanel(null);
             }}
          />
@@ -1004,15 +1044,38 @@ export default function MapView() {
             }}
          />
          <ChatPanel
-            isOpen={chatOpen}
-            onToggle={() => setChatOpen((prev) => !prev)}
+            chatState={chatState}
+            onToggle={() => setChatState((s) => !s)}
             dongPanelOpen={!!dongPanel}
             mapContext={chatContext}
             onNavigate={handleChatNavigate}
             onHighlightArea={handleHighlightArea}
+            onFindAndHighlightByName={handleFindAndHighlightByName}
             onClearContext={() => setChatContext(null)}
             onSearchArea={handleSearch}
          />
+         {/* ── 동 hover 분석 제안 버블 ── */}
+         {hoverBubble && (
+            <div
+               className="mv-hover-bubble"
+               style={{ left: hoverBubble.x + 12, top: hoverBubble.y - 8 }}
+            >
+               <span className="mv-hover-bubble__name">
+                  {hoverBubble.guNm ? `${hoverBubble.guNm} ` : ""}{hoverBubble.dongNm}
+               </span>
+               <button
+                  className="mv-hover-bubble__btn"
+                  onClick={() => {
+                     setChatContext({ guName: hoverBubble.guNm, dongName: hoverBubble.dongNm, admCd: hoverBubble.admCd });
+                     setChatState(true);
+                     setHoverBubble(null);
+                  }}
+               >
+                  AI 분석 →
+               </button>
+            </div>
+         )}
+
          <div className="coord-bar">
             📍 위도: {coords.lat} | 경도: {coords.lng} | 줌: {currentZoom}
          </div>
