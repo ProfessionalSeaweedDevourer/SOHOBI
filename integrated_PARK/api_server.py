@@ -20,6 +20,7 @@ _logger = logging.getLogger("sohobi.api")
 
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 import httpx
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
@@ -94,6 +95,9 @@ app.add_middleware(
     max_age=600,
 )
 
+# 1KB 이상 응답만 gzip 압축 (SSE 스트림은 자동 제외됨)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 # ── IP 화이트리스트 미들웨어 (환경변수 미설정 시 비활성화) ────
 class _IPFilterMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, allowed_ips: set[str]):
@@ -117,6 +121,17 @@ _allowed_ips_raw = os.getenv("ALLOWED_IPS", "")
 _allowed_ips = {ip.strip() for ip in _allowed_ips_raw.split(",") if ip.strip()}
 if _allowed_ips:
     app.add_middleware(_IPFilterMiddleware, allowed_ips=_allowed_ips)
+
+
+@app.middleware("http")
+async def add_response_time_header(request: Request, call_next):
+    t0 = time.monotonic()
+    response = await call_next(request)
+    ms = round((time.monotonic() - t0) * 1000)
+    response.headers["X-Response-Time-MS"] = str(ms)
+    if ms > 30000:
+        _logger.warning("SLOW_REQUEST path=%r latency=%dms", request.url.path, ms)
+    return response
 
 
 # ── 스키마 ────────────────────────────────────────────────────
