@@ -8,7 +8,7 @@
 
 ## 1. 현재 적용 완료된 사항
 
-### GitHub Actions 워크플로우 (`.github/workflows/azure-static-web-apps-<SWA_RESOURCE_NAME>.yml`)
+### GitHub Actions 워크플로우 (`.github/workflows/azure-static-web-apps-delightful-rock-0de6c000f.yml`)
 
 아래 환경변수가 Azure Static Web Apps 빌드 시 자동 주입되도록 설정됨:
 

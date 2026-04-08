@@ -46,7 +46,7 @@ gh secret set VITE_REALESTATE_URL --body "" --repo ProfessionalSeaweedDevourer/S
 
 ### Phase 2 — 코드 변경 3개 (커밋 → SWA 자동 재빌드)
 
-**변경 파일 1:** `.github/workflows/azure-static-web-apps-<SWA_RESOURCE_NAME>.yml`
+**변경 파일 1:** `.github/workflows/azure-static-web-apps-delightful-rock-0de6c000f.yml`
 
 - 26번 줄: `VITE_API_URL: https://sohobi-backend...` → `VITE_API_URL: ""`
 - env 블록에 추가: `VITE_API_KEY: ${{ secrets.VITE_API_KEY }}`
@@ -81,7 +81,7 @@ VITE_REALESTATE_URL=
 ### Phase 3 — SWA 재빌드 완료 확인
 
 ```bash
-gh run list --workflow="azure-static-web-apps-<SWA_RESOURCE_NAME>.yml" \
+gh run list --workflow="azure-static-web-apps-delightful-rock-0de6c000f.yml" \
   --repo ProfessionalSeaweedDevourer/SOHOBI --limit 3
 # "completed / success" 확인 후 다음 단계 진행
 

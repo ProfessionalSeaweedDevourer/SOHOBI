@@ -44,7 +44,7 @@ az containerapp update \
 
 **배경**: 프론트엔드(`VITE_API_URL`)가 구 Railway 백엔드를 가리키고 있어, 백엔드 수정 후에도 프론트에서 동일한 `gpt-5.4-pro` 에러가 계속 출력됨.
 
-**변경 파일**: `.github/workflows/azure-static-web-apps-<SWA_RESOURCE_NAME>.yml`
+**변경 파일**: `.github/workflows/azure-static-web-apps-delightful-rock-0de6c000f.yml`
 
 ```diff
 - VITE_API_URL: https://<PREVIOUS_BACKEND_HOST>

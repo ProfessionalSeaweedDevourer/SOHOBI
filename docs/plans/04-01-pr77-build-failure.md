@@ -45,7 +45,7 @@ az staticwebapp environment delete \
 
 ### 4단계: PR #77 워크플로우 재실행
 ```bash
-gh workflow run azure-static-web-apps-<SWA_RESOURCE_NAME>.yml \
+gh workflow run azure-static-web-apps-delightful-rock-0de6c000f.yml \
   --ref NAM
 ```
 또는 GitHub UI에서 실패한 run을 "Re-run" 클릭.
@@ -54,10 +54,10 @@ gh workflow run azure-static-web-apps-<SWA_RESOURCE_NAME>.yml \
 
 워크플로우 완료 후:
 ```bash
-gh run list --workflow=azure-static-web-apps-<SWA_RESOURCE_NAME>.yml --limit 3
+gh run list --workflow=azure-static-web-apps-delightful-rock-0de6c000f.yml --limit 3
 ```
 conclusion이 `success`이면 완료.
 
 ## 관련 파일
 
-- [.github/workflows/azure-static-web-apps-<SWA_RESOURCE_NAME>.yml](.github/workflows/azure-static-web-apps-<SWA_RESOURCE_NAME>.yml) — SWA 배포 워크플로우
+- [.github/workflows/azure-static-web-apps-delightful-rock-0de6c000f.yml](.github/workflows/azure-static-web-apps-delightful-rock-0de6c000f.yml) — SWA 배포 워크플로우
