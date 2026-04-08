@@ -39,7 +39,7 @@ export async function sendQuery(question, maxRetries = 3, sessionId = null, curr
  * @param {(eventName: string, data: object) => void} onEvent  이벤트 콜백
  * @returns {Promise<void>}  스트림 종료 시 resolve
  */
-export async function streamQuery(question, maxRetries = 3, sessionId = null, onEvent, currentParams = null) {
+export async function streamQuery(question, maxRetries = 3, sessionId = null, onEvent, currentParams = null, signal = null) {
   const body = { question, domain: null, max_retries: maxRetries };
   if (sessionId) body.session_id = sessionId;
   if (currentParams) body.current_params = currentParams;
@@ -48,6 +48,7 @@ export async function streamQuery(question, maxRetries = 3, sessionId = null, on
     method: "POST",
     headers: _AUTH_HEADERS,
     body: JSON.stringify(body),
+    ...(signal ? { signal } : {}),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -61,6 +62,7 @@ export async function streamQuery(question, maxRetries = 3, sessionId = null, on
   let currentDataLines = [];
 
   while (true) {
+    if (signal?.aborted) { reader.cancel(); break; }
     const { done, value } = await reader.read();
     if (done) break;
 

@@ -14,6 +14,8 @@ import ChecklistProgress from "../components/checklist/ChecklistProgress";
 import { useChecklistState } from "../components/checklist/useChecklistState";
 import { useChatMessages } from "../hooks/chat/useChatMessages";
 import { useStreamQuery } from "../hooks/chat/useStreamQuery";
+import { motion } from "motion/react";
+import { ArrowLeft, MessageSquare, Menu, X } from "lucide-react";
 
 const DOMAIN_CARDS = [
   {
@@ -100,6 +102,7 @@ export default function UserChat({ devMode = false }) {
   const navigate = useNavigate();
   const { user, login, logout } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [showBanner, setShowBanner] = useState(() => !devMode && !localStorage.getItem("sohobi_tip_dismissed"));
   const [showSamples, setShowSamples] = useState(false);
   const [showLoginNudge, setShowLoginNudge] = useState(
@@ -112,6 +115,7 @@ export default function UserChat({ devMode = false }) {
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const userMenuRef = useRef(null);
+  const navRef = useRef(null);
 
   const {
     messages, sessionId, setSessionId, latestParams, setLatestParams,
@@ -136,15 +140,18 @@ export default function UserChat({ devMode = false }) {
   });
 
   useEffect(() => {
-    if (!userMenuOpen) return;
+    if (!userMenuOpen && !navOpen) return;
     function handleClickOutside(e) {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setUserMenuOpen(false);
       }
+      if (navRef.current && !navRef.current.contains(e.target)) {
+        setNavOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [userMenuOpen]);
+  }, [userMenuOpen, navOpen]);
 
   useEffect(() => {
     if (!devMode) trackEvent("feature_discovery", { page: "user_chat" });
@@ -173,75 +180,133 @@ export default function UserChat({ devMode = false }) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 glass border-b border-[var(--border)] px-4 py-3 flex items-center gap-3">
-        <button
-          onClick={() => navigate("/")}
-          className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-        >
-          ← 홈
-        </button>
-        <span className="font-semibold text-foreground">
-          {devMode ? "SOHOBI 개발자" : "SOHOBI 상담"}
-        </span>
-        <span
-          className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium"
-          style={
-            devMode
-              ? { background: "rgba(249,115,22,0.15)", color: "var(--brand-orange)" }
-              : { background: "rgba(8,145,178,0.15)", color: "var(--brand-blue)" }
-          }
-        >
-          {devMode ? "개발자" : "사용자"}
-        </span>
+      <motion.header
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="glass border-b border-white/20 backdrop-blur-xl sticky top-0 z-50"
+      >
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          {/* Left: 홈 + 로고 */}
+          <div className="flex items-center gap-2">
+            <motion.button
+              onClick={() => navigate("/")}
+              whileHover={{ x: -2 }}
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft size={16} />
+              <span className="text-sm">홈</span>
+            </motion.button>
+            <div className="w-px h-4 mx-1" style={{ background: "var(--border)" }} />
+            <div className="flex items-center gap-2">
+              <motion.div
+                className="w-8 h-8 bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-teal)] rounded-lg flex items-center justify-center shadow-lg"
+                whileHover={{ scale: 1.1, rotate: 360 }}
+                transition={{ duration: 0.6 }}
+              >
+                <MessageSquare size={16} className="text-white" />
+              </motion.div>
+              <span className="gradient-text font-semibold text-sm">
+                {devMode ? "SOHOBI 개발자" : "SOHOBI 상담"}
+              </span>
+            </div>
+          </div>
 
-        {devMode ? (
-          <>
-            <button
-              onClick={() => navigate("/dev/logs")}
-              className="text-xs glass rounded-lg px-3 py-1.5 hover:shadow-elevated transition-glow text-foreground"
-            >
-              📋 로그 뷰어
-            </button>
-            <button
-              onClick={() => { clearDevAuth(); navigate("/"); }}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              로그아웃
-            </button>
-          </>
-        ) : (
-          <>
-            <a href="/map" className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}>지도 🗺️</a>
-            <a href="/features" className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}>기능 ✨</a>
-            <a href="/my-report" className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}>내 리포트 📊</a>
-            <a href="/roadmap" className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}>로드맵 🗳️</a>
-            {user ? (
+          {/* Right: 액션 */}
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+
+            {devMode ? (
               <>
-                <a href="/my-logs" className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", textDecoration: "none" }}>내 로그 📋</a>
-                <div className="relative" ref={userMenuRef}>
-                  <button
-                    onClick={() => setUserMenuOpen((v) => !v)}
-                    className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)] max-w-[6rem] truncate"
-                    style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}
-                    title={user.email}
+                <button
+                  onClick={() => navigate("/dev/logs")}
+                  className="text-xs glass rounded-lg px-3 py-1.5 hover:shadow-elevated transition-glow text-foreground"
+                >
+                  📋 로그 뷰어
+                </button>
+                <button
+                  onClick={() => { clearDevAuth(); navigate("/"); }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <>
+                {/* 유저 아바타 / 로그인 버튼 */}
+                {user ? (
+                  <div className="relative" ref={userMenuRef}>
+                    <motion.button
+                      onClick={() => setUserMenuOpen((v) => !v)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-teal)] flex items-center justify-center text-white text-xs font-bold shadow-lg"
+                      title={user.email}
+                    >
+                      {(user.name || user.email || "?")[0].toUpperCase()}
+                    </motion.button>
+                    {userMenuOpen && (
+                      <div className="absolute right-0 top-full mt-2 rounded-2xl border shadow-elevated z-50 overflow-hidden min-w-[9rem]" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                        <div className="px-3 py-2 text-xs border-b truncate" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}>{user.email}</div>
+                        <button onClick={() => { setUserMenuOpen(false); logout(); }} className="w-full text-left px-3 py-2 text-xs transition-colors hover:bg-[var(--muted)]" style={{ color: "var(--foreground)" }}>로그아웃</button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <motion.button
+                    onClick={login}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors px-1"
                   >
-                    {user.name || user.email} ▾
-                  </button>
-                  {userMenuOpen && (
-                    <div className="absolute right-0 top-full mt-1 rounded-xl border shadow-lg z-50 overflow-hidden" style={{ background: "var(--card)", borderColor: "var(--border)", minWidth: "7rem" }}>
-                      <div className="px-3 py-2 text-xs border-b truncate" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}>{user.email}</div>
-                      <button onClick={() => { setUserMenuOpen(false); logout(); }} className="w-full text-left px-3 py-2 text-xs transition-colors hover:bg-[var(--muted)]" style={{ color: "var(--foreground)" }}>로그아웃</button>
-                    </div>
+                    로그인
+                  </motion.button>
+                )}
+
+                {/* 햄버거 메뉴 */}
+                <div className="relative" ref={navRef}>
+                  <motion.button
+                    onClick={() => setNavOpen((v) => !v)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg glass hover:bg-white/10 transition-all"
+                    aria-label="메뉴"
+                  >
+                    {navOpen ? <X size={18} /> : <Menu size={18} />}
+                  </motion.button>
+                  {navOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 rounded-2xl border shadow-elevated z-50 overflow-hidden min-w-[11rem]"
+                      style={{ background: "var(--card)", borderColor: "var(--border)" }}
+                    >
+                      {[
+                        { href: "/map", icon: "🗺️", label: "지도·상권분석" },
+                        { href: "/features", icon: "✨", label: "기능 안내" },
+                        { href: "/my-report", icon: "📊", label: "내 리포트" },
+                        { href: "/roadmap", icon: "🗳️", label: "로드맵" },
+                        ...(user ? [{ href: "/my-logs", icon: "📋", label: "내 로그" }] : []),
+                      ].map((item) => (
+                        <a
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setNavOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-[var(--muted)]"
+                          style={{ color: "var(--foreground)", textDecoration: "none" }}
+                        >
+                          <span>{item.icon}</span>
+                          {item.label}
+                        </a>
+                      ))}
+                    </motion.div>
                   )}
                 </div>
               </>
-            ) : (
-              <button onClick={login} className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-[var(--muted)]" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}>로그인</button>
             )}
-          </>
-        )}
-        <ThemeToggle />
-      </header>
+          </div>
+        </div>
+      </motion.header>
 
       {/* 대화 영역 + 사이드패널 */}
       <div className="flex-1 flex overflow-hidden max-w-5xl mx-auto w-full">

@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { AnimatedBackground } from "../components/AnimatedBackground";
+import { motion } from "motion/react";
+import { ArrowLeft, MessageSquare } from "lucide-react";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const _API_KEY = import.meta.env.VITE_API_KEY || "";
@@ -18,22 +21,24 @@ export default function Roadmap() {
     typeof window !== "undefined" ? localStorage.getItem(SESSION_KEY) || "" : "";
 
   useEffect(() => {
+    const controller = new AbortController();
     async function load() {
       try {
         const res = await fetch(
           `${BASE_URL}/api/roadmap/votes?session_id=${encodeURIComponent(sessionId)}`,
-          { headers: _HEADERS }
+          { headers: _HEADERS, signal: controller.signal }
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setFeatures(data.features || []);
-      } catch {
-        setError("투표 현황을 불러오지 못했습니다.");
+      } catch (e) {
+        if (e.name !== "AbortError") setError("투표 현황을 불러오지 못했습니다.");
       } finally {
         setLoading(false);
       }
     }
     load();
+    return () => controller.abort();
   }, [sessionId]);
 
   async function handleVote(featureId) {
@@ -91,42 +96,47 @@ export default function Roadmap() {
   }
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "var(--background)", color: "var(--foreground)" }}
-    >
+    <div className="min-h-screen flex flex-col relative">
+      <AnimatedBackground />
+
       {/* 헤더 */}
-      <header
-        className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 border-b"
-        style={{ background: "var(--card)", borderColor: "var(--border)" }}
+      <motion.header
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="glass border-b border-white/20 backdrop-blur-xl sticky top-0 z-50"
       >
-        <a
-          href="/user"
-          className="text-xl font-bold tracking-tight"
-          style={{ color: "var(--foreground)", textDecoration: "none" }}
-        >
-          SOHOBI
-        </a>
-        <span
-          className="text-xs px-2 py-0.5 rounded-full font-medium"
-          style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
-        >
-          로드맵 투표
-        </span>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          {/* Left: 뒤로 */}
           <a
-            href="/"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            href="/user"
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
             style={{ textDecoration: "none" }}
           >
-            홈 →
+            <ArrowLeft size={16} />
+            <span className="text-sm">상담으로</span>
           </a>
-          <ThemeToggle />
+
+          {/* Center: 로고 */}
+          <div className="flex items-center gap-2">
+            <motion.div
+              className="w-8 h-8 bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-teal)] rounded-lg flex items-center justify-center shadow-lg"
+              whileHover={{ scale: 1.1, rotate: 360 }}
+              transition={{ duration: 0.6 }}
+            >
+              <MessageSquare size={16} className="text-white" />
+            </motion.div>
+            <span className="gradient-text font-semibold">SOHOBI</span>
+          </div>
+
+          {/* Right */}
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+          </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* 본문 */}
-      <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-8 flex flex-col gap-6">
+      <main className="relative z-10 flex-1 max-w-2xl w-full mx-auto px-4 py-8 flex flex-col gap-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--foreground)" }}>
             🗳️ 다음에 추가되었으면 하는 기능
