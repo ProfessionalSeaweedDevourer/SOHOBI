@@ -1,46 +1,51 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence } from "motion/react";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import UserChat from "./pages/UserChat";
-import DevChat from "./pages/DevChat";
-import LogViewer from "./pages/LogViewer";
-import DevLogin from "./pages/DevLogin";
-import MapPage from "./pages/MapPage";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Features from "./pages/Features";
-import Changelog from "./pages/Changelog";
-import MyReport from "./pages/MyReport";
-import MyLogs from "./pages/MyLogs";
-import AuthCallback from "./pages/AuthCallback";
-import Roadmap from "./pages/Roadmap";
 import RequireDevAuth from "./components/RequireDevAuth";
 import { CursorGlow } from "./components/CursorGlow";
 import { ToastProvider } from "./components/ToastProvider";
 import { AuthProvider } from "./contexts/AuthContext";
+import { LoadingSpinner } from "./components/LoadingSpinner";
+
+const MapPage       = lazy(() => import("./pages/MapPage"));
+const LogViewer     = lazy(() => import("./pages/LogViewer"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const Roadmap       = lazy(() => import("./pages/Roadmap"));
+const Changelog     = lazy(() => import("./pages/Changelog"));
+const MyReport      = lazy(() => import("./pages/MyReport"));
+const MyLogs        = lazy(() => import("./pages/MyLogs"));
+const Features      = lazy(() => import("./pages/Features"));
+const DevChat       = lazy(() => import("./pages/DevChat"));
+const DevLogin      = lazy(() => import("./pages/DevLogin"));
+const AuthCallback  = lazy(() => import("./pages/AuthCallback"));
 
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Landing />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/user" element={<UserChat />} />
-        <Route path="/map" element={<MapPage />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/features" element={<Features />} />
-        <Route path="/dev/login" element={<DevLogin />} />
-        <Route path="/dev" element={<RequireDevAuth><DevChat /></RequireDevAuth>} />
-        <Route path="/dev/logs" element={<RequireDevAuth><LogViewer /></RequireDevAuth>} />
-        <Route path="/changelog" element={<Changelog />} />
-        <Route path="/my-report" element={<MyReport />} />
-        <Route path="/my-logs" element={<MyLogs />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/roadmap" element={<Roadmap />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AnimatePresence>
+    <Suspense fallback={<LoadingSpinner />}>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<Landing />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/user" element={<UserChat />} />
+          <Route path="/map" element={<MapPage />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/features" element={<Features />} />
+          <Route path="/dev/login" element={<DevLogin />} />
+          <Route path="/dev" element={<RequireDevAuth><DevChat /></RequireDevAuth>} />
+          <Route path="/dev/logs" element={<RequireDevAuth><LogViewer /></RequireDevAuth>} />
+          <Route path="/changelog" element={<Changelog />} />
+          <Route path="/my-report" element={<MyReport />} />
+          <Route path="/my-logs" element={<MyLogs />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/roadmap" element={<Roadmap />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AnimatePresence>
+    </Suspense>
   );
 }
 

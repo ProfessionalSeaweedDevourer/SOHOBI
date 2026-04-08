@@ -50,4 +50,28 @@ export default defineConfig({
          },
       },
    },
+   build: {
+      rollupOptions: {
+         output: {
+            manualChunks: {
+               "vendor-react":    ["react", "react-dom", "react-router-dom"],
+               "vendor-motion":   ["motion"],
+               "vendor-icons":    ["lucide-react"],
+               "vendor-markdown": ["react-markdown", "remark-gfm"],
+               "vendor-map":   ["ol", "@turf/turf"],
+               "vendor-ui":    [
+                  "@radix-ui/react-collapsible",
+                  "@radix-ui/react-label",
+                  "@radix-ui/react-select",
+                  "@radix-ui/react-separator",
+                  "@radix-ui/react-slot",
+                  "@radix-ui/react-switch",
+                  "@radix-ui/react-tabs",
+                  "@radix-ui/react-tooltip",
+               ],
+            },
+         },
+      },
+      chunkSizeWarningLimit: 600,
+   },
 });
