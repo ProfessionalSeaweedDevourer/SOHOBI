@@ -20,6 +20,8 @@ import re
 
 logger = logging.getLogger(__name__)
 
+_TIMEOUT_MSG = "AI 응답 생성 중 타임아웃이 발생했습니다. 잠시 후 다시 시도해 주세요."
+
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import (
     AzureChatCompletion,
@@ -138,6 +140,9 @@ class FinanceAgent:
                 timeout=60.0,
             )
             return result.content or str(result)
+        except asyncio.TimeoutError:
+            logger.warning("FinanceAgent LLM 타임아웃 (60초)")
+            raise ValueError(_TIMEOUT_MSG)
         except Exception as e:
             err_str = str(e).lower()
             logger.error("FinanceAgent LLM 호출 실패 (_retry=%s): %s", _retry, e)
@@ -214,6 +219,9 @@ class FinanceAgent:
                 timeout=60.0,
             )
             return result.content or str(result)
+        except asyncio.TimeoutError:
+            logger.warning("FinanceAgent explanation LLM 타임아웃 (60초)")
+            raise ValueError(_TIMEOUT_MSG)
         except Exception as e:
             err_str = str(e).lower()
             logger.error("FinanceAgent explanation LLM 호출 실패: %s", e)
@@ -275,7 +283,7 @@ class FinanceAgent:
 
         sim_input = {k: variables[k] for k in sim_keys if variables.get(k) is not None}
 
-        sim_result = self._sim.monte_carlo_simulation(**sim_input)
+        sim_result = await self._sim.monte_carlo_simulation_async(**sim_input)
 
         recovery_result: dict | None = None
         if variables.get("initial_investment") is not None:
