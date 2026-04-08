@@ -21,6 +21,57 @@ _PRIVACY_RESPONSE = (
     "추가로 궁금하신 점이 있으시면 말씀해 주세요!"
 )
 
+# 사용법/기능 안내 패턴 — 이 패턴이 감지되면 전문 에이전트 리디렉션을 건너뜀
+_USAGE_PATTERNS = [
+    "어떻게 써", "어떻게 사용", "어떻게 쓰나요", "어떻게 쓰는", "사용법", "도움말",
+    "기능 안내", "기능 소개", "기능 설명", "기능 알려", "기능을 알려",
+    "어떻게 이용", "이용 방법", "뭘 입력", "무엇을 입력", "어떻게 입력",
+]
+
+# (키워드 목록, 대상 도메인) — 키워드 중 하나라도 포함되면 해당 에이전트로 리디렉션
+_SPECIALIST_PATTERNS: list[tuple[list[str], str]] = [
+    # 정부지원사업 — 업종/상황 불문, "지원받을 수 있어?" 형태 포함
+    (["지원사업", "보조금", "지원금", "정책자금", "지원받", "창업지원금",
+      "지원 신청", "지원 받을", "지원을 받", "자금 지원", "창업자금"], "admin"),
+    # 재무 시뮬레이션 액션 요청
+    (["재무 시뮬레이션", "수익 시뮬레이션", "손익분기점 계산", "투자회수 계산",
+      "수익성 분석", "수익 분석해", "매출 분석해"], "finance"),
+    # 법무 액션 요청
+    (["권리금 계약", "임대차 계약서", "보증금 반환", "법적 분쟁"], "legal"),
+    # 상권분석 액션 요청
+    (["상권 분석", "상권분석", "입지 분석"], "location"),
+]
+
+_SPECIALIST_RESPONSES: dict[str, str] = {
+    "admin": (
+        "해당 질문은 **행정 에이전트**가 더 정확하게 도와드릴 수 있어요.\n\n"
+        "왼쪽 메뉴에서 **행정** 탭을 선택하시거나, 지금 바로 여기에 질문 내용을 그대로 입력해 주세요 — "
+        "행정 에이전트가 정부지원사업·영업신고·인허가 정보를 맞춤으로 안내해 드립니다."
+    ),
+    "finance": (
+        "수익성 분석은 **재무 시뮬레이션 에이전트**에서 처리해 드릴 수 있어요.\n\n"
+        "월매출 / 원가 / 인건비 / 임대료 수치를 알려주시면 재무 탭에서 시뮬레이션을 바로 시작할 수 있습니다."
+    ),
+    "legal": (
+        "계약·분쟁 관련 질문은 **법무 에이전트**가 담당해요.\n\n"
+        "법무 탭에서 상황을 자유롭게 설명해 주시면 임대차·권리금 관련 법적 정보를 안내해 드립니다."
+    ),
+    "location": (
+        "상권 분석은 **상권 분석 에이전트**가 담당해요.\n\n"
+        "상권 탭에서 지역명과 업종을 알려주시면 서울 2025년 4분기 데이터를 기반으로 분석해 드립니다."
+    ),
+}
+
+
+def _detect_specialist(question: str) -> str | None:
+    """전문 에이전트 영역 질문 감지. 사용법 문의는 제외. 해당 도메인명 반환, 없으면 None."""
+    if any(pat in question for pat in _USAGE_PATTERNS):
+        return None
+    for keywords, domain in _SPECIALIST_PATTERNS:
+        if any(kw in question for kw in keywords):
+            return domain
+    return None
+
 SYSTEM_PROMPT = """당신은 SOHOBI의 안내 도우미입니다. 소규모 외식업 창업자를 위한 AI 서비스로, 아래 4가지 전문 에이전트가 있습니다.
 사용자가 각 기능의 사용법·필요 정보·예시 질문을 물으면 아래 내용을 바탕으로 친절하게 설명하세요.
 
@@ -82,6 +133,9 @@ class ChatAgent:
     ) -> str:
         if any(kw in question for kw in _PRIVACY_KEYWORDS):
             return _PRIVACY_RESPONSE
+        specialist_domain = _detect_specialist(question)
+        if specialist_domain:
+            return _SPECIALIST_RESPONSES[specialist_domain]
         service: AzureChatCompletion = self._kernel.get_service("chat")
         history = ChatHistory()
         system = SYSTEM_PROMPT
