@@ -20,6 +20,8 @@ import re
 
 logger = logging.getLogger(__name__)
 
+_TIMEOUT_MSG = "AI 응답 생성 중 타임아웃이 발생했습니다. 잠시 후 다시 시도해 주세요."
+
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import (
     AzureChatCompletion,
@@ -140,7 +142,7 @@ class FinanceAgent:
             return result.content or str(result)
         except asyncio.TimeoutError:
             logger.warning("FinanceAgent LLM 타임아웃 (60초)")
-            raise ValueError("AI 응답 생성 중 타임아웃이 발생했습니다. 잠시 후 다시 시도해 주세요.")
+            raise ValueError(_TIMEOUT_MSG)
         except Exception as e:
             err_str = str(e).lower()
             logger.error("FinanceAgent LLM 호출 실패 (_retry=%s): %s", _retry, e)
@@ -219,7 +221,7 @@ class FinanceAgent:
             return result.content or str(result)
         except asyncio.TimeoutError:
             logger.warning("FinanceAgent explanation LLM 타임아웃 (60초)")
-            raise ValueError("AI 응답 생성 중 타임아웃이 발생했습니다. 잠시 후 다시 시도해 주세요.")
+            raise ValueError(_TIMEOUT_MSG)
         except Exception as e:
             err_str = str(e).lower()
             logger.error("FinanceAgent explanation LLM 호출 실패: %s", e)
