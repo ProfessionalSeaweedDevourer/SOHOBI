@@ -21,6 +21,7 @@ const MyLogs        = lazy(() => import("./pages/MyLogs"));
 const Features      = lazy(() => import("./pages/Features"));
 const DevChat       = lazy(() => import("./pages/DevChat"));
 const DevLogin      = lazy(() => import("./pages/DevLogin"));
+const StatsPage     = lazy(() => import("./pages/StatsPage"));
 const AuthCallback  = lazy(() => import("./pages/AuthCallback"));
 
 function AnimatedRoutes() {
@@ -39,6 +40,7 @@ function AnimatedRoutes() {
           <Route path="/dev/login" element={<DevLogin />} />
           <Route path="/dev" element={<RequireDevAuth><DevChat /></RequireDevAuth>} />
           <Route path="/dev/logs" element={<RequireDevAuth><LogViewer /></RequireDevAuth>} />
+          <Route path="/dev/stats" element={<RequireDevAuth><StatsPage /></RequireDevAuth>} />
           <Route path="/changelog" element={<Changelog />} />
           <Route path="/my-report" element={<MyReport />} />
           <Route path="/my-logs" element={<MyLogs />} />
