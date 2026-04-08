@@ -42,7 +42,7 @@ const STATUS_COLORS = {
   rejected: "rgba(239,68,68,0.75)", unknown: "rgba(148,163,184,0.75)",
 };
 
-function ms2s(ms) { return (ms / 1000).toFixed(1) + "s"; }
+function ms2s(ms) { return ((ms ?? 0) / 1000).toFixed(1) + "s"; }
 
 function SummaryCard({ label, value, sub }) {
   return (
@@ -195,11 +195,12 @@ export default function StatsPage() {
       </header>
 
       {/* 기간 선택 */}
-      <div className="glass border-b border-[var(--border)] px-4 py-2 flex gap-2">
+      <div className="glass border-b border-[var(--border)] px-4 py-2 flex gap-2" role="group" aria-label="조회 기간">
         {PERIODS.map((p) => (
           <button
             key={p.hours}
             onClick={() => setHours(p.hours)}
+            aria-pressed={hours === p.hours}
             className="px-3 py-1 rounded-lg text-sm font-medium transition-colors"
             style={hours === p.hours
               ? { background: "var(--brand-teal)", color: "#fff" }
@@ -228,9 +229,9 @@ export default function StatsPage() {
             {/* 요약 카드 */}
             <div className="flex gap-3 flex-wrap">
               <SummaryCard label="총 요청" value={data.total} />
-              <SummaryCard label="평균 응답" value={ms2s(data.overall.avg_ms)} sub={`n=${data.overall.n}`} />
-              <SummaryCard label="P90" value={ms2s(data.overall.p90_ms)} />
-              <SummaryCard label="에러율" value={`${(data.error_rate * 100).toFixed(1)}%`} sub={`${data.error_count}건`} />
+              <SummaryCard label="평균 응답" value={ms2s(data.overall?.avg_ms)} sub={`n=${data.overall?.n ?? 0}`} />
+              <SummaryCard label="P90" value={ms2s(data.overall?.p90_ms)} />
+              <SummaryCard label="에러율" value={`${(Math.min(data.error_rate ?? 0, 1) * 100).toFixed(1)}%`} sub={`${data.error_count}건`} />
             </div>
 
             <BarChart byDomain={data.by_domain} />
