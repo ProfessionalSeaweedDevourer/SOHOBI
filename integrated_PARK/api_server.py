@@ -670,7 +670,7 @@ def _latency_stats(latencies: list[float]) -> dict:
 
 
 @app.get("/api/v1/stats", dependencies=[Depends(verify_api_key)])
-async def get_stats(hours: int = Query(24, ge=1, le=168)):
+async def get_stats(hours: int = Query(24, ge=1, le=2160)):
     """최근 N시간 쿼리·에러 로그를 집계하여 성능 통계를 반환한다."""
     from datetime import datetime, timezone, timedelta
 

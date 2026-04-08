@@ -24,6 +24,8 @@ const PERIODS = [
   { label: "24h", hours: 24 },
   { label: "48h", hours: 48 },
   { label: "7d",  hours: 168 },
+  { label: "30d", hours: 720 },
+  { label: "90d", hours: 2160 },
 ];
 
 const AGENT_LABELS = {
