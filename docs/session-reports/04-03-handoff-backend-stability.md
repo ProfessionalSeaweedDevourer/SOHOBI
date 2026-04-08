@@ -11,9 +11,9 @@
 ```bash
 az containerapp revision restart \
   --name sohobi-backend \
-  --resource-group rg-ejp-9638 \
+  --resource-group <RESOURCE_GROUP> \
   --revision $(az containerapp revision list --name sohobi-backend \
-    --resource-group rg-ejp-9638 --query "[?properties.active].name" -o tsv)
+    --resource-group <RESOURCE_GROUP> --query "[?properties.active].name" -o tsv)
 ```
 
 ### 2. PR #126 — variable_extractor sign_off 버그 (머지 대기)

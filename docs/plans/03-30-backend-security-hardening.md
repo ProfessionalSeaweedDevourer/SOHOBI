@@ -26,7 +26,7 @@
 허용 origin:
   https://sohobi.net
   https://www.sohobi.net
-  https://delightful-rock-0de6c000f.6.azurestaticapps.net
+  https://<SWA_RESOURCE_NAME>.6.azurestaticapps.net
   + CORS_EXTRA_ORIGINS 환경변수에 쉼표 구분으로 추가 가능
 ```
 
@@ -165,13 +165,13 @@ VITE_API_URL=http://localhost:8000
 ```bash
 # 1. 인증 없이 직접 호출 → 401
 curl -s -o /dev/null -w "%{http_code}" \
-  -X POST https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/api/v1/query \
+  -X POST <BACKEND_HOST>/api/v1/query \
   -H "Content-Type: application/json" -d '{"question":"test"}'
 # 기대: 401
 
 # 2. 잘못된 API Key → 401
 curl -s -o /dev/null -w "%{http_code}" \
-  -X POST https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/api/v1/query \
+  -X POST <BACKEND_HOST>/api/v1/query \
   -H "X-API-Key: wrong" -H "Content-Type: application/json" -d '{"question":"test"}'
 # 기대: 401
 
@@ -187,7 +187,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 
 # 5. /api/v1/logs 인증 없이 → 401
 curl -s -o /dev/null -w "%{http_code}" \
-  https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/api/v1/logs
+  <BACKEND_HOST>/api/v1/logs
 # 기대: 401
 ```
 

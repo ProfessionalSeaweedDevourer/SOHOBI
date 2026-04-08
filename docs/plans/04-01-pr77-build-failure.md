@@ -23,11 +23,11 @@ az login --tenant 62ae463a-9f12-4edf-8544-4f6ca3834524
 ### 2단계: SWA 리소스 그룹 및 staging environment 확인
 ```bash
 # SWA 리소스 그룹 확인
-az staticwebapp list --query "[?name=='delightful-rock-0de6c000f'].{name:name, rg:resourceGroup}" -o table
+az staticwebapp list --query "[?name=='<SWA_RESOURCE_NAME>'].{name:name, rg:resourceGroup}" -o table
 
 # staging environment 목록 조회
 az staticwebapp environment list \
-  --name delightful-rock-0de6c000f \
+  --name <SWA_RESOURCE_NAME> \
   --resource-group <리소스그룹명> \
   -o table
 ```
@@ -36,7 +36,7 @@ az staticwebapp environment list \
 PR #77 (NAM 브랜치) 외 나머지 환경 삭제:
 ```bash
 az staticwebapp environment delete \
-  --name delightful-rock-0de6c000f \
+  --name <SWA_RESOURCE_NAME> \
   --resource-group <리소스그룹명> \
   --environment-name <환경명> \
   --yes
@@ -45,7 +45,7 @@ az staticwebapp environment delete \
 
 ### 4단계: PR #77 워크플로우 재실행
 ```bash
-gh workflow run azure-static-web-apps-delightful-rock-0de6c000f.yml \
+gh workflow run azure-static-web-apps-<SWA_RESOURCE_NAME>.yml \
   --ref NAM
 ```
 또는 GitHub UI에서 실패한 run을 "Re-run" 클릭.
@@ -54,10 +54,10 @@ gh workflow run azure-static-web-apps-delightful-rock-0de6c000f.yml \
 
 워크플로우 완료 후:
 ```bash
-gh run list --workflow=azure-static-web-apps-delightful-rock-0de6c000f.yml --limit 3
+gh run list --workflow=azure-static-web-apps-<SWA_RESOURCE_NAME>.yml --limit 3
 ```
 conclusion이 `success`이면 완료.
 
 ## 관련 파일
 
-- [.github/workflows/azure-static-web-apps-delightful-rock-0de6c000f.yml](.github/workflows/azure-static-web-apps-delightful-rock-0de6c000f.yml) — SWA 배포 워크플로우
+- [.github/workflows/azure-static-web-apps-<SWA_RESOURCE_NAME>.yml](.github/workflows/azure-static-web-apps-<SWA_RESOURCE_NAME>.yml) — SWA 배포 워크플로우

@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |---|---|
-| 테스트 대상 | SOHOBI (https://https://delightful-rock-0de6c000f.6.azurestaticapps.net/dev) |
+| 테스트 대상 | SOHOBI (https://https://<SWA_RESOURCE_NAME>.6.azurestaticapps.net/dev) |
 | 테스트 일시 | 2026-03-26 16:00 - 17:00 KST |
 | 테스트 수행자 | 박주현 (Eric J. Park) |
 | 총 테스트 케이스 수 | 20 |

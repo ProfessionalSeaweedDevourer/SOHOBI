@@ -2,8 +2,8 @@
 
 ## 배포 현황
 
-- **Backend URL**: `https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io`
-- **Frontend URL**: `https://delightful-rock-0de6c000f.6.azurestaticapps.net`
+- **Backend URL**: `<BACKEND_HOST>`
+- **Frontend URL**: `https://<SWA_RESOURCE_NAME>.6.azurestaticapps.net`
 - **현재 브랜치**: main (PARK → main 직접 머지)
 
 ---
@@ -24,7 +24,7 @@ az containerapp update \
   --resource-group <RESOURCE_GROUP> \
   --set-env-vars \
     "AZURE_DEPLOYMENT_NAME=gpt-4.1-mini" \
-    "AZURE_OPENAI_ENDPOINT=https://ejp-9638-resource.openai.azure.com/"
+    "AZURE_OPENAI_ENDPOINT=https://<AZURE_OPENAI_ENDPOINT>/"
 ```
 
 추가로 `AZURE_OPENAI_API_KEY`를 비워 Managed Identity로 전환 (기존 student02용 키가 ejp-9638 엔드포인트와 불일치하던 문제 해결).
@@ -34,7 +34,7 @@ az containerapp update \
 | 변수 | 변경 전 | 변경 후 |
 |------|---------|---------|
 | `AZURE_DEPLOYMENT_NAME` | `gpt-5-nano` (미존재 모델) | `gpt-4.1-mini` |
-| `AZURE_OPENAI_ENDPOINT` | `student02-11-1604-resource` (타 계정) | `ejp-9638-resource` (동일 계정) |
+| `AZURE_OPENAI_ENDPOINT` | `student02-11-1604-resource` (타 계정) | `<AZURE_OPENAI_RESOURCE>` (동일 계정) |
 | `AZURE_OPENAI_API_KEY` | student02 키 | 비워서 Managed Identity 사용 |
 | `BLOB_LOGS_ACCOUNT` | 미설정 | `sohobi9638logs` 추가 |
 
@@ -44,11 +44,11 @@ az containerapp update \
 
 **배경**: 프론트엔드(`VITE_API_URL`)가 구 Railway 백엔드를 가리키고 있어, 백엔드 수정 후에도 프론트에서 동일한 `gpt-5.4-pro` 에러가 계속 출력됨.
 
-**변경 파일**: `.github/workflows/azure-static-web-apps-delightful-rock-0de6c000f.yml`
+**변경 파일**: `.github/workflows/azure-static-web-apps-<SWA_RESOURCE_NAME>.yml`
 
 ```diff
-- VITE_API_URL: https://awake-victory-production-0a07.up.railway.app
-+ VITE_API_URL: https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io
+- VITE_API_URL: https://<PREVIOUS_BACKEND_HOST>
++ VITE_API_URL: <BACKEND_HOST>
 ```
 
 main 브랜치 푸시 후 Static Web Apps 자동 재빌드 완료. 이후 재무 시뮬레이션 응답 정상 출력 확인.

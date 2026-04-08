@@ -42,7 +42,7 @@ curl 같은 non-browser 클라이언트는 CORS 헤더를 무시하므로 백엔
 ALLOWED_ORIGINS = [
     "https://sohobi.net",
     "https://www.sohobi.net",
-    "https://delightful-rock-0de6c000f.6.azurestaticapps.net",
+    "https://<SWA_RESOURCE_NAME>.6.azurestaticapps.net",
     # 로컬 개발 — 환경변수로 제어
 ]
 _extra = os.getenv("CORS_EXTRA_ORIGINS", "")
@@ -81,7 +81,7 @@ SWA의 `routes` 규칙으로 `/api/*`를 Container Apps URL로 프록시.
   "routes": [
     {
       "route": "/api/*",
-      "rewrite": "https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/api/*"
+      "rewrite": "<BACKEND_HOST>/api/*"
     }
   ],
   "globalHeaders": {
@@ -268,7 +268,7 @@ VITE_API_URL=  (SWA 프록시 전환 후 제거)
 
 ```bash
 # 1. 외부에서 직접 호출 → 401 (인증 없음)
-curl -X POST https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/api/v1/query \
+curl -X POST <BACKEND_HOST>/api/v1/query \
   -H "Content-Type: application/json" -d '{"question":"test"}'
 # 기대: 401
 
