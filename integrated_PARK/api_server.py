@@ -4,6 +4,7 @@
 - POST /api/v1/query         — Q&A: 질문 → 도메인 라우팅 → 에이전트 → Sign-off
 - POST /api/v1/signoff       — draft 단독 Sign-off 검증
 - POST /api/v1/doc/chat      — 문서 생성: 대화형 정보 수집 → 식품 영업 신고서 PDF (NAM)
+- GET  /api/v1/stats         — 성능 통계 집계 (에이전트별 latency, 등급/상태 분포)
 - GET  /api/v1/logs          — JSONL 로그 조회 (프론트엔드 로그 뷰어용)
 """
 
@@ -629,6 +630,75 @@ async def doc_chat(req: DocChatRequest, request: Request):
         return {"reply": reply, "pdf_url": pdf_url}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# ── 성능 통계 ──────────────────────────────────────────────────────
+
+
+def _percentile(sorted_vals: list[float], p: float) -> float:
+    if not sorted_vals:
+        return 0.0
+    idx = min(int(len(sorted_vals) * p), len(sorted_vals) - 1)
+    return sorted_vals[idx]
+
+
+def _latency_stats(latencies: list[float]) -> dict:
+    if not latencies:
+        return {"n": 0, "avg_ms": 0, "p50_ms": 0, "p90_ms": 0, "max_ms": 0}
+    latencies.sort()
+    return {
+        "n": len(latencies),
+        "avg_ms": round(sum(latencies) / len(latencies)),
+        "p50_ms": round(_percentile(latencies, 0.5)),
+        "p90_ms": round(_percentile(latencies, 0.9)),
+        "max_ms": round(latencies[-1]),
+    }
+
+
+@app.get("/api/v1/stats", dependencies=[Depends(verify_api_key)])
+async def get_stats(hours: int = Query(24, ge=1, le=168)):
+    """최근 N시간 쿼리·에러 로그를 집계하여 성능 통계를 반환한다."""
+    from datetime import datetime, timezone, timedelta
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    cutoff_str = cutoff.isoformat()
+
+    queries = [
+        e for e in load_entries_json(log_type="queries", limit=0)
+        if e.get("ts", "") >= cutoff_str
+    ]
+    errors = [
+        e for e in load_entries_json(log_type="errors", limit=0)
+        if e.get("ts", "") >= cutoff_str
+    ]
+
+    all_latencies = [e["latency_ms"] for e in queries if e.get("latency_ms")]
+
+    by_domain: dict[str, list[float]] = {}
+    by_status: dict[str, int] = {}
+    by_grade: dict[str, int] = {}
+    for e in queries:
+        domain = e.get("domain", "unknown")
+        by_domain.setdefault(domain, [])
+        if e.get("latency_ms"):
+            by_domain[domain].append(e["latency_ms"])
+        status = e.get("status", "unknown")
+        by_status[status] = by_status.get(status, 0) + 1
+        grade = e.get("grade", "-")
+        if grade and grade != "-":
+            by_grade[grade] = by_grade.get(grade, 0) + 1
+
+    total = len(queries) + len(errors)
+    return {
+        "range_hours": hours,
+        "total": total,
+        "overall": _latency_stats(all_latencies),
+        "by_domain": {d: _latency_stats(lats) for d, lats in sorted(by_domain.items())},
+        "by_status": by_status,
+        "by_grade": by_grade,
+        "error_count": len(errors),
+        "error_rate": round(len(errors) / len(queries), 4) if queries else 0.0,
+    }
 
 
 @app.get("/api/v1/logs/export", dependencies=[Depends(verify_api_key)])
