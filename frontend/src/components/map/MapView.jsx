@@ -115,7 +115,6 @@ export default function MapView() {
       drawMarkers,
       clearMarkers,
       selectMarker,
-      highlightById,
       markerLayerRef,
    } = useMarkers(mapInstance, visibleCats);
 
@@ -810,6 +809,7 @@ export default function MapView() {
          />
          <div ref={mapRef} className="mv-map" />
          <MapControls
+            hasPopup={!!(popup || wmsPopup || clusterPopup)}
             nearbyCount={nearbyCount}
             loading={loading}
             dongMode={dongMode}
@@ -898,6 +898,7 @@ export default function MapView() {
          <WmsPopup
             wmsPopup={wmsPopup}
             landValue={landValue}
+            hasDongPanel={!!dongPanel}
             onBack={
                prevStorePopupRef.current
                   ? () => {
@@ -938,20 +939,14 @@ export default function MapView() {
                if (s.LNG && s.LAT) {
                   const map = mapInstance.current;
                   if (map) {
-                     map.getView().animate(
-                        {
-                           center: fromLonLat([
-                              parseFloat(s.LNG),
-                              parseFloat(s.LAT),
-                           ]),
-                           zoom: 19,
-                           duration: 500,
-                        },
-                        () => {
-                           if (s.STORE_ID || s.store_id)
-                              highlightById(s.STORE_ID || s.store_id);
-                        },
-                     );
+                     map.getView().animate({
+                        center: fromLonLat([
+                           parseFloat(s.LNG),
+                           parseFloat(s.LAT),
+                        ]),
+                        zoom: Math.max(map.getView().getZoom() || 17, 17),
+                        duration: 500,
+                     });
                   }
                }
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
@@ -1033,20 +1028,14 @@ export default function MapView() {
                if (s.LNG && s.LAT) {
                   const map = mapInstance.current;
                   if (map) {
-                     map.getView().animate(
-                        {
-                           center: fromLonLat([
-                              parseFloat(s.LNG),
-                              parseFloat(s.LAT),
-                           ]),
-                           zoom: 19,
-                           duration: 500,
-                        },
-                        () => {
-                           if (s.STORE_ID || s.store_id)
-                              highlightById(s.STORE_ID || s.store_id);
-                        },
-                     );
+                     map.getView().animate({
+                        center: fromLonLat([
+                           parseFloat(s.LNG),
+                           parseFloat(s.LAT),
+                        ]),
+                        zoom: Math.max(map.getView().getZoom() || 17, 17),
+                        duration: 500,
+                     });
                   }
                }
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {

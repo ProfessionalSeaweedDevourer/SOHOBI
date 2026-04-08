@@ -728,3 +728,9 @@
       z-index: 190; /* WmsPopup(z:300) 아래로 */
    }
 }
+
+/* 동패널 열릴 때 WmsPopup 왼쪽으로 이동 */
+.mv-wms-popup--dong-open {
+   right: auto;
+   left: 14px;
+}

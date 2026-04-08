@@ -201,8 +201,16 @@ export function useMarkers(mapInstance, visibleCats) {
    };
 
    const selectMarker = (feature) => {
-      selectedFeatRef.current = feature || null;
-      if (selectedFeatRef.current) delete selectedFeatRef.current.__storeId__;
+      if (!feature) {
+         selectedFeatRef.current = null;
+      } else {
+         // cluster wrapper에서 STORE_ID 추출해서 storeId 기반으로 저장
+         const members = feature.get("features") || [];
+         const store = members[0]?.get("store");
+         const storeId = store?.STORE_ID || store?.store_id || null;
+         selectedFeatRef.current = feature;
+         if (storeId) selectedFeatRef.current.__storeId__ = storeId;
+      }
       clusterLayerRef.current?.changed();
    };
 

@@ -2,6 +2,7 @@
 import "./MapControls.css";
 
 export default function MapControls({
+   hasPopup,
    dongMode,
    onDongMode,
    dongLoading,
@@ -13,7 +14,9 @@ export default function MapControls({
    onStoreSearch,
 }) {
    return (
-      <div className="mv-map-controls">
+      <div
+         className={`mv-map-controls${hasPopup ? " mv-map-controls--hidden" : ""}`}
+      >
          {/* 현재 구 이름 */}
          {currentGuNm && (
             <div className="mv-map-controls__gu-badge">
@@ -43,11 +46,15 @@ export default function MapControls({
                      key={mode}
                      onClick={() => onDongMode(mode)}
                      className="mv-mode-btn"
-                     style={isActive ? {
-                        background: activeColor,
-                        borderColor: activeColor,
-                        color: "#fff",
-                     } : {}}
+                     style={
+                        isActive
+                           ? {
+                                background: activeColor,
+                                borderColor: activeColor,
+                                color: "#fff",
+                             }
+                           : {}
+                     }
                   >
                      {label}
                      {isActive ? " ✓" : ""}
@@ -61,11 +68,15 @@ export default function MapControls({
             <button
                onClick={onStoreSearchToggle}
                className="mv-store-btn"
-               style={storeSearchOn ? {
-                  background: "#0891B2",
-                  borderColor: "#0891B2",
-                  color: "#fff",
-               } : {}}
+               style={
+                  storeSearchOn
+                     ? {
+                          background: "#0891B2",
+                          borderColor: "#0891B2",
+                          color: "#fff",
+                       }
+                     : {}
+               }
             >
                🏪 상가 검색 {storeSearchOn ? "ON ✓" : "OFF"}
             </button>

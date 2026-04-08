@@ -74,6 +74,7 @@ export default function ChatPanel({
    isOpen,
    onToggle,
    dongPanelOpen,
+   hasPopup,
    onNavigate,
    mapContext,
    onClearContext,
@@ -368,7 +369,7 @@ export default function ChatPanel({
          {/* 토글 버튼 */}
          {!isOpen && (
             <button
-               className="group absolute bottom-[110px] right-[14px] z-[450] bg-gradient-to-br from-[#0891b2] to-[#06b6d4] hover:from-[#0e7490] hover:to-[#0891b2] dark:from-[#06b6d4] dark:to-[#0891b2] dark:hover:from-[#22d3ee] dark:hover:to-[#06b6d4] rounded-full shadow-lg hover:shadow-xl dark:shadow-[0_8px_30px_rgba(6,182,212,0.4)] dark:hover:shadow-[0_10px_40px_rgba(34,211,238,0.5)] transition-all duration-300 ease-in-out hover:scale-105 flex items-center gap-3 px-5 py-3.5 cursor-pointer border-2 border-white/20 dark:border-white/30"
+               className={`group absolute bottom-[20px] z-[210] ${hasPopup ? "left-[12px]" : "right-[14px]"} bg-gradient-to-br from-[#0891b2] to-[#06b6d4] hover:from-[#0e7490] hover:to-[#0891b2] dark:from-[#06b6d4] dark:to-[#0891b2] dark:hover:from-[#22d3ee] dark:hover:to-[#06b6d4] rounded-full shadow-lg hover:shadow-xl dark:shadow-[0_8px_30px_rgba(6,182,212,0.4)] dark:hover:shadow-[0_10px_40px_rgba(34,211,238,0.5)] transition-all duration-300 ease-in-out hover:scale-105 flex items-center gap-3 px-5 py-3.5 cursor-pointer border-2 border-white/20 dark:border-white/30`}
                onClick={onToggle}
                title="에이전트와 대화"
             >
