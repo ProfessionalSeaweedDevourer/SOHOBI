@@ -73,7 +73,7 @@ app.include_router(realestate_router, dependencies=[Depends(verify_api_key)])
 app.include_router(feedback_router,   dependencies=[Depends(verify_api_key)])
 app.include_router(event_router,       dependencies=[Depends(verify_api_key)])
 app.include_router(checklist_router,   dependencies=[Depends(verify_api_key)])
-app.include_router(report_router,      dependencies=[Depends(verify_api_key)])
+app.include_router(report_router)
 app.include_router(roadmap_router,     dependencies=[Depends(verify_api_key)])
 
 # ── CORS: 허용 origin 명시적 화이트리스트 ─────────────────────

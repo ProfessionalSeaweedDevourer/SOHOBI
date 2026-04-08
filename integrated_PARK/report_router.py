@@ -16,6 +16,7 @@ from collections import Counter
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from auth import verify_api_key
 from auth_router import get_current_user
 from checklist_store import CHECKLIST_ITEM_IDS
 from log_formatter import load_entries_json
@@ -242,7 +243,7 @@ async def get_my_report(user: dict = Depends(get_current_user)):
     }
 
 
-@router.get("/api/report/{session_id}")
+@router.get("/api/report/{session_id}", dependencies=[Depends(verify_api_key)])
 async def get_report(session_id: str):
     """단일 세션 리포트 (비로그인 폴백)."""
     if not await session_exists(session_id):
