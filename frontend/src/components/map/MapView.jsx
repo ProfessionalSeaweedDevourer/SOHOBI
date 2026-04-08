@@ -91,15 +91,23 @@ export default function MapView() {
 
    const {
       dongLoading,
-      dongPanel, setDongPanel,
+      dongPanel,
+      setDongPanel,
       quarters,
-      selectedQtr, setSelectedQtr,
-      svcData, setSvcData,
+      selectedQtr,
+      setSelectedQtr,
+      svcData,
+      setSvcData,
       currentGuNmRef,
       fetchDongPanel,
    } = useDongPanel();
 
    const currentZoom = useMapZoom(mapInstance, mapRef, mapReady);
+
+   // 동패널 열릴 때 챗패널 자동 닫기
+   useEffect(() => {
+      if (dongPanel) setChatOpen(false);
+   }, [dongPanel]);
 
    const allCatKeys = new Set(CATEGORIES.map((c) => c.key));
    const [visibleCats, setVisibleCats] = useState(allCatKeys);
@@ -112,6 +120,7 @@ export default function MapView() {
       drawMarkers,
       clearMarkers,
       selectMarker,
+      highlightById,
       markerLayerRef,
    } = useMarkers(mapInstance, visibleCats);
 
@@ -150,26 +159,40 @@ export default function MapView() {
       // 지적도 레이어 — mapReady 시점에 초기화 (showPanel 여부 무관)
       const map = mapInstance.current;
       const vKey = import.meta.env.VITE_VWORLD_API_KEY;
-      if (!map.getLayers().getArray().some((l) => l.get("name") === "cadastral")) {
-         Promise.all([import("ol/layer/Tile"), import("ol/source/TileWMS")])
-            .then(([{ default: TileLayer }, { default: TileWMS }]) => {
-               const layer = new TileLayer({
-                  source: new TileWMS({
-                     url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vKey}&DOMAIN=localhost`,
-                     params: {
-                        SERVICE: "WMS", VERSION: "1.3.0", REQUEST: "GetMap",
-                        LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
-                        STYLES: ",",
-                        FORMAT: "image/png", TRANSPARENT: "TRUE", CRS: "EPSG:3857",
-                     },
-                     crossOrigin: "anonymous", transition: 0,
-                  }),
-                  opacity: 0.7, zIndex: 50, minZoom: 17,
-               });
-               layer.set("name", "cadastral");
-               map.addLayer(layer);
-               wmsLayerRef.current = layer;
+      if (
+         !map
+            .getLayers()
+            .getArray()
+            .some((l) => l.get("name") === "cadastral")
+      ) {
+         Promise.all([
+            import("ol/layer/Tile"),
+            import("ol/source/TileWMS"),
+         ]).then(([{ default: TileLayer }, { default: TileWMS }]) => {
+            const layer = new TileLayer({
+               source: new TileWMS({
+                  url: `${import.meta.env.VITE_API_URL || ""}/wms/req/wms?KEY=${vKey}&DOMAIN=localhost`,
+                  params: {
+                     SERVICE: "WMS",
+                     VERSION: "1.3.0",
+                     REQUEST: "GetMap",
+                     LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+                     STYLES: ",",
+                     FORMAT: "image/png",
+                     TRANSPARENT: "TRUE",
+                     CRS: "EPSG:3857",
+                  },
+                  crossOrigin: "anonymous",
+                  transition: 0,
+               }),
+               opacity: 0.7,
+               zIndex: 50,
+               minZoom: 17,
             });
+            layer.set("name", "cadastral");
+            map.addLayer(layer);
+            wmsLayerRef.current = layer;
+         });
       }
    }, [mapReady]); // eslint-disable-line
    const dongSelectedFeatRef = useRef(null); // 현재 선택(클릭)된 폴리곤
@@ -181,7 +204,8 @@ export default function MapView() {
          n.has(key) ? n.delete(key) : n.add(key);
          return n;
       });
-   const handleShowAll = () => setVisibleCats(new Set(CATEGORIES.map((c) => c.key)));
+   const handleShowAll = () =>
+      setVisibleCats(new Set(CATEGORIES.map((c) => c.key)));
    const handleHideAll = () => setVisibleCats(new Set());
 
    // ── 채팅 → 지도 네비게이션 콜백 ────────────────────────────────
@@ -291,16 +315,25 @@ export default function MapView() {
                   .filter(Boolean),
             ),
          ];
-         const uncached = admCds.filter((id) => !storesByAdmCdRef.current.has(id));
+         const uncached = admCds.filter(
+            (id) => !storesByAdmCdRef.current.has(id),
+         );
          Promise.all(
             uncached.map((admCd) =>
-               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, { headers: _mapHeaders })
+               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, {
+                  headers: _mapHeaders,
+               })
                   .then((r) => r.json())
-                  .then((d) => { storesByAdmCdRef.current.set(admCd, d.stores || []); return d.stores || []; })
+                  .then((d) => {
+                     storesByAdmCdRef.current.set(admCd, d.stores || []);
+                     return d.stores || [];
+                  })
                   .catch(() => []),
             ),
          ).then(() => {
-            const stores = admCds.flatMap((id) => storesByAdmCdRef.current.get(id) || []);
+            const stores = admCds.flatMap(
+               (id) => storesByAdmCdRef.current.get(id) || [],
+            );
             allStoresRef.current = stores;
             setNearbyCount(stores.length);
             const counts = {};
@@ -330,7 +363,6 @@ export default function MapView() {
          duration: 600,
          maxZoom: 17,
       });
-
    };
 
    // ── 동 모드 전환 핸들러 ─────────────────────────────────────────
@@ -363,7 +395,9 @@ export default function MapView() {
             if (_admCd) {
                if (allStoresRef.current.length === 0) {
                   clearMarkers();
-                  fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`, { headers: _mapHeaders })
+                  fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`, {
+                     headers: _mapHeaders,
+                  })
                      .then((r) => r.json())
                      .then((d) => {
                         const stores = d.stores || [];
@@ -377,13 +411,25 @@ export default function MapView() {
                         setCatCounts(counts);
                         drawMarkers(stores, visibleCats);
                      })
-                     .catch((e) => console.error("[MapView] handleDongMode stores-by-dong 실패:", e));
+                     .catch((e) =>
+                        console.error(
+                           "[MapView] handleDongMode stores-by-dong 실패:",
+                           e,
+                        ),
+                     );
                } else {
                   // 이미 로드된 마커 재활용
                   drawMarkers(allStoresRef.current, visibleCats);
                }
             }
-            await fetchDongPanel(_admCd, _dongNm, _guNm, _admNm, next, selectedQtr);
+            await fetchDongPanel(
+               _admCd,
+               _dongNm,
+               _guNm,
+               _admNm,
+               next,
+               selectedQtr,
+            );
             if (next === "sales" && _admCd) {
                loadFestivals(_admCd).then(() => setFestivalLoaded(true));
             }
@@ -426,7 +472,9 @@ export default function MapView() {
       }
       const clusterMembers = markerFeat.get("features");
       if (clusterMembers?.length > 1) {
-         const stores = clusterMembers.map((f) => f.get("store")).filter(Boolean);
+         const stores = clusterMembers
+            .map((f) => f.get("store"))
+            .filter(Boolean);
          selectMarker(markerFeat);
          setLandmarkPopup(null);
          setPopup(null);
@@ -437,7 +485,8 @@ export default function MapView() {
          setClusterPopup({ stores, x: e.pixel[0], y: e.pixel[1] });
          return true;
       }
-      const realFeat = clusterMembers?.length === 1 ? clusterMembers[0] : markerFeat;
+      const realFeat =
+         clusterMembers?.length === 1 ? clusterMembers[0] : markerFeat;
       if (realFeat?.get("store")) {
          const store = realFeat.get("store");
          selectMarker(markerFeat);
@@ -469,137 +518,165 @@ export default function MapView() {
          return true;
       }
       return false;
-   }, []); // eslint-disable-line react-hooks/exhaustive-deps — 모든 deps가 안정적(ref/setter)
+   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
    // ── 2순위: 동 폴리곤 클릭 ──────────────────────────────────────────
-   const handlePolygonClick = useCallback(async (e) => {
-      const map = mapInstance.current;
-      if (!map) return false;
-      if (!dongBoundaryLayerRef.current) {
-         await ensureDongBoundaryLayer();
-      }
-      const bLayer = dongBoundaryLayerRef.current;
-      const feat = bLayer?.getSource?.()?.getFeatures
-         ? map.forEachFeatureAtPixel(e.pixel, (f) => f, {
-              layerFilter: (l) => l === bLayer,
-              hitTolerance: 8,
-           })
-         : null;
-      const isMarkerClick = map.forEachFeatureAtPixel(e.pixel, () => true, {
-         hitTolerance: 10,
-         layerFilter: (l) => l !== dongBoundaryLayerRef.current,
-      });
-      if (!feat || isMarkerClick) return false;
+   const handlePolygonClick = useCallback(
+      async (e) => {
+         const map = mapInstance.current;
+         if (!map) return false;
+         if (!dongBoundaryLayerRef.current) {
+            await ensureDongBoundaryLayer();
+         }
+         const bLayer = dongBoundaryLayerRef.current;
+         const feat = bLayer?.getSource?.()?.getFeatures
+            ? map.forEachFeatureAtPixel(e.pixel, (f) => f, {
+                 layerFilter: (l) => l === bLayer,
+                 hitTolerance: 8,
+              })
+            : null;
+         const isMarkerClick = map.forEachFeatureAtPixel(e.pixel, () => true, {
+            hitTolerance: 10,
+            layerFilter: (l) => l !== dongBoundaryLayerRef.current,
+         });
+         if (!feat || isMarkerClick) return false;
 
-      const p = feat.getProperties();
-      const _admCd = (p.adm_cd || "").trim();
-      const _dongNm = p.adm_nm || "";
-      const _admNm = p.adm_nm || _dongNm;
-      const _guNm = p.gu_nm || p.sig_kor_nm || currentGuNmRef.current || "";
-      if (!_dongNm) return false;
+         const p = feat.getProperties();
+         const _admCd = (p.adm_cd || "").trim();
+         const _dongNm = p.adm_nm || "";
+         const _admNm = p.adm_nm || _dongNm;
+         const _guNm = p.gu_nm || p.sig_kor_nm || currentGuNmRef.current || "";
+         if (!_dongNm) return false;
 
-      if (_guNm) currentGuNmRef.current = _guNm;
-      if (dongSelectedFeatRef.current && dongSelectedFeatRef.current !== feat) {
-         dongSelectedFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
-      }
-      dongSearchFeatsRef.current.forEach((f) => {
-         if (f !== feat) f.setStyle(DONG_STYLE_DEFAULT);
-      });
-      dongSearchFeatsRef.current = [];
-      if (dongHoverFeatRef.current && dongHoverFeatRef.current !== feat) {
-         dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
-      }
-      const prevAdmCd = dongSelectedFeatRef.current?.getProperties?.()?.adm_cd || "";
-      const isSameDong = prevAdmCd === _admCd && allStoresRef.current.length > 0;
+         if (_guNm) currentGuNmRef.current = _guNm;
+         if (
+            dongSelectedFeatRef.current &&
+            dongSelectedFeatRef.current !== feat
+         ) {
+            dongSelectedFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+         }
+         dongSearchFeatsRef.current.forEach((f) => {
+            if (f !== feat) f.setStyle(DONG_STYLE_DEFAULT);
+         });
+         dongSearchFeatsRef.current = [];
+         if (dongHoverFeatRef.current && dongHoverFeatRef.current !== feat) {
+            dongHoverFeatRef.current.setStyle(DONG_STYLE_DEFAULT);
+         }
+         const prevAdmCd =
+            dongSelectedFeatRef.current?.getProperties?.()?.adm_cd || "";
+         const isSameDong =
+            prevAdmCd === _admCd && allStoresRef.current.length > 0;
 
-      feat.setStyle(DONG_STYLE_SELECTED);
-      dongSelectedFeatRef.current = feat;
-      dongHoverFeatRef.current = feat;
-      const _mode = dongMode;
+         feat.setStyle(DONG_STYLE_SELECTED);
+         dongSelectedFeatRef.current = feat;
+         dongHoverFeatRef.current = feat;
+         const _mode = dongMode;
 
-      if (!isSameDong && _admCd) {
-         clearMarkers();
-         setNearbyCount(null);
-         const _url = `${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`;
-         console.log("[stores-by-dong] 요청:", _url);
-         fetch(_url, { headers: _mapHeaders })
-            .then((r) => r.json())
-            .then((d) => {
-               const stores = d.stores || [];
-               console.log(`[stores-by-dong] 응답: count=${stores.length}, adm_cd=${_admCd}`);
-               allStoresRef.current = stores;
-               setNearbyCount(stores.length);
-               const counts = {};
-               stores.forEach((s) => {
-                  counts[s.CAT_CD || "기타"] = (counts[s.CAT_CD || "기타"] || 0) + 1;
-               });
-               setCatCounts(counts);
-               drawMarkers(stores, visibleCats);
-            })
-            .catch((err) => console.error("[stores-by-dong] 오류:", err));
-      }
-      if (_mode === "none") return true;
-      await fetchDongPanelRef.current(_admCd, _dongNm, _guNm, _admNm, _mode, selectedQtr);
-      handleWmsClick(map, e.coordinate).then((wmsResult) => {
+         if (!isSameDong && _admCd) {
+            clearMarkers();
+            setNearbyCount(null);
+            const _url = `${FASTAPI_URL}/map/stores-by-dong?adm_cd=${_admCd}`;
+            console.log("[stores-by-dong] 요청:", _url);
+            fetch(_url, { headers: _mapHeaders })
+               .then((r) => r.json())
+               .then((d) => {
+                  const stores = d.stores || [];
+                  console.log(
+                     `[stores-by-dong] 응답: count=${stores.length}, adm_cd=${_admCd}`,
+                  );
+                  allStoresRef.current = stores;
+                  setNearbyCount(stores.length);
+                  const counts = {};
+                  stores.forEach((s) => {
+                     counts[s.CAT_CD || "기타"] =
+                        (counts[s.CAT_CD || "기타"] || 0) + 1;
+                  });
+                  setCatCounts(counts);
+                  drawMarkers(stores, visibleCats);
+               })
+               .catch((err) => console.error("[stores-by-dong] 오류:", err));
+         }
+         if (_mode === "none") return true;
+         await fetchDongPanelRef.current(
+            _admCd,
+            _dongNm,
+            _guNm,
+            _admNm,
+            _mode,
+            selectedQtr,
+         );
+         handleWmsClick(map, e.coordinate).then((wmsResult) => {
+            if (wmsResult) {
+               setWmsPopup(wmsResult.parsed);
+               setLandValue(wmsResult.landValue || null);
+               if (!wmsResult.landValue && wmsResult.parsed.pnu) {
+                  fetch(
+                     `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(wmsResult.parsed.pnu)}`,
+                     { headers: _mapHeaders },
+                  )
+                     .then((r) => r.json())
+                     .then((d) => {
+                        if (d.data?.length) setLandValue(d.data);
+                     })
+                     .catch((err) =>
+                        console.error("[공시지가 조회 실패]", err),
+                     );
+               }
+            }
+         });
+         return true;
+      },
+      [dongMode, visibleCats, selectedQtr],
+   ); // eslint-disable-line react-hooks/exhaustive-deps
+
+   // ── 클릭 최상위 조정자 ──────────────────────────────────────────────
+   const clickHandler = useCallback(
+      async (e) => {
+         const map = mapInstance.current;
+         if (!map) return;
+         if (await handleMarkerClick(e)) return;
+         if (await handlePolygonClick(e)) return;
+
+         // ── 3순위: WMS 공시지가 클릭 ──────────────────────────────
+         const wmsResult = await handleWmsClick(map, e.coordinate);
          if (wmsResult) {
+            setPopup(null);
             setWmsPopup(wmsResult.parsed);
             setLandValue(wmsResult.landValue || null);
+            setKakaoDetail(null);
+            setLandmarkPopup(null);
+            setClusterPopup(null);
+            if (wmsResult.parsed.sigg)
+               currentGuNmRef.current = wmsResult.parsed.sigg;
             if (!wmsResult.landValue && wmsResult.parsed.pnu) {
                fetch(
                   `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(wmsResult.parsed.pnu)}`,
                   { headers: _mapHeaders },
                )
                   .then((r) => r.json())
-                  .then((d) => { if (d.data?.length) setLandValue(d.data); })
+                  .then((d) => {
+                     if (d.data?.length) setLandValue(d.data);
+                  })
                   .catch((err) => console.error("[공시지가 조회 실패]", err));
             }
+            return;
          }
-      });
-      return true;
-   }, [dongMode, visibleCats, selectedQtr]); // eslint-disable-line react-hooks/exhaustive-deps
+         setWmsPopup(null);
 
-   // ── 클릭 최상위 조정자 ──────────────────────────────────────────────
-   const clickHandler = useCallback(async (e) => {
-      const map = mapInstance.current;
-      if (!map) return;
-      if (await handleMarkerClick(e)) return;
-      if (await handlePolygonClick(e)) return;
-
-      // ── 3순위: WMS 공시지가 클릭 ──────────────────────────────
-      const wmsResult = await handleWmsClick(map, e.coordinate);
-      if (wmsResult) {
-         setPopup(null);
-         setWmsPopup(wmsResult.parsed);
-         setLandValue(wmsResult.landValue || null);
-         setKakaoDetail(null);
-         setLandmarkPopup(null);
-         setClusterPopup(null);
-         if (wmsResult.parsed.sigg) currentGuNmRef.current = wmsResult.parsed.sigg;
-         if (!wmsResult.landValue && wmsResult.parsed.pnu) {
-            fetch(
-               `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(wmsResult.parsed.pnu)}`,
-               { headers: _mapHeaders },
-            )
-               .then((r) => r.json())
-               .then((d) => { if (d.data?.length) setLandValue(d.data); })
-               .catch((err) => console.error("[공시지가 조회 실패]", err));
+         const feature = map.forEachFeatureAtPixel(e.pixel, (f) => f, {
+            hitTolerance: 6,
+            layerFilter: (l) => l !== dongBoundaryLayerRef.current,
+         });
+         if (feature?.get("lmData")) {
+            selectLandmark(feature);
+            setLandmarkPopup(feature.get("lmData"));
+            setPopup(null);
+            setKakaoDetail(null);
          }
-         return;
-      }
-      setWmsPopup(null);
-
-      const feature = map.forEachFeatureAtPixel(e.pixel, (f) => f, {
-         hitTolerance: 6,
-         layerFilter: (l) => l !== dongBoundaryLayerRef.current,
-      });
-      if (feature?.get("lmData")) {
-         selectLandmark(feature);
-         setLandmarkPopup(feature.get("lmData"));
-         setPopup(null);
-         setKakaoDetail(null);
-      }
-      // 빈 영역 클릭 시 아무것도 안 함 (폴리곤 선택으로만 상가 검색)
-   }, [handleMarkerClick, handlePolygonClick]); // eslint-disable-line react-hooks/exhaustive-deps
+         // 빈 영역 클릭 시 아무것도 안 함 (폴리곤 선택으로만 상가 검색)
+      },
+      [handleMarkerClick, handlePolygonClick],
+   ); // eslint-disable-line react-hooks/exhaustive-deps
 
    // ── 지도 초기화 + pointermove 등록 (마운트 1회) ────────────────────
    useEffect(() => {
@@ -714,7 +791,12 @@ export default function MapView() {
                      )
                         .then((r) => r.json())
                         .then((d) => setSvcData(d.data || []))
-                        .catch((e) => console.error("[MapView] sangkwon-svc-by-cat 실패:", e));
+                        .catch((e) =>
+                           console.error(
+                              "[MapView] sangkwon-svc-by-cat 실패:",
+                              e,
+                           ),
+                        );
                   } else if (!catCd && dongPanel?.admCd) {
                      // 전체 선택 시 기존 대분류 기준으로 복원
                      const qtrParam = selectedQtr
@@ -726,7 +808,12 @@ export default function MapView() {
                      )
                         .then((r) => r.json())
                         .then((d) => setSvcData(d.data || []))
-                        .catch((e) => console.error("[MapView] sangkwon-svc 전체 복원 실패:", e));
+                        .catch((e) =>
+                           console.error(
+                              "[MapView] sangkwon-svc 전체 복원 실패:",
+                              e,
+                           ),
+                        );
                   }
                }, 200);
             }}
@@ -739,6 +826,8 @@ export default function MapView() {
          />
          <div ref={mapRef} className="mv-map" />
          <MapControls
+            hasPopup={!!(popup || wmsPopup || clusterPopup)}
+            hasDongPanel={!!dongPanel}
             nearbyCount={nearbyCount}
             loading={loading}
             dongMode={dongMode}
@@ -766,7 +855,9 @@ export default function MapView() {
                setLoading(true);
                clearMarkers();
                setNearbyCount(null);
-               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, { headers: _mapHeaders })
+               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, {
+                  headers: _mapHeaders,
+               })
                   .then((r) => r.json())
                   .then((d) => {
                      const stores = d.stores || [];
@@ -780,13 +871,22 @@ export default function MapView() {
                      setCatCounts(counts);
                      drawMarkers(stores, visibleCats);
                   })
-                  .catch((e) => console.error("[MapView] onStoreSearch stores-by-dong 실패:", e))
+                  .catch((e) =>
+                     console.error(
+                        "[MapView] onStoreSearch stores-by-dong 실패:",
+                        e,
+                     ),
+                  )
                   .finally(() => setLoading(false));
             }}
          />
          <div className="mv-top-right-controls">
-            <a href="/user" className="mv-nav-btn">← 상담</a>
-            <a href="/features" className="mv-nav-btn">기능</a>
+            <a href="/user" className="mv-nav-btn">
+               ← 상담
+            </a>
+            <a href="/features" className="mv-nav-btn">
+               기능
+            </a>
             <ThemeToggle />
             <button
                className="mv-layer-btn"
@@ -816,6 +916,7 @@ export default function MapView() {
          <WmsPopup
             wmsPopup={wmsPopup}
             landValue={landValue}
+            hasDongPanel={!!dongPanel}
             onBack={
                prevStorePopupRef.current
                   ? () => {
@@ -856,14 +957,20 @@ export default function MapView() {
                if (s.LNG && s.LAT) {
                   const map = mapInstance.current;
                   if (map) {
-                     map.getView().animate({
-                        center: fromLonLat([
-                           parseFloat(s.LNG),
-                           parseFloat(s.LAT),
-                        ]),
-                        zoom: Math.max(map.getView().getZoom() || 17, 17),
-                        duration: 500,
-                     });
+                     map.getView().animate(
+                        {
+                           center: fromLonLat([
+                              parseFloat(s.LNG),
+                              parseFloat(s.LAT),
+                           ]),
+                           zoom: 19,
+                           duration: 500,
+                        },
+                        () => {
+                           if (s.STORE_ID || s.store_id)
+                              highlightById(s.STORE_ID || s.store_id);
+                        },
+                     );
                   }
                }
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
@@ -896,42 +1003,52 @@ export default function MapView() {
                setClusterPopup(null);
                setBuildingStores([]);
                lastClusterStoresRef.current = null;
-               // 좌표 → PNU 조회 → 공시지가 표시
+               // 좌표 → WMS GetFeatureInfo → PNU → DB 공시지가 조회
                const lng = parseFloat(popup.LNG);
                const lat = parseFloat(popup.LAT);
                const addr = popup.ROAD_ADDR || "";
-               // 1단계: 백엔드 /map/pnu-by-coord 로 좌표 → PNU 취득
-               fetch(
-                  `${FASTAPI_URL}/map/pnu-by-coord?lng=${lng}&lat=${lat}`,
-                  { headers: _mapHeaders },
-               )
-                  .then((r) => r.json())
-                  .then((d) => {
-                     const pnu = d.pnu || "";
-                     setWmsPopup({
-                        type: "cadastral",
-                        pnu,
-                        addr,
-                        sido: popup.SIDO_NM,
-                        sigg: popup.SGG_NM,
-                        dong: popup.ADM_NM,
-                     });
-                     // 2단계: PNU 있으면 백엔드 공시지가 이력 조회
-                     if (pnu) {
-                        fetch(
-                           `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(pnu)}`,
-                           { headers: _mapHeaders },
-                        )
-                           .then((r) => r.json())
-                           .then((lv) => {
-                              if (lv.data?.length) setLandValue(lv.data);
-                           })
-                           .catch((err) => console.error("[공시지가 조회 실패]", err));
-                     }
-                  })
-                  .catch(() => {
-                     setWmsPopup({ type: "cadastral", pnu: "", addr });
-                  });
+               const map = mapInstance.current;
+               setWmsPopup({
+                  type: "cadastral",
+                  pnu: "",
+                  addr,
+                  sido: popup.SIDO_NM,
+                  sigg: popup.SGG_NM,
+                  dong: popup.ADM_NM,
+               });
+               if (map) {
+                  const coord = fromLonLat([lng, lat]);
+                  const doWmsClick = () => {
+                     handleWmsClick(map, coord, { skipZoomGuard: true }).then(
+                        (result) => {
+                           const pnu = result?.parsed?.pnu || "";
+                           if (pnu) {
+                              setWmsPopup((prev) =>
+                                 prev ? { ...prev, pnu } : prev,
+                              );
+                              fetch(
+                                 `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(pnu)}`,
+                                 { headers: _mapHeaders },
+                              )
+                                 .then((r) => r.json())
+                                 .then((lv) => {
+                                    if (lv.data?.length) setLandValue(lv.data);
+                                 })
+                                 .catch(() => {});
+                           }
+                        },
+                     );
+                  };
+                  const currentZoom = map.getView().getZoom() || 0;
+                  if (currentZoom < 18) {
+                     map.getView().animate(
+                        { center: coord, zoom: 18, duration: 500 },
+                        doWmsClick,
+                     );
+                  } else {
+                     doWmsClick();
+                  }
+               }
             }}
             onClusterSelect={(s) => {
                setClusterPopup(null);
@@ -944,14 +1061,20 @@ export default function MapView() {
                if (s.LNG && s.LAT) {
                   const map = mapInstance.current;
                   if (map) {
-                     map.getView().animate({
-                        center: fromLonLat([
-                           parseFloat(s.LNG),
-                           parseFloat(s.LAT),
-                        ]),
-                        zoom: Math.max(map.getView().getZoom() || 17, 17),
-                        duration: 500,
-                     });
+                     map.getView().animate(
+                        {
+                           center: fromLonLat([
+                              parseFloat(s.LNG),
+                              parseFloat(s.LAT),
+                           ]),
+                           zoom: 19,
+                           duration: 500,
+                        },
+                        () => {
+                           if (s.STORE_ID || s.store_id)
+                              highlightById(s.STORE_ID || s.store_id);
+                        },
+                     );
                   }
                }
                fetchKakaoDetail(s.STORE_NM, s.ROAD_ADDR).then((d) => {
@@ -1005,8 +1128,12 @@ export default function MapView() {
          />
          <ChatPanel
             isOpen={chatOpen}
-            onToggle={() => setChatOpen((prev) => !prev)}
+            onToggle={() => {
+               setChatOpen((prev) => !prev);
+               setDongPanel(null);
+            }}
             dongPanelOpen={!!dongPanel}
+            hasPopup={!!(popup || wmsPopup || clusterPopup)}
             mapContext={chatContext}
             onNavigate={handleChatNavigate}
             onHighlightArea={handleHighlightArea}
