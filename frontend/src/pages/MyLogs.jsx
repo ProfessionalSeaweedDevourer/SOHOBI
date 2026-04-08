@@ -1,5 +1,6 @@
 import { useState, useEffect, memo } from "react";
 import { ThemeToggle } from "../components/ThemeToggle";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { useAuth } from "../contexts/AuthContext";
 import { AnimatedBackground } from "../components/AnimatedBackground";
 import { motion, AnimatePresence } from "motion/react";
@@ -17,10 +18,11 @@ function formatDate(isoString) {
 const SessionCard = memo(function SessionCard({ session, token, index }) {
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState(null);
+  const [historyError, setHistoryError] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function loadHistory() {
-    if (history !== null) {
+    if (history !== null || historyError) {
       setOpen((v) => !v);
       return;
     }
@@ -34,7 +36,7 @@ const SessionCard = memo(function SessionCard({ session, token, index }) {
       setHistory(await r.json());
       setOpen(true);
     } catch {
-      setHistory([]);
+      setHistoryError(true);
       setOpen(true);
     } finally {
       setLoading(false);
@@ -104,7 +106,7 @@ const SessionCard = memo(function SessionCard({ session, token, index }) {
             className="shrink-0"
           >
             {loading
-              ? <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>...</span>
+              ? <LoadingSpinner size="sm" />
               : <ChevronDown size={16} style={{ color: "var(--muted-foreground)" }} />
             }
           </motion.div>
@@ -112,7 +114,7 @@ const SessionCard = memo(function SessionCard({ session, token, index }) {
 
         {/* 대화 내역 */}
         <AnimatePresence>
-          {open && history !== null && (
+          {open && (history !== null || historyError) && (
             <motion.div
               key="session-history"
               initial={{ height: 0, opacity: 0 }}
@@ -125,7 +127,11 @@ const SessionCard = memo(function SessionCard({ session, token, index }) {
                 className="border-t px-5 py-4 flex flex-col gap-3"
                 style={{ borderColor: "var(--border)" }}
               >
-                {history.length === 0 ? (
+                {historyError ? (
+                  <p className="text-sm text-center py-4" style={{ color: "var(--muted-foreground)" }}>
+                    기록을 불러오지 못했습니다.
+                  </p>
+                ) : history.length === 0 ? (
                   <div className="flex flex-col items-center py-6 gap-2">
                     <span className="text-2xl">📭</span>
                     <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
@@ -301,8 +307,8 @@ export default function MyLogs() {
 
         {/* 데이터 로딩 */}
         {!authLoading && user && fetching && (
-          <div className="text-sm text-center py-12" style={{ color: "var(--muted-foreground)" }}>
-            기록을 불러오는 중...
+          <div className="flex justify-center py-12">
+            <LoadingSpinner size="md" />
           </div>
         )}
 
