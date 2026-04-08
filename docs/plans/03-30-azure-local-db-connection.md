@@ -1,8 +1,8 @@
 # Azure 백엔드 ↔ 로컬 DB 서버 연결 검토
 
 ## Context
-Azure Container Apps에 배포된 백엔드(integrated_PARK)가 로컬 서버(10.1.92.119)의 Oracle DB에 연결해야 함.
-현재 `.env`에 `ORACLE_HOST=10.1.92.119` (내부 사설 IP)로 설정되어 있어 Azure에서 도달 불가.
+Azure Container Apps에 배포된 백엔드(integrated_PARK)가 로컬 서버(<ORACLE_HOST>)의 Oracle DB에 연결해야 함.
+현재 `.env`에 `ORACLE_HOST=<ORACLE_HOST>` (내부 사설 IP)로 설정되어 있어 Azure에서 도달 불가.
 
 ---
 
@@ -41,7 +41,7 @@ az containerapp show \
 
 ### 1. `.env` — ORACLE_HOST 변경 (Critical)
 
-- **현재**: `ORACLE_HOST=10.1.92.119` (사설 IP, Azure에서 도달 불가)
+- **현재**: `ORACLE_HOST=<ORACLE_HOST>` (사설 IP, Azure에서 도달 불가)
 - **변경**: `ORACLE_HOST=<공인IP 또는 도메인>` (네트워크팀이 포트포워딩 설정 후 확인)
 
 **파일**: `integrated_PARK/.env`

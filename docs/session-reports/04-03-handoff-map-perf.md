@@ -113,7 +113,7 @@ CREATE INDEX idx_store_lat_lng ON store_seoul(lat, lng);
 ---
 
 ## 참고: Azure 배포 정보
-- Container App: `sohobi-backend` / resource group: `rg-ejp-9638`
+- Container App: `sohobi-backend` / resource group: `<RESOURCE_GROUP>`
 - 배포 자동화 없음 (GitHub Actions는 프론트엔드만)
 - 환경변수 `PG_HOST`, `PG_DB`, `PG_USER`, `PG_PASSWORD`, `VWORLD_API_KEY`, `KAKAO_REST_KEY` 모두 설정됨
 

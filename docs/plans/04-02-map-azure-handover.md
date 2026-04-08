@@ -14,9 +14,9 @@
 
 ```yaml
 env:
-  VITE_KAKAO_JS_KEY: 4f588577d41ff38695f0daa513b5bef7
-  VITE_KAKAO_API_KEY: 064e455e57b72a7665be2ff5515aead2
-  VITE_VWORLD_API_KEY: BE3AF33A-202E-3D5F-A8AD-63D9EE291ABF
+  VITE_KAKAO_JS_KEY: <KAKAO_JS_KEY>
+  VITE_KAKAO_API_KEY: <KAKAO_API_KEY>
+  VITE_VWORLD_API_KEY: <VWORLD_API_KEY>
   VITE_MAP_URL: ${{ secrets.VITE_MAP_URL }}
   VITE_REALESTATE_URL: ${{ secrets.VITE_REALESTATE_URL }}
 ```
@@ -71,7 +71,7 @@ const currentDomain = window.location.hostname;
 url: `/wms/req/wms?KEY=${vworldKey}&DOMAIN=${currentDomain}`
 ```
 
-> **추가 조치:** VWorld API 계정에서 Azure SWA 도메인(`delightful-rock-0de6c000f.azurestaticapps.net`)을 허용 도메인으로 등록해야 함.
+> **추가 조치:** VWorld API 계정에서 Azure SWA 도메인(`<SWA_RESOURCE_NAME>.azurestaticapps.net`)을 허용 도메인으로 등록해야 함.
 
 ### 3-3. Kakao Maps JS SDK 동적 로드 추가
 
@@ -126,7 +126,7 @@ useEffect(() => {
 [Azure Static Web Apps]
   └─ /map 라우트 → MapView.jsx
        ├─ VITE_MAP_URL ──────────────→ [미배포] mapController.py (8681)
-       │                                └─ Oracle DB (10.1.92.119) ← Azure 도달 불가
+       │                                └─ Oracle DB (<ORACLE_HOST>) ← Azure 도달 불가
        ├─ VITE_REALESTATE_URL ───────→ [미배포] realEstateController.py (8682)
        │                                └─ Oracle DB (동일)
        ├─ Kakao REST API ────────────→ dapi.kakao.com (vite proxy 경유, SWA에서는 직접 호출)

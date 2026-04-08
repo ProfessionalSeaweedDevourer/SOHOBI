@@ -8,8 +8,8 @@
 
 ```
 TERRY 백엔드 (로컬 8681/8682포트)
-    ↓  TCP 1521 (하드코딩: "shobi/8680@//10.1.92.119:1521/xe")
-Oracle XE @ 10.1.92.119 ← 팀원 로컬 서버
+    ↓  TCP 1521 (하드코딩: "<ORACLE_USER>/<ORACLE_PASSWORD>@//<ORACLE_HOST>:1521/xe")
+Oracle XE @ <ORACLE_HOST> ← 팀원 로컬 서버
 
 CHOI locationAgent_DB (로컬 8000포트)
     ↓  TCP 1521 (env: ORACLE_USER/ORACLE_PASSWORD/ORACLE_DSN)
@@ -120,7 +120,7 @@ Oracle XE @ 동일 서버
 TERRY, CHOI 각자 로컬 Oracle에 연결 → "내 PC에서만 됨" 현상
 
 [문제 3] 보안 위험
-Oracle 접속 정보(10.1.92.119:1521, shobi/8680)가 코드에 하드코딩
+Oracle 접속 정보(<ORACLE_HOST>:1521, <ORACLE_USER>/<ORACLE_PASSWORD>)가 코드에 하드코딩
 공인 인터넷에서 Oracle 포트 오픈 여부 확인 필요
 
 [문제 4] 데이터 일관성 없음
@@ -155,7 +155,7 @@ Azure DB 서비스는 7–35일 Point-in-Time Restore 기본 제공
 ### 단계 1: 데이터 내보내기 (1일)
 ```bash
 # Oracle에서 CSV 덤프
-expdp shobi/8680@10.1.92.119:1521/xe \
+expdp <ORACLE_USER>/<ORACLE_PASSWORD>@<ORACLE_HOST>:1521/xe \
   TABLES=SANGKWON_SALES,SANGKWON_STORE,STORE_SEOUL,...
 ```
 

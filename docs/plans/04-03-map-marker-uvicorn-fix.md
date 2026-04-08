@@ -29,7 +29,7 @@ CMD ["sh", "-c", "uvicorn api_server:app --host 0.0.0.0 --port ${PORT:-8000} --w
 ```bash
 az containerapp update \
   --name sohobi-backend \
-  --resource-group rg-ejp-9638 \
+  --resource-group <RESOURCE_GROUP> \
   --set-env-vars UVICORN_WORKERS=4
 ```
 

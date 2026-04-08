@@ -2,7 +2,7 @@
 
 ## 배포 현황
 
-- **Container Apps URL**: `https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io`
+- **Container Apps URL**: `<BACKEND_HOST>`
 - **현재 브랜치**: PARK
 - **오늘 main 머지된 PR**: #46, #47, #48
 
@@ -12,7 +12,7 @@
 
 ### 1. Signoff 엔드포인트 classic 전환 및 로컬·클라우드 검증 ✅
 
-**배경**: 전날 세션에서 AI Foundry 엔드포인트(`services.ai.azure.com`)와 `AsyncAzureOpenAI` SDK의 경로 구조 불일치로 signoff 400 에러가 미해결 상태였음. Cloud Shell 확인 결과 `gpt-4.1-mini`가 classic 엔드포인트(`ejp-9638-resource`)에 배포돼 있음을 확인.
+**배경**: 전날 세션에서 AI Foundry 엔드포인트(`services.ai.azure.com`)와 `AsyncAzureOpenAI` SDK의 경로 구조 불일치로 signoff 400 에러가 미해결 상태였음. Cloud Shell 확인 결과 `gpt-4.1-mini`가 classic 엔드포인트(`<AZURE_OPENAI_RESOURCE>`)에 배포돼 있음을 확인.
 
 **변경 내용 (PR #46)**
 
@@ -20,15 +20,15 @@
 |------|------|
 | `integrated_PARK/kernel_setup.py` | `_SIGNOFF_TOKEN_PROVIDER` (`ai.azure.com/.default`) 제거 → `_TOKEN_PROVIDER` (`cognitiveservices.azure.com/.default`) 재사용 |
 | `integrated_PARK/kernel_setup.py` | signoff 클라이언트 `api_version`을 `AZURE_SIGNOFF_API_VERSION` → `AZURE_OPENAI_API_VERSION` 환경변수로 통일 |
-| `integrated_PARK/.env` | `AZURE_SIGNOFF_ENDPOINT` → `https://ejp-9638-resource.openai.azure.com/` |
+| `integrated_PARK/.env` | `AZURE_SIGNOFF_ENDPOINT` → `https://<AZURE_OPENAI_ENDPOINT>/` |
 
 **Azure Container Apps 환경변수 수정 (Cloud Shell)**
 
 ```bash
 az containerapp update \
   --name sohobi-backend \
-  --resource-group rg-ejp-9638 \
-  --set-env-vars AZURE_SIGNOFF_ENDPOINT=https://ejp-9638-resource.openai.azure.com/
+  --resource-group <RESOURCE_GROUP> \
+  --set-env-vars AZURE_SIGNOFF_ENDPOINT=https://<AZURE_OPENAI_ENDPOINT>/
 ```
 
 **검증 결과 (로컬 및 Container Apps)**

@@ -11,7 +11,7 @@
 
 이 서버들은 Azure에 배포된 적 없음. `frontend/.env.production`에 해당 변수 없음 → 프론트엔드가 `localhost:8681` / 빈 URL 호출 → 404 → `apiData = null` → "데이터 없음".
 
-TERRY DAOs는 사내 Oracle DB(`10.1.92.119:1521`)를 사용하므로 Azure에서 접근 불가.
+TERRY DAOs는 사내 Oracle DB(`<ORACLE_HOST>:1521`)를 사용하므로 Azure에서 접근 불가.
 
 ## 수정 내용
 

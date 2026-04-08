@@ -21,12 +21,12 @@
 
 ## Step 1 — SSH 터널 열기 (Oracle 데이터 내보내기 전용)
 
-Oracle DB(`10.1.92.119:1521`)는 유선 LAN에만 존재하므로 Tailscale을 통해 SSH 터널로 접근한다.
+Oracle DB(`<ORACLE_HOST>:1521`)는 유선 LAN에만 존재하므로 Tailscale을 통해 SSH 터널로 접근한다.
 **데이터 내보내기(Step 5)가 끝나면 터널을 닫아도 된다.**
 
 ```bash
 # 터미널 하나를 전용으로 유지 (Ctrl+C로 종료)
-ssh -N -L 1521:10.1.92.119:1521 soldesk@<팀원_tailscale_IP>
+ssh -N -L 1521:<ORACLE_HOST>:1521 soldesk@<팀원_tailscale_IP>
 # 비밀번호: 1234
 ```
 

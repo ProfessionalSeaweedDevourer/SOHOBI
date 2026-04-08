@@ -166,7 +166,7 @@ curl -s "$BACKEND_HOST/api/v1/logs?type=queries&limit=50" | python3 -m json.tool
 
 ## 도메인 & 인프라
 
-- 프론트엔드 도메인: `sohobi.net` (Azure DNS zone: `rg-ejp-9638`)
+- 프론트엔드 도메인: `sohobi.net` (Azure DNS zone: `.env` 참조)
 - 백엔드: Azure Container Apps (`BACKEND_HOST` in `.env`)
 - SEO canonical URL, sitemap, OG 태그 등에서 도메인은 **`sohobi.net`** 사용
 
