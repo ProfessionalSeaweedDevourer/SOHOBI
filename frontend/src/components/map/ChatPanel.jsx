@@ -104,7 +104,8 @@ export default function ChatPanel({ chatState = false, onToggle, dongPanelOpen, 
     autoSendTimerRef.current = setTimeout(() => {
       handleSend(`${label} 상권 분석`);
     }, 300);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => clearTimeout(autoSendTimerRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapContext]);
 
   // 카카오 키워드 검색으로 좌표 조회
