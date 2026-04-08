@@ -3,6 +3,7 @@ import "./MapControls.css";
 
 export default function MapControls({
    hasPopup,
+   hasDongPanel,
    dongMode,
    onDongMode,
    dongLoading,
@@ -15,7 +16,7 @@ export default function MapControls({
 }) {
    return (
       <div
-         className={`mv-map-controls${hasPopup ? " mv-map-controls--hidden" : ""}`}
+         className={`mv-map-controls${hasPopup ? " mv-map-controls--hidden" : ""}${hasDongPanel ? " mv-map-controls--dong" : ""}`}
       >
          {/* 현재 구 이름 */}
          {currentGuNm && (

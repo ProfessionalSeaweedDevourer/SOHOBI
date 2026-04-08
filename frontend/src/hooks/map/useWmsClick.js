@@ -25,7 +25,7 @@ export const LAYER_META = {
 export function parseWmsProps(p, layerType) {
    if (layerType === "cadastral") {
       return {
-         pnu: p.pnu || "",
+         pnu: p.pnu || p.PNU || p.필지번호 || p.jibun_cd || "",
          addr: p.addr || p.uname || "",
          jibun: p.jibun || (p.bubun ? `${p.bubun}-${p.bonbun}` : ""),
          sido: p.ctp_nm || p.sido_name || "",
@@ -110,7 +110,11 @@ export function parseWmsProps(p, layerType) {
 const CADASTRAL_MIN_ZOOM = 17; // Layerpanel.jsx minZoom: 17 과 동기화
 
 // ── WMS 레이어 클릭 처리 ────────────────────────────────────────
-export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } = {}) {
+export async function handleWmsClick(
+   map,
+   coordinate,
+   { skipZoomGuard = false } = {},
+) {
    const wmsLayers = map
       .getLayers()
       .getArray()
@@ -140,6 +144,18 @@ export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } 
          urlObj.searchParams.set("REQUEST", "GetFeatureInfo");
          const res = await fetch(urlObj.pathname + urlObj.search);
          const text = await res.text();
+         try {
+            const _parsed = JSON.parse(text);
+            const _props = _parsed.features?.[0]?.properties;
+            console.log("[WMS Properties]", JSON.stringify(_props));
+         } catch (e) {
+            console.log("[WMS parse err]", e);
+         }
+         console.log(
+            "[WMS Response]",
+            wmsLayer.get("name"),
+            text.slice(0, 300),
+         );
          let feat = null;
          try {
             feat = JSON.parse(text).features?.[0];

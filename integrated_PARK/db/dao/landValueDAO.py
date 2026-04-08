@@ -3,7 +3,7 @@
 # 반환 형식: {"pnu", "count", "data": [{"year", "price", "price_str"}]}
 
 import logging
-from integrated_PARK.db.baseDAO import BaseDAO
+from .baseDAO import BaseDAO
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class LandValueDAO(BaseDAO):
         if not pnu or len(pnu) < 15:
             return {"pnu": pnu, "count": 0, "data": [], "unit": "원/㎡"}
         try:
-            rows = self.execute_query("""
+            rows = self._query("""
                 SELECT year, price
                 FROM land_value
                 WHERE pnu = %(pnu)s

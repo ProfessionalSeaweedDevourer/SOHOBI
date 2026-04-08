@@ -369,13 +369,13 @@ export default function ChatPanel({
          {/* 토글 버튼 */}
          {!isOpen && (
             <button
-               className={`group absolute bottom-[20px] z-[210] ${hasPopup ? "left-[12px]" : "right-[14px]"} bg-gradient-to-br from-[#0891b2] to-[#06b6d4] hover:from-[#0e7490] hover:to-[#0891b2] dark:from-[#06b6d4] dark:to-[#0891b2] dark:hover:from-[#22d3ee] dark:hover:to-[#06b6d4] rounded-full shadow-lg hover:shadow-xl dark:shadow-[0_8px_30px_rgba(6,182,212,0.4)] dark:hover:shadow-[0_10px_40px_rgba(34,211,238,0.5)] transition-all duration-300 ease-in-out hover:scale-105 flex items-center gap-3 px-5 py-3.5 cursor-pointer border-2 border-white/20 dark:border-white/30`}
+               className={`group absolute bottom-[20px] z-[210] ${hasPopup || dongPanelOpen ? "left-[12px]" : "right-[14px]"} bg-gradient-to-br from-[#0891b2] to-[#06b6d4] hover:from-[#0e7490] hover:to-[#0891b2] dark:from-[#06b6d4] dark:to-[#0891b2] dark:hover:from-[#22d3ee] dark:hover:to-[#06b6d4] rounded-full shadow-lg hover:shadow-xl dark:shadow-[0_8px_30px_rgba(6,182,212,0.4)] dark:hover:shadow-[0_10px_40px_rgba(34,211,238,0.5)] transition-all duration-300 ease-in-out hover:scale-105 flex items-center gap-3 px-5 py-3.5 cursor-pointer border-2 border-white/20 dark:border-white/30`}
                onClick={onToggle}
                title="에이전트와 대화"
             >
                <div className="flex-shrink-0 w-10 h-10 bg-white dark:bg-gray-800 rounded-lg p-0.5 shadow-sm dark:shadow-md">
                   <img
-                     src="/sohobi_logo_small.png"
+                     src="/sohobi_logo_48w.png"
                      alt="소호비 로고"
                      className="w-full h-full object-contain dark:brightness-110"
                   />

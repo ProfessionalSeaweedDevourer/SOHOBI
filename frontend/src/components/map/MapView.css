@@ -729,8 +729,14 @@
    }
 }
 
-/* 동패널 열릴 때 WmsPopup 왼쪽으로 이동 */
+/* 동패널 열릴 때 WmsPopup 동패널 왼쪽에 붙음 */
 .mv-wms-popup--dong-open {
-   right: auto;
-   left: 14px;
+   right: 316px;
+   left: auto;
+}
+
+/* 동패널 열릴 때 맵컨트롤 최좌측 고정 */
+.mv-map-controls--dong {
+   right: auto !important;
+   left: 12px !important;
 }

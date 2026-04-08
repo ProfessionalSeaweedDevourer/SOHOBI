@@ -104,6 +104,11 @@ export default function MapView() {
 
    const currentZoom = useMapZoom(mapInstance, mapRef, mapReady);
 
+   // 동패널 열릴 때 챗패널 자동 닫기
+   useEffect(() => {
+      if (dongPanel) setChatOpen(false);
+   }, [dongPanel]);
+
    const allCatKeys = new Set(CATEGORIES.map((c) => c.key));
    const [visibleCats, setVisibleCats] = useState(allCatKeys);
    const [catCounts, setCatCounts] = useState({});
@@ -810,6 +815,7 @@ export default function MapView() {
          <div ref={mapRef} className="mv-map" />
          <MapControls
             hasPopup={!!(popup || wmsPopup || clusterPopup)}
+            hasDongPanel={!!dongPanel}
             nearbyCount={nearbyCount}
             loading={loading}
             dongMode={dongMode}
@@ -979,43 +985,52 @@ export default function MapView() {
                setClusterPopup(null);
                setBuildingStores([]);
                lastClusterStoresRef.current = null;
-               // 좌표 → PNU 조회 → 공시지가 표시
+               // 좌표 → WMS GetFeatureInfo → PNU → DB 공시지가 조회
                const lng = parseFloat(popup.LNG);
                const lat = parseFloat(popup.LAT);
                const addr = popup.ROAD_ADDR || "";
-               // 1단계: 백엔드 /map/pnu-by-coord 로 좌표 → PNU 취득
-               fetch(`${FASTAPI_URL}/map/pnu-by-coord?lng=${lng}&lat=${lat}`, {
-                  headers: _mapHeaders,
-               })
-                  .then((r) => r.json())
-                  .then((d) => {
-                     const pnu = d.pnu || "";
-                     setWmsPopup({
-                        type: "cadastral",
-                        pnu,
-                        addr,
-                        sido: popup.SIDO_NM,
-                        sigg: popup.SGG_NM,
-                        dong: popup.ADM_NM,
-                     });
-                     // 2단계: PNU 있으면 백엔드 공시지가 이력 조회
-                     if (pnu) {
-                        fetch(
-                           `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(pnu)}`,
-                           { headers: _mapHeaders },
-                        )
-                           .then((r) => r.json())
-                           .then((lv) => {
-                              if (lv.data?.length) setLandValue(lv.data);
-                           })
-                           .catch((err) =>
-                              console.error("[공시지가 조회 실패]", err),
-                           );
-                     }
-                  })
-                  .catch(() => {
-                     setWmsPopup({ type: "cadastral", pnu: "", addr });
-                  });
+               const map = mapInstance.current;
+               setWmsPopup({
+                  type: "cadastral",
+                  pnu: "",
+                  addr,
+                  sido: popup.SIDO_NM,
+                  sigg: popup.SGG_NM,
+                  dong: popup.ADM_NM,
+               });
+               if (map) {
+                  const coord = fromLonLat([lng, lat]);
+                  const doWmsClick = () => {
+                     handleWmsClick(map, coord, { skipZoomGuard: true }).then(
+                        (result) => {
+                           const pnu = result?.parsed?.pnu || "";
+                           if (pnu) {
+                              setWmsPopup((prev) =>
+                                 prev ? { ...prev, pnu } : prev,
+                              );
+                              fetch(
+                                 `${REALESTATE_URL}/realestate/land-value?pnu=${encodeURIComponent(pnu)}`,
+                                 { headers: _mapHeaders },
+                              )
+                                 .then((r) => r.json())
+                                 .then((lv) => {
+                                    if (lv.data?.length) setLandValue(lv.data);
+                                 })
+                                 .catch(() => {});
+                           }
+                        },
+                     );
+                  };
+                  const currentZoom = map.getView().getZoom() || 0;
+                  if (currentZoom < 18) {
+                     map.getView().animate(
+                        { center: coord, zoom: 18, duration: 500 },
+                        doWmsClick,
+                     );
+                  } else {
+                     doWmsClick();
+                  }
+               }
             }}
             onClusterSelect={(s) => {
                setClusterPopup(null);
@@ -1089,8 +1104,12 @@ export default function MapView() {
          />
          <ChatPanel
             isOpen={chatOpen}
-            onToggle={() => setChatOpen((prev) => !prev)}
+            onToggle={() => {
+               setChatOpen((prev) => !prev);
+               setDongPanel(null);
+            }}
             dongPanelOpen={!!dongPanel}
+            hasPopup={!!(popup || wmsPopup || clusterPopup)}
             mapContext={chatContext}
             onNavigate={handleChatNavigate}
             onHighlightArea={handleHighlightArea}
