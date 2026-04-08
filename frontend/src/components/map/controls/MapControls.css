@@ -1,11 +1,17 @@
 /* ── MapControls 컨테이너 ──────────────────────────────── */
 .mv-map-controls {
    position: absolute;
-   bottom: 50px;
-   left: 16px;
-   z-index: 200;
+   bottom: 120px;
+   right: 14px;
+   z-index: 400;
    display: flex;
    flex-direction: column;
+   background: rgba(255, 255, 255, 0.92);
+   backdrop-filter: blur(6px);
+   -webkit-backdrop-filter: blur(6px);
+   border-radius: 12px;
+   padding: 8px;
+   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
    gap: 6px;
 }
 
@@ -91,14 +97,14 @@
 
 /* 새로고침 버튼 */
 .mv-refresh-btn {
-   border: 2px solid #0891B2;
+   border: 2px solid #0891b2;
    border-radius: 10px;
    padding: 7px 10px;
    font-size: 12px;
    font-weight: 700;
    cursor: pointer;
    background: #fff;
-   color: #0891B2;
+   color: #0891b2;
    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
    white-space: nowrap;
 }
@@ -112,8 +118,9 @@
 @media (max-width: 640px) {
    /* 버튼 그룹 위치: coord-bar 위로 이동 */
    .mv-map-controls {
-      bottom: 56px;
-      left: 8px;
+      bottom: 120px;
+      right: 8px;
+      left: auto;
       gap: 4px;
    }
 
@@ -141,4 +148,27 @@
       font-size: 10px;
       padding: 4px 10px;
    }
+}
+
+/* 다크모드 맵컨트롤 배경 */
+.dark .mv-map-controls {
+   background: rgba(15, 20, 32, 0.92);
+}
+
+/* 팝업 열릴 때 맵컨트롤 좌측으로 이동 */
+.mv-map-controls--hidden {
+   right: auto;
+   left: 12px;
+   transition:
+      left 0.2s,
+      right 0.2s;
+}
+
+/* 동패널 열릴 때 맵컨트롤 최좌측으로 */
+.mv-map-controls--dong-open {
+   right: auto;
+   left: 12px;
+   transition:
+      left 0.25s ease,
+      right 0.25s ease;
 }

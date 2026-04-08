@@ -1,3 +1,11 @@
+/* ── 에이전트 채팅 토글 버튼 위치 ──────────────────────────── */
+.mv-chat-toggle {
+   position: absolute;
+   bottom: 80px; /* 스토어/WMS 팝업(bottom:18px) 위 */
+   right: 20px;
+   z-index: 290; /* 팝업(300)보다 낮게 */
+}
+
 /* ============================================================
    MapView.css  –  지도 컴포넌트 전체 스타일
    ============================================================ */
@@ -719,4 +727,16 @@
       padding: 4px 10px;
       z-index: 190; /* WmsPopup(z:300) 아래로 */
    }
+}
+
+/* 동패널 열릴 때 WmsPopup 동패널 왼쪽에 붙음 */
+.mv-wms-popup--dong-open {
+   right: 316px;
+   left: auto;
+}
+
+/* 동패널 열릴 때 맵컨트롤 최좌측 고정 */
+.mv-map-controls--dong {
+   right: auto !important;
+   left: 12px !important;
 }
