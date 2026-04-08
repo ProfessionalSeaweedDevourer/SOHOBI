@@ -252,6 +252,9 @@ _PROFILE_CONTEXT = """[창업자 상황]
 
 """
 
+# SignOff S5: 면책 문구 — LLM 지시 의존 대신 코드에서 직접 append하여 retry 시 누락 방지
+_DISCLAIMER = "\n\n---\n본 분석은 DB 데이터 기반 정보 제공이며 창업 성공을 보장하지 않습니다. 전문가 상담을 병행하시기 바랍니다."
+
 
 class LocationAgent:
     def __init__(self, kernel: Kernel):
@@ -656,6 +659,8 @@ class LocationAgent:
                 except ValueError:
                     logger.warning("LocationAgent retry LLM 실패 — 이전 draft 유지")
 
+                if _DISCLAIMER not in draft_revised:
+                    draft_revised = draft_revised.rstrip() + _DISCLAIMER
                 return {
                     "draft":         draft_revised,
                     "adm_codes":     adm_codes_ctx,
@@ -758,6 +763,8 @@ class LocationAgent:
             except ValueError:
                 logger.warning("LocationAgent retry LLM 실패 — 이전 draft 유지")
 
+        if _DISCLAIMER not in draft:
+            draft = draft.rstrip() + _DISCLAIMER
         return {
             "draft":         draft,
             "adm_codes":     adm_codes,
