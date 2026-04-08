@@ -147,10 +147,7 @@ class _IPFilterMiddleware(BaseHTTPMiddleware):
         self.allowed_ips = allowed_ips
 
     async def dispatch(self, request: Request, call_next):
-        forwarded = request.headers.get("X-Forwarded-For", "")
-        client_ip = forwarded.split(",")[0].strip() if forwarded else (
-            request.client.host if request.client else ""
-        )
+        client_ip = _get_client_ip(request)
         if client_ip not in self.allowed_ips:
             import logging
             logging.getLogger("sohobi.security").warning(
@@ -162,6 +159,8 @@ class _IPFilterMiddleware(BaseHTTPMiddleware):
 _allowed_ips_raw = os.getenv("ALLOWED_IPS", "")
 _allowed_ips = {ip.strip() for ip in _allowed_ips_raw.split(",") if ip.strip()}
 if _allowed_ips:
+    # rate limit 면제 IP는 IP 필터도 자동 통과
+    _allowed_ips |= _RATE_LIMIT_EXEMPT_IPS
     app.add_middleware(_IPFilterMiddleware, allowed_ips=_allowed_ips)
 
 
@@ -263,6 +262,13 @@ async def health():
         "domains": ["admin", "finance", "legal", "location", "chat"],
         "plugins": ["FinanceSim", "LegalSearch", "BusinessDoc"],
     }
+
+
+@app.get("/api/v1/my-ip")
+@limiter.exempt
+async def my_ip(request: Request):
+    """서버가 인식하는 클라이언트 IP 반환 (RATE_LIMIT_EXEMPT_IPS 등록용)."""
+    return {"ip": _get_client_ip(request)}
 
 
 @app.post("/api/v1/query", dependencies=[Depends(verify_api_key)])
