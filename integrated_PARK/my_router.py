@@ -46,9 +46,13 @@ async def list_my_sessions(user: dict = Depends(get_current_user)):
 @router.get("/sessions/{session_id}/history")
 async def get_session_history(
     session_id: str,
+    include_messages: bool = False,
     user: dict = Depends(get_current_user),
 ):
-    """특정 세션의 Q&A 대화 내역 반환. 본인 세션만 허용."""
+    """특정 세션의 Q&A 대화 내역 반환. 본인 세션만 허용.
+
+    include_messages=true 시 프론트 렌더링용 messages 메타데이터도 함께 반환.
+    """
     # 소유권 확인: 해당 세션이 이 유저의 것인지 검증
     user_sessions = await session_store.get_sessions_by_user(user["sub"])
     owned_ids = {s["session_id"] for s in user_sessions}
@@ -57,8 +61,15 @@ async def get_session_history(
 
     history = await session_store.get_session_history(session_id)
     # user/assistant 메시지만 반환 (system 제외)
-    return [
+    filtered = [
         {"role": m["role"], "content": m["content"]}
         for m in history
         if m.get("role") in ("user", "assistant")
     ]
+
+    if not include_messages:
+        # TODO: 응답 포맷 통일 — MyLogs와 함께 항상 dict 반환으로 변환 예정
+        return filtered  # 하위 호환: 기존 flat array
+
+    messages = await session_store.get_session_messages(session_id)
+    return {"history": filtered, "messages": messages}

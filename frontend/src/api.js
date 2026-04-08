@@ -1,6 +1,6 @@
 // SWA 프록시 사용 시 VITE_API_URL을 빈 문자열로 설정하면 상대경로(/api/...)로 동작한다.
 // 로컬 개발 시 VITE_API_URL=http://localhost:8000 으로 설정한다.
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+export const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const _API_KEY = import.meta.env.VITE_API_KEY || "";
 const _AUTH_HEADERS = {
   "Content-Type": "application/json",
