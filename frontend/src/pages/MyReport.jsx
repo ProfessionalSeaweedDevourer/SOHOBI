@@ -4,6 +4,9 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import ReportSummary from "../components/report/ReportSummary";
 import AgentUsageChart from "../components/report/AgentUsageChart";
 import Recommendations from "../components/report/Recommendations";
+import { AnimatedBackground } from "../components/AnimatedBackground";
+import { motion } from "motion/react";
+import { ArrowLeft, MessageSquare } from "lucide-react";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const _API_KEY = import.meta.env.VITE_API_KEY || "";
@@ -14,14 +17,6 @@ const _HEADERS = {
 
 const SESSION_KEY = "sohobi_session_id";
 
-async function fetchReport(sessionId) {
-  const res = await fetch(`${BASE_URL}/api/report/${sessionId}`, {
-    headers: _HEADERS,
-  });
-  if (res.status === 403) return null;
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
 
 export default function MyReport() {
   const [report, setReport] = useState(null);
@@ -38,45 +33,59 @@ export default function MyReport() {
       setLoading(false);
       return;
     }
-    fetchReport(sessionId)
+    const controller = new AbortController();
+    fetch(`${BASE_URL}/api/report/${sessionId}`, { headers: _HEADERS, signal: controller.signal })
+      .then((res) => {
+        if (res.status === 403) return null;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         setReport(data);
         trackEvent("report_view", { session_id: sessionId });
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => { if (e.name !== "AbortError") setError(e.message); })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, [sessionId]);
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "var(--background)", color: "var(--foreground)" }}
-    >
+    <div className="min-h-screen flex flex-col relative">
+      <AnimatedBackground />
+
       {/* 헤더 */}
-      <header
-        className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 border-b"
-        style={{ background: "var(--card)", borderColor: "var(--border)" }}
+      <motion.header
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="glass border-b border-white/20 backdrop-blur-xl sticky top-0 z-50"
       >
-        <a href="/user" className="text-xl font-bold tracking-tight" style={{ color: "var(--foreground)", textDecoration: "none" }}>
-          SOHOBI
-        </a>
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
-          나의 리포트
-        </span>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <a
-            href="/map"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            href="/user"
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
             style={{ textDecoration: "none" }}
           >
-            지도 🗺️
+            <ArrowLeft size={16} />
+            <span className="text-sm">상담으로</span>
           </a>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <motion.div
+              className="w-8 h-8 bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-teal)] rounded-lg flex items-center justify-center shadow-lg"
+              whileHover={{ scale: 1.1, rotate: 360 }}
+              transition={{ duration: 0.6 }}
+            >
+              <MessageSquare size={16} className="text-white" />
+            </motion.div>
+            <span className="gradient-text font-semibold">SOHOBI</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+          </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* 본문 */}
-      <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-8 flex flex-col gap-6">
+      <main className="relative z-10 flex-1 max-w-2xl w-full mx-auto px-4 py-8 flex flex-col gap-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--foreground)" }}>
             사용 리포트

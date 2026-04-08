@@ -1,10 +1,10 @@
 export function AnimatedBackground() {
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-      {/* Gradient Orbs */}
-      <div className="absolute top-0 -left-40 w-80 h-80 bg-[var(--brand-blue)] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
-      <div className="absolute top-0 -right-40 w-80 h-80 bg-[var(--brand-teal)] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
-      <div className="absolute -bottom-40 left-20 w-80 h-80 bg-[var(--brand-orange)] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
+      {/* Gradient Orbs — transform 기반 애니메이션에 GPU 레이어 강제 생성 */}
+      <div className="absolute top-0 -left-40 w-80 h-80 bg-[var(--brand-blue)] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" style={{ willChange: "transform", transform: "translateZ(0)" }} />
+      <div className="absolute top-0 -right-40 w-80 h-80 bg-[var(--brand-teal)] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" style={{ willChange: "transform", transform: "translateZ(0)" }} />
+      <div className="absolute -bottom-40 left-20 w-80 h-80 bg-[var(--brand-orange)] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" style={{ willChange: "transform", transform: "translateZ(0)" }} />
 
       {/* Dot Grid Pattern */}
       <div
