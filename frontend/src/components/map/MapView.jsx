@@ -123,6 +123,9 @@ export default function MapView() {
       markerLayerRef,
    } = useMarkers(mapInstance, visibleCats);
 
+   // admCd → stores[] 캐시 (모드 전환 시 중복 fetch 방지)
+   const storesByAdmCdRef = useRef(new Map());
+
    const {
       landmarkLayerRef,
       festivalLayerRef,
@@ -311,17 +314,16 @@ export default function MapView() {
                   .filter(Boolean),
             ),
          ];
+         const uncached = admCds.filter((id) => !storesByAdmCdRef.current.has(id));
          Promise.all(
-            admCds.map((admCd) =>
-               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, {
-                  headers: _mapHeaders,
-               })
+            uncached.map((admCd) =>
+               fetch(`${FASTAPI_URL}/map/stores-by-dong?adm_cd=${admCd}`, { headers: _mapHeaders })
                   .then((r) => r.json())
-                  .then((d) => d.stores || [])
+                  .then((d) => { storesByAdmCdRef.current.set(admCd, d.stores || []); return d.stores || []; })
                   .catch(() => []),
             ),
-         ).then((results) => {
-            const stores = results.flat();
+         ).then(() => {
+            const stores = admCds.flatMap((id) => storesByAdmCdRef.current.get(id) || []);
             allStoresRef.current = stores;
             setNearbyCount(stores.length);
             const counts = {};

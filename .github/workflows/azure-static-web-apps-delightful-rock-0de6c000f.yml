@@ -59,9 +59,10 @@ jobs:
 
           echo "발견된 환경: $EXISTING_ENVS"
 
-          for ENV_NAME in $EXISTING_ENVS; do
-            # 환경 이름에서 PR 번호 추출 (Azure SWA는 "pr-123" 형식 사용)
-            PR_NUM=$(echo "$ENV_NAME" | grep -oP '(?<=pr-)\d+')
+          while IFS= read -r ENV_NAME; do
+            [ -z "$ENV_NAME" ] && continue
+            # Azure SWA 환경명은 PR 번호 그대로 (숫자) 또는 "pr-123" 형식
+            PR_NUM=$(echo "$ENV_NAME" | grep -oP '\d+' | head -1 || true)
             if [ -z "$PR_NUM" ]; then
               echo "  $ENV_NAME: PR 번호 추출 불가, 건너뜀"
               continue
@@ -78,7 +79,7 @@ jobs:
                 --environment-name "$ENV_NAME" \
                 --yes
             fi
-          done
+          done <<< "$EXISTING_ENVS"
 
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
