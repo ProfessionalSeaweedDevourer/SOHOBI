@@ -36,7 +36,7 @@ const AGENT_COLORS = {
   chat: "rgba(100,116,139,0.75)", unknown: "rgba(203,213,225,0.75)",
 };
 
-const GRADE_COLORS = { A: "var(--grade-a)", B: "var(--grade-b)", C: "var(--grade-c)" };
+const GRADE_COLORS = { A: "#10b981", B: "#eab308", C: "#ef4444" };
 const STATUS_COLORS = {
   approved: "rgba(20,184,166,0.75)", pending: "rgba(234,179,8,0.75)",
   rejected: "rgba(239,68,68,0.75)", unknown: "rgba(148,163,184,0.75)",
@@ -54,52 +54,20 @@ function SummaryCard({ label, value, sub }) {
   );
 }
 
-function useChart(canvasRef, chartRef, builder, deps) {
+function BarChart({ byDomain }) {
+  const canvasRef = useRef(null);
+  const chartRef = useRef(null);
+
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !byDomain) return;
     chartRef.current?.destroy();
-    chartRef.current = builder(canvasRef.current);
-    return () => { chartRef.current?.destroy(); chartRef.current = null; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-}
 
-export default function StatsPage() {
-  const navigate = useNavigate();
-  const [hours, setHours] = useState(24);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const barCanvasRef = useRef(null);
-  const barChartRef  = useRef(null);
-  const gradeCanvasRef = useRef(null);
-  const gradeChartRef  = useRef(null);
-  const statusCanvasRef = useRef(null);
-  const statusChartRef  = useRef(null);
-
-  const load = useCallback(async (h) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setData(await fetchStats(h));
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(hours); }, [hours, load]);
-
-  // 에이전트별 latency 막대 차트
-  useChart(barCanvasRef, barChartRef, (canvas) => {
-    if (!data?.by_domain) return null;
-    const entries = Object.entries(data.by_domain)
+    const entries = Object.entries(byDomain)
       .filter(([, v]) => v.n > 0)
       .sort((a, b) => b[1].avg_ms - a[1].avg_ms);
-    if (entries.length === 0) return null;
-    return new Chart(canvas, {
+    if (entries.length === 0) return;
+
+    chartRef.current = new Chart(canvasRef.current, {
       type: "bar",
       data: {
         labels: entries.map(([k]) => AGENT_LABELS[k] ?? k),
@@ -125,36 +93,40 @@ export default function StatsPage() {
         },
       },
     });
-  }, [data]);
 
-  // 등급 도넛
-  useChart(gradeCanvasRef, gradeChartRef, (canvas) => {
-    if (!data?.by_grade || Object.keys(data.by_grade).length === 0) return null;
-    const entries = Object.entries(data.by_grade).sort(([a], [b]) => a.localeCompare(b));
-    return new Chart(canvas, {
-      type: "doughnut",
-      data: {
-        labels: entries.map(([k]) => `등급 ${k}`),
-        datasets: [{ data: entries.map(([, v]) => v), backgroundColor: entries.map(([k]) => GRADE_COLORS[k] ?? "rgba(148,163,184,0.75)"), borderWidth: 0 }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: "60%",
-        plugins: { legend: { position: "bottom", labels: { font: { size: 11 }, padding: 12 } } },
-      },
-    });
-  }, [data]);
+    return () => { chartRef.current?.destroy(); chartRef.current = null; };
+  }, [byDomain]);
 
-  // 상태 도넛
-  useChart(statusCanvasRef, statusChartRef, (canvas) => {
-    if (!data?.by_status || Object.keys(data.by_status).length === 0) return null;
-    const entries = Object.entries(data.by_status);
-    return new Chart(canvas, {
+  const domainCount = byDomain ? Object.keys(byDomain).length : 0;
+  return (
+    <div className="glass rounded-xl p-5">
+      <div className="text-sm font-semibold text-foreground mb-3">에이전트별 평균 응답 시간</div>
+      <div style={{ height: Math.max(160, domainCount * 50) }}>
+        <canvas ref={canvasRef} />
+      </div>
+    </div>
+  );
+}
+
+function DoughnutChart({ title, dataMap, colorMap }) {
+  const canvasRef = useRef(null);
+  const chartRef = useRef(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || !dataMap || Object.keys(dataMap).length === 0) return;
+    chartRef.current?.destroy();
+
+    const entries = Object.entries(dataMap).sort(([a], [b]) => a.localeCompare(b));
+
+    chartRef.current = new Chart(canvasRef.current, {
       type: "doughnut",
       data: {
         labels: entries.map(([k]) => k),
-        datasets: [{ data: entries.map(([, v]) => v), backgroundColor: entries.map(([k]) => STATUS_COLORS[k] ?? "rgba(148,163,184,0.75)"), borderWidth: 0 }],
+        datasets: [{
+          data: entries.map(([, v]) => v),
+          backgroundColor: entries.map(([k]) => colorMap[k] ?? "rgba(148,163,184,0.75)"),
+          borderWidth: 0,
+        }],
       },
       options: {
         responsive: true,
@@ -163,7 +135,49 @@ export default function StatsPage() {
         plugins: { legend: { position: "bottom", labels: { font: { size: 11 }, padding: 12 } } },
       },
     });
-  }, [data]);
+
+    return () => { chartRef.current?.destroy(); chartRef.current = null; };
+  }, [dataMap, colorMap]);
+
+  return (
+    <div className="glass rounded-xl p-5">
+      <div className="text-sm font-semibold text-foreground mb-3">{title}</div>
+      <div style={{ height: 220 }}>
+        <canvas ref={canvasRef} />
+      </div>
+    </div>
+  );
+}
+
+const GRADE_LABEL_MAP = { A: "등급 A", B: "등급 B", C: "등급 C" };
+
+export default function StatsPage() {
+  const navigate = useNavigate();
+  const [hours, setHours] = useState(24);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(async (h) => {
+    setLoading(true);
+    setError(null);
+    try {
+      setData(await fetchStats(h));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(hours); }, [hours, load]);
+
+  const gradeLabeled = data?.by_grade
+    ? Object.fromEntries(Object.entries(data.by_grade).map(([k, v]) => [GRADE_LABEL_MAP[k] ?? k, v]))
+    : null;
+  const gradeLabeledColors = Object.fromEntries(
+    Object.entries(GRADE_COLORS).map(([k, v]) => [GRADE_LABEL_MAP[k] ?? k, v])
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -219,28 +233,12 @@ export default function StatsPage() {
               <SummaryCard label="에러율" value={`${(data.error_rate * 100).toFixed(1)}%`} sub={`${data.error_count}건`} />
             </div>
 
-            {/* 에이전트별 latency */}
-            <div className="glass rounded-xl p-5">
-              <div className="text-sm font-semibold text-foreground mb-3">에이전트별 평균 응답 시간</div>
-              <div style={{ height: Math.max(120, Object.keys(data.by_domain).length * 40) }}>
-                <canvas ref={barCanvasRef} />
-              </div>
-            </div>
+            <BarChart byDomain={data.by_domain} />
 
             {/* 도넛 차트 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="glass rounded-xl p-5">
-                <div className="text-sm font-semibold text-foreground mb-3">등급 분포</div>
-                <div style={{ height: 220 }}>
-                  <canvas ref={gradeCanvasRef} />
-                </div>
-              </div>
-              <div className="glass rounded-xl p-5">
-                <div className="text-sm font-semibold text-foreground mb-3">상태 분포</div>
-                <div style={{ height: 220 }}>
-                  <canvas ref={statusCanvasRef} />
-                </div>
-              </div>
+              <DoughnutChart title="등급 분포" dataMap={gradeLabeled} colorMap={gradeLabeledColors} />
+              <DoughnutChart title="상태 분포" dataMap={data.by_status} colorMap={STATUS_COLORS} />
             </div>
           </div>
         )}
