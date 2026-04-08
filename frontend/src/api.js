@@ -7,6 +7,12 @@ const _AUTH_HEADERS = {
   ...(_API_KEY ? { "X-API-Key": _API_KEY } : {}),
 };
 
+function fetchWithTimeout(url, options = {}, ms = 15000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 /**
  * POST /api/v1/query
  * @param {string} question
@@ -19,14 +25,16 @@ export async function sendQuery(question, maxRetries = 3, sessionId = null, curr
   const body = { question, domain: null, max_retries: maxRetries };
   if (sessionId) body.session_id = sessionId;
   if (currentParams) body.current_params = currentParams;
-  const res = await fetch(`${BASE_URL}/api/v1/query`, {
+  const res = await fetchWithTimeout(`${BASE_URL}/api/v1/query`, {
     method: "POST",
     headers: _AUTH_HEADERS,
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const text = await res.text();
+    let err = {};
+    try { err = JSON.parse(text); } catch {}
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -51,8 +59,10 @@ export async function streamQuery(question, maxRetries = 3, sessionId = null, on
     ...(signal ? { signal } : {}),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const text = await res.text();
+    let err = {};
+    try { err = JSON.parse(text); } catch {}
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
   }
 
   const reader = res.body.getReader();
@@ -100,7 +110,7 @@ export async function streamQuery(question, maxRetries = 3, sessionId = null, on
 export async function fetchLogs(type = "queries", limit = 500, userId = "") {
   const params = new URLSearchParams({ type, limit });
   if (userId) params.append("user_id", userId);
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${BASE_URL}/api/v1/logs?${params}`,
     { headers: _AUTH_HEADERS }
   );
@@ -116,7 +126,7 @@ export async function fetchLogs(type = "queries", limit = 500, userId = "") {
  * @returns {Promise<{count: number, users: Array<{user_id, email, name}>}>}
  */
 export async function fetchLogUsers() {
-  const res = await fetch(`${BASE_URL}/api/v1/logs/users`, { headers: _AUTH_HEADERS });
+  const res = await fetchWithTimeout(`${BASE_URL}/api/v1/logs/users`, { headers: _AUTH_HEADERS });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -126,7 +136,7 @@ export async function fetchLogUsers() {
  * @returns {Promise<{features: Array<{feature_id, label, icon, vote_count, user_voted}>}>}
  */
 export async function fetchRoadmapVotes() {
-  const res = await fetch(`${BASE_URL}/api/roadmap/votes`, { headers: _AUTH_HEADERS });
+  const res = await fetchWithTimeout(`${BASE_URL}/api/roadmap/votes`, { headers: _AUTH_HEADERS });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -137,7 +147,7 @@ export async function fetchRoadmapVotes() {
  * @returns {Promise<{count: number, items: Array}>}
  */
 export async function fetchFeedback(limit = 500) {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${BASE_URL}/api/feedback?limit=${limit}`,
     { headers: _AUTH_HEADERS }
   );
