@@ -61,6 +61,7 @@ export function useMarkers(mapInstance, visibleCats) {
    const circleLayerRef = useRef(null);
    const allStoresRef = useRef([]);
    const selectedFeatRef = useRef(null);
+   const selectedStoreIdRef = useRef(null);
    const clusterSourceRef = useRef(null);
    const vectorSourceRef = useRef(null);
 
@@ -105,6 +106,7 @@ export function useMarkers(mapInstance, visibleCats) {
       // 레이어가 이미 존재하면 소스만 교체 (Layer 재생성 생략)
       if (clusterLayerRef.current && vectorSourceRef.current) {
          selectedFeatRef.current = null;
+         selectedStoreIdRef.current = null;
          vectorSourceRef.current.clear();
          vectorSourceRef.current.addFeatures(features);
          return;
@@ -122,8 +124,8 @@ export function useMarkers(mapInstance, visibleCats) {
          zIndex: 200,
          style: (feature) => {
             const members = feature.get("features") || [];
-            // feature 참조 대신 STORE_ID로 비교 (zoom 변경 시 cluster 재생성 대응)
-            const selId = selectedFeatRef.current?.__storeId__;
+            // STORE_ID로 비교 (zoom 변경 시 cluster 재생성 대응)
+            const selId = selectedStoreIdRef.current;
             const isSel =
                selId != null &&
                members.some((f) => {
@@ -168,20 +170,10 @@ export function useMarkers(mapInstance, visibleCats) {
       clusterLayerRef.current = layer;
    };
 
-   // 클러스터/단일 모두 대응: cluster feature는 "features" 배열 안에 store가 있음
-   const _getCatCd = (feat) => {
-      if (!feat) return undefined;
-      const direct = feat.get("store");
-      if (direct) return direct.CAT_CD;
-      const members = feat.get("features");
-      return members?.[0]?.get("store")?.CAT_CD;
-   };
-
    const _highlightById = (storeId) => {
       if (!storeId) return;
-      // feature 참조 대신 storeId 저장 (zoom 변경 시 재생성 대응)
-      if (!selectedFeatRef.current) selectedFeatRef.current = {};
-      selectedFeatRef.current.__storeId__ = storeId;
+      selectedStoreIdRef.current = storeId;
+      selectedFeatRef.current = null;
       clusterLayerRef.current?.changed();
       // clusterSource 준비됐으면 feature 참조도 같이 저장 (선택적)
       if (clusterSourceRef?.current) {
@@ -193,7 +185,6 @@ export function useMarkers(mapInstance, visibleCats) {
             });
             if (match) {
                selectedFeatRef.current = wf;
-               selectedFeatRef.current.__storeId__ = storeId;
                break;
             }
          }
@@ -203,13 +194,12 @@ export function useMarkers(mapInstance, visibleCats) {
    const selectMarker = (feature) => {
       if (!feature) {
          selectedFeatRef.current = null;
+         selectedStoreIdRef.current = null;
       } else {
-         // cluster wrapper에서 STORE_ID 추출해서 storeId 기반으로 저장
          const members = feature.get("features") || [];
          const store = members[0]?.get("store");
-         const storeId = store?.STORE_ID || store?.store_id || null;
          selectedFeatRef.current = feature;
-         if (storeId) selectedFeatRef.current.__storeId__ = storeId;
+         selectedStoreIdRef.current = store?.STORE_ID || store?.store_id || null;
       }
       clusterLayerRef.current?.changed();
    };
@@ -228,6 +218,7 @@ export function useMarkers(mapInstance, visibleCats) {
       vectorSourceRef.current = null;
       clusterSourceRef.current = null;
       selectedFeatRef.current = null;
+      selectedStoreIdRef.current = null;
       allStoresRef.current = [];
    };
 

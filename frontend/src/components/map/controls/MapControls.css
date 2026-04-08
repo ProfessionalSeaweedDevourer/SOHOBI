@@ -156,19 +156,11 @@
 }
 
 /* 팝업 열릴 때 맵컨트롤 좌측으로 이동 */
-.mv-map-controls--hidden {
+.mv-map-controls.mv-map-controls--hidden,
+.mv-map-controls.mv-map-controls--dong {
    right: auto;
    left: 12px;
    transition:
       left 0.2s,
       right 0.2s;
-}
-
-/* 동패널 열릴 때 맵컨트롤 최좌측으로 */
-.mv-map-controls--dong-open {
-   right: auto;
-   left: 12px;
-   transition:
-      left 0.25s ease,
-      right 0.25s ease;
 }

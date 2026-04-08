@@ -734,9 +734,3 @@
    right: 316px;
    left: auto;
 }
-
-/* 동패널 열릴 때 맵컨트롤 최좌측 고정 */
-.mv-map-controls--dong {
-   right: auto !important;
-   left: 12px !important;
-}
