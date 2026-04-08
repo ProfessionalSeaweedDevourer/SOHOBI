@@ -33,6 +33,9 @@ psycopg2-binary==2.9.9
 # 캐싱
 cachetools==5.3.3
 
+# Rate limiting
+slowapi==0.1.9
+
 # 유틸리티
 python-dotenv==1.2.2
 requests==2.33.1
