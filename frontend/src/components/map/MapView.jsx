@@ -69,6 +69,7 @@ export default function MapView() {
    // 동 hover 분석 제안 버블: { dongNm, guNm, admCd, x, y } | null
    const [hoverBubble, setHoverBubble] = useState(null);
    const hoverBubbleTimerRef = useRef(null);
+   const hoverPixelRef = useRef(null);
    const [chatState, setChatState] = useState(false);
    const [chatContext, setChatContext] = useState(null);
    const [landmarkLoaded, setLandmarkLoaded] = useState(false);
@@ -691,13 +692,15 @@ export default function MapView() {
             const admCd = (p.adm_cd || "").trim();
             if (guNm) currentGuNmRef.current = guNm;
 
+            // 마우스 최신 위치 항상 업데이트 (버블 표시 시점의 커서 위치 사용)
+            hoverPixelRef.current = e.pixel;
             if (dongNm !== dongHoverNameRef.current) {
                dongHoverNameRef.current = dongNm;
-               // 동이 바뀌면 버블 타이머 리셋 (1.2초 후 표시)
+               // 동이 바뀌면 버블 타이머 리셋 (1.2초 후 최신 커서 위치에 표시)
                clearTimeout(hoverBubbleTimerRef.current);
                setHoverBubble(null);
-               const px = e.pixel;
                hoverBubbleTimerRef.current = setTimeout(() => {
+                  const px = hoverPixelRef.current || e.pixel;
                   setHoverBubble({ dongNm, guNm, admCd, x: px[0], y: px[1] });
                }, 1200);
             }
