@@ -1,8 +1,8 @@
 /* ── MapControls 컨테이너 ──────────────────────────────── */
 .mv-map-controls {
    position: absolute;
-   bottom: 50px;
-   left: 16px;
+   bottom: 180px;
+   right: 14px;
    z-index: 200;
    display: flex;
    flex-direction: column;
@@ -91,14 +91,14 @@
 
 /* 새로고침 버튼 */
 .mv-refresh-btn {
-   border: 2px solid #0891B2;
+   border: 2px solid #0891b2;
    border-radius: 10px;
    padding: 7px 10px;
    font-size: 12px;
    font-weight: 700;
    cursor: pointer;
    background: #fff;
-   color: #0891B2;
+   color: #0891b2;
    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
    white-space: nowrap;
 }
@@ -113,7 +113,8 @@
    /* 버튼 그룹 위치: coord-bar 위로 이동 */
    .mv-map-controls {
       bottom: 56px;
-      left: 8px;
+      right: 8px;
+      left: auto;
       gap: 4px;
    }
 
