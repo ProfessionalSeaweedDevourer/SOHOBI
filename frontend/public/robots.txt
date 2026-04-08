@@ -1,7 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /dev/
-Disallow: /dev/*
 Disallow: /auth/
 Disallow: /my-report
 Disallow: /my-logs

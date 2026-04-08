@@ -15,9 +15,8 @@
     <meta name="referrer" content="origin-when-cross-origin" />
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- 검색엔진 인증 (등록 후 토큰 교체) -->
+    <!-- 검색엔진 인증 -->
     <meta name="google-site-verification" content="1vZ6L8CCnXElDXAaj31tZruNKgirClJD672bHuAmWws" />
-    <meta name="naver-site-verification" content="NAVER_VERIFICATION_TOKEN" />
 
     <!-- 브라우저 / 모바일 UX -->
     <meta name="theme-color" content="#0891b2" />
@@ -54,8 +53,8 @@
     <meta name="twitter:image" content="https://sohobi.net/og-image.png" />
 
     <!-- 성능 힌트 -->
-    <link rel="preconnect" href="https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io" />
-    <link rel="dns-prefetch" href="https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io" />
+    <link rel="preconnect" href="%VITE_API_URL%" />
+    <link rel="dns-prefetch" href="%VITE_API_URL%" />
 
     <!-- JSON-LD: SoftwareApplication -->
     <script type="application/ld+json">
@@ -90,7 +89,10 @@
       "url": "https://sohobi.net",
       "potentialAction": {
         "@type": "SearchAction",
-        "target": "https://sohobi.net/user?q={search_term_string}",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://sohobi.net/user?q={search_term_string}"
+        },
         "query-input": "required name=search_term_string"
       }
     }

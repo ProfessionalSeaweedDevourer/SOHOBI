@@ -1,4 +1,4 @@
-const SITE_URL = 'https://sohobi.net';
+export const SITE_URL = 'https://sohobi.net';
 
 export const seoConfig = {
   '/': {
@@ -95,4 +95,3 @@ export const seoConfig = {
   '/my-logs': { title: '내 상담 기록', noindex: true },
 };
 
-export { SITE_URL };
