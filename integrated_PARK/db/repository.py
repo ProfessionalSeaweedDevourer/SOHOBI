@@ -18,6 +18,7 @@ PG_PASSWORD=...
 import logging
 import os
 import threading
+import time
 from typing import Optional
 
 import psycopg2
@@ -532,8 +533,29 @@ def _make_pool():
     )
 
 
+_CACHE_TTL = 300  # 5분 — 상권 데이터는 분기 단위 갱신이므로 충분
+
+
 class CommercialRepository:
     _pool = None
+    _cache: dict[str, tuple[object, float]] = {}
+    _cache_lock = threading.Lock()
+
+    def _cache_get(self, key: str) -> object:
+        with self._cache_lock:
+            entry = self._cache.get(key)
+        if entry is None:
+            return None
+        val, ts = entry
+        if time.monotonic() - ts > _CACHE_TTL:
+            with self._cache_lock:
+                self._cache.pop(key, None)  # lazy eviction
+            return None
+        return val
+
+    def _cache_set(self, key: str, val: object) -> None:
+        with self._cache_lock:
+            self._cache[key] = (val, time.monotonic())
 
     @classmethod
     def _get_pool(cls):
@@ -587,6 +609,11 @@ class CommercialRepository:
         행정동별 매출 조회 + 합산
         반환: {summary(합산), breakdown(행정동별 분리)}
         """
+        cache_key = f"sales|{location}|{business_type}|{quarter}"
+        cached = self._cache_get(cache_key)
+        if cached is not None:
+            return cached
+
         adm_codes = self._get_adm_codes(location)
         industry_code = self._get_industry_code(business_type)
 
@@ -691,7 +718,9 @@ class CommercialRepository:
             "source": "상권분석 DB (sangkwon_sales)",
         }
 
-        return {"summary": summary, "breakdown": breakdown}
+        result = {"summary": summary, "breakdown": breakdown}
+        self._cache_set(cache_key, result)
+        return result
 
     def get_store_count(
         self, location: str, business_type: str, quarter: str = "20254"
@@ -699,6 +728,11 @@ class CommercialRepository:
         """
         점포수/개폐업률 조회 + 합산 (sangkwon_store 테이블)
         """
+        cache_key = f"store_count|{location}|{business_type}|{quarter}"
+        cached = self._cache_get(cache_key)
+        if cached is not None:
+            return cached
+
         adm_codes = self._get_adm_codes(location)
         industry_code = self._get_industry_code(business_type)
 
@@ -759,7 +793,9 @@ class CommercialRepository:
             "source": "상권분석 DB (sangkwon_store)",
         }
 
-        return {"summary": summary, "breakdown": breakdown}
+        result = {"summary": summary, "breakdown": breakdown}
+        self._cache_set(cache_key, result)
+        return result
 
     def get_similar_locations(
         self,
@@ -772,6 +808,11 @@ class CommercialRepository:
         업종 기준 유사 상권 추천 (복합 점수)
         점수 = 점포당평균매출(0.4) + 폐업률낮음(0.3) + 매출규모(0.2) + 개업률적정(0.1)
         """
+        cache_key = f"similar|{business_type}|{quarter}|{exclude_location}|{top_n}"
+        cached = self._cache_get(cache_key)
+        if cached is not None:
+            return cached
+
         industry_code = self._get_industry_code(business_type)
         if not industry_code:
             return []
@@ -868,7 +909,9 @@ class CommercialRepository:
             )
 
         scored.sort(key=lambda x: x["score"], reverse=True)
-        return scored[:top_n]
+        result = scored[:top_n]
+        self._cache_set(cache_key, result)
+        return result
 
     def get_supported_locations(self) -> list:
         return list(AREA_MAP.keys())
