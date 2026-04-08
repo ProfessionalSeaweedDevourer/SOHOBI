@@ -40,11 +40,13 @@
    display: flex;
    align-items: center;
    gap: 8px;
-   background: #fff;
-   border: 1px solid #e5e7eb;
+   background: var(--glass-bg);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border: 1px solid var(--glass-border);
    border-radius: 12px;
    padding: 6px 10px;
-   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 .mv-ctrl-btn {
    border: none;
@@ -56,49 +58,57 @@
    transition: all 0.18s;
 }
 .mv-ctrl-btn--on {
-   background: #2563eb;
+   background: var(--brand-blue);
    color: #fff;
+   box-shadow: var(--glow-blue);
 }
 .mv-ctrl-btn--off {
-   background: #e5e7eb;
-   color: #555;
+   background: var(--muted);
+   color: var(--muted-foreground);
 }
 .mv-ctrl-badge {
-   background: #eff6ff;
-   border: 1px solid #bfdbfe;
+   background: rgba(8, 145, 178, 0.1);
+   border: 1px solid rgba(8, 145, 178, 0.25);
    border-radius: 8px;
    padding: 5px 12px;
    font-size: 12px;
-   color: #2563eb;
+   color: var(--brand-blue);
    font-weight: 600;
 }
 .mv-ctrl-loading {
-   background: #fff;
-   border: 1px solid #ddd;
+   background: var(--card);
+   border: 1px solid var(--border);
    border-radius: 8px;
    padding: 5px 12px;
    font-size: 12px;
-   color: #999;
+   color: var(--muted-foreground);
 }
 .mv-ctrl-clear {
-   background: #fff;
-   border: 1px solid #ddd;
+   background: var(--card);
+   border: 1px solid var(--border);
    border-radius: 8px;
    padding: 5px 12px;
    font-size: 12px;
-   color: #666;
+   color: var(--muted-foreground);
    cursor: pointer;
 }
 
 /* ── 레이어 패널 토글 ──────────────────────────────────────── */
 .mv-layer-btn {
-   background: #fff;
-   border: 1px solid #e5e7eb;
+   background: var(--glass-bg);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border: 1px solid var(--glass-border);
    border-radius: 10px;
    padding: 8px 12px;
    font-size: 18px;
    cursor: pointer;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+   color: var(--foreground);
+   transition: box-shadow 0.2s, background 0.2s;
+}
+.mv-layer-btn:hover {
+   box-shadow: var(--glow-blue);
 }
 .mv-layer-panel-wrap {
    position: absolute;
@@ -121,7 +131,7 @@
    display: flex;
    align-items: center;
    gap: 6px;
-   border: 1px solid #e5e7eb;
+   border: 1px solid var(--border);
    border-radius: 10px;
    padding: 7px 14px;
    font-size: 12px;
@@ -131,19 +141,23 @@
    white-space: nowrap;
 }
 .mv-dong-btn--off {
-   background: #fff;
-   color: #555;
-   border-color: #e5e7eb;
+   background: var(--glass-bg);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   color: var(--muted-foreground);
+   border-color: var(--glass-border);
 }
 .mv-dong-btn--sales {
-   background: #059669;
+   background: var(--brand-teal);
    color: #fff;
-   border-color: #059669;
+   border-color: var(--brand-teal);
+   box-shadow: var(--glow-teal);
 }
 .mv-dong-btn--re {
-   background: #2563eb;
+   background: var(--brand-blue);
    color: #fff;
-   border-color: #2563eb;
+   border-color: var(--brand-blue);
+   box-shadow: var(--glow-blue);
 }
 
 /* ── 행정동 로딩 ───────────────────────────────────────────── */
@@ -153,12 +167,14 @@
    left: 50%;
    transform: translate(-50%, -50%);
    z-index: 400;
-   background: rgba(255, 255, 255, 0.9);
+   background: var(--glass-bg);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
    border-radius: 12px;
    padding: 16px 24px;
    font-size: 13px;
-   color: #555;
-   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+   color: var(--muted-foreground);
+   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 /* ── 행정동 클릭 패널 ──────────────────────────────────────── */
@@ -168,8 +184,10 @@
    right: 0;
    width: var(--dong-panel-width);
    height: 100%;
-   background: #fff;
-   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+   background: var(--glass-bg);
+   backdrop-filter: blur(24px);
+   -webkit-backdrop-filter: blur(24px);
+   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08), -1px 0 4px rgba(0, 0, 0, 0.04);
    z-index: 350;
    display: flex;
    flex-direction: column;
@@ -178,6 +196,15 @@
 .mv-dong-panel__header {
    padding: 16px 16px 14px;
    color: #fff;
+}
+.mv-dong-panel__header--sales {
+   background: linear-gradient(135deg, var(--brand-teal), var(--brand-blue));
+}
+.mv-dong-panel__header--re {
+   background: linear-gradient(135deg, var(--brand-blue), var(--brand-bright-cyan));
+}
+.mv-dong-panel__header--store {
+   background: linear-gradient(135deg, #7c3aed, var(--brand-blue));
 }
 .mv-dong-panel__header-row {
    display: flex;
@@ -216,7 +243,7 @@
    gap: 12px;
 }
 .mv-dong-panel__empty {
-   color: #bbb;
+   color: var(--muted-foreground);
    font-size: 13px;
    text-align: center;
    margin-top: 40px;
@@ -229,7 +256,7 @@
 }
 .mv-dp-card__label {
    font-size: 10px;
-   color: #888;
+   color: var(--muted-foreground);
    margin-bottom: 4px;
 }
 .mv-dp-card__value {
@@ -238,18 +265,18 @@
 }
 .mv-dp-card__sub {
    font-size: 11px;
-   color: #64748b;
+   color: var(--muted-foreground);
    margin-top: 2px;
 }
 .mv-dp-section {
-   background: #f8fafc;
+   background: var(--secondary);
    border-radius: 12px;
    padding: 14px;
 }
 .mv-dp-section__title {
    font-size: 11px;
    font-weight: 700;
-   color: #475569;
+   color: var(--muted-foreground);
    margin-bottom: 8px;
 }
 
@@ -265,7 +292,7 @@
 }
 .mv-dp-bar-track {
    height: 6px;
-   background: #e2e8f0;
+   background: var(--muted);
    border-radius: 3px;
    overflow: hidden;
 }
@@ -282,7 +309,7 @@
 }
 .mv-dp-grid-item__label {
    font-size: 10px;
-   color: #888;
+   color: var(--muted-foreground);
 }
 .mv-dp-grid-item__value {
    font-size: 12px;
@@ -307,9 +334,11 @@
    right: 16px;
    z-index: 300;
    width: 320px;
-   background: #fff;
+   background: var(--glass-bg);
+   backdrop-filter: blur(20px);
+   -webkit-backdrop-filter: blur(20px);
    border-radius: 16px;
-   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+   box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
    overflow: hidden;
 }
 .mv-wms-popup__color-bar {
@@ -333,19 +362,19 @@
 .mv-wms-popup__close {
    background: transparent;
    border: none;
-   color: #bbb;
+   color: var(--muted-foreground);
    cursor: pointer;
    font-size: 16px;
 }
 .mv-wms-popup__title {
    font-size: 17px;
    font-weight: 700;
-   color: #111;
+   color: var(--foreground);
    margin-bottom: 4px;
 }
 .mv-wms-popup__divider {
    height: 1px;
-   background: #f0f0f0;
+   background: var(--border);
    margin: 10px 0;
 }
 .mv-wms-popup__rows {
@@ -365,33 +394,36 @@
 }
 .mv-wms-popup__row-text {
    font-size: 13px;
-   color: #444;
+   color: var(--muted-foreground);
    line-height: 1.4;
 }
 
 /* 공시지가 */
 .mv-landval {
    margin-top: 12px;
-   background: #f0fdf4;
-   border: 1px solid #bbf7d0;
+   background: rgba(20, 184, 166, 0.08);
+   border: 1px solid rgba(20, 184, 166, 0.25);
    border-radius: 10px;
    padding: 12px 14px;
 }
 .mv-landval__label {
    font-size: 11px;
-   color: #16a34a;
+   color: var(--brand-teal);
    font-weight: 600;
    margin-bottom: 4px;
 }
 .mv-landval__value {
    font-size: 18px;
    font-weight: 800;
-   color: #15803d;
+   color: var(--brand-deep-cyan);
 }
 .mv-landval__sub {
    font-size: 11px;
-   color: #4ade80;
+   color: var(--brand-teal);
    margin-top: 2px;
+}
+.dark .mv-landval__value {
+   color: var(--brand-mint);
 }
 
 /* ── 좌표 표시바 ───────────────────────────────────────────── */
@@ -401,12 +433,14 @@
    left: 50%;
    transform: translateX(-50%);
    z-index: 200;
-   background: rgba(255, 255, 255, 0.92);
-   border: 1px solid #e5e7eb;
+   background: var(--glass-bg);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border: 1px solid var(--glass-border);
    border-radius: 8px;
    padding: 5px 16px;
    font-size: 12px;
-   color: #666;
+   color: var(--muted-foreground);
    font-family: "JetBrains Mono", monospace;
 }
 
@@ -425,15 +459,15 @@
    gap: 8px;
 }
 .map-btn {
-   background: white;
-   border: 1px solid #ddd;
+   background: var(--card);
+   border: 1px solid var(--border);
    border-radius: 10px;
    padding: 6px 12px;
    font-size: 13px;
    cursor: pointer;
 }
 .map-btn:hover {
-   background: #f3f3f3;
+   background: var(--muted);
 }
 .summary-card {
    position: absolute;
@@ -442,14 +476,16 @@
    transform: translateX(-50%);
    z-index: 300;
    width: 320px;
-   background: white;
+   background: var(--glass-bg);
+   backdrop-filter: blur(20px);
+   -webkit-backdrop-filter: blur(20px);
    border-radius: 16px;
-   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+   box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
    overflow: hidden;
 }
 .summary-header {
    padding: 14px;
-   border-bottom: 1px solid #eee;
+   border-bottom: 1px solid var(--border);
 }
 .summary-title {
    font-size: 16px;
@@ -457,7 +493,7 @@
 }
 .summary-sub {
    font-size: 11px;
-   color: #888;
+   color: var(--muted-foreground);
    margin-top: 4px;
 }
 .category-tag {
@@ -469,18 +505,18 @@
 }
 .small-text {
    font-size: 10px;
-   color: #bbb;
+   color: var(--muted-foreground);
 }
 .meta-text {
    font-size: 11px;
-   color: #888;
+   color: var(--muted-foreground);
    line-height: 1.4;
 }
 .popup-card {
-   background: white;
+   background: var(--card);
    border-radius: 14px;
    padding: 14px;
-   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+   box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
    width: 260px;
 }
 .popup-title {
@@ -490,7 +526,7 @@
 }
 .popup-desc {
    font-size: 13px;
-   color: #444;
+   color: var(--muted-foreground);
    line-height: 1.4;
 }
 
@@ -507,28 +543,23 @@
 
 /* ── 지도 페이지 네비게이션 링크 ───────────────────────────────── */
 .mv-nav-btn {
-   background: #fff;
-   border: 1px solid #e5e7eb;
+   background: var(--glass-bg);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border: 1px solid var(--glass-border);
    border-radius: 10px;
    padding: 6px 12px;
    font-size: 12px;
    font-weight: 500;
-   color: #374151;
+   color: var(--foreground);
    text-decoration: none;
    cursor: pointer;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-   transition: background 0.15s;
+   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+   transition: box-shadow 0.2s, background 0.2s;
 }
 .mv-nav-btn:hover {
-   background: #f3f4f6;
-}
-.dark .mv-nav-btn {
-   background: var(--card);
-   border-color: var(--border);
-   color: var(--foreground);
-}
-.dark .mv-nav-btn:hover {
-   background: var(--muted);
+   background: var(--glass-bg);
+   box-shadow: var(--glow-blue);
 }
 
 /* ── OL 줌 레벨 뱃지 기본 스타일 ─────────────────────── */
@@ -536,17 +567,11 @@
    text-align: center;
    font-size: 11px;
    font-weight: 700;
-   color: #333;
-   padding: 2px 0;
-   background: #fff;
-   border-left: 2px solid #ddd;
-   border-right: 2px solid #ddd;
-}
-.dark .zoom-level-badge {
    color: var(--foreground);
+   padding: 2px 0;
    background: var(--card);
-   border-left-color: var(--border);
-   border-right-color: var(--border);
+   border-left: 2px solid var(--border);
+   border-right: 2px solid var(--border);
 }
 
 /* ── OL 기본 줌 버튼 다크모드 ─────────────────────────── */
@@ -556,106 +581,11 @@
    color: var(--foreground) !important;
 }
 
-/* ── 다크모드 오버라이드 ───────────────────────────────── */
-/* 상단 컨트롤 바 */
-.dark .mv-ctrl-bar {
-   background: var(--card);
-   border-color: var(--border);
-}
-.dark .mv-ctrl-btn--off {
-   background: var(--secondary);
-   color: var(--foreground);
-}
+/* ── 다크모드 보정 (CSS 변수 자동 대응 외 추가 필요 항목만) ── */
 .dark .mv-ctrl-badge {
    background: rgba(20, 184, 166, 0.12);
    border-color: rgba(20, 184, 166, 0.3);
    color: var(--brand-teal);
-}
-.dark .mv-ctrl-loading {
-   background: var(--card);
-   border-color: var(--border);
-   color: var(--muted-foreground);
-}
-.dark .mv-ctrl-clear {
-   background: var(--card);
-   border-color: var(--border);
-   color: var(--muted-foreground);
-}
-
-/* 레이어 패널 토글 버튼 */
-.dark .mv-layer-btn {
-   background: var(--card);
-   border-color: var(--border);
-   color: var(--foreground);
-}
-
-/* 행정동 모드 버튼 */
-.dark .mv-dong-btn--off {
-   background: var(--card);
-   color: var(--foreground);
-   border-color: var(--border);
-}
-
-/* 행정동 로딩 오버레이 */
-.dark .mv-dong-loading {
-   background: rgba(15, 20, 32, 0.92);
-   color: var(--muted-foreground);
-}
-
-/* 우측 동 패널 */
-.dark .mv-dong-panel {
-   background: var(--card);
-}
-.dark .mv-dong-panel__empty {
-   color: var(--muted-foreground);
-}
-
-/* 패널 내 카드/섹션 */
-.dark .mv-dp-card__label {
-   color: var(--muted-foreground);
-}
-.dark .mv-dp-card__sub {
-   color: var(--muted-foreground);
-}
-.dark .mv-dp-section {
-   background: var(--secondary);
-}
-.dark .mv-dp-section__title {
-   color: var(--muted-foreground);
-}
-.dark .mv-dp-bar-track {
-   background: rgba(136, 145, 168, 0.2);
-}
-.dark .mv-dp-grid-item__label {
-   color: var(--muted-foreground);
-}
-.dark .mv-dp-grid-item__value {
-   color: var(--foreground);
-}
-
-/* WMS 팝업 */
-.dark .mv-wms-popup {
-   background: var(--card);
-   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-}
-.dark .mv-wms-popup__title {
-   color: var(--foreground);
-}
-.dark .mv-wms-popup__divider {
-   background: var(--border);
-}
-.dark .mv-wms-popup__row-text {
-   color: var(--muted-foreground);
-}
-.dark .mv-wms-popup__close {
-   color: var(--muted-foreground);
-}
-
-/* 좌표 표시바 */
-.dark .coord-bar {
-   background: rgba(15, 20, 32, 0.92);
-   border-color: var(--border);
-   color: var(--muted-foreground);
 }
 
 /* ══════════════════════════════════════════════════════════════
