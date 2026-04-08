@@ -25,7 +25,7 @@ export const LAYER_META = {
 export function parseWmsProps(p, layerType) {
    if (layerType === "cadastral") {
       return {
-         pnu: p.pnu || "",
+         pnu: p.pnu || p.PNU || p.필지번호 || p.jibun_cd || "",
          addr: p.addr || p.uname || "",
          jibun: p.jibun || (p.bubun ? `${p.bubun}-${p.bonbun}` : ""),
          sido: p.ctp_nm || p.sido_name || "",
@@ -110,7 +110,11 @@ export function parseWmsProps(p, layerType) {
 const CADASTRAL_MIN_ZOOM = 17; // Layerpanel.jsx minZoom: 17 과 동기화
 
 // ── WMS 레이어 클릭 처리 ────────────────────────────────────────
-export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } = {}) {
+export async function handleWmsClick(
+   map,
+   coordinate,
+   { skipZoomGuard = false } = {},
+) {
    const wmsLayers = map
       .getLayers()
       .getArray()
