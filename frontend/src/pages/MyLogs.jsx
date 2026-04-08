@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { useAuth } from "../contexts/AuthContext";
 import { AnimatedBackground } from "../components/AnimatedBackground";
@@ -13,7 +13,7 @@ function formatDate(isoString) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function SessionCard({ session, token }) {
+const SessionCard = memo(function SessionCard({ session, token }) {
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -120,7 +120,7 @@ function SessionCard({ session, token }) {
       )}
     </div>
   );
-}
+});
 
 export default function MyLogs() {
   const { user, login, loading: authLoading } = useAuth();

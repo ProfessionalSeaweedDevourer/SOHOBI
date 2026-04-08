@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { streamQuery } from "../../api";
 import { interpretError } from "../../utils/errorInterpreter";
 
@@ -28,9 +28,18 @@ export function useStreamQuery({
   const [loading, setLoading] = useState(false);
   const [activeEvents, setActiveEvents] = useState([]);
   const [pendingQuestion, setPendingQuestion] = useState(null);
+  const controllerRef = useRef(null);
+
+  useEffect(() => {
+    return () => controllerRef.current?.abort();
+  }, []);
 
   const _runStream = useCallback(
     async (question, onEvent, onError) => {
+      controllerRef.current?.abort();
+      controllerRef.current = new AbortController();
+      const { signal } = controllerRef.current;
+
       setLoading(true);
       setActiveEvents([]);
 
@@ -57,9 +66,11 @@ export function useStreamQuery({
               }
             }
           },
-          latestParams
+          latestParams,
+          signal
         );
       } catch (e) {
+        if (e.name === "AbortError") { setActiveEvents([]); setLoading(false); return; }
         onError(question, e.message);
         setActiveEvents([]);
         setLoading(false);
