@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import { motion } from "motion/react";
+import { BarChart2 } from "lucide-react";
 import {
   Chart,
   BarController,
@@ -12,32 +14,35 @@ import {
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const AGENT_LABELS = {
-  finance: "재무",
-  legal: "법률·세무",
+  finance:  "재무",
+  legal:    "법률·세무",
   location: "상권",
-  admin: "행정",
-  chat: "일반",
-  unknown: "기타",
+  admin:    "행정",
+  chat:     "일반",
+  unknown:  "기타",
 };
 
 const AGENT_COLORS = {
-  finance: "rgba(139,92,246,0.75)",
-  legal: "rgba(8,145,178,0.75)",
+  finance:  "rgba(139,92,246,0.75)",
+  legal:    "rgba(8,145,178,0.75)",
   location: "rgba(20,184,166,0.75)",
-  admin: "rgba(234,179,8,0.75)",
-  chat: "rgba(100,116,139,0.75)",
-  unknown: "rgba(203,213,225,0.75)",
+  admin:    "rgba(234,179,8,0.75)",
+  chat:     "rgba(100,116,139,0.75)",
+  unknown:  "rgba(203,213,225,0.75)",
 };
 
-/**
- * 에이전트별 이용 횟수 막대 차트
- *
- * @param {object} props
- * @param {object} props.agentUsage - {finance: 5, legal: 3, ...}
- */
+const AGENT_SOLID = {
+  finance:  "#8b5cf6",
+  legal:    "#0891b2",
+  location: "#14b8a6",
+  admin:    "#eab308",
+  chat:     "#64748b",
+  unknown:  "#cbd5e1",
+};
+
 export default function AgentUsageChart({ agentUsage }) {
   const canvasRef = useRef(null);
-  const chartRef = useRef(null);
+  const chartRef  = useRef(null);
 
   useEffect(() => {
     if (!agentUsage || !canvasRef.current) return;
@@ -74,9 +79,7 @@ export default function AgentUsageChart({ agentUsage }) {
         plugins: {
           legend: { display: false },
           tooltip: {
-            callbacks: {
-              label: (ctx) => ` ${ctx.parsed.y}회`,
-            },
+            callbacks: { label: (ctx) => ` ${ctx.parsed.y}회` },
           },
         },
         scales: {
@@ -86,10 +89,7 @@ export default function AgentUsageChart({ agentUsage }) {
           },
           y: {
             beginAtZero: true,
-            ticks: {
-              stepSize: 1,
-              font: { size: 11 },
-            },
+            ticks: { stepSize: 1, font: { size: 11 } },
             grid: { color: "rgba(148,163,184,0.15)" },
           },
         },
@@ -102,32 +102,65 @@ export default function AgentUsageChart({ agentUsage }) {
     };
   }, [agentUsage]);
 
-  const isEmpty = !agentUsage || Object.keys(agentUsage).length === 0;
+  const entries = agentUsage ? Object.entries(agentUsage).sort((a, b) => b[1] - a[1]) : [];
+  const isEmpty  = entries.length === 0;
 
   return (
-    <div
-      className="rounded-2xl border p-4"
-      style={{
-        background: "var(--card)",
-        borderColor: "var(--border)",
-        boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
-      }}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5 }}
+      className="glass rounded-2xl shadow-elevated overflow-hidden"
     >
-      <div className="text-sm font-semibold mb-3" style={{ color: "var(--foreground)" }}>
-        에이전트별 이용 현황
-      </div>
-      {isEmpty ? (
+      {/* 섹션 헤더 */}
+      <div className="px-5 pt-5 pb-4 flex items-center gap-2 border-b" style={{ borderColor: "var(--border)" }}>
         <div
-          className="h-32 flex items-center justify-center text-sm"
-          style={{ color: "var(--muted-foreground)" }}
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(8,145,178,0.12)" }}
         >
-          이용 기록이 없습니다
+          <BarChart2 size={15} style={{ color: "var(--brand-blue)" }} />
         </div>
-      ) : (
-        <div style={{ height: 180 }}>
-          <canvas ref={canvasRef} />
-        </div>
-      )}
-    </div>
+        <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+          에이전트별 이용 현황
+        </span>
+      </div>
+
+      <div className="px-5 pb-5 pt-4">
+        {isEmpty ? (
+          <div className="h-32 flex items-center justify-center text-sm" style={{ color: "var(--muted-foreground)" }}>
+            이용 기록이 없습니다
+          </div>
+        ) : (
+          <>
+            {/* 컬러 범례 */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {entries.map(([k, v]) => (
+                <span
+                  key={k}
+                  className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
+                  style={{
+                    backgroundColor: `${AGENT_SOLID[k] ?? "#94a3b8"}18`,
+                    color: AGENT_SOLID[k] ?? "#94a3b8",
+                  }}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: AGENT_SOLID[k] ?? "#94a3b8" }}
+                  />
+                  {AGENT_LABELS[k] ?? k}
+                  <span className="opacity-70">{v}회</span>
+                </span>
+              ))}
+            </div>
+
+            {/* 차트 */}
+            <div style={{ height: 180 }}>
+              <canvas ref={canvasRef} />
+            </div>
+          </>
+        )}
+      </div>
+    </motion.div>
   );
 }

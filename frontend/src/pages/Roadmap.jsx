@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { AnimatedBackground } from "../components/AnimatedBackground";
+import { GlowCTA } from "../components/GlowCTA";
 import { motion } from "motion/react";
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { ArrowLeft, MessageSquare, Vote, Zap, CheckCircle2, ArrowRight } from "lucide-react";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const _API_KEY = import.meta.env.VITE_API_KEY || "";
@@ -44,7 +45,6 @@ export default function Roadmap() {
   async function handleVote(featureId) {
     if (!sessionId) return;
 
-    // 옵티미스틱 업데이트
     setFeatures((prev) =>
       [...prev]
         .map((f) => {
@@ -67,7 +67,6 @@ export default function Roadmap() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      // 서버 실제 값으로 동기화
       setFeatures((prev) =>
         [...prev]
           .map((f) =>
@@ -78,7 +77,6 @@ export default function Roadmap() {
           .sort((a, b) => b.vote_count - a.vote_count)
       );
     } catch {
-      // 실패 시 옵티미스틱 업데이트 롤백
       setFeatures((prev) =>
         [...prev]
           .map((f) => {
@@ -95,6 +93,16 @@ export default function Roadmap() {
     }
   }
 
+  const inProgress = features.filter((f) => f.status === "in_progress");
+  const voting     = features.filter((f) => f.status !== "in_progress");
+  const totalVotes = voting.reduce((sum, f) => sum + (f.vote_count ?? 0), 0);
+
+  const stats = [
+    { icon: "🗳️", label: "전체 피처",  value: features.length, unit: "개", color: "#0891b2" },
+    { icon: "▲",  label: "총 투표 수", value: totalVotes,       unit: "표", color: "#14b8a6" },
+    { icon: "⚡", label: "개발 중",    value: inProgress.length, unit: "개", color: "#f97316" },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col relative">
       <AnimatedBackground />
@@ -106,7 +114,6 @@ export default function Roadmap() {
         className="glass border-b border-white/20 backdrop-blur-xl sticky top-0 z-50"
       >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          {/* Left: 뒤로 */}
           <a
             href="/user"
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
@@ -115,8 +122,6 @@ export default function Roadmap() {
             <ArrowLeft size={16} />
             <span className="text-sm">상담으로</span>
           </a>
-
-          {/* Center: 로고 */}
           <div className="flex items-center gap-2">
             <motion.div
               className="w-8 h-8 bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-teal)] rounded-lg flex items-center justify-center shadow-lg"
@@ -127,47 +132,121 @@ export default function Roadmap() {
             </motion.div>
             <span className="gradient-text font-semibold">SOHOBI</span>
           </div>
-
-          {/* Right */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
           </div>
         </div>
       </motion.header>
 
-      {/* 본문 */}
-      <main className="relative z-10 flex-1 max-w-2xl w-full mx-auto px-4 py-8 flex flex-col gap-6">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--foreground)" }}>
-            🗳️ 다음에 추가되었으면 하는 기능
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
+      <main className="relative z-10 flex-1 max-w-2xl w-full mx-auto px-4 py-10 flex flex-col gap-10">
+
+        {/* 히어로 */}
+        <div className="flex flex-col items-center text-center gap-4">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full text-sm shadow-elevated"
+          >
+            <Vote size={14} className="text-[var(--brand-blue)]" />
+            <span className="text-muted-foreground">커뮤니티 투표</span>
+          </motion.div>
+
+          <motion.h1
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+            className="text-3xl font-bold gradient-text"
+          >
+            다음 기능, 여러분이 결정합니다
+          </motion.h1>
+
+          <motion.p
+            initial={{ y: 15, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.25 }}
+            className="text-sm"
+            style={{ color: "var(--muted-foreground)" }}
+          >
             원하는 기능에 투표해 주세요. 투표 결과가 개발 우선순위에 반영됩니다.
-          </p>
+          </motion.p>
         </div>
 
-        {!sessionId && (
-          <div
-            className="rounded-2xl border p-6 text-center"
-            style={{ background: "var(--card)", borderColor: "var(--border)" }}
-          >
-            <div className="text-2xl mb-3">🗳️</div>
-            <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-              투표하려면 먼저{" "}
-              <a href="/user" style={{ color: "var(--brand-blue, #0891b2)" }}>
-                AI 에이전트
-              </a>
-              와 대화를 시작해 보세요.
-            </p>
+        {/* 통계 배너 */}
+        {!loading && features.length > 0 && (
+          <div className="grid grid-cols-3 gap-4">
+            {stats.map((stat, idx) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 + idx * 0.08 }}
+                whileHover={{ y: -4 }}
+                className="group"
+              >
+                <div className="glass rounded-2xl p-4 shadow-elevated transition-glow hover-lift relative overflow-hidden text-center flex flex-col items-center gap-1.5">
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-2xl"
+                    style={{ backgroundColor: stat.color }}
+                  />
+                  <span className="text-xl relative z-10">{stat.icon}</span>
+                  <span
+                    className="text-xl font-bold tabular-nums relative z-10"
+                    style={{ color: stat.color }}
+                  >
+                    {stat.value}
+                    <span className="text-xs font-normal ml-0.5" style={{ color: "var(--muted-foreground)" }}>
+                      {stat.unit}
+                    </span>
+                  </span>
+                  <span className="text-xs relative z-10" style={{ color: "var(--muted-foreground)" }}>
+                    {stat.label}
+                  </span>
+                </div>
+              </motion.div>
+            ))}
           </div>
         )}
 
+        {/* 미로그인 안내 */}
+        {!sessionId && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <GlowCTA orbSize="w-32 h-32" className="p-10 text-center shadow-elevated-lg">
+              <div className="flex flex-col items-center gap-4">
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+                  style={{ backgroundColor: "rgba(8,145,178,0.15)" }}
+                >
+                  <span className="text-2xl">🗳️</span>
+                </div>
+                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  투표하려면 먼저 AI 에이전트와 대화를 시작해 보세요
+                </p>
+                <a
+                  href="/user"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105"
+                  style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
+                >
+                  AI 에이전트와 대화하기
+                  <ArrowRight size={14} />
+                </a>
+              </div>
+            </GlowCTA>
+          </motion.div>
+        )}
+
+        {/* 로딩 */}
         {loading && (
           <div className="text-sm text-center py-12" style={{ color: "var(--muted-foreground)" }}>
             불러오는 중...
           </div>
         )}
 
+        {/* 에러 */}
         {!loading && error && (
           <div
             className="rounded-2xl border p-4 text-sm"
@@ -181,67 +260,140 @@ export default function Roadmap() {
           </div>
         )}
 
-        {!loading && !error && features.length > 0 && (() => {
-          const inProgress = features.filter(f => f.status === "in_progress");
-          const voting = features.filter(f => f.status !== "in_progress");
+        {/* 피처 목록 */}
+        {!loading && !error && features.length > 0 && (
+          <div className="flex flex-col gap-8">
 
-          const FeatureRow = ({ feat }) => (
-            <div
-              key={feat.feature_id}
-              className="flex items-center justify-between rounded-2xl border px-4 py-3"
-              style={{ background: "var(--card)", borderColor: "var(--border)" }}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">{feat.icon}</span>
-                <span className="text-sm font-medium">{feat.label}</span>
-              </div>
-              {feat.status === "in_progress" ? (
-                <span
-                  className="text-xs font-semibold px-3 py-1.5 rounded-xl"
-                  style={{ background: "var(--brand-teal, #14b8a6)", color: "#fff" }}
+            {/* 개발 중 섹션 */}
+            {inProgress.length > 0 && (
+              <section className="flex flex-col gap-4">
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4 }}
+                  className="inline-flex items-center gap-2 glass px-3.5 py-1.5 rounded-full text-xs font-semibold self-start shadow-elevated"
+                  style={{ color: "var(--brand-teal)" }}
                 >
-                  개발 중
-                </span>
-              ) : (
-                <button
-                  onClick={() => handleVote(feat.feature_id)}
-                  disabled={!sessionId}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border transition-colors"
-                  style={{
-                    background: feat.user_voted ? "var(--primary)" : "transparent",
-                    color: feat.user_voted ? "#fff" : "var(--primary)",
-                    borderColor: "var(--primary)",
-                    cursor: sessionId ? "pointer" : "default",
-                    opacity: sessionId ? 1 : 0.5,
-                  }}
-                >
-                  ▲ {feat.vote_count}
-                </button>
-              )}
-            </div>
-          );
+                  <CheckCircle2 size={13} />
+                  지금 만들고 있어요
+                </motion.div>
 
-          return (
-            <div className="flex flex-col gap-6">
-              {inProgress.length > 0 && (
                 <div className="flex flex-col gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-teal, #14b8a6)" }}>
-                    개발 중
-                  </p>
-                  {inProgress.map(feat => <FeatureRow key={feat.feature_id} feat={feat} />)}
+                  {inProgress.map((feat, idx) => (
+                    <motion.div
+                      key={feat.feature_id}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: idx * 0.07 }}
+                      className="group"
+                    >
+                      <div
+                        className="glass rounded-2xl px-5 py-4 shadow-elevated flex items-center justify-between relative overflow-hidden"
+                        style={{ borderLeft: "4px solid var(--brand-teal)" }}
+                      >
+                        <div
+                          className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300"
+                          style={{ backgroundColor: "#14b8a6" }}
+                        />
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+                            style={{ backgroundColor: "rgba(20,184,166,0.12)" }}
+                          >
+                            {feat.icon}
+                          </div>
+                          <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                            {feat.label}
+                          </span>
+                        </div>
+                        <motion.span
+                          animate={{ opacity: [1, 0.5, 1] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-xl relative z-10 shrink-0"
+                          style={{ background: "rgba(20,184,166,0.15)", color: "var(--brand-teal)" }}
+                        >
+                          개발 중
+                        </motion.span>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
-              )}
-              {voting.length > 0 && (
+              </section>
+            )}
+
+            {/* 투표 중 섹션 */}
+            {voting.length > 0 && (
+              <section className="flex flex-col gap-4">
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4 }}
+                  className="inline-flex items-center gap-2 glass px-3.5 py-1.5 rounded-full text-xs font-semibold self-start shadow-elevated"
+                  style={{ color: "var(--muted-foreground)" }}
+                >
+                  <Zap size={13} />
+                  투표로 우선순위를 정해요
+                </motion.div>
+
                 <div className="flex flex-col gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>
-                    투표 중 — 높은 순으로 개발 반영
-                  </p>
-                  {voting.map(feat => <FeatureRow key={feat.feature_id} feat={feat} />)}
+                  {voting.map((feat, idx) => (
+                    <motion.div
+                      key={feat.feature_id}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: idx * 0.05 }}
+                      className="group"
+                    >
+                      <div className="glass rounded-2xl px-5 py-4 shadow-elevated flex items-center justify-between relative overflow-hidden transition-glow hover-lift">
+                        <div
+                          className="absolute inset-0 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-300"
+                          style={{ backgroundColor: "var(--brand-blue)" }}
+                        />
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+                            style={{ backgroundColor: "rgba(8,145,178,0.10)" }}
+                          >
+                            {feat.icon}
+                          </div>
+                          <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                            {feat.label}
+                          </span>
+                        </div>
+
+                        <motion.button
+                          onClick={() => handleVote(feat.feature_id)}
+                          disabled={!sessionId}
+                          whileHover={sessionId ? { scale: 1.05 } : {}}
+                          whileTap={sessionId ? { scale: 0.95 } : {}}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border transition-all relative z-10 shrink-0"
+                          style={{
+                            background: feat.user_voted
+                              ? "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))"
+                              : "transparent",
+                            color: feat.user_voted ? "#fff" : "var(--brand-blue)",
+                            borderColor: feat.user_voted ? "transparent" : "var(--brand-blue)",
+                            cursor: sessionId ? "pointer" : "default",
+                            opacity: sessionId ? 1 : 0.5,
+                            boxShadow: feat.user_voted
+                              ? "0 0 16px rgba(8,145,178,0.35)"
+                              : "none",
+                          }}
+                        >
+                          ▲ {feat.vote_count}
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
-              )}
-            </div>
-          );
-        })()}
+              </section>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
