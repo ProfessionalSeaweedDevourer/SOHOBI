@@ -59,7 +59,7 @@ export default function MyReport() {
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [user, sessionId, authLoading]);
+  }, [user?.token, sessionId, authLoading]);
 
   return (
     <div className="min-h-screen flex flex-col relative">

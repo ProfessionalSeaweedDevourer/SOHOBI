@@ -17,6 +17,7 @@ from collections import Counter
 from fastapi import APIRouter, Depends, HTTPException
 
 from auth_router import get_current_user
+from checklist_store import CHECKLIST_ITEM_IDS
 from log_formatter import load_entries_json
 from session_store import get_sessions_by_user, session_exists
 
@@ -135,7 +136,7 @@ async def _aggregate_feedback(session_id: str) -> dict:
 
 async def _aggregate_checklist(session_id: str) -> dict:
     """session_id 기준 체크리스트 집계를 반환한다."""
-    from checklist_store import get_checklist, CHECKLIST_ITEM_IDS
+    from checklist_store import get_checklist
 
     doc = await get_checklist(session_id)
     items = doc.get("items", {})
@@ -181,8 +182,6 @@ def _merge_feedback(results: list[dict]) -> dict:
 
 def _merge_checklist(results: list[dict]) -> dict:
     """여러 세션의 체크리스트를 합산한다 (하나라도 완료면 완료)."""
-    from checklist_store import CHECKLIST_ITEM_IDS
-
     completed_set: set[str] = set()
     for r in results:
         completed_set.update(r.get("completed_items", []))
@@ -229,7 +228,7 @@ async def get_my_report(user: dict = Depends(get_current_user)):
         )
     except Exception as e:
         _logger.error("report/me 집계 실패 user_id=%s: %s", user_id, e)
-        return {"user_id": user_id, "error": "집계 중 오류가 발생했습니다."}
+        raise HTTPException(status_code=500, detail="집계 중 오류가 발생했습니다.")
 
     return {
         "user_id":         user_id,
@@ -257,10 +256,7 @@ async def get_report(session_id: str):
         )
     except Exception as e:
         _logger.error("report 집계 실패 session_id=%s: %s", session_id, e)
-        return {
-            "session_id": session_id,
-            "error": "집계 중 오류가 발생했습니다.",
-        }
+        raise HTTPException(status_code=500, detail="집계 중 오류가 발생했습니다.")
 
     return {
         "session_id":      session_id,
