@@ -29,7 +29,7 @@ export async function sendQuery(question, maxRetries = 3, sessionId = null, curr
     method: "POST",
     headers: _AUTH_HEADERS,
     body: JSON.stringify(body),
-  });
+  }, 30000);
   if (!res.ok) {
     const text = await res.text();
     let err = {};
@@ -115,8 +115,10 @@ export async function fetchLogs(type = "queries", limit = 500, userId = "") {
     { headers: _AUTH_HEADERS }
   );
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const text = await res.text();
+    let err = {};
+    try { err = JSON.parse(text); } catch {}
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -127,7 +129,12 @@ export async function fetchLogs(type = "queries", limit = 500, userId = "") {
  */
 export async function fetchLogUsers() {
   const res = await fetchWithTimeout(`${BASE_URL}/api/v1/logs/users`, { headers: _AUTH_HEADERS });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let err = {};
+    try { err = JSON.parse(text); } catch {}
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
+  }
   return res.json();
 }
 
@@ -137,7 +144,12 @@ export async function fetchLogUsers() {
  */
 export async function fetchRoadmapVotes() {
   const res = await fetchWithTimeout(`${BASE_URL}/api/roadmap/votes`, { headers: _AUTH_HEADERS });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let err = {};
+    try { err = JSON.parse(text); } catch {}
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
+  }
   return res.json();
 }
 
@@ -151,6 +163,11 @@ export async function fetchFeedback(limit = 500) {
     `${BASE_URL}/api/feedback?limit=${limit}`,
     { headers: _AUTH_HEADERS }
   );
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let err = {};
+    try { err = JSON.parse(text); } catch {}
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
+  }
   return res.json();
 }
