@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dev/
+Disallow: /dev/*
+Disallow: /auth/
+Disallow: /my-report
+Disallow: /my-logs
+
+Sitemap: https://sohobi.net/sitemap.xml
