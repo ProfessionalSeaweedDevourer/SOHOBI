@@ -269,7 +269,7 @@ export default function ChatPanel({ isOpen, onToggle, dongPanelOpen, onNavigate,
         >
           <div className="flex-shrink-0 w-10 h-10 bg-white dark:bg-gray-800 rounded-lg p-0.5 shadow-sm dark:shadow-md">
             <img
-              src="/sohobi_logo_small.png"
+              src="/sohobi_logo_48w.png"
               alt="소호비 로고"
               className="w-full h-full object-contain dark:brightness-110"
             />
