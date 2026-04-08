@@ -124,6 +124,26 @@ export async function fetchLogs(type = "queries", limit = 500, userId = "") {
 }
 
 /**
+ * GET /api/v1/stats — 성능 통계 집계
+ * @param {number} hours 조회 기간 (1-168)
+ */
+export async function fetchStats(hours = 24) {
+  const h = Math.max(1, Math.min(168, Math.floor(hours)));
+  const params = new URLSearchParams({ hours: h });
+  const res = await fetchWithTimeout(
+    `${BASE_URL}/api/v1/stats?${params}`,
+    { headers: _AUTH_HEADERS }
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    let err = {};
+    try { err = JSON.parse(text); } catch {}
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/**
  * GET /api/v1/logs/users — 로그에 등장한 사용자 목록 (드롭다운용)
  * @returns {Promise<{count: number, users: Array<{user_id, email, name}>}>}
  */
