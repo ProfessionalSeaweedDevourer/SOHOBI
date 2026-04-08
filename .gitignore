@@ -9,6 +9,18 @@ NAM2/
 CHANG/
 PARK/
 
+# dev-summary 팀원별 폴더는 예외 (위 규칙이 macOS 대소문자 무시로 충돌)
+!docs/dev-summary/park/
+!docs/dev-summary/park/**
+!docs/dev-summary/nam/
+!docs/dev-summary/nam/**
+!docs/dev-summary/chang/
+!docs/dev-summary/chang/**
+!docs/dev-summary/choi/
+!docs/dev-summary/choi/**
+!docs/dev-summary/woo/
+!docs/dev-summary/woo/**
+
 # macOS
 .DS_Store
 **/.DS_Store
