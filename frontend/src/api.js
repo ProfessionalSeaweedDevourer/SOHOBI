@@ -125,10 +125,10 @@ export async function fetchLogs(type = "queries", limit = 500, userId = "") {
 
 /**
  * GET /api/v1/stats — 성능 통계 집계
- * @param {number} hours 조회 기간 (1-168)
+ * @param {number} hours 조회 기간 (1-2160)
  */
 export async function fetchStats(hours = 24) {
-  const h = Math.max(1, Math.min(168, Math.floor(hours)));
+  const h = Math.max(1, Math.min(2160, Math.floor(hours)));
   const params = new URLSearchParams({ hours: h });
   const res = await fetchWithTimeout(
     `${BASE_URL}/api/v1/stats?${params}`,
