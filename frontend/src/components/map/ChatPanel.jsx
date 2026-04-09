@@ -320,11 +320,12 @@ export default function ChatPanel({
                   const draft =
                      data.draft || accumulated || "응답을 받지 못했습니다.";
                   const charts = data.charts || [];
+                  const chart = data.chart || null;
                   const suggestedActions = data.suggested_actions || [];
                   setMessages((prev) =>
                      prev.map((m) =>
                         m.id === streamMsgId
-                           ? { ...m, content: draft, charts, suggestedActions }
+                           ? { ...m, content: draft, charts, chart, suggestedActions }
                            : m,
                      ),
                   );
