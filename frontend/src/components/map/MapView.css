@@ -342,10 +342,6 @@
    box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
    overflow: hidden;
 }
-.dark .mv-landval__value {
-   color: var(--brand-mint);
-}
-
 /* ── 좌표 표시바 ───────────────────────────────────────────── */
 .coord-bar {
    position: absolute;
