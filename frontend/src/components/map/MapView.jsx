@@ -258,14 +258,24 @@ export default function MapView() {
 
    // ── 채팅 응답 지명 클릭 → 폴리곤 하이라이트 + 지도 이동 ───────
    // ChatPanel에서 onFindAndHighlightByName(dongName) 형태로 호출
-   const handleFindAndHighlightByName = useCallback((name) => {
+   const handleFindAndHighlightByName = useCallback(async (name) => {
+      if (!dongBoundaryLayerRef.current) {
+         await ensureDongBoundaryLayer();
+      }
       const layer = dongBoundaryLayerRef.current;
       if (!layer?.getSource?.()?.getFeatures) return;
       const features = layer.getSource().getFeatures();
       const q = name.trim();
       const matched = features.filter((f) => {
-         const nm = f.getProperties().adm_nm || f.getProperties().name || "";
-         return nm.includes(q) || q.includes(nm.replace(/동$/, ""));
+         const props = f.getProperties();
+         const nm = props.adm_nm || props.name || "";
+         const guNm = (props.gu_nm || "").replace(/구$/, "");
+         return (
+            nm.includes(q) ||
+            q.includes(nm.replace(/동$/, "")) ||
+            guNm.includes(q) ||
+            q.includes(guNm)
+         );
       });
       if (matched.length === 0) return;
       features.forEach((f) => {
@@ -282,7 +292,7 @@ export default function MapView() {
          duration: 600,
          maxZoom: 15,
       });
-   }, []);
+   }, [ensureDongBoundaryLayer]);
 
    // ── 구/동 검색 → 폴리곤 하이라이트 ────────────────────────────
    const handleSearch = async (query) => {

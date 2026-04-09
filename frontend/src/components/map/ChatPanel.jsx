@@ -429,6 +429,19 @@ export default function ChatPanel({
             );
             return <li>{processed}</li>;
          },
+         strong: ({ children }) => {
+            const toArr = Array.isArray(children) ? children : [children];
+            const processed = toArr.flatMap((child, i) =>
+               typeof child === "string"
+                  ? renderWithAreaLinks(
+                       child,
+                       onFindAndHighlightByName,
+                       `strong-${i}`,
+                    )
+                  : [child],
+            );
+            return <strong>{processed}</strong>;
+         },
       }),
       [onFindAndHighlightByName],
    );
