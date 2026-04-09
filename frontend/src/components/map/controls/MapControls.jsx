@@ -7,26 +7,16 @@ export default function MapControls({
    dongMode,
    onDongMode,
    dongLoading,
-   currentGuNm,
-   nearbyCount,
    loading,
    storeSearchOn,
    onStoreSearchToggle,
    onStoreSearch,
+   chatOpen,
 }) {
    return (
       <div
-         className={`mv-map-controls${hasPopup ? " mv-map-controls--hidden" : ""}${hasDongPanel ? " mv-map-controls--dong" : ""}`}
+         className={`mv-map-controls${hasPopup || chatOpen ? " mv-map-controls--hidden" : ""}${hasDongPanel ? " mv-map-controls--dong" : ""}`}
       >
-         {/* 현재 구 이름 */}
-         {currentGuNm && (
-            <div className="mv-map-controls__gu-badge">
-               📍 {currentGuNm}
-               {nearbyCount !== null &&
-                  ` · ${nearbyCount.toLocaleString()}개 상가`}
-            </div>
-         )}
-
          {/* 로딩 */}
          {(dongLoading || loading) && (
             <div className="mv-map-controls__loading">
