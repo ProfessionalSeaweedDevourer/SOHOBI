@@ -2,8 +2,6 @@
 import "./MapControls.css";
 
 export default function MapControls({
-   hasPopup,
-   hasDongPanel,
    dongMode,
    onDongMode,
    dongLoading,
@@ -11,12 +9,9 @@ export default function MapControls({
    storeSearchOn,
    onStoreSearchToggle,
    onStoreSearch,
-   chatOpen,
 }) {
    return (
-      <div
-         className={`mv-map-controls${hasPopup || chatOpen ? " mv-map-controls--hidden" : ""}${hasDongPanel ? " mv-map-controls--dong" : ""}`}
-      >
+      <div className="mv-map-controls">
          {/* 로딩 */}
          {(dongLoading || loading) && (
             <div className="mv-map-controls__loading">

@@ -15,21 +15,6 @@
    gap: 6px;
 }
 
-/* 현재 구 이름 뱃지 */
-.mv-map-controls__gu-badge {
-   background: rgba(255, 255, 255, 0.95);
-   border-radius: 8px;
-   padding: 4px 10px;
-   font-size: 11px;
-   color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-   text-align: center;
-}
-.dark .mv-map-controls__gu-badge {
-   background: rgba(15, 20, 32, 0.95);
-   color: var(--muted-foreground);
-}
-
 /* 로딩 표시 */
 .mv-map-controls__loading {
    background: rgba(255, 255, 255, 0.95);
@@ -119,8 +104,7 @@
    /* 버튼 그룹 위치: coord-bar 위로 이동 */
    .mv-map-controls {
       bottom: 120px;
-      right: 8px;
-      left: auto;
+      left: 8px;
       gap: 4px;
    }
 
@@ -137,11 +121,6 @@
       font-size: 11px;
       min-height: 36px;
       min-width: 36px;
-   }
-
-   .mv-map-controls__gu-badge {
-      font-size: 10px;
-      padding: 3px 8px;
    }
 
    .mv-map-controls__loading {

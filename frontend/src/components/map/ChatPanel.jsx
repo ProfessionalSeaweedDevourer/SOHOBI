@@ -463,7 +463,7 @@ export default function ChatPanel({
                   exit={{ scale: 0.8, opacity: 0 }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`mv-chat-toggle ${hasPopup || dongPanelOpen || isOpen ? "mv-chat-toggle--left" : ""}`}
+                  className={`mv-chat-toggle ${hasPopup || dongPanelOpen ? "mv-chat-toggle--left" : ""}`}
                   onClick={onToggle}
                   title="에이전트와 대화"
                >
