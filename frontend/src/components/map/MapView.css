@@ -626,3 +626,8 @@
    right: 316px;
    left: auto;
 }
+/* 챗패널 열릴 때 팝업들 챗패널 왼쪽으로 이동 */
+.mv-wms-popup--chat-open {
+   right: 416px;
+   left: auto;
+}
