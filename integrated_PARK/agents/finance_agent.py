@@ -277,7 +277,12 @@ class FinanceAgent:
             if extracted_ctx.get("business_type"):
                 ctx["business_type"] = extracted_ctx["business_type"]
             base = current_params or self._sim.load_initial(ctx.get("adm_codes"), ctx.get("business_type"))
+            # merge_json 이후 revenue 타입 보정
             variables = self._sim.merge_json(base, extracted)
+            if not isinstance(variables.get("revenue"), list):
+                variables["revenue"] = self._sim.load_initial(
+                    ctx.get("adm_codes"), ctx.get("business_type")
+                )["revenue"]
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]
 
@@ -295,12 +300,14 @@ class FinanceAgent:
         # 가정 조건 문자열 구성
         rev = variables.get("revenue") or []
         # 손익분기/안전마진 관련 연산 추가
+        avg_revenue = sum(rev) / len(rev) if rev else 0
         breakeven = self._sim.breakeven_analysis_mc(
-            avg_revenue=sum(rev) / len(rev),
+            avg_revenue=avg_revenue,
             avg_net_profit=sim_result["average_net_profit"],
             variable_cost=sim_result["actual_cost"],
-        )
-        rev_str = f"{rev[0]:,}원" if len(rev) == 1 else f"{min(rev):,}~{max(rev):,}원 (복수 시나리오)"
+        ) if avg_revenue > 0 else None
+        # 수정
+        rev_str = f"{rev[0]:,}원" if len(rev) == 1 else f"{min(rev):,}~{max(rev):,}원 (복수 시나리오)" if rev else "데이터 없음"
         assumption_lines = [
             f"- 월매출: {rev_str}",
             f"- 원가: {sim_result['actual_cost']:,}원",
