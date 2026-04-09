@@ -32,7 +32,7 @@ import {
    DONG_STYLE_HOVER,
    DONG_STYLE_SELECTED,
 } from "../../hooks/map/useDongLayer";
-import { handleWmsClick } from "../../hooks/map/useWmsClick";
+import { handleWmsClick, CADASTRAL_LAYERS } from "../../hooks/map/useWmsClick";
 import { useDongPanel } from "../../hooks/map/useDongPanel";
 // ── 상수/스타일 ────────────────────────────────────────────────
 import { CATEGORIES } from "../../constants/categories";
@@ -174,7 +174,7 @@ export default function MapView() {
                   SERVICE: "WMS",
                   VERSION: "1.3.0",
                   REQUEST: "GetMap",
-                  LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+                  LAYERS: CADASTRAL_LAYERS,
                   STYLES: ",",
                   FORMAT: "image/png",
                   TRANSPARENT: "TRUE",

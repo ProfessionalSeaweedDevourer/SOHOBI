@@ -4,6 +4,7 @@
 import React, { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
+import { CADASTRAL_LAYERS } from "../../../hooks/map/useWmsClick";
 import "./Layerpanel.css";
 
 function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
@@ -38,7 +39,7 @@ function makeCadastralLayer(vworldKey) {
             SERVICE: "WMS",
             VERSION: "1.3.0",
             REQUEST: "GetMap",
-            LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+            LAYERS: CADASTRAL_LAYERS,
             STYLES: ",",
             FORMAT: "image/png",
             TRANSPARENT: "TRUE",
