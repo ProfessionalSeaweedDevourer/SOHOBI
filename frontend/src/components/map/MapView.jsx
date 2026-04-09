@@ -914,6 +914,7 @@ export default function MapView() {
             wmsPopup={wmsPopup}
             landValue={landValue}
             hasDongPanel={!!dongPanel}
+            chatOpen={chatOpen}
             onBack={
                prevStorePopupRef.current
                   ? () => {
@@ -936,6 +937,7 @@ export default function MapView() {
          {/* 클러스터 팝업 */}
          <StorePopup
             hasDongPanel={!!dongPanel}
+            chatOpen={chatOpen}
             popup={popup}
             kakaoDetail={kakaoDetail}
             loadingDetail={loadingDetail}
@@ -1015,7 +1017,9 @@ export default function MapView() {
                });
                if (map) {
                   // 공시지가 조회 시 지적도 레이어가 꺼져 있으면 강제 활성화
-                  const cadastralLayer = map.getLayers().getArray()
+                  const cadastralLayer = map
+                     .getLayers()
+                     .getArray()
                      .find((l) => l.get("name") === "cadastral");
                   if (cadastralLayer && !cadastralLayer.getVisible()) {
                      cadastralLayer.setVisible(true);
