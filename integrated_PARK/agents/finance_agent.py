@@ -91,7 +91,7 @@ _EXPLAIN_PROMPT = """[사용자 질문]
 [안내]
 본 결과는 투자 권유가 아닌 정보 제공을 목적으로 하며, 실제 사업 결과와 다를 수 있습니다.
 
-위 형식에서 [3. 외부 리스크 경고] 내용만 새로 작성하고, [1. 가정 조건], [2. 시뮬레이션 결과], [안내] 섹션은 원문 그대로 출력하세요.
+위 형식에서 [3. 외부 리스크 경고] 내용만 작성하고 [1.],[2.] 및 [안내]를 포함해 나머지는 그대로 출력하세요.
 별도 계산 없이 위 수치를 그대로 사용하세요.
 """
 
@@ -295,12 +295,14 @@ class FinanceAgent:
         # 가정 조건 문자열 구성
         rev = variables.get("revenue") or []
         # 손익분기/안전마진 관련 연산 추가
+        avg_revenue = sum(rev) / len(rev) if rev else 0
         breakeven = self._sim.breakeven_analysis_mc(
-            avg_revenue=sum(rev) / len(rev),
+            avg_revenue=avg_revenue,
             avg_net_profit=sim_result["average_net_profit"],
             variable_cost=sim_result["actual_cost"],
-        )
-        rev_str = f"{rev[0]:,}원" if len(rev) == 1 else f"{min(rev):,}~{max(rev):,}원 (복수 시나리오)"
+        ) if avg_revenue > 0 else None
+        # 수정
+        rev_str = f"{rev[0]:,}원" if len(rev) == 1 else f"{min(rev):,}~{max(rev):,}원 (복수 시나리오)" if rev else "데이터 없음"
         assumption_lines = [
             f"- 월매출: {rev_str}",
             f"- 원가: {sim_result['actual_cost']:,}원",

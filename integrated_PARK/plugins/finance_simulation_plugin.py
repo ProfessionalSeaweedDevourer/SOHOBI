@@ -286,7 +286,7 @@ class FinanceSimulationPlugin:
         if isinstance(region, int):
             region = [str(region)]
         elif isinstance(region, list):
-            region = [str(r) for r in region]
+            region = [str(r) for r in region] if region else None
 
         industry_cd = INDUSTRY_CODE_MAP.get(industry)
         if _DBWORK_AVAILABLE:
