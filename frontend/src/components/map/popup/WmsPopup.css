@@ -158,3 +158,8 @@
 .wp-kakao-btn:hover {
    opacity: 0.85;
 }
+
+/* ── Dark mode overrides ─────────────────────────────────── */
+.dark .wp-landval-price {
+  color: var(--brand-mint);
+}
