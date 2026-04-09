@@ -115,13 +115,14 @@ export default function WmsPopup({
    onClose,
    onBack,
    hasDongPanel,
+   chatOpen,
 }) {
    if (!wmsPopup) return null;
    const meta = LAYER_META[wmsPopup.type] || LAYER_META.cadastral;
 
    return (
       <div
-         className={`mv-wms-popup${hasDongPanel ? " mv-wms-popup--dong-open" : ""}`}
+         className={`mv-wms-popup${hasDongPanel ? " mv-wms-popup--dong-open" : ""}${chatOpen ? " mv-wms-popup--chat-open" : ""}`}
       >
          <div style={{ height: 4, background: meta.color }} />
          <div className="wp-body">

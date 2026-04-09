@@ -968,6 +968,7 @@ export default function MapView() {
             wmsPopup={wmsPopup}
             landValue={landValue}
             hasDongPanel={!!dongPanel}
+            chatOpen={chatOpen}
             onBack={
                prevStorePopupRef.current
                   ? () => {
@@ -990,6 +991,7 @@ export default function MapView() {
          {/* 클러스터 팝업 */}
          <StorePopup
             hasDongPanel={!!dongPanel}
+            chatOpen={chatOpen}
             popup={popup}
             kakaoDetail={kakaoDetail}
             loadingDetail={loadingDetail}

@@ -1,9 +1,9 @@
 /* ── 에이전트 채팅 토글 버튼 위치 ──────────────────────────── */
 .mv-chat-toggle {
    position: absolute;
-   bottom: 80px; /* 스토어/WMS 팝업(bottom:18px) 위 */
-   right: 20px;
-   z-index: 290; /* 팝업(300)보다 낮게 */
+   bottom: 80px;
+   left: 12px;
+   z-index: 290;
 }
 
 /* ============================================================
@@ -625,4 +625,12 @@
 .mv-wms-popup--dong-open {
    right: 316px;
    left: auto;
+}
+
+.mv-wms-popup--chat-open {
+   right: 416px;
+}
+
+.mv-wms-popup--chat-open.mv-wms-popup--dong-open {
+   right: 316px;
 }

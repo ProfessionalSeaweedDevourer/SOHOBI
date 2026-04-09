@@ -223,9 +223,10 @@ export default function StorePopup({
    onClusterSelect,
    onLandValue,
    hasDongPanel = false,
+   chatOpen = false,
 }) {
    const [showList, setShowList] = useState(false);
-   const popupClass = `sp-popup${hasDongPanel ? " sp-popup--dong-open" : ""}`;
+   const popupClass = `sp-popup${hasDongPanel ? " sp-popup--dong-open" : ""}${chatOpen ? " sp-popup--chat-open" : ""}`;
 
    // 클러스터 목록 모드
    if (clusterStores && clusterStores.length > 0 && !popup) {
