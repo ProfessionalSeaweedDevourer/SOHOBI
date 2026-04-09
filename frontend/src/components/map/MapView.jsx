@@ -1067,9 +1067,7 @@ export default function MapView() {
                });
                if (map) {
                   // 공시지가 조회 시 지적도 레이어가 꺼져 있으면 강제 활성화
-                  const cadastralLayer = map
-                     .getLayers()
-                     .getArray()
+                  const cadastralLayer = map.getLayers().getArray()
                      .find((l) => l.get("name") === "cadastral");
                   if (cadastralLayer && !cadastralLayer.getVisible()) {
                      cadastralLayer.setVisible(true);
@@ -1202,23 +1200,15 @@ export default function MapView() {
          {hoverBubble && (
             <div
                className="mv-hover-bubble"
-               style={{
-                  left: Math.max(hoverBubble.x + 12, 254),
-                  top: hoverBubble.y - 8,
-               }}
+               style={{ left: hoverBubble.x + 12, top: hoverBubble.y - 8 }}
             >
                <span className="mv-hover-bubble__name">
-                  {hoverBubble.guNm ? `${hoverBubble.guNm} ` : ""}
-                  {hoverBubble.dongNm}
+                  {hoverBubble.guNm ? `${hoverBubble.guNm} ` : ""}{hoverBubble.dongNm}
                </span>
                <button
                   className="mv-hover-bubble__btn"
                   onClick={() => {
-                     setChatContext({
-                        guName: hoverBubble.guNm,
-                        dongName: hoverBubble.dongNm,
-                        admCd: hoverBubble.admCd,
-                     });
+                     setChatContext({ guName: hoverBubble.guNm, dongName: hoverBubble.dongNm, admCd: hoverBubble.admCd });
                      setChatOpen(true);
                      setHoverBubble(null);
                   }}
