@@ -116,11 +116,9 @@ export async function handleWmsClick(
    { skipZoomGuard = false } = {},
 ) {
    const LAYER_ORDER = ["cadastral", "tourist_info", "tourist_spot", "market"];
+   const allLayers = map.getLayers().getArray();
    const wmsLayers = LAYER_ORDER.map((name) =>
-      map
-         .getLayers()
-         .getArray()
-         .find((l) => l.get("name") === name),
+      allLayers.find((l) => l.get("name") === name),
    ).filter(Boolean);
 
    for (const wmsLayer of wmsLayers) {
@@ -132,14 +130,11 @@ export async function handleWmsClick(
       }
       const source = wmsLayer.getSource();
       const layerName = wmsLayer.get("name");
-      const extraParams =
-         layerName === "cadastral"
-            ? {
-                 INFO_FORMAT: "application/json",
-                 FEATURE_COUNT: 1,
-                 QUERY_LAYERS: "lp_pa_cbnd_bubun",
-              }
-            : { INFO_FORMAT: "application/json", FEATURE_COUNT: 1 };
+      const extraParams = {
+         INFO_FORMAT: "application/json",
+         FEATURE_COUNT: 1,
+         ...(layerName === "cadastral" && { QUERY_LAYERS: "lp_pa_cbnd_bubun" }),
+      };
       const url = source.getFeatureInfoUrl(
          coordinate,
          map.getView().getResolution(),
