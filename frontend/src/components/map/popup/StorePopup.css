@@ -21,11 +21,11 @@
 }
 
 .sp-popup--chat-open {
-   right: 416px;
+   right: calc(var(--chat-panel-width) + 16px);
 }
 
 .sp-popup--chat-open.sp-popup--dong-open {
-   right: calc(var(--dong-panel-width) + 16px);
+   right: calc(var(--dong-panel-width) + var(--chat-panel-width) + 16px);
 }
 
 /* Body padding */

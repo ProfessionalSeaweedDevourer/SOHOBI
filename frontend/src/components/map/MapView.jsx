@@ -876,14 +876,10 @@ export default function MapView() {
          />
          <div ref={mapRef} className="mv-map" />
          <MapControls
-            hasPopup={!!(popup || wmsPopup || clusterPopup)}
-            hasDongPanel={!!dongPanel}
-            nearbyCount={nearbyCount}
             loading={loading}
             dongMode={dongMode}
             onDongMode={handleDongMode}
             dongLoading={dongLoading}
-            currentGuNm={currentGuNmRef.current}
             storeSearchOn={storeSearchOn}
             onStoreSearchToggle={() => {
                const next = !storeSearchOn;
