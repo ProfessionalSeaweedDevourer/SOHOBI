@@ -323,18 +323,32 @@
    }
 }
 
-/* ── 응답 내 지역명 클릭 링크 ───────────────────────── */
+/* ── 응답 내 지역명 클릭 뱃지 ───────────────────────── */
 .mv-chat-area-link {
    color: var(--brand-blue, #0891b2);
-   text-decoration: underline dotted;
+   background: rgba(8, 145, 178, 0.10);
+   border: 1px solid rgba(8, 145, 178, 0.30);
+   text-decoration: none;
    cursor: pointer;
-   border-radius: 3px;
-   padding: 0 1px;
-   transition: background 0.12s;
+   border-radius: 4px;
+   padding: 1px 5px;
+   font-weight: 500;
+   white-space: nowrap;
+   transition: background 0.12s, border-color 0.12s;
 }
 .mv-chat-area-link:hover {
-   background: rgba(8, 145, 178, 0.12);
-   text-decoration: underline;
+   background: rgba(8, 145, 178, 0.22);
+   border-color: rgba(8, 145, 178, 0.60);
+   text-decoration: none;
+}
+.dark .mv-chat-area-link {
+   color: #22d3ee;
+   background: rgba(34, 211, 238, 0.10);
+   border-color: rgba(34, 211, 238, 0.30);
+}
+.dark .mv-chat-area-link:hover {
+   background: rgba(34, 211, 238, 0.22);
+   border-color: rgba(34, 211, 238, 0.60);
 }
 
 /* ── 빠른 쿼리 칩 ────────────────────────────────── */
