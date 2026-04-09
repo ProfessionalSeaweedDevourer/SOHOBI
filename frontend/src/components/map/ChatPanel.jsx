@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { streamQuery } from "../../api";
@@ -8,10 +8,7 @@ import "./ChatPanel.css";
 
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
 
-// "강남역 보여줘" 같은 지도 이동 패턴
-const NAV_PATTERN = /(.+?)\s*(보여줘|보여 줘|이동|찾아줘|찾아 줘|어디)/;
-
-// 사용자 입력에 지역명이 포함되었는지 판별하는 키워드 목록
+// 사용자 입력 판별 및 응답 텍스트 지역명 링크 변환에 공통 사용
 const AREA_KEYWORDS = [
    "강남",
    "강동",
@@ -69,6 +66,32 @@ const AREA_KEYWORDS = [
    "서촌",
    "익선동",
 ];
+// NOTE: "g" flag는 matchAll 전용. .test()/.exec() 직접 사용 금지 (lastIndex 오염)
+const AREA_PATTERN = new RegExp(AREA_KEYWORDS.join("|"), "g");
+
+function renderWithAreaLinks(text, onHighlight, keyBase) {
+   const result = [];
+   let last = 0;
+   for (const m of text.matchAll(AREA_PATTERN)) {
+      if (m.index > last) result.push(text.slice(last, m.index));
+      result.push(
+         <span
+            key={`${keyBase}-${m.index}`}
+            className="mv-chat-area-link"
+            onClick={() => onHighlight?.(m[0])}
+            title={`${m[0]} 지도에서 보기`}
+         >
+            {m[0]}
+         </span>,
+      );
+      last = m.index + m[0].length;
+   }
+   if (last < text.length) result.push(text.slice(last));
+   return result;
+}
+
+// "강남역 보여줘" 같은 지도 이동 패턴
+const NAV_PATTERN = /(.+?)\s*(보여줘|보여 줘|이동|찾아줘|찾아 줘|어디)/;
 
 export default function ChatPanel({
    isOpen,
@@ -79,6 +102,7 @@ export default function ChatPanel({
    mapContext,
    onClearContext,
    onHighlightArea,
+   onFindAndHighlightByName,
    onSearchArea,
 }) {
    const [messages, setMessages] = useState([]);
@@ -92,6 +116,15 @@ export default function ChatPanel({
    const messagesEndRef = useRef(null);
    const timerRef = useRef(null);
    const prevContextRef = useRef(null);
+   const chipsRef = useRef(null);
+   const chipsDragRef = useRef({
+      dragging: false,
+      moved: false,
+      startX: 0,
+      scrollLeft: 0,
+   });
+   const autoSendTimerRef = useRef(null);
+   const handleSendRef = useRef(null);
    const lastLocationRef = useRef(null); // 직전 분석 지역 (대화 맥락 자동 보완)
    const lastBusinessRef = useRef(null); // 직전 분석 업종 (대화 맥락 자동 보완)
 
@@ -111,7 +144,8 @@ export default function ChatPanel({
       return () => clearInterval(timerRef.current);
    }, [loading]);
 
-   // 지도 컨텍스트 변경 시 시스템 메시지
+   // 지도 컨텍스트 변경 시 시스템 메시지 + 지역 단독 쿼리 자동 전송
+   // → 백엔드가 _build_business_type_partial()로 10개 업종 버튼을 suggested_actions로 반환
    useEffect(() => {
       if (!mapContext || !mapContext.dongName) return;
       const key = `${mapContext.guName}_${mapContext.dongName}`;
@@ -119,7 +153,7 @@ export default function ChatPanel({
       prevContextRef.current = key;
 
       const label = mapContext.guName
-         ? `${mapContext.guName} ${mapContext.dongName}`
+         ? `${mapContext.guName.replace(/구$/, "")} ${mapContext.dongName}`
          : mapContext.dongName;
 
       setMessages((prev) => [
@@ -127,9 +161,16 @@ export default function ChatPanel({
          {
             id: crypto.randomUUID(),
             role: "system",
-            content: `${label} 선택됨`,
+            content: `${mapContext.guName ? `${mapContext.guName} ` : ""}${mapContext.dongName} 선택됨`,
          },
       ]);
+      // 지역만 담긴 쿼리 → 백엔드가 업종 선택 버튼 반환 (300ms debounce: 빠른 연속 클릭 방어)
+      clearTimeout(autoSendTimerRef.current);
+      autoSendTimerRef.current = setTimeout(() => {
+         handleSendRef.current?.(`${label} 상권 분석`);
+      }, 300);
+      return () => clearTimeout(autoSendTimerRef.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [mapContext]);
 
    // 카카오 키워드 검색으로 좌표 조회
@@ -349,6 +390,10 @@ export default function ChatPanel({
       [input, loading, sessionId, mapContext, geocodeAndNavigate, onSearchArea],
    );
 
+   useEffect(() => {
+      handleSendRef.current = handleSend;
+   }, [handleSend]);
+
    const handleKeyDown = (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
          e.preventDefault();
@@ -363,6 +408,58 @@ export default function ChatPanel({
    const placeholder = contextLabel
       ? `${contextLabel} 지역에 대해 질문하세요 (예: 카페 창업 분석)`
       : "상권 분석 질문을 입력하세요 (예: 홍대 카페 상권 분석)";
+
+   // 응답 텍스트 지역명 → 클릭 가능한 span (ReactMarkdown 커스텀 렌더러)
+   const markdownComponents = useMemo(
+      () => ({
+         p: ({ children }) => {
+            const toArr = Array.isArray(children) ? children : [children];
+            const processed = toArr.flatMap((child, i) =>
+               typeof child === "string"
+                  ? renderWithAreaLinks(
+                       child,
+                       onFindAndHighlightByName,
+                       i * 1000,
+                    )
+                  : [child],
+            );
+            return <p>{processed}</p>;
+         },
+         li: ({ children }) => {
+            const toArr = Array.isArray(children) ? children : [children];
+            const processed = toArr.flatMap((child, i) =>
+               typeof child === "string"
+                  ? renderWithAreaLinks(
+                       child,
+                       onFindAndHighlightByName,
+                       i * 1000 + 500,
+                    )
+                  : [child],
+            );
+            return <li>{processed}</li>;
+         },
+      }),
+      [onFindAndHighlightByName],
+   );
+
+   // 빠른 쿼리 칩 — mapContext 유무에 따라 동적 생성
+   const areaLabel = mapContext?.dongName
+      ? mapContext.dongName.replace(/동$/, "")
+      : mapContext?.guName?.replace(/구$/, "") || "";
+   const quickChips = mapContext?.dongName
+      ? [
+           `${areaLabel} 카페 창업 가능성 분석`,
+           `${areaLabel} 한식 경쟁 분석`,
+           `${areaLabel} 매출 추이 분석`,
+           `${areaLabel} 인근 지역 비교`,
+        ]
+      : [
+           "홍대 카페 상권 분석",
+           "강남 한식 경쟁 분석",
+           "잠실 상권 현황",
+           "명동 관광 업종 분석",
+           "여의도 음식점 창업 전망",
+        ];
 
    return (
       <>
@@ -432,7 +529,10 @@ export default function ChatPanel({
                   >
                      {msg.role === "assistant" ? (
                         <>
-                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                           <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={markdownComponents}
+                           >
                               {msg.content}
                            </ReactMarkdown>
                            {msg.suggestedActions?.length > 0 && (
@@ -492,6 +592,50 @@ export default function ChatPanel({
 
                <div ref={messagesEndRef} />
             </div>
+
+            {/* ── 빠른 쿼리 칩 ── */}
+            {!loading && (
+               <div
+                  className="mv-chat-chips"
+                  ref={chipsRef}
+                  onPointerDown={(e) => {
+                     chipsDragRef.current = {
+                        dragging: true,
+                        moved: false,
+                        startX: e.pageX,
+                        scrollLeft: chipsRef.current.scrollLeft,
+                     };
+                  }}
+                  onPointerMove={(e) => {
+                     if (!chipsDragRef.current.dragging) return;
+                     const dx = e.pageX - chipsDragRef.current.startX;
+                     if (Math.abs(dx) > 4) chipsDragRef.current.moved = true;
+                     chipsRef.current.scrollLeft =
+                        chipsDragRef.current.scrollLeft - dx;
+                  }}
+                  onPointerUp={() => {
+                     chipsDragRef.current.dragging = false;
+                     chipsDragRef.current.moved = false;
+                  }}
+                  onPointerLeave={() => {
+                     chipsDragRef.current.dragging = false;
+                     chipsDragRef.current.moved = false;
+                  }}
+               >
+                  {quickChips.map((chip) => (
+                     <button
+                        key={chip}
+                        className="mv-chat-chip"
+                        onClick={() =>
+                           !chipsDragRef.current.moved && handleSend(chip)
+                        }
+                        disabled={loading}
+                     >
+                        {chip}
+                     </button>
+                  ))}
+               </div>
+            )}
 
             <div className="mv-chat-input-area">
                <textarea

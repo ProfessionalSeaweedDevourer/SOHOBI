@@ -55,7 +55,9 @@
    font-size: 20px;
    cursor: pointer;
    padding: 0 4px;
+   opacity: 0.85;
 }
+.mv-chat-header__close:hover { opacity: 1; }
 
 /* ── 컨텍스트 표시 ───────────────────────────────── */
 .mv-chat-context {
@@ -198,6 +200,67 @@
    }
 }
 
+/* ── 응답 내 지역명 클릭 링크 ───────────────────────── */
+.mv-chat-area-link {
+  color: var(--brand-blue, #0891b2);
+  text-decoration: underline dotted;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 1px;
+  transition: background 0.12s;
+}
+.mv-chat-area-link:hover {
+  background: rgba(8, 145, 178, 0.12);
+  text-decoration: underline;
+}
+.dark .mv-chat-area-link {
+  color: #22d3ee;
+}
+.dark .mv-chat-area-link:hover {
+  background: rgba(34, 211, 238, 0.12);
+}
+
+/* ── 빠른 쿼리 칩 ────────────────────────────────── */
+.mv-chat-chips {
+  display: flex;
+  gap: 6px;
+  padding: 6px 12px;
+  overflow-x: scroll;
+  overflow-y: visible;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  border-top: 1px solid var(--border, #e2e8f0);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.mv-chat-chips::-webkit-scrollbar { display: none; }
+
+.mv-chat-chip {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(8, 145, 178, 0.4);
+  background: rgba(8, 145, 178, 0.07);
+  color: var(--brand-blue, #0891b2);
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.mv-chat-chip:hover {
+  background: rgba(8, 145, 178, 0.15);
+  border-color: rgba(8, 145, 178, 0.7);
+}
+.dark .mv-chat-chip {
+  border-color: rgba(34, 211, 238, 0.3);
+  background: rgba(34, 211, 238, 0.08);
+  color: #22d3ee;
+}
+.dark .mv-chat-chip:hover {
+  background: rgba(34, 211, 238, 0.15);
+  border-color: rgba(34, 211, 238, 0.6);
+}
+
 /* ── 입력 영역 ───────────────────────────────────── */
 .mv-chat-input-area {
    display: flex;
@@ -206,6 +269,9 @@
    border-top: 1px solid var(--border);
    background: var(--card);
    flex-shrink: 0;
+}
+.mv-chat-chips + .mv-chat-input-area {
+  border-top: none;
 }
 .mv-chat-input {
    flex: 1;
