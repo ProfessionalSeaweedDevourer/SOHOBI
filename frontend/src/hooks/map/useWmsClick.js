@@ -137,7 +137,7 @@ export async function handleWmsClick(
             ? {
                  INFO_FORMAT: "application/json",
                  FEATURE_COUNT: 1,
-                 QUERY_LAYERS: "lp_pa_cbnd_bonbun",
+                 QUERY_LAYERS: "lp_pa_cbnd_bubun",
               }
             : { INFO_FORMAT: "application/json", FEATURE_COUNT: 1 };
       const url = source.getFeatureInfoUrl(
