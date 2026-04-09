@@ -283,6 +283,11 @@ class FinanceSimulationPlugin:
         Returns:
             dict: revenue 및 나머지 비용 항목(None) 포함한 초기 파라미터 dict.
         """
+        if isinstance(region, int):
+            region = [str(region)]
+        elif isinstance(region, list):
+            region = [str(r) for r in region]
+
         industry_cd = INDUSTRY_CODE_MAP.get(industry)
         if _DBWORK_AVAILABLE:
             try:
