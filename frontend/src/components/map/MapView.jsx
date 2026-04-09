@@ -250,7 +250,9 @@ export default function MapView() {
          return nm.includes(q) || q.includes(nm.replace(/동$/, ""));
       });
       if (matched.length === 0) return;
-      features.forEach((f) => f.setStyle(null));
+      features.forEach((f) => {
+         if (f !== dongSelectedFeatRef.current) f.setStyle(null);
+      });
       matched.forEach((f) => f.setStyle(DONG_STYLE_SELECTED));
       dongSearchFeatsRef.current = matched;
       const extent = matched.reduce(
