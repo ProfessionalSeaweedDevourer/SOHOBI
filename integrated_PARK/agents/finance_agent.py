@@ -277,7 +277,12 @@ class FinanceAgent:
             if extracted_ctx.get("business_type"):
                 ctx["business_type"] = extracted_ctx["business_type"]
             base = current_params or self._sim.load_initial(ctx.get("adm_codes"), ctx.get("business_type"))
+            # merge_json 이후 revenue 타입 보정
             variables = self._sim.merge_json(base, extracted)
+            if not isinstance(variables.get("revenue"), list):
+                variables["revenue"] = self._sim.load_initial(
+                    ctx.get("adm_codes"), ctx.get("business_type")
+                )["revenue"]
         # ── 2단계: 시뮬레이션 실행 ──────────────────────────
         sim_keys = ["revenue", "cost", "salary", "hours", "rent", "admin", "fee"]
 
