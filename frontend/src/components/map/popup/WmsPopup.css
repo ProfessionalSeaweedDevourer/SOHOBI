@@ -1,0 +1,160 @@
+/* ── WmsPopup — glass morphism ─────────────────────────────── */
+
+/* Body padding */
+.wp-body {
+   padding: 12px 16px 16px;
+}
+
+/* Top header row */
+.wp-top {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   margin-bottom: 8px;
+}
+
+.wp-top-left {
+   display: flex;
+   align-items: center;
+   gap: 8px;
+}
+
+/* Back button */
+.wp-back-btn {
+   background: none;
+   border: none;
+   cursor: pointer;
+   font-size: 16px;
+   color: var(--muted-foreground);
+   padding: 0;
+}
+
+/* Category / type tag badge */
+.wp-tag {
+   border-radius: 20px;
+   padding: 3px 10px;
+   font-size: 11px;
+   font-weight: 700;
+}
+
+/* Close button */
+.wp-close-btn {
+   background: transparent;
+   border: none;
+   color: var(--muted-foreground);
+   cursor: pointer;
+   font-size: 16px;
+}
+
+/* Title */
+.wp-title {
+   font-size: 17px;
+   font-weight: 700;
+   color: var(--foreground);
+   margin-bottom: 4px;
+}
+
+/* Divider */
+.wp-divider {
+   height: 1px;
+   background: var(--border);
+   margin: 10px 0;
+}
+
+/* Info rows container */
+.wp-rows {
+   display: flex;
+   flex-direction: column;
+   gap: 6px;
+}
+
+/* Single info row */
+.wp-row {
+   display: flex;
+   align-items: flex-start;
+   gap: 7px;
+}
+
+.wp-row-icon {
+   font-size: 13px;
+   flex-shrink: 0;
+   margin-top: 1px;
+}
+
+.wp-row-text {
+   font-size: 13px;
+   color: var(--muted-foreground);
+   line-height: 1.4;
+}
+
+/* Phone / link */
+.wp-link {
+   font-size: 13px;
+   color: var(--brand-blue);
+   text-decoration: none;
+}
+
+.wp-link:hover {
+   text-decoration: underline;
+}
+
+/* ── Land value box ───────────────────────────────────────── */
+.wp-landval {
+   background: rgba(16, 185, 129, 0.08);
+   border: 1px solid rgba(16, 185, 129, 0.25);
+   border-radius: 10px;
+   padding: 10px 12px;
+}
+
+.wp-landval-title {
+   font-size: 11px;
+   font-weight: 700;
+   color: var(--grade-a);
+   margin-bottom: 6px;
+}
+
+.wp-landval-row {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   font-size: 12px;
+   margin-bottom: 3px;
+}
+
+.wp-landval-year {
+   color: rgba(16, 185, 129, 0.7);
+}
+
+.wp-landval-price {
+   font-weight: 700;
+   font-size: 14px;
+   color: var(--grade-a);
+}
+
+/* Empty / no-data */
+.wp-empty {
+   font-size: 11px;
+   color: var(--muted-foreground);
+   text-align: center;
+   padding: 8px 0;
+}
+
+/* ── Kakao button ─────────────────────────────────────────── */
+.wp-kakao-btn {
+   margin-top: 12px;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   background: #fee500;
+   border-radius: 10px;
+   padding: 9px;
+   font-size: 13px;
+   font-weight: 700;
+   color: #111;
+   text-decoration: none;
+   transition: opacity 0.15s;
+}
+
+.wp-kakao-btn:hover {
+   opacity: 0.85;
+}

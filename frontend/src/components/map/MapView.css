@@ -327,7 +327,7 @@
    color: #fff;
 }
 
-/* ── WMS 팝업 ──────────────────────────────────────────────── */
+/* ── WMS 팝업 (glass morphism — 내부 스타일은 WmsPopup.css) ── */
 .mv-wms-popup {
    position: absolute;
    bottom: 20px;
@@ -335,92 +335,12 @@
    z-index: 300;
    width: 320px;
    background: var(--glass-bg);
-   backdrop-filter: blur(20px);
-   -webkit-backdrop-filter: blur(20px);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border: 1px solid var(--glass-border);
    border-radius: 16px;
    box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
    overflow: hidden;
-}
-.mv-wms-popup__color-bar {
-   height: 4px;
-}
-.mv-wms-popup__body {
-   padding: 12px 16px 16px;
-}
-.mv-wms-popup__top {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   margin-bottom: 8px;
-}
-.mv-wms-popup__tag {
-   border-radius: 20px;
-   padding: 3px 10px;
-   font-size: 11px;
-   font-weight: 700;
-}
-.mv-wms-popup__close {
-   background: transparent;
-   border: none;
-   color: var(--muted-foreground);
-   cursor: pointer;
-   font-size: 16px;
-}
-.mv-wms-popup__title {
-   font-size: 17px;
-   font-weight: 700;
-   color: var(--foreground);
-   margin-bottom: 4px;
-}
-.mv-wms-popup__divider {
-   height: 1px;
-   background: var(--border);
-   margin: 10px 0;
-}
-.mv-wms-popup__rows {
-   display: flex;
-   flex-direction: column;
-   gap: 6px;
-}
-.mv-wms-popup__row {
-   display: flex;
-   align-items: flex-start;
-   gap: 7px;
-}
-.mv-wms-popup__row-icon {
-   font-size: 13px;
-   flex-shrink: 0;
-   margin-top: 1px;
-}
-.mv-wms-popup__row-text {
-   font-size: 13px;
-   color: var(--muted-foreground);
-   line-height: 1.4;
-}
-
-/* 공시지가 */
-.mv-landval {
-   margin-top: 12px;
-   background: rgba(20, 184, 166, 0.08);
-   border: 1px solid rgba(20, 184, 166, 0.25);
-   border-radius: 10px;
-   padding: 12px 14px;
-}
-.mv-landval__label {
-   font-size: 11px;
-   color: var(--brand-teal);
-   font-weight: 600;
-   margin-bottom: 4px;
-}
-.mv-landval__value {
-   font-size: 18px;
-   font-weight: 800;
-   color: var(--brand-deep-cyan);
-}
-.mv-landval__sub {
-   font-size: 11px;
-   color: var(--brand-teal);
-   margin-top: 2px;
 }
 .dark .mv-landval__value {
    color: var(--brand-mint);

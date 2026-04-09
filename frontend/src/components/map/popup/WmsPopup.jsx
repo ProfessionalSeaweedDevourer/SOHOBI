@@ -3,6 +3,7 @@
 
 // 카카오 연동: 앱 링크(kakaomap://place) 우선, 없으면 웹 링크
 import { LAYER_META } from "../../../hooks/map/useWmsClick";
+import "./WmsPopup.css";
 
 // ── 카카오맵 웹 링크 생성 ──────────────────────────────────────
 function kakaoWebLink(name, address) {
@@ -14,13 +15,9 @@ function kakaoWebLink(name, address) {
 function InfoRow({ icon, children }) {
    if (!children) return null;
    return (
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
-         <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }}>
-            {icon}
-         </span>
-         <span style={{ fontSize: 13, color: "#444", lineHeight: 1.4 }}>
-            {children}
-         </span>
+      <div className="wp-row">
+         <span className="wp-row-icon">{icon}</span>
+         <span className="wp-row-text">{children}</span>
       </div>
    );
 }
@@ -29,18 +26,9 @@ function InfoRow({ icon, children }) {
 function CadastralContent({ wmsPopup, landValue }) {
    return (
       <>
-         <div
-            style={{
-               fontSize: 17,
-               fontWeight: 700,
-               color: "#111",
-               marginBottom: 4,
-            }}
-         >
-            {wmsPopup.addr || "주소 없음"}
-         </div>
-         <div style={{ height: 1, background: "#f0f0f0", margin: "10px 0" }} />
-         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+         <div className="wp-title">{wmsPopup.addr || "주소 없음"}</div>
+         <div className="wp-divider" />
+         <div className="wp-rows">
             {wmsPopup.sido && (
                <InfoRow icon="🏙️">
                   {wmsPopup.sido} {wmsPopup.sigg} {wmsPopup.dong}
@@ -51,60 +39,26 @@ function CadastralContent({ wmsPopup, landValue }) {
             )}
             {wmsPopup.pnu && <InfoRow icon="🔑">PNU: {wmsPopup.pnu}</InfoRow>}
          </div>
-         <div style={{ height: 1, background: "#f0f0f0", margin: "10px 0" }} />
+         <div className="wp-divider" />
          {landValue?.length > 0 ? (
-            <div
-               style={{
-                  background: "#f0fdf4",
-                  border: "1px solid #bbf7d0",
-                  borderRadius: 10,
-                  padding: "10px 12px",
-               }}
-            >
-               <div
-                  style={{
-                     fontSize: 11,
-                     fontWeight: 700,
-                     color: "#166534",
-                     marginBottom: 6,
-                  }}
-               >
+            <div className="wp-landval">
+               <div className="wp-landval-title">
                   🏷️ 개별공시지가 ·{" "}
                   {landValue[0].label || `${landValue[0].year}년 기준`}
                </div>
                {landValue.slice(0, 3).map((lv, i) => (
-                  <div
-                     key={i}
-                     style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        fontSize: 12,
-                        marginBottom: 3,
-                     }}
-                  >
-                     <span style={{ color: "#4b7c5e" }}>
+                  <div key={i} className="wp-landval-row">
+                     <span className="wp-landval-year">
                         {lv.year}년{lv.month ? ` ${lv.month}월` : ""}
                      </span>
-                     <b style={{ color: "#14532d", fontSize: 14 }}>
-                        {lv.price_str}
-                     </b>
+                     <b className="wp-landval-price">{lv.price_str}</b>
                   </div>
                ))}
             </div>
          ) : wmsPopup.pnu ? (
-            <div style={{ fontSize: 11, color: "#bbb", textAlign: "center" }}>
-               공시지가 정보 없음
-            </div>
+            <div className="wp-empty">공시지가 정보 없음</div>
          ) : (
-            <div
-               style={{
-                  fontSize: 11,
-                  color: "#bbb",
-                  textAlign: "center",
-                  padding: "8px 0",
-               }}
-            >
+            <div className="wp-empty">
                지적도 레이어를 활성화하면
                <br />
                공시지가를 조회할 수 있습니다
@@ -120,18 +74,9 @@ function PlaceContent({ wmsPopup }) {
 
    return (
       <>
-         <div
-            style={{
-               fontSize: 17,
-               fontWeight: 700,
-               color: "#111",
-               marginBottom: 4,
-            }}
-         >
-            {wmsPopup.name}
-         </div>
-         <div style={{ height: 1, background: "#f0f0f0", margin: "10px 0" }} />
-         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+         <div className="wp-title">{wmsPopup.name}</div>
+         <div className="wp-divider" />
+         <div className="wp-rows">
             {wmsPopup.sido && (
                <InfoRow icon="🏙️">
                   {wmsPopup.sido} {wmsPopup.sigg}
@@ -139,20 +84,9 @@ function PlaceContent({ wmsPopup }) {
             )}
             {wmsPopup.addr && <InfoRow icon="📍">{wmsPopup.addr}</InfoRow>}
             {wmsPopup.tel && (
-               <div
-                  style={{ display: "flex", alignItems: "flex-start", gap: 7 }}
-               >
-                  <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }}>
-                     📞
-                  </span>
-                  <a
-                     href={`tel:${wmsPopup.tel}`}
-                     style={{
-                        fontSize: 13,
-                        color: "#2563eb",
-                        textDecoration: "none",
-                     }}
-                  >
+               <div className="wp-row">
+                  <span className="wp-row-icon">📞</span>
+                  <a href={`tel:${wmsPopup.tel}`} className="wp-link">
                      {wmsPopup.tel}
                   </a>
                </div>
@@ -166,19 +100,7 @@ function PlaceContent({ wmsPopup }) {
             href={webLink}
             target="_blank"
             rel="noreferrer"
-            style={{
-               marginTop: 12,
-               display: "flex",
-               justifyContent: "center",
-               alignItems: "center",
-               background: "#fee500",
-               borderRadius: 10,
-               padding: "9px",
-               fontSize: 13,
-               fontWeight: 700,
-               color: "#111",
-               textDecoration: "none",
-            }}
+            className="wp-kakao-btn"
          >
             카카오맵에서 보기 →
          </a>
@@ -202,37 +124,17 @@ export default function WmsPopup({
          className={`mv-wms-popup${hasDongPanel ? " mv-wms-popup--dong-open" : ""}`}
       >
          <div style={{ height: 4, background: meta.color }} />
-         <div style={{ padding: "12px 16px 16px" }}>
-            <div
-               style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 8,
-               }}
-            >
-               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+         <div className="wp-body">
+            <div className="wp-top">
+               <div className="wp-top-left">
                   {onBack && (
-                     <button
-                        onClick={onBack}
-                        style={{
-                           background: "none",
-                           border: "none",
-                           cursor: "pointer",
-                           fontSize: 16,
-                           color: "#888",
-                           padding: 0,
-                        }}
-                     >
+                     <button onClick={onBack} className="wp-back-btn">
                         ←
                      </button>
                   )}
                   <div
+                     className="wp-tag"
                      style={{
-                        borderRadius: 20,
-                        padding: "3px 10px",
-                        fontSize: 11,
-                        fontWeight: 700,
                         background: meta.bg,
                         color: meta.color,
                         border: `1px solid ${meta.color}`,
@@ -241,16 +143,7 @@ export default function WmsPopup({
                      {meta.icon} {meta.label}
                   </div>
                </div>
-               <button
-                  onClick={onClose}
-                  style={{
-                     background: "transparent",
-                     border: "none",
-                     color: "#bbb",
-                     cursor: "pointer",
-                     fontSize: 16,
-                  }}
-               >
+               <button onClick={onClose} className="wp-close-btn">
                   ✕
                </button>
             </div>
