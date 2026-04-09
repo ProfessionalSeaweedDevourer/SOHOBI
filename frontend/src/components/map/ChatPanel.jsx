@@ -57,6 +57,7 @@ export default function ChatPanel({
   mapContext,
   onClearContext,
   onHighlightArea,
+  onFindAndHighlightByName,
   onSearchArea,
 }) {
   const [messages, setMessages] = useState([]);
@@ -74,6 +75,8 @@ export default function ChatPanel({
   const lastBusinessRef = useRef(null);
   const chipsRef = useRef(null);
   const chipsDragRef = useRef({ dragging: false, moved: false, startX: 0, scrollLeft: 0 });
+  const autoSendTimerRef = useRef(null);
+  const handleSendRef = useRef(null);
 
   // 자동 스크롤
   useEffect(() => {
@@ -91,7 +94,7 @@ export default function ChatPanel({
     return () => clearInterval(timerRef.current);
   }, [loading]);
 
-  // 지도 컨텍스트 변경 시 시스템 메시지
+  // 지도 컨텍스트 변경 시 시스템 메시지 + 지역 단독 쿼리 자동 전송
   useEffect(() => {
     if (!mapContext || !mapContext.dongName) return;
     const key = `${mapContext.guName}_${mapContext.dongName}`;
@@ -99,13 +102,24 @@ export default function ChatPanel({
     prevContextRef.current = key;
 
     const label = mapContext.guName
-      ? `${mapContext.guName} ${mapContext.dongName}`
+      ? `${mapContext.guName.replace(/구$/, "")} ${mapContext.dongName}`
       : mapContext.dongName;
 
     setMessages((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), role: "system", content: `${label} 선택됨` },
+      {
+        id: crypto.randomUUID(),
+        role: "system",
+        content: `${mapContext.guName ? `${mapContext.guName} ` : ""}${mapContext.dongName} 선택됨`,
+      },
     ]);
+    // 지역만 담긴 쿼리 → 백엔드가 업종 선택 버튼 반환 (300ms debounce: 빠른 연속 클릭 방어)
+    clearTimeout(autoSendTimerRef.current);
+    autoSendTimerRef.current = setTimeout(() => {
+      handleSendRef.current?.(`${label} 상권 분석`);
+    }, 300);
+    return () => clearTimeout(autoSendTimerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapContext]);
 
   // 카카오 키워드 검색으로 좌표 조회
@@ -251,6 +265,7 @@ export default function ChatPanel({
     },
     [input, loading, sessionId, mapContext, geocodeAndNavigate, onSearchArea],
   );
+  handleSendRef.current = handleSend;
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -266,18 +281,27 @@ export default function ChatPanel({
     ? `${contextLabel} 지역에 대해 질문하세요 (예: 카페 창업 분석)`
     : "상권 분석 질문을 입력하세요 (예: 홍대 카페 상권 분석)";
 
-  // 응답 텍스트 지역명 → 클릭 가능한 span
+  // 응답 텍스트 지역명 → 클릭 가능한 span (클릭 시 동 폴리곤 하이라이트 + 지도 이동)
   const markdownComponents = useMemo(() => ({
     p: ({ children }) => {
       const toArr = Array.isArray(children) ? children : [children];
       const processed = toArr.flatMap((child, i) =>
         typeof child === "string"
-          ? renderWithAreaLinks(child, onSearchArea, i * 1000)
+          ? renderWithAreaLinks(child, onFindAndHighlightByName, i * 1000)
           : [child]
       );
       return <p>{processed}</p>;
     },
-  }), [onSearchArea]);
+    li: ({ children }) => {
+      const toArr = Array.isArray(children) ? children : [children];
+      const processed = toArr.flatMap((child, i) =>
+        typeof child === "string"
+          ? renderWithAreaLinks(child, onFindAndHighlightByName, i * 1000 + 500)
+          : [child]
+      );
+      return <li>{processed}</li>;
+    },
+  }), [onFindAndHighlightByName]);
 
   // 빠른 쿼리 칩
   const areaLabel = mapContext?.dongName
