@@ -1,15 +1,9 @@
 /* ── 에이전트 채팅 토글 버튼 위치 ──────────────────────────── */
 .mv-chat-toggle {
    position: absolute;
-   bottom: 80px; /* 스토어/WMS 팝업(bottom:18px) 위 */
-   right: 20px;
-   z-index: 290; /* 팝업(300)보다 낮게 */
-}
-
-/* ── MapControls: 카테고리 패널(240px) 내 중앙 정렬 ── */
-.mv-map-controls {
-   left: 20px !important;
-   right: auto !important;
+   bottom: 80px;
+   left: 12px;
+   z-index: 290;
 }
 
 /* ============================================================
@@ -96,7 +90,16 @@
    cursor: pointer;
 }
 
-/* 레이어 패널 wrap */
+/* ── 레이어 패널 토글 ──────────────────────────────────────── */
+.mv-layer-btn {
+   background: #fff;
+   border: 1px solid #e5e7eb;
+   border-radius: 10px;
+   padding: 8px 12px;
+   font-size: 18px;
+   cursor: pointer;
+   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
 .mv-layer-panel-wrap {
    position: absolute;
    top: 58px;
@@ -499,62 +502,33 @@
    z-index: 200;
    display: flex;
    align-items: center;
-   gap: 6px;
+   gap: 8px;
 }
 
 /* ── 지도 페이지 네비게이션 링크 ───────────────────────────────── */
 .mv-nav-btn {
-   background: rgba(255, 255, 255, 0.92);
-   border: 1px solid rgba(8, 145, 178, 0.2);
-   border-radius: 20px;
-   padding: 0 14px;
-   height: 36px;
+   background: #fff;
+   border: 1px solid #e5e7eb;
+   border-radius: 10px;
+   padding: 6px 12px;
    font-size: 12px;
-   font-weight: 600;
+   font-weight: 500;
    color: #374151;
    text-decoration: none;
    cursor: pointer;
-   box-shadow: 0 2px 8px rgba(8, 145, 178, 0.1);
+   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
    transition: background 0.15s;
-   display: flex;
-   align-items: center;
-   white-space: nowrap;
 }
 .mv-nav-btn:hover {
-   background: rgba(8, 145, 178, 0.08);
+   background: #f3f4f6;
 }
 .dark .mv-nav-btn {
-   background: rgba(15, 20, 32, 0.92);
-   border-color: rgba(8, 145, 178, 0.3);
+   background: var(--card);
+   border-color: var(--border);
    color: var(--foreground);
 }
 .dark .mv-nav-btn:hover {
-   background: rgba(8, 145, 178, 0.15);
-}
-
-/* 레이어 버튼 */
-.mv-layer-btn {
-   background: rgba(255, 255, 255, 0.92);
-   border: 1px solid rgba(8, 145, 178, 0.2);
-   border-radius: 20px;
-   width: 36px;
-   height: 36px;
-   font-size: 16px;
-   cursor: pointer;
-   box-shadow: 0 2px 8px rgba(8, 145, 178, 0.1);
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   padding: 0;
-   transition: background 0.15s;
-}
-.mv-layer-btn:hover {
-   background: rgba(8, 145, 178, 0.08);
-}
-.dark .mv-layer-btn {
-   background: rgba(15, 20, 32, 0.92);
-   border-color: rgba(8, 145, 178, 0.3);
-   color: var(--foreground);
+   background: var(--muted);
 }
 
 /* ── OL 줌 레벨 뱃지 기본 스타일 ─────────────────────── */
@@ -608,7 +582,14 @@
    color: var(--muted-foreground);
 }
 
-/* ── 행정동 모드 버튼 ──────────────────────────────────────── */
+/* 레이어 패널 토글 버튼 */
+.dark .mv-layer-btn {
+   background: var(--card);
+   border-color: var(--border);
+   color: var(--foreground);
+}
+
+/* 행정동 모드 버튼 */
 .dark .mv-dong-btn--off {
    background: var(--card);
    color: var(--foreground);
@@ -751,12 +732,5 @@
 /* 동패널 열릴 때 WmsPopup 동패널 왼쪽에 붙음 */
 .mv-wms-popup--dong-open {
    right: 316px;
-   left: auto;
-}
-
-/* 챗패널 열릴 때 팝업들 챗패널 왼쪽으로 이동 */
-.mv-wms-popup--chat-open,
-.mv-store-popup--chat-open {
-   right: 416px;
    left: auto;
 }
