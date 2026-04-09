@@ -23,6 +23,8 @@ import ChatPanel from "./ChatPanel";
 import LandmarkPopup from "./popup/LandmarkPopup";
 import { useLandmarkLayer } from "../../hooks/map/useLandmarkLayer";
 import { ThemeToggle } from "../ThemeToggle";
+import { Link } from "react-router-dom";
+import { Layers } from "lucide-react";
 
 // ── 커스텀 훅 ──────────────────────────────────────────────────
 import { useMarkers } from "../../hooks/map/useMarkers";
@@ -878,18 +880,19 @@ export default function MapView() {
             }}
          />
          <div className="mv-top-right-controls">
-            <a href="/user" className="mv-nav-btn">
+            <Link to="/user" className="mv-nav-btn">
                ← 상담
-            </a>
-            <a href="/features" className="mv-nav-btn">
+            </Link>
+            <Link to="/features" className="mv-nav-btn">
                기능
-            </a>
+            </Link>
             <ThemeToggle />
             <button
                className="mv-layer-btn"
                onClick={() => setShowPanel((p) => !p)}
+               aria-label="레이어 패널 토글"
             >
-               🗂️
+               <Layers size={18} />
             </button>
          </div>
          {showPanel && mapInstance.current && (

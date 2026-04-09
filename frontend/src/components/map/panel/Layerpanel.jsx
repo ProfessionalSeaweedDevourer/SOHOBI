@@ -207,6 +207,7 @@ function LayerRow({ label, desc, on, color, onClick, disabled }) {
             style={{
                background: on ? color : undefined,
                color: on ? "#fff" : undefined,
+               boxShadow: on ? `0 0 12px ${color}40` : undefined,
                cursor: disabled ? "default" : "pointer",
             }}
          >
