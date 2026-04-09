@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { CHECKLIST_ITEMS } from "../../constants/checklistItems";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -70,15 +71,27 @@ export function useChecklistState(sessionId, enabled = true) {
     [items, sessionId]
   );
 
-  // complete 이벤트의 checked_items 배열을 로컬 상태에 즉시 반영
+  // complete 이벤트의 checked_items 배열을 로컬 상태에 즉시 반영 + toast 알림
   const syncFromDraft = useCallback((checkedIds) => {
     if (!checkedIds?.length) return;
     setItems((prev) => {
       const next = { ...prev };
+      const newlyChecked = [];
       for (const id of checkedIds) {
         if (next[id] && !next[id].checked) {
           next[id] = { ...next[id], checked: true, source: "auto" };
+          newlyChecked.push(id);
         }
+      }
+      // 새로 체크된 항목이 있으면 toast 알림
+      if (newlyChecked.length > 0) {
+        const labels = newlyChecked
+          .map((id) => CHECKLIST_ITEMS.find((i) => i.id === id)?.label)
+          .filter(Boolean);
+        toast("대화에서 다뤘어요!", {
+          description: `✓ ${labels.join(", ")}`,
+          duration: 4000,
+        });
       }
       return next;
     });

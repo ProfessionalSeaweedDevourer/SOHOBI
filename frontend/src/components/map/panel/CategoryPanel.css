@@ -1,250 +1,274 @@
-/* ── CategoryPanel ─────────────────────────────────────── */
+/* ── CategoryPanel ── glass + gradient 디자인 시스템 ── */
 
+/* ── 사이드바 컨테이너 ───────────────────────────── */
 .cp-sidebar {
-   height: 100%;
-   background: var(--glass-bg);
-   backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
-   border-right: 1px solid var(--glass-border);
-   border-radius: 0 12px 12px 0;
-   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
-   display: flex;
-   flex-direction: column;
-   transition: width 0.2s ease;
-   overflow: hidden;
-   isolation: isolate;
-   flex-shrink: 0;
-   min-width: 0;
+  height: 100%;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--glass-border);
+  box-shadow:
+    2px 0 12px rgba(0, 0, 0, 0.06),
+    1px 0 4px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.25s ease;
+  overflow: hidden;
+  isolation: isolate;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
-/* ── 헤더 (gradient) ──────────────────────────────────── */
+/* ── 헤더 ────────────────────────────────────────── */
 .cp-header {
-   display: flex;
-   align-items: center;
-   justify-content: space-between;
-   padding: 14px 12px 10px;
-   background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
-   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+  flex-shrink: 0;
 }
-
-.cp-header__title {
-   font-size: 13px;
-   font-weight: 700;
-   color: #fff;
+.cp-header--collapsed {
+  justify-content: center;
+  padding: 12px 8px;
 }
-
+.cp-header__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.cp-header__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
 .cp-collapse-btn {
-   background: rgba(255, 255, 255, 0.2);
-   border: none;
-   border-radius: 6px;
-   cursor: pointer;
-   font-size: 12px;
-   color: #fff;
-   padding: 2px 6px;
-   margin-left: auto;
-   transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
 }
 .cp-collapse-btn:hover {
-   background: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.25);
 }
 
-/* ── 검색 ─────────────────────────────────────────────── */
+/* ── 검색 ────────────────────────────────────────── */
 .cp-search-box {
-   display: flex;
-   gap: 4px;
-   padding: 10px 12px 0;
-   flex-shrink: 0;
-   position: relative;
-   z-index: 1;
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px 0;
+  flex-shrink: 0;
 }
-
 .cp-search-input {
-   flex: 1;
-   padding: 5px 8px;
-   border: 1px solid var(--glass-border);
-   border-radius: 8px;
-   font-size: 12px;
-   outline: none;
-   background: var(--glass-bg);
-   color: var(--foreground);
-   min-width: 0;
-   box-sizing: border-box;
-   transition: box-shadow 0.2s, border-color 0.2s;
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  font-size: 12px;
+  outline: none;
+  background: var(--glass-bg);
+  color: var(--foreground);
+  min-width: 0;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 .cp-search-input:focus {
-   border-color: var(--brand-blue);
-   box-shadow: var(--glow-blue);
+  border-color: var(--brand-teal);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
 }
-
+.cp-search-input::placeholder {
+  color: var(--muted-foreground);
+}
 .cp-search-btn {
-   padding: 5px 8px;
-   background: var(--brand-blue);
-   border: none;
-   border-radius: 8px;
-   cursor: pointer;
-   font-size: 13px;
-   color: #fff;
-   flex-shrink: 0;
-   transition: box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(8, 145, 178, 0.2);
+  transition: box-shadow 0.2s;
 }
 .cp-search-btn:hover {
-   box-shadow: var(--glow-blue);
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.35);
 }
 
-/* ── 통계 뱃지 ────────────────────────────────────────── */
+/* ── 통계 배지 ───────────────────────────────────── */
 .cp-total-badge {
-   margin: 10px 12px 0;
-   padding: 7px 10px;
-   background: rgba(8, 145, 178, 0.1);
-   border: 1px solid rgba(8, 145, 178, 0.25);
-   border-radius: 8px;
-   font-size: 12px;
-   color: var(--brand-blue);
-   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 12px 0;
+  padding: 6px 12px;
+  background: rgba(8, 145, 178, 0.06);
+  border: 1px solid rgba(8, 145, 178, 0.15);
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand-blue);
 }
 .dark .cp-total-badge {
-   background: rgba(20, 184, 166, 0.12);
-   border-color: rgba(20, 184, 166, 0.3);
-   color: var(--brand-teal);
+  background: rgba(20, 184, 166, 0.08);
+  border-color: rgba(20, 184, 166, 0.2);
+  color: var(--brand-teal);
 }
 
-/* ── Show / Hide 버튼 ─────────────────────────────────── */
+/* ── Hide/Show 버튼 ──────────────────────────────── */
 .cp-all-btns {
-   display: flex;
-   gap: 6px;
-   padding: 10px 12px 0;
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px 0;
 }
-
+.cp-hide-all-btn,
+.cp-show-all-btn {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
 .cp-hide-all-btn {
-   flex: 1;
-   padding: 5px 0;
-   background: var(--secondary);
-   border: 1px solid var(--border);
-   border-radius: 6px;
-   font-size: 11px;
-   font-weight: 600;
-   color: var(--foreground);
-   cursor: pointer;
-   transition: all 0.18s;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--foreground);
 }
 .cp-hide-all-btn:hover {
-   background: var(--muted);
+  background: var(--secondary);
 }
-
 .cp-show-all-btn {
-   flex: 1;
-   padding: 5px 0;
-   background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
-   border: none;
-   border-radius: 6px;
-   font-size: 11px;
-   font-weight: 600;
-   color: #fff;
-   cursor: pointer;
-   transition: all 0.18s;
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+  border: none;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(8, 145, 178, 0.2);
 }
 .cp-show-all-btn:hover {
-   box-shadow: var(--glow-teal);
+  box-shadow: 0 4px 10px rgba(8, 145, 178, 0.35);
 }
 
-/* ── 구분선 ───────────────────────────────────────────── */
+/* ── 구분선 ──────────────────────────────────────── */
 .cp-divider {
-   height: 1px;
-   background: var(--border);
-   margin: 10px 0 4px;
-   flex-shrink: 0;
+  height: 1px;
+  background: var(--glass-border);
+  margin: 10px 0 4px;
+  flex-shrink: 0;
 }
 
-/* ── 카테고리 리스트 (스크롤) ──────────────────────────── */
+/* ── 카테고리 목록 ───────────────────────────────── */
 .cp-cat-list {
-   overflow-y: scroll;
-   height: 0;
-   flex: 1 1 0;
-   padding: 0 8px 16px;
-   scrollbar-width: thin;
-   scrollbar-color: var(--muted-foreground) transparent;
+  overflow-y: auto;
+  height: 0;
+  flex: 1 1 0;
+  padding: 4px 8px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(8, 145, 178, 0.2) transparent;
 }
 .cp-cat-list::-webkit-scrollbar {
-   width: 4px;
+  width: 4px;
 }
 .cp-cat-list::-webkit-scrollbar-thumb {
-   background: var(--muted-foreground);
-   border-radius: 4px;
+  background: rgba(8, 145, 178, 0.25);
+  border-radius: 4px;
 }
 .cp-cat-list::-webkit-scrollbar-track {
-   background: transparent;
+  background: transparent;
 }
 
-/* ── 카테고리 행 ──────────────────────────────────────── */
+/* ── 카테고리 행 ─────────────────────────────────── */
 .cp-cat-row {
-   display: flex;
-   align-items: center;
-   justify-content: space-between;
-   padding: 6px 8px;
-   border-radius: 8px;
-   cursor: pointer;
-   transition: transform 0.2s, box-shadow 0.2s, background 0.1s;
-   margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.18s;
+  border: 1px solid transparent;
+  margin-bottom: 2px;
 }
 .cp-cat-row:hover {
-   transform: translateY(-2px);
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: rgba(8, 145, 178, 0.04);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .cp-cat-left {
-   display: flex;
-   align-items: center;
-   gap: 7px;
-   flex: 1;
-   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
 }
-
 .cp-cat-dot {
-   width: 28px;
-   height: 28px;
-   border-radius: 50%;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   flex-shrink: 0;
-   transition: background 0.2s;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  font-size: 12px;
 }
-
-.cp-cat-icon {
-   font-size: 12px;
-}
-
 .cp-cat-name {
-   font-size: 12px;
-   font-weight: 600;
-   white-space: nowrap;
-   overflow: hidden;
-   text-overflow: ellipsis;
-   transition: color 0.2s;
-   cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s;
+  cursor: pointer;
 }
-
 .cp-count-chip {
-   font-size: 10px;
-   font-weight: 700;
-   padding: 1px 6px;
-   border-radius: 10px;
-   flex-shrink: 0;
-   transition: all 0.2s;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.cp-toggle-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+.cp-toggle-btn:hover {
+  transform: scale(1.05);
 }
 
-/* ── ON/OFF 토글 ──────────────────────────────────────── */
-.cp-toggle-btn {
-   border: none;
-   border-radius: 6px;
-   padding: 3px 8px;
-   font-size: 10px;
-   font-weight: 700;
-   cursor: pointer;
-   flex-shrink: 0;
-   transition: all 0.2s;
-}
-.cp-toggle-btn--off {
-   background: var(--muted);
-   color: var(--muted-foreground);
+/* ── 모바일 (≤ 640px) ────────────────────────────── */
+@media (max-width: 640px) {
+  .cp-sidebar--mobile-overlay {
+    position: absolute;
+    z-index: 300;
+  }
 }
