@@ -5,12 +5,14 @@
  * @param {number} props.progress - 완료된 항목 수 (0~total)
  * @param {number} [props.total]  - 전체 항목 수 (기본값 8)
  */
-export default function ChecklistProgress({ progress, total = 8 }) {
+export default function ChecklistProgress({ progress, total = 8, onClick }) {
   const pct = total > 0 ? Math.round((progress / total) * 100) : 0;
   const allDone = progress === total;
 
+  const Wrapper = onClick ? "button" : "div";
+
   return (
-    <div className="px-3 pb-2">
+    <Wrapper className={`px-3 pb-2 w-full${onClick ? " text-left" : ""}`} onClick={onClick}>
       <div className="flex items-center justify-between mb-1.5">
         <span
           className="text-xs font-semibold"
@@ -36,6 +38,6 @@ export default function ChecklistProgress({ progress, total = 8 }) {
           }}
         />
       </div>
-    </div>
+    </Wrapper>
   );
 }

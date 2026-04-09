@@ -9,6 +9,7 @@ import ProgressPanel from "../components/ProgressPanel";
 import { ThemeToggle } from "../components/ThemeToggle";
 import StartupChecklist from "../components/checklist/StartupChecklist";
 import ChecklistProgress from "../components/checklist/ChecklistProgress";
+import ChecklistDrawer from "../components/checklist/ChecklistDrawer";
 import { useChecklistState } from "../components/checklist/useChecklistState";
 import { useChatMessages } from "../hooks/chat/useChatMessages";
 import { useStreamQuery } from "../hooks/chat/useStreamQuery";
@@ -124,6 +125,7 @@ export default function UserChat() {
   );
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
   const [loadingElapsed, setLoadingElapsed] = useState(0);
+  const [checklistDrawerOpen, setChecklistDrawerOpen] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -487,15 +489,25 @@ export default function UserChat() {
 
         {/* 체크리스트 사이드패널 (데스크톱 전용) */}
         <aside className="hidden lg:block w-64 shrink-0 border-l border-[var(--border)] px-3 py-4 overflow-y-auto">
-          <StartupChecklist items={checklistItems} progress={checklistProgress} onToggle={toggleItem} />
+          <StartupChecklist items={checklistItems} progress={checklistProgress} onToggle={toggleItem} onAskQuestion={handleSubmit} />
         </aside>
       </div>
 
       {/* 입력창 */}
       <footer className="sticky bottom-0 bg-background border-t border-[var(--border)] max-w-5xl mx-auto w-full">
         <div className="lg:hidden border-b border-[var(--border)] px-4 py-2">
-          <ChecklistProgress progress={checklistProgress} total={8} />
+          <ChecklistProgress progress={checklistProgress} total={8} onClick={() => setChecklistDrawerOpen(true)} />
         </div>
+
+        {checklistDrawerOpen && (
+          <ChecklistDrawer
+            items={checklistItems}
+            progress={checklistProgress}
+            onToggle={toggleItem}
+            onAskQuestion={(q) => { setChecklistDrawerOpen(false); handleSubmit(q); }}
+            onClose={() => setChecklistDrawerOpen(false)}
+          />
+        )}
 
         {showSamples && (
           <div className="border-b border-[var(--border)] px-4 py-3 max-h-72 overflow-y-auto">
