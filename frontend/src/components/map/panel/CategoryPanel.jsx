@@ -9,14 +9,13 @@ export default function CategoryPanel({
    onToggle,
    onShowAll,
    onHideAll,
-   totalCount,
    catCounts,
    onSearch,
    selectedCatCd,
    onCatSelect,
 }) {
    const [isMobile, setIsMobile] = useState(
-      typeof window !== "undefined" && window.innerWidth <= 640
+      typeof window !== "undefined" && window.innerWidth <= 640,
    );
    useEffect(() => {
       const handler = () => setIsMobile(window.innerWidth <= 640);
@@ -24,22 +23,23 @@ export default function CategoryPanel({
       return () => window.removeEventListener("resize", handler);
    }, []);
    const [collapsed, setCollapsed] = useState(
-      typeof window !== "undefined" && window.innerWidth <= 640
-   ); // 모바일: 기본 접힘
+      typeof window !== "undefined" && window.innerWidth <= 640,
+   );
    const [searchQuery, setSearchQuery] = useState("");
 
-   // ── 검색 실행 ────────────────────────────────────────────────
    const handleSearch = () => {
       if (searchQuery.trim()) onSearch?.(searchQuery.trim());
    };
 
    return (
-      <div style={{
-         ...S.sidebar,
-         width: collapsed ? 48 : (isMobile ? "min(220px, 80vw)" : 220),
-         position: isMobile && !collapsed ? "absolute" : "relative",
-         zIndex: isMobile && !collapsed ? 300 : 200,
-      }}>
+      <div
+         style={{
+            ...S.sidebar,
+            width: collapsed ? 48 : isMobile ? "min(240px, 80vw)" : 240,
+            position: isMobile && !collapsed ? "absolute" : "relative",
+            zIndex: isMobile && !collapsed ? 300 : 200,
+         }}
+      >
          {/* ── 헤더 ──────────────────────────────────────────── */}
          <div style={S.header}>
             {!collapsed && <span style={S.headerTitle}>🏪 상권 분석</span>}
@@ -68,13 +68,6 @@ export default function CategoryPanel({
                      🔍
                   </button>
                </div>
-
-               {/* ── 전체 통계 ─────────────────────────────── */}
-               {totalCount !== null && (
-                  <div style={S.totalBadge}>
-                     반경 내 총 <b>{totalCount}</b>건
-                  </div>
-               )}
 
                {/* ── Hide all / Show all ───────────────────── */}
                <div style={S.allBtns}>
@@ -112,7 +105,7 @@ export default function CategoryPanel({
                               <div
                                  style={{
                                     ...S.catDot,
-                                    background: isOn ? cat.color : "#ccc",
+                                    background: isOn ? cat.color : "#e5e7eb",
                                  }}
                               >
                                  <span style={{ fontSize: 12 }}>
@@ -127,7 +120,9 @@ export default function CategoryPanel({
                                  }
                                  style={{
                                     ...S.catName,
-                                    color: isOn ? "var(--foreground)" : "var(--muted-foreground)",
+                                    color: isOn
+                                       ? "var(--foreground)"
+                                       : "var(--muted-foreground)",
                                     cursor: "pointer",
                                     textDecoration:
                                        selectedCatCd === cat.key
@@ -142,8 +137,12 @@ export default function CategoryPanel({
                                  <span
                                     style={{
                                        ...S.countChip,
-                                       background: isOn ? cat.bg : "var(--secondary)",
-                                       color: isOn ? cat.color : "var(--muted-foreground)",
+                                       background: isOn
+                                          ? cat.bg
+                                          : "var(--secondary)",
+                                       color: isOn
+                                          ? cat.color
+                                          : "var(--muted-foreground)",
                                        border: `1px solid ${isOn ? cat.color : "var(--border)"}`,
                                     }}
                                  >
@@ -175,10 +174,10 @@ const S = {
    sidebar: {
       position: "relative",
       height: "100%",
-      background: "var(--card)",
-      borderRight: "1px solid var(--border)",
-      borderRadius: "0 12px 12px 0",
-      boxShadow: "2px 0 12px rgba(0,0,0,0.08)",
+      background: "linear-gradient(160deg, #f0fdfa 0%, #e0f2fe 100%)",
+      borderRight: "1px solid rgba(8,145,178,0.15)",
+      borderRadius: "0 16px 16px 0",
+      boxShadow: "2px 0 16px rgba(8,145,178,0.10)",
       zIndex: 200,
       display: "flex",
       flexDirection: "column",
@@ -193,45 +192,50 @@ const S = {
       alignItems: "center",
       justifyContent: "space-between",
       padding: "14px 12px 10px",
-      borderBottom: "1px solid var(--border)",
+      borderBottom: "1px solid rgba(8,145,178,0.12)",
       flexShrink: 0,
+      background: "rgba(255,255,255,0.6)",
+      backdropFilter: "blur(8px)",
    },
-   headerTitle: { fontSize: 13, fontWeight: 700, color: "var(--foreground)" },
+   headerTitle: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: "#0891B2",
+   },
    collapseBtn: {
       background: "transparent",
       border: "none",
       cursor: "pointer",
       fontSize: 12,
-      color: "var(--muted-foreground)",
+      color: "#0891B2",
       padding: "2px 4px",
       marginLeft: "auto",
    },
-   // ── 검색 ──
    searchBox: {
       display: "flex",
       gap: 4,
       padding: "10px 12px 0",
       flexShrink: 0,
       position: "relative",
-      zIndex: 1, // 사이드바 내부에서만 동작
+      zIndex: 1,
    },
    searchInput: {
       flex: 1,
-      padding: "5px 8px",
-      border: "1px solid var(--border)",
-      borderRadius: 8,
+      padding: "6px 10px",
+      border: "1px solid rgba(8,145,178,0.25)",
+      borderRadius: 20,
       fontSize: 12,
       outline: "none",
-      background: "var(--input-background)",
+      background: "rgba(255,255,255,0.85)",
       color: "var(--foreground)",
-      minWidth: 0, // flex 자식 넘침 방지
+      minWidth: 0,
       boxSizing: "border-box",
    },
    searchBtn: {
-      padding: "5px 8px",
-      background: "#2563EB",
+      padding: "6px 10px",
+      background: "#0891B2",
       border: "none",
-      borderRadius: 8,
+      borderRadius: 20,
       cursor: "pointer",
       fontSize: 13,
       color: "#fff",
@@ -240,30 +244,31 @@ const S = {
    totalBadge: {
       margin: "10px 12px 0",
       padding: "7px 10px",
-      background: "rgba(8, 145, 178, 0.08)",
-      borderRadius: 8,
+      background: "rgba(8,145,178,0.10)",
+      borderRadius: 20,
       fontSize: 12,
-      color: "var(--brand-blue)",
+      color: "#0891B2",
       textAlign: "center",
+      fontWeight: 500,
    },
    allBtns: { display: "flex", gap: 6, padding: "10px 12px 0" },
    hideAllBtn: {
       flex: 1,
-      padding: "5px 0",
-      background: "var(--secondary)",
-      border: "1px solid var(--border)",
-      borderRadius: 6,
+      padding: "6px 0",
+      background: "rgba(255,255,255,0.8)",
+      border: "1px solid rgba(8,145,178,0.2)",
+      borderRadius: 20,
       fontSize: 11,
       fontWeight: 600,
-      color: "var(--foreground)",
+      color: "#555",
       cursor: "pointer",
    },
    showAllBtn: {
       flex: 1,
-      padding: "5px 0",
-      background: "#2563EB",
+      padding: "6px 0",
+      background: "#0891B2",
       border: "none",
-      borderRadius: 6,
+      borderRadius: 20,
       fontSize: 11,
       fontWeight: 600,
       color: "#fff",
@@ -271,26 +276,27 @@ const S = {
    },
    divider: {
       height: 1,
-      background: "var(--border)",
+      background: "rgba(8,145,178,0.12)",
       margin: "10px 0 4px",
       flexShrink: 0,
    },
    catList: {
       overflowY: "scroll",
-      height: 0, // flex 자식이 실제로 축소되도록
-      flex: "1 1 0", // grow/shrink/basis=0 → 남은 공간만큼 먹고 스크롤
+      height: 0,
+      flex: "1 1 0",
       padding: "0 8px 16px",
       scrollbarWidth: "thin",
-      scrollbarColor: "#ddd transparent",
+      scrollbarColor: "rgba(8,145,178,0.2) transparent",
    },
    catRow: {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      padding: "6px 4px",
-      borderRadius: 8,
+      padding: "6px 6px",
+      borderRadius: 10,
       cursor: "pointer",
       transition: "background 0.1s",
+      marginBottom: 2,
    },
    catLeft: {
       display: "flex",
@@ -321,14 +327,14 @@ const S = {
       fontSize: 10,
       fontWeight: 700,
       padding: "1px 6px",
-      borderRadius: 10,
+      borderRadius: 20,
       flexShrink: 0,
       transition: "all 0.2s",
    },
    toggleBtn: {
       border: "none",
-      borderRadius: 6,
-      padding: "3px 8px",
+      borderRadius: 20,
+      padding: "3px 10px",
       fontSize: 10,
       fontWeight: 700,
       cursor: "pointer",

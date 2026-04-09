@@ -2,72 +2,77 @@
 .mv-map-controls {
    position: absolute;
    bottom: 120px;
-   right: 14px;
+   left: 12px;
    z-index: 400;
    display: flex;
    flex-direction: column;
+   align-items: stretch;
    background: rgba(255, 255, 255, 0.92);
-   backdrop-filter: blur(6px);
-   -webkit-backdrop-filter: blur(6px);
-   border-radius: 12px;
-   padding: 8px;
-   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+   backdrop-filter: blur(8px);
+   -webkit-backdrop-filter: blur(8px);
+   border-radius: 16px;
+   padding: 10px;
+   box-shadow: 0 4px 16px rgba(8, 145, 178, 0.15);
    gap: 6px;
+   min-width: 200px;
 }
 
 /* 현재 구 이름 뱃지 */
 .mv-map-controls__gu-badge {
-   background: rgba(255, 255, 255, 0.95);
-   border-radius: 8px;
-   padding: 4px 10px;
+   background: rgba(8, 145, 178, 0.08);
+   border-radius: 20px;
+   padding: 5px 12px;
    font-size: 11px;
-   color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+   color: #0891b2;
    text-align: center;
+   font-weight: 600;
 }
 .dark .mv-map-controls__gu-badge {
-   background: rgba(15, 20, 32, 0.95);
-   color: var(--muted-foreground);
+   background: rgba(8, 145, 178, 0.15);
+   color: #38bdf8;
 }
 
 /* 로딩 표시 */
 .mv-map-controls__loading {
    background: rgba(255, 255, 255, 0.95);
-   border-radius: 8px;
+   border-radius: 20px;
    padding: 5px 12px;
    font-size: 11px;
-   color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+   color: #0891b2;
+   text-align: center;
 }
 .dark .mv-map-controls__loading {
    background: rgba(15, 20, 32, 0.95);
-   color: var(--muted-foreground);
+   color: #38bdf8;
 }
 
 /* 버튼 행 */
 .mv-map-controls__mode-row {
    display: flex;
    flex-direction: row;
-   gap: 6px;
+   gap: 5px;
+   justify-content: center;
 }
 .mv-map-controls__store-row {
    display: flex;
-   gap: 6px;
+   gap: 5px;
 }
 
 /* 공통 버튼 */
 .mv-mode-btn {
-   border: 2px solid #e5e7eb;
-   border-radius: 10px;
-   padding: 7px 12px;
+   border: 1.5px solid #e5e7eb;
+   border-radius: 20px;
+   padding: 7px 0;
    font-size: 12px;
    font-weight: 700;
    cursor: pointer;
    background: #fff;
    color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
    transition: all 0.18s;
    white-space: nowrap;
+   flex: 1;
+   text-align: center;
 }
 .dark .mv-mode-btn {
    background: var(--card);
@@ -75,19 +80,20 @@
    color: var(--foreground);
 }
 
-/* 상가 검색 버튼 (비활성) */
+/* 상가 검색 버튼 */
 .mv-store-btn {
-   border: 2px solid #e5e7eb;
-   border-radius: 10px;
+   border: 1.5px solid #e5e7eb;
+   border-radius: 20px;
    padding: 7px 12px;
    font-size: 12px;
    font-weight: 700;
    cursor: pointer;
    background: #fff;
    color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
    white-space: nowrap;
    flex: 1;
+   text-align: center;
 }
 .dark .mv-store-btn {
    background: var(--card);
@@ -97,15 +103,15 @@
 
 /* 새로고침 버튼 */
 .mv-refresh-btn {
-   border: 2px solid #0891b2;
-   border-radius: 10px;
+   border: 1.5px solid #0891b2;
+   border-radius: 20px;
    padding: 7px 10px;
    font-size: 12px;
    font-weight: 700;
    cursor: pointer;
    background: #fff;
    color: #0891b2;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
    white-space: nowrap;
 }
 .dark .mv-refresh-btn {
@@ -155,12 +161,4 @@
    background: rgba(15, 20, 32, 0.92);
 }
 
-/* 팝업 열릴 때 맵컨트롤 좌측으로 이동 */
-.mv-map-controls.mv-map-controls--hidden,
-.mv-map-controls.mv-map-controls--dong {
-   right: auto;
-   left: 12px;
-   transition:
-      left 0.2s,
-      right 0.2s;
-}
+/* 팝업/동패널 열려도 위치 고정 (항상 왼쪽) */

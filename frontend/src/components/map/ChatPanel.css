@@ -2,32 +2,23 @@
 .mv-chat-panel {
    position: absolute;
    top: 0;
-   right: 0;
-   width: 400px;
+   left: 240px;
+   width: 380px;
    height: 100%;
    background: #fff;
    z-index: 500;
    display: flex;
    flex-direction: column;
-   box-shadow: -2px 0 12px rgba(0, 0, 0, 0.15);
+   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
    transition:
       transform 0.3s ease,
-      visibility 0.3s,
-      right 0.3s ease;
+      visibility 0.3s;
    visibility: visible;
 }
 
-/* 동패널 열림 시 채팅패널을 왼쪽으로 밀기 */
-.mv-chat-panel--dong-open {
-   right: var(--dong-panel-width);
-}
-@media (max-width: 640px) {
-   .mv-chat-panel--dong-open {
-      right: 0;
-   }
-}
+/* 동패널 열림 시 챗패널은 왼쪽 고정이므로 위치 변경 불필요 */
 .mv-chat-panel--closed {
-   transform: translateX(100%);
+   transform: translateX(-100%);
    pointer-events: none;
    visibility: hidden;
    display: none;
@@ -364,9 +355,8 @@
    /* 채팅 패널: 400px 고정 → 전체 너비 슬라이드 */
    .mv-chat-panel {
       width: 100vw;
-      width: 100dvw; /* iOS 주소창 대응 */
+      width: 100dvw;
       left: 0;
-      right: 0;
       -webkit-overflow-scrolling: touch;
    }
    /* .mv-chat-panel--closed의 translateX(100%) 유지 → 전체 화면 슬라이드 자동 동작 */
@@ -374,7 +364,7 @@
    /* 채팅 토글: coord-bar(bottom:12px)와 겹침 방지 */
    .mv-chat-toggle {
       bottom: 70px;
-      right: 12px;
+      left: 12px;
    }
 
    .mv-chat-msg {

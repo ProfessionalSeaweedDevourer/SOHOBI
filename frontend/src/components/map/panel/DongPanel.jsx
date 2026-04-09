@@ -25,8 +25,8 @@ export default function DongPanel({
    const d = dongPanel.apiData;
    const isRE = dongPanel.mode === "realestate";
    const isStore = dongPanel.mode === "store";
-   const panelColor = isRE ? "#2563EB" : isStore ? "#7C3AED" : "#059669";
-   const panelBg = isRE ? "#eff6ff" : isStore ? "#f5f3ff" : "#f0fdf4";
+   const panelColor = "#0891B2";
+   const panelBg = "#f0f9ff";
 
    return (
       <div className="mv-dong-panel">

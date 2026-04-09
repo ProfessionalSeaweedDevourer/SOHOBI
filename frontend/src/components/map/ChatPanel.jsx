@@ -388,7 +388,7 @@ export default function ChatPanel({
 
          {/* 패널 */}
          <div
-            className={`mv-chat-panel ${isOpen ? "" : "mv-chat-panel--closed"} ${dongPanelOpen ? "mv-chat-panel--dong-open" : ""}`}
+            className={`mv-chat-panel ${isOpen ? "" : "mv-chat-panel--closed"} ${dongPanelOpen ? "mv-chat-panel--dong-open" : ""} ${hasPopup ? "mv-chat-panel--has-popup" : ""}`}
          >
             <div className="mv-chat-header">
                <span>상권분석 AI</span>

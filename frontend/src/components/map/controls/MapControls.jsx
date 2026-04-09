@@ -37,9 +37,9 @@ export default function MapControls({
          {/* 점포수 / 매출 / 부동산 버튼 */}
          <div className="mv-map-controls__mode-row">
             {[
-               { mode: "store", label: "점포수", activeColor: "#7C3AED" },
-               { mode: "sales", label: "매출", activeColor: "#059669" },
-               { mode: "realestate", label: "부동산", activeColor: "#2563EB" },
+               { mode: "store", label: "점포수", activeColor: "#0891B2" },
+               { mode: "sales", label: "매출", activeColor: "#0891B2" },
+               { mode: "realestate", label: "부동산", activeColor: "#0891B2" },
             ].map(({ mode, label, activeColor }) => {
                const isActive = dongMode === mode;
                return (

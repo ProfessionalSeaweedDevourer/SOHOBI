@@ -485,7 +485,13 @@ export default function StorePopup({
    onClusterSelect,
    onLandValue,
    hasDongPanel = false,
+   chatOpen = false,
 }) {
+   const rightOffset = hasDongPanel
+      ? "calc(var(--dong-panel-width) + 16px)"
+      : chatOpen
+        ? 416
+        : 16;
    const [showList, setShowList] = useState(false);
 
    // 클러스터 목록 모드
@@ -495,7 +501,7 @@ export default function StorePopup({
             style={{
                position: "absolute",
                bottom: 20,
-               ...(hasDongPanel ? { right: "calc(var(--dong-panel-width) + 16px)" } : { right: 16 }),
+               right: rightOffset,
                zIndex: 300,
                width: 300,
                background: "#fff",
@@ -523,7 +529,7 @@ export default function StorePopup({
             style={{
                position: "absolute",
                bottom: 20,
-               ...(hasDongPanel ? { right: "calc(var(--dong-panel-width) + 16px)" } : { right: 16 }),
+               right: rightOffset,
                zIndex: 300,
                width: 300,
                background: "#fff",
@@ -551,7 +557,7 @@ export default function StorePopup({
          style={{
             position: "absolute",
             bottom: 20,
-            ...(hasDongPanel ? { right: "calc(var(--dong-panel-width) + 16px)" } : { right: 16 }),
+            right: rightOffset,
             zIndex: 300,
             width: 300,
             background: "#fff",
