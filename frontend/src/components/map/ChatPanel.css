@@ -244,11 +244,11 @@
   text-align: left;
 }
 .mv-chat-msg--assistant table th {
-  background: rgba(8, 145, 178, 0.08);
+  background: rgba(8, 145, 178, 0.1);
   font-weight: 600;
 }
 .mv-chat-msg--assistant table tbody tr:nth-child(even) {
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(128, 128, 128, 0.04);
 }
 .mv-chat-msg--assistant del,
 .mv-chat-msg--assistant s {
@@ -529,12 +529,6 @@
   background: rgba(34, 211, 238, 0.14);
   border-color: rgba(34, 211, 238, 0.5);
   box-shadow: 0 0 12px rgba(34, 211, 238, 0.15);
-}
-.dark .mv-chat-msg--assistant table th {
-  background: rgba(20, 184, 166, 0.12);
-}
-.dark .mv-chat-msg--assistant table tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.03);
 }
 
 /* ── 모바일 반응형 (≤ 640px) ──────────────────────── */

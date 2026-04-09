@@ -31,7 +31,7 @@ function renderWithAreaLinks(text, onHighlight, keyBase) {
   return parts.map((part, i) =>
     i % 2 === 1 ? (
       <span
-        key={`${keyBase}-${i}`}
+        key={`al-${keyBase}-${i}`}
         className="mv-chat-area-link"
         onClick={() => onHighlight?.(part)}
         title={`${part} 지도에서 보기`}

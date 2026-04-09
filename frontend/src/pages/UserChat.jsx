@@ -14,7 +14,7 @@ import { useChecklistState } from "../components/checklist/useChecklistState";
 import { useChatMessages } from "../hooks/chat/useChatMessages";
 import { useStreamQuery } from "../hooks/chat/useStreamQuery";
 import { BASE_URL } from "../api";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, MessageSquare, Menu, X } from "lucide-react";
 
 const DOMAIN_CARDS = [
@@ -499,15 +499,17 @@ export default function UserChat() {
           <ChecklistProgress progress={checklistProgress} total={8} onClick={() => setChecklistDrawerOpen(true)} />
         </div>
 
-        {checklistDrawerOpen && (
-          <ChecklistDrawer
-            items={checklistItems}
-            progress={checklistProgress}
-            onToggle={toggleItem}
-            onAskQuestion={(q) => { setChecklistDrawerOpen(false); handleSubmit(q); }}
-            onClose={() => setChecklistDrawerOpen(false)}
-          />
-        )}
+        <AnimatePresence>
+          {checklistDrawerOpen && (
+            <ChecklistDrawer
+              items={checklistItems}
+              progress={checklistProgress}
+              onToggle={toggleItem}
+              onAskQuestion={(q) => { setChecklistDrawerOpen(false); handleSubmit(q); }}
+              onClose={() => setChecklistDrawerOpen(false)}
+            />
+          )}
+        </AnimatePresence>
 
         {showSamples && (
           <div className="border-b border-[var(--border)] px-4 py-3 max-h-72 overflow-y-auto">
