@@ -108,6 +108,8 @@ export function parseWmsProps(p, layerType) {
  */
 
 const CADASTRAL_MIN_ZOOM = 17; // Layerpanel.jsx minZoom: 17 과 동기화
+export const CADASTRAL_QUERY_LAYER = "lp_pa_cbnd_bubun";
+export const CADASTRAL_LAYERS = `${CADASTRAL_QUERY_LAYER},lp_pa_cbnd_bonbun`;
 
 // ── WMS 레이어 클릭 처리 ────────────────────────────────────────
 export async function handleWmsClick(
@@ -123,17 +125,17 @@ export async function handleWmsClick(
 
    for (const wmsLayer of wmsLayers) {
       if (!wmsLayer.getVisible()) continue;
+      const layerName = wmsLayer.get("name");
 
       // cadastral: minZoom 이하에서 타일 없음 → GetFeatureInfo 스킵 (프로그래매틱 호출은 예외)
-      if (!skipZoomGuard && wmsLayer.get("name") === "cadastral") {
+      if (!skipZoomGuard && layerName === "cadastral") {
          if ((map.getView().getZoom() ?? 0) < CADASTRAL_MIN_ZOOM) continue;
       }
       const source = wmsLayer.getSource();
-      const layerName = wmsLayer.get("name");
       const extraParams = {
          INFO_FORMAT: "application/json",
          FEATURE_COUNT: 1,
-         ...(layerName === "cadastral" && { QUERY_LAYERS: "lp_pa_cbnd_bubun" }),
+         ...(layerName === "cadastral" && { QUERY_LAYERS: CADASTRAL_QUERY_LAYER }),
       };
       const url = source.getFeatureInfoUrl(
          coordinate,
@@ -155,12 +157,11 @@ export async function handleWmsClick(
          }
          if (!feat) continue;
 
-         const layerType = wmsLayer.get("name");
-         const parsed = parseWmsProps(feat.properties, layerType);
+         const parsed = parseWmsProps(feat.properties, layerName);
 
          // 지적도 공시지가 처리
          let landValue = null;
-         if (layerType === "cadastral" && parsed.jiga && parsed.gosi_year) {
+         if (layerName === "cadastral" && parsed.jiga && parsed.gosi_year) {
             const price = parseInt(String(parsed.jiga).replace(/,/g, ""));
             const manwon = Math.round(price / 10000);
             landValue = [
@@ -174,8 +175,8 @@ export async function handleWmsClick(
             ];
          }
          return {
-            parsed: { ...parsed, type: layerType },
-            layerType,
+            parsed: { ...parsed, type: layerName },
+            layerType: layerName,
             landValue,
          };
       } catch (err) {
