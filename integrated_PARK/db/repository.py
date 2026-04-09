@@ -17,6 +17,7 @@ PG_PASSWORD=...
 
 import logging
 import os
+import re
 import threading
 import time
 from typing import Optional
@@ -586,13 +587,18 @@ class CommercialRepository:
         return self._lookup_adm_codes_by_name(location)
 
     def _lookup_adm_codes_by_name(self, adm_nm: str) -> list[str]:
-        """AREA_MAP에 없는 지역명(예: 서초1동)을 DB adm_nm으로 직접 조회"""
-        sql = "SELECT DISTINCT adm_cd FROM sangkwon_sales WHERE adm_nm = %s LIMIT 5"
+        """AREA_MAP에 없는 지역명(예: 서초1동)을 DB adm_nm으로 직접 조회.
+        정확 매칭 실패 시, 동으로 끝나는 입력에 한해 LIKE 폴백."""
+        sql_exact = "SELECT DISTINCT adm_cd FROM sangkwon_sales WHERE adm_nm = %s LIMIT 5"
+        sql_like = "SELECT DISTINCT adm_cd FROM sangkwon_sales WHERE adm_nm LIKE %s LIMIT 5"
         conn = self._connect()
         try:
             with conn.cursor() as cursor:
-                cursor.execute(sql, [adm_nm])
+                cursor.execute(sql_exact, [adm_nm])
                 rows = cursor.fetchall()
+                if not rows and re.search(r"동\d*$", adm_nm):
+                    cursor.execute(sql_like, [f"%{adm_nm}"])
+                    rows = cursor.fetchall()
             return [r[0] for r in rows]
         except Exception:
             return []

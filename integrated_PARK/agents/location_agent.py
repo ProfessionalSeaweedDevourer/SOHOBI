@@ -77,6 +77,18 @@ def _normalize_location(raw: str) -> str | None:
     if raw in AREA_MAP:
         return raw
 
+    # 1.4단계: "X구 Y동" 형식 → "Y동"만 추출 (DB adm_nm은 동 단위만 저장)
+    m = re.match(r"^\S+구\s+(\S+동\d*)$", raw)
+    if m:
+        return m.group(1)
+
+    # 1.45단계: 공백 분리 토큰 중 "동"으로 끝나는 토큰 우선 (예: "강남 역삼1동" → "역삼1동")
+    tokens = raw.split()
+    if len(tokens) >= 2:
+        dong_tokens = [t for t in tokens if re.search(r"동\d*$", t)]
+        if dong_tokens:
+            return dong_tokens[-1]  # 마지막(가장 구체적) 동 토큰
+
     # 1.5단계: 세부 동(숫자+동 형식, 예: 서초1동, 역삼2동) — 정규화 없이 원문 반환
     # repository._get_adm_codes에서 DB adm_nm 직접 조회로 처리
     if re.search(r"\d+동$", raw):
