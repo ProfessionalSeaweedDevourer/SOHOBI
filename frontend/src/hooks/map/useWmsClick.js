@@ -115,14 +115,13 @@ export async function handleWmsClick(
    coordinate,
    { skipZoomGuard = false } = {},
 ) {
-   const wmsLayers = map
-      .getLayers()
-      .getArray()
-      .filter((l) =>
-         ["cadastral", "tourist_info", "tourist_spot", "market"].includes(
-            l.get("name"),
-         ),
-      );
+   const LAYER_ORDER = ["cadastral", "tourist_info", "tourist_spot", "market"];
+   const wmsLayers = LAYER_ORDER.map((name) =>
+      map
+         .getLayers()
+         .getArray()
+         .find((l) => l.get("name") === name),
+   ).filter(Boolean);
 
    for (const wmsLayer of wmsLayers) {
       if (!wmsLayer.getVisible()) continue;
@@ -132,11 +131,20 @@ export async function handleWmsClick(
          if ((map.getView().getZoom() ?? 0) < CADASTRAL_MIN_ZOOM) continue;
       }
       const source = wmsLayer.getSource();
+      const layerName = wmsLayer.get("name");
+      const extraParams =
+         layerName === "cadastral"
+            ? {
+                 INFO_FORMAT: "application/json",
+                 FEATURE_COUNT: 1,
+                 QUERY_LAYERS: "lp_pa_cbnd_bonbun",
+              }
+            : { INFO_FORMAT: "application/json", FEATURE_COUNT: 1 };
       const url = source.getFeatureInfoUrl(
          coordinate,
          map.getView().getResolution(),
          "EPSG:3857",
-         { INFO_FORMAT: "application/json", FEATURE_COUNT: 1 },
+         extraParams,
       );
       if (!url) continue;
       try {
