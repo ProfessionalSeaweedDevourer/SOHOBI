@@ -6,6 +6,7 @@ import ProgressPanel from "../ProgressPanel";
 import ActionButtons from "../ActionButtons";
 import { motion, AnimatePresence } from "motion/react";
 import { MessageSquare, X, MapPin, Send } from "lucide-react";
+import SimulationChart from "../SimulationChart";
 import "./ChatPanel.css";
 
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
@@ -579,6 +580,9 @@ export default function ChatPanel({
                               />
                            ))}
                         </div>
+                     )}
+                     {msg.chart && typeof msg.chart === "object" && (
+                        <SimulationChart chartData={msg.chart} />
                      )}
                   </div>
                ))}
