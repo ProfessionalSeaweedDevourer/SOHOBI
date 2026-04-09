@@ -2,7 +2,7 @@
 
 ## 작업 목표
 
-Oracle DB 연결 정보(`10.1.92.119:1521/xe`, 사용자 `shobi`)를 이용해
+Oracle DB 연결 정보(`<ORACLE_HOST>:1521/xe`, 사용자 `shobi`)를 이용해
 `integrated_PARK/db/finance_db.py` 및 관련 에이전트/플러그인의 DB 연동이 정상 작동하는지 검증 및 수정.
 
 ---
@@ -47,7 +47,7 @@ def _get_connection(self):
 
 | 항목 | 내용 |
 |------|------|
-| 증상 | `10.1.92.119:1521` timeout — `nc`, `ping` 모두 실패 |
+| 증상 | `<ORACLE_HOST>:1521` timeout — `nc`, `ping` 모두 실패 |
 | 원인 | 개발 PC(Mac)는 무선, DB 서버는 유선 LAN 전용 망 |
 | 추가 원인 | 해당 공유기가 무선 접속 불가 상태 |
 
@@ -77,7 +77,7 @@ Homebrew 버전 제거 후 **Mac App Store**에서 Tailscale 재설치.
 팀원 PC(Windows 10)와 Mac 양쪽에서 같은 계정으로 로그인.
 
 ```bash
-ping -c 3 100.107.219.31   # 팀원 PC Tailscale IP
+ping -c 3 <TAILSCALE_IP>   # 팀원 PC Tailscale IP
 # → 응답 성공 (평균 383ms)
 ```
 
@@ -95,11 +95,11 @@ net user soldesk 1234
 
 ```bash
 # Mac 터미널 (세션 동안 유지)
-ssh -N -L 1521:10.1.92.119:1521 soldesk@100.107.219.31
+ssh -N -L 1521:<ORACLE_HOST>:1521 soldesk@<TAILSCALE_IP>
 ```
 
 ```
-Mac(Wi-Fi) → Tailscale → 팀원 PC(10.1.92.110) → 유선 LAN → Oracle DB(10.1.92.119:1521)
+Mac(Wi-Fi) → Tailscale → 팀원 PC(10.1.92.110) → 유선 LAN → Oracle DB(<ORACLE_HOST>:1521)
 ```
 
 `.env` 수정:
@@ -133,7 +133,7 @@ repository 연결: 성공              # repository.py ✅
 
 ```bash
 # 1. SSH 터널 열기 (터미널 하나 전용으로 유지)
-ssh -N -L 1521:10.1.92.119:1521 soldesk@100.107.219.31
+ssh -N -L 1521:<ORACLE_HOST>:1521 soldesk@<TAILSCALE_IP>
 # 비밀번호: 1234
 
 # 2. 터널 확인
@@ -150,5 +150,5 @@ cd integrated_PARK && .venv/bin/python3 api_server.py
 ## 주의 사항
 
 - SSH 터널은 세션마다 수동으로 열어야 함 (영구 연결 아님)
-- 배포 환경(Azure Container Apps)은 `ORACLE_HOST=10.1.92.119` 직접 사용 — `.env` 커밋 금지
+- 배포 환경(Azure Container Apps)은 `ORACLE_HOST=<ORACLE_HOST>` 직접 사용 — `.env` 커밋 금지
 - 팀원 PC 임시 암호(`1234`)는 보안상 추후 SSH 키 인증으로 교체 권장

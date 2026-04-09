@@ -23,7 +23,7 @@
 - 대상 리소스 그룹 확인
 - Oracle SSH 터널 열기 (데이터 내보내기 시 필요)
   ```bash
-  ssh -N -L 1521:10.1.92.119:1521 soldesk@<tailscale-ip>
+  ssh -N -L 1521:<ORACLE_HOST>:1521 soldesk@<tailscale-ip>
   ```
 
 ### 3. Azure PostgreSQL Flexible Server 프로비저닝

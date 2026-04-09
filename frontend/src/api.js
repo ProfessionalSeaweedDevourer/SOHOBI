@@ -1,6 +1,6 @@
 // SWA 프록시 사용 시 VITE_API_URL을 빈 문자열로 설정하면 상대경로(/api/...)로 동작한다.
 // 로컬 개발 시 VITE_API_URL=http://localhost:8000 으로 설정한다.
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+export const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const _API_KEY = import.meta.env.VITE_API_KEY || "";
 const _AUTH_HEADERS = {
   "Content-Type": "application/json",
@@ -112,6 +112,26 @@ export async function fetchLogs(type = "queries", limit = 500, userId = "") {
   if (userId) params.append("user_id", userId);
   const res = await fetchWithTimeout(
     `${BASE_URL}/api/v1/logs?${params}`,
+    { headers: _AUTH_HEADERS }
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    let err = {};
+    try { err = JSON.parse(text); } catch {}
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/**
+ * GET /api/v1/stats — 성능 통계 집계
+ * @param {number} hours 조회 기간 (1-2160)
+ */
+export async function fetchStats(hours = 24) {
+  const h = Math.max(1, Math.min(2160, Math.floor(hours)));
+  const params = new URLSearchParams({ hours: h });
+  const res = await fetchWithTimeout(
+    `${BASE_URL}/api/v1/stats?${params}`,
     { headers: _AUTH_HEADERS }
   );
   if (!res.ok) {

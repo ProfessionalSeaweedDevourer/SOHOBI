@@ -4,6 +4,7 @@
 import React, { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import TileWMS from "ol/source/TileWMS";
+import { CADASTRAL_LAYERS } from "../../../hooks/map/useWmsClick";
 import "./Layerpanel.css";
 
 function makeWmsLayer(layerName, layerKey, zIndex, vworldKey) {
@@ -38,7 +39,7 @@ function makeCadastralLayer(vworldKey) {
             SERVICE: "WMS",
             VERSION: "1.3.0",
             REQUEST: "GetMap",
-            LAYERS: "lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun",
+            LAYERS: CADASTRAL_LAYERS,
             STYLES: ",",
             FORMAT: "image/png",
             TRANSPARENT: "TRUE",
@@ -83,20 +84,12 @@ export default function LayerPanel({
       map.addLayer(
          makeWmsLayer("lt_p_dgtouristinfo", "tourist_info", 215, vworldKey),
       );
-      // 지적도: MapView useEffect([mapReady])에서 동적 import로 생성 — 500ms 후 ref 연결
-      const t = setTimeout(() => {
-         const existing = map.getLayers().getArray()
-            .find((l) => l.get("name") === "cadastral");
-         if (existing) {
-            wmsLayerRef.current = existing;
-            return;
-         }
-         // MapView 동적 import가 아직 완료 안 됐으면 직접 생성 (fallback)
-         const layer = makeCadastralLayer(vworldKey);
-         map.addLayer(layer);
-         wmsLayerRef.current = layer;
-      }, 500);
-      return () => clearTimeout(t);
+      // 지적도: MapView useEffect([mapReady])에서 동기 생성 — ref 연결만 수행
+      const existing = map.getLayers().getArray()
+         .find((l) => l.get("name") === "cadastral");
+      if (existing) {
+         wmsLayerRef.current = existing;
+      }
    }, [map, mapReady]); // eslint-disable-line
 
    // ── 지적도 ──────────────────────────────────────────────────
@@ -214,6 +207,7 @@ function LayerRow({ label, desc, on, color, onClick, disabled }) {
             style={{
                background: on ? color : undefined,
                color: on ? "#fff" : undefined,
+               boxShadow: on ? `0 0 12px ${color}40` : undefined,
                cursor: disabled ? "default" : "pointer",
             }}
          >

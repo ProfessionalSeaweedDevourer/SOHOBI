@@ -2,7 +2,7 @@
 
 ## 배포 현황
 
-- **Container Apps URL**: `https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io`
+- **Container Apps URL**: `<BACKEND_HOST>`
 - **Merged PR**: #38 (main ← PARK) — 2026-03-24, 배포 완료 확인 (CI/CD 2m3s)
 - **현재 브랜치**: PARK (main과 동기 상태)
 
@@ -47,9 +47,9 @@ data: {"event": "signoff_start", "attempt": 1}
 ```
 
 ### 확인된 사실 (이슈 아님)
-- `AZURE_SIGNOFF_ENDPOINT`: `https://ejp-9638-resource.openai.azure.com/` ✅
+- `AZURE_SIGNOFF_ENDPOINT`: `https://<AZURE_OPENAI_ENDPOINT>/` ✅
 - `AZURE_SIGNOFF_DEPLOYMENT`: `gpt-5.4-pro` ✅ (실제 배포 존재 확인)
-- RBAC: 관리 ID → ejp-9638-resource `Cognitive Services OpenAI Contributor` ✅ (2026-03-23 부여)
+- RBAC: 관리 ID → <AZURE_OPENAI_RESOURCE> `Cognitive Services OpenAI Contributor` ✅ (2026-03-23 부여)
 - Cloud Shell에서 Responses API 직접 호출 성공 ✅ (단순 입력 19초 소요)
 
 ### 가설 (우선순위 순)
@@ -61,7 +61,7 @@ Cloud Shell 테스트는 이 파라미터 없이 호출 → 성공.
 **→ 검증 명령 (Cloud Shell):**
 ```bash
 TOKEN=$(az account get-access-token --resource https://cognitiveservices.azure.com --query accessToken -o tsv)
-time curl -s -X POST "https://ejp-9638-resource.openai.azure.com/openai/responses?api-version=2025-04-01-preview" \
+time curl -s -X POST "https://<AZURE_OPENAI_ENDPOINT>/openai/responses?api-version=2025-04-01-preview" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"model": "gpt-5.4-pro", "input": [{"role": "user", "content": "respond with json {\"ok\": true}"}], "text": {"format": {"type": "json_object"}}}'
@@ -74,7 +74,7 @@ time curl -s -X POST "https://ejp-9638-resource.openai.azure.com/openai/response
 **→ 검증: `time curl` 로 정확한 소요 시간 측정**
 ```bash
 time curl -s -N -X POST \
-  https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/api/v1/stream \
+  <BACKEND_HOST>/api/v1/stream \
   -H "Content-Type: application/json" \
   -d '{"question": "서울 마포구에서 카페를 열고 싶습니다"}' \
   --max-time 240
@@ -92,7 +92,7 @@ time curl -s -N -X POST \
 ### 1단계: 정확한 소요 시간 측정
 ```bash
 time curl -s -N -X POST \
-  https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/api/v1/stream \
+  <BACKEND_HOST>/api/v1/stream \
   -H "Content-Type: application/json" \
   -d '{"question": "서울 마포구에서 카페를 열고 싶습니다"}' \
   --max-time 300
@@ -149,12 +149,12 @@ response = await client.responses.create(
 ```bash
 az cosmosdb sql database list \
   --account-name sohobi-ejp-9638 \
-  --resource-group rg-ejp-9638 \
+  --resource-group <RESOURCE_GROUP> \
   --query "[].id" -o tsv
 
 az cosmosdb sql container list \
   --account-name sohobi-ejp-9638 \
-  --resource-group rg-ejp-9638 \
+  --resource-group <RESOURCE_GROUP> \
   --database-name sohobi \
   --query "[].id" -o tsv
 ```
@@ -163,6 +163,6 @@ az cosmosdb sql container list \
 ```bash
 az containerapp secret set \
   --name sohobi-backend \
-  --resource-group rg-ejp-9638 \
+  --resource-group <RESOURCE_GROUP> \
   --secrets export-secret=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
 ```

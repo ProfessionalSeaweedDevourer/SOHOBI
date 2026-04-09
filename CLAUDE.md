@@ -164,6 +164,12 @@ curl -s "$BACKEND_HOST/api/v1/logs?type=queries&limit=50" | python3 -m json.tool
 
 상세 명령 및 필터링: [`docs/guides/backend-logs.md`](docs/guides/backend-logs.md)
 
+## 도메인 & 인프라
+
+- 프론트엔드 도메인: `sohobi.net` (Azure DNS zone: `.env` 참조)
+- 백엔드: Azure Container Apps (`BACKEND_HOST` in `.env`)
+- SEO canonical URL, sitemap, OG 태그 등에서 도메인은 **`sohobi.net`** 사용
+
 ## 주의 사항
 
 - `.env` 파일에는 Azure API 키가 있음 — 절대 커밋하지 말 것

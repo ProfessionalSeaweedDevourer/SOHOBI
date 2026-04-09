@@ -116,7 +116,7 @@ TC3: `sohobi.net/map` → 신당동 지적도 클릭 → 팝업 공시지가 금
 ## VWorld 인증 구조 요약 (아키텍처 메모)
 
 ```
-VWorld API 키: BE3AF33A-202E-3D5F-A8AD-63D9EE291ABF
+VWorld API 키: <VWORLD_API_KEY>
 등록 방식: 도메인 기반 (https://sohobi.net)
 등록자: WOO (TerryBlackhoodWoo)
 

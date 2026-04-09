@@ -80,7 +80,7 @@
    ```
 
 3. **VWorld 개발자 센터:** [https://www.vworld.kr/dev/v4dv_apikey_s002.do](https://www.vworld.kr/dev/v4dv_apikey_s002.do)
-   - API 키 `BE3AF33A-202E-3D5F-A8AD-63D9EE291ABF` → IP 허용 목록에 Azure outbound IP 추가
+   - API 키 `<VWORLD_API_KEY>` → IP 허용 목록에 Azure outbound IP 추가
 
 ---
 

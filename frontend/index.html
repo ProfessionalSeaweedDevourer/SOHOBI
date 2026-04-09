@@ -1,10 +1,84 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/sohobi_logo_small.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SOHOBI — 소호비 창업 상담</title>
+
+    <!-- 기본 SEO -->
+    <title>SOHOBI — 소호비 | AI 기반 외식업 창업 컨설팅</title>
+    <meta name="description" content="소호비(SOHOBI) — AI 기반 외식업 창업 컨설팅. 사업성 분석, 상권분석, 재무 시뮬레이션, 법률·세무 상담을 무료로 제공합니다." />
+    <meta name="keywords" content="창업, 소자본 창업, 사업성 분석, 상권분석, 소상공인, 창업지원, 점포분석, 입지선정, 외식업 창업, AI 창업 상담" />
+    <meta name="author" content="SOHOBI" />
+    <link rel="canonical" href="https://sohobi.net/" />
+
+    <!-- 크롤러 제어 (robots/googlebot은 SEO.jsx에서 라우트별 동적 관리) -->
+    <meta name="referrer" content="origin-when-cross-origin" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- 검색엔진 인증 -->
+    <meta name="google-site-verification" content="1vZ6L8CCnXElDXAaj31tZruNKgirClJD672bHuAmWws" />
+
+    <!-- 브라우저 / 모바일 UX -->
+    <meta name="theme-color" content="#0891b2" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="소호비" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="application-name" content="SOHOBI 소호비" />
+
+    <!-- 파비콘 & 아이콘 -->
+    <link rel="icon" type="image/png" href="/sohobi_logo_small.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SOHOBI — 소호비 | AI 기반 외식업 창업 컨설팅" />
+    <meta property="og:description" content="소호비(SOHOBI) — AI 기반 외식업 창업 컨설팅. 사업성 분석, 상권분석, 재무 시뮬레이션, 법률·세무 상담을 무료로 제공합니다." />
+    <meta property="og:url" content="https://sohobi.net/" />
+    <meta property="og:site_name" content="SOHOBI 소호비" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:image" content="https://sohobi.net/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SOHOBI 소호비 — AI 기반 외식업 창업 컨설팅 플랫폼" />
+    <meta property="og:image:type" content="image/png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SOHOBI — 소호비 | AI 기반 외식업 창업 컨설팅" />
+    <meta name="twitter:description" content="소호비(SOHOBI) — AI 기반 외식업 창업 컨설팅. 사업성 분석, 상권분석, 재무 시뮬레이션, 법률·세무 상담을 무료로 제공합니다." />
+    <meta name="twitter:image" content="https://sohobi.net/og-image.png" />
+
+    <!-- 성능 힌트 -->
+    <link rel="preconnect" href="%VITE_API_URL%" />
+    <link rel="dns-prefetch" href="%VITE_API_URL%" />
+
+    <!-- JSON-LD: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "SOHOBI",
+      "alternateName": "소호비",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "url": "https://sohobi.net",
+      "description": "AI 기반 외식업 창업 컨설팅 플랫폼. 사업성 분석, 상권분석, 재무 시뮬레이션, 법률·세무 상담.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "KRW"
+      },
+      "provider": {
+        "@type": "Organization",
+        "name": "SOHOBI",
+        "url": "https://sohobi.net"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

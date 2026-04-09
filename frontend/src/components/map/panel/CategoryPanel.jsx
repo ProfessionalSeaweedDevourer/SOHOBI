@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { CATEGORIES } from "../../../constants/categories";
+import "./CategoryPanel.css";
 
 export default function CategoryPanel({
    visibleCats,
@@ -34,17 +35,19 @@ export default function CategoryPanel({
    };
 
    return (
-      <div style={{
-         ...S.sidebar,
-         width: collapsed ? 48 : (isMobile ? "min(220px, 80vw)" : 220),
-         position: isMobile && !collapsed ? "absolute" : "relative",
-         zIndex: isMobile && !collapsed ? 300 : 200,
-      }}>
+      <div
+         className="cp-sidebar"
+         style={{
+            width: collapsed ? 48 : (isMobile ? "min(220px, 80vw)" : 220),
+            position: isMobile && !collapsed ? "absolute" : "relative",
+            zIndex: isMobile && !collapsed ? 300 : 200,
+         }}
+      >
          {/* ── 헤더 ──────────────────────────────────────────── */}
-         <div style={S.header}>
-            {!collapsed && <span style={S.headerTitle}>🏪 상권 분석</span>}
+         <div className="cp-header">
+            {!collapsed && <span className="cp-header__title">🏪 상권 분석</span>}
             <button
-               style={S.collapseBtn}
+               className="cp-collapse-btn"
                onClick={() => setCollapsed((v) => !v)}
             >
                {collapsed ? "▶" : "◀"}
@@ -54,7 +57,7 @@ export default function CategoryPanel({
          {!collapsed && (
             <>
                {/* ── 구/동 검색 ────────────────────────────── */}
-               <div style={S.searchBox}>
+               <div className="cp-search-box">
                   <input
                      type="text"
                      placeholder="행정동/법정동 검색..."
@@ -62,42 +65,42 @@ export default function CategoryPanel({
                      autoComplete="off"
                      onChange={(e) => setSearchQuery(e.target.value)}
                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                     style={S.searchInput}
+                     className="cp-search-input"
                   />
-                  <button style={S.searchBtn} onClick={handleSearch}>
+                  <button className="cp-search-btn" onClick={handleSearch}>
                      🔍
                   </button>
                </div>
 
                {/* ── 전체 통계 ─────────────────────────────── */}
                {totalCount !== null && (
-                  <div style={S.totalBadge}>
+                  <div className="cp-total-badge">
                      반경 내 총 <b>{totalCount}</b>건
                   </div>
                )}
 
                {/* ── Hide all / Show all ───────────────────── */}
-               <div style={S.allBtns}>
-                  <button style={S.hideAllBtn} onClick={onHideAll}>
+               <div className="cp-all-btns">
+                  <button className="cp-hide-all-btn" onClick={onHideAll}>
                      Hide all
                   </button>
-                  <button style={S.showAllBtn} onClick={onShowAll}>
+                  <button className="cp-show-all-btn" onClick={onShowAll}>
                      Show all
                   </button>
                </div>
 
-               <div style={S.divider} />
+               <div className="cp-divider" />
 
                {/* ── 카테고리 목록 (스크롤) ────────────────── */}
-               <div style={S.catList}>
+               <div className="cp-cat-list">
                   {CATEGORIES.map((cat) => {
                      const isOn = visibleCats.has(cat.key);
                      const count = catCounts?.[cat.key] || 0;
                      return (
                         <div
                            key={cat.label || cat.key}
+                           className="cp-cat-row"
                            style={{
-                              ...S.catRow,
                               background:
                                  selectedCatCd === cat.key
                                     ? `${cat.color}18`
@@ -108,14 +111,14 @@ export default function CategoryPanel({
                                     : "1px solid transparent",
                            }}
                         >
-                           <div style={S.catLeft}>
+                           <div className="cp-cat-left">
                               <div
+                                 className="cp-cat-dot"
                                  style={{
-                                    ...S.catDot,
-                                    background: isOn ? cat.color : "#ccc",
+                                    background: isOn ? cat.color : "var(--muted)",
                                  }}
                               >
-                                 <span style={{ fontSize: 12 }}>
+                                 <span className="cp-cat-icon">
                                     {cat.icon}
                                  </span>
                               </div>
@@ -125,10 +128,9 @@ export default function CategoryPanel({
                                        selectedCatCd === cat.key ? "" : cat.key,
                                     )
                                  }
+                                 className="cp-cat-name"
                                  style={{
-                                    ...S.catName,
                                     color: isOn ? "var(--foreground)" : "var(--muted-foreground)",
-                                    cursor: "pointer",
                                     textDecoration:
                                        selectedCatCd === cat.key
                                           ? "underline"
@@ -140,8 +142,8 @@ export default function CategoryPanel({
                               </span>
                               {count > 0 && (
                                  <span
+                                    className="cp-count-chip"
                                     style={{
-                                       ...S.countChip,
                                        background: isOn ? cat.bg : "var(--secondary)",
                                        color: isOn ? cat.color : "var(--muted-foreground)",
                                        border: `1px solid ${isOn ? cat.color : "var(--border)"}`,
@@ -152,11 +154,8 @@ export default function CategoryPanel({
                               )}
                            </div>
                            <button
-                              style={{
-                                 ...S.toggleBtn,
-                                 background: isOn ? cat.color : "#e5e7eb",
-                                 color: isOn ? "#fff" : "#999",
-                              }}
+                              className={`cp-toggle-btn ${isOn ? "" : "cp-toggle-btn--off"}`}
+                              style={isOn ? { background: cat.color, color: "#fff" } : undefined}
                               onClick={() => onToggle(cat.key)}
                            >
                               {isOn ? "ON" : "OFF"}
@@ -170,169 +169,3 @@ export default function CategoryPanel({
       </div>
    );
 }
-
-const S = {
-   sidebar: {
-      position: "relative",
-      height: "100%",
-      background: "var(--card)",
-      borderRight: "1px solid var(--border)",
-      borderRadius: "0 12px 12px 0",
-      boxShadow: "2px 0 12px rgba(0,0,0,0.08)",
-      zIndex: 200,
-      display: "flex",
-      flexDirection: "column",
-      transition: "width 0.2s ease",
-      overflow: "hidden",
-      isolation: "isolate",
-      flexShrink: 0,
-      minWidth: 0,
-   },
-   header: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "14px 12px 10px",
-      borderBottom: "1px solid var(--border)",
-      flexShrink: 0,
-   },
-   headerTitle: { fontSize: 13, fontWeight: 700, color: "var(--foreground)" },
-   collapseBtn: {
-      background: "transparent",
-      border: "none",
-      cursor: "pointer",
-      fontSize: 12,
-      color: "var(--muted-foreground)",
-      padding: "2px 4px",
-      marginLeft: "auto",
-   },
-   // ── 검색 ──
-   searchBox: {
-      display: "flex",
-      gap: 4,
-      padding: "10px 12px 0",
-      flexShrink: 0,
-      position: "relative",
-      zIndex: 1, // 사이드바 내부에서만 동작
-   },
-   searchInput: {
-      flex: 1,
-      padding: "5px 8px",
-      border: "1px solid var(--border)",
-      borderRadius: 8,
-      fontSize: 12,
-      outline: "none",
-      background: "var(--input-background)",
-      color: "var(--foreground)",
-      minWidth: 0, // flex 자식 넘침 방지
-      boxSizing: "border-box",
-   },
-   searchBtn: {
-      padding: "5px 8px",
-      background: "#2563EB",
-      border: "none",
-      borderRadius: 8,
-      cursor: "pointer",
-      fontSize: 13,
-      color: "#fff",
-      flexShrink: 0,
-   },
-   totalBadge: {
-      margin: "10px 12px 0",
-      padding: "7px 10px",
-      background: "rgba(8, 145, 178, 0.08)",
-      borderRadius: 8,
-      fontSize: 12,
-      color: "var(--brand-blue)",
-      textAlign: "center",
-   },
-   allBtns: { display: "flex", gap: 6, padding: "10px 12px 0" },
-   hideAllBtn: {
-      flex: 1,
-      padding: "5px 0",
-      background: "var(--secondary)",
-      border: "1px solid var(--border)",
-      borderRadius: 6,
-      fontSize: 11,
-      fontWeight: 600,
-      color: "var(--foreground)",
-      cursor: "pointer",
-   },
-   showAllBtn: {
-      flex: 1,
-      padding: "5px 0",
-      background: "#2563EB",
-      border: "none",
-      borderRadius: 6,
-      fontSize: 11,
-      fontWeight: 600,
-      color: "#fff",
-      cursor: "pointer",
-   },
-   divider: {
-      height: 1,
-      background: "var(--border)",
-      margin: "10px 0 4px",
-      flexShrink: 0,
-   },
-   catList: {
-      overflowY: "scroll",
-      height: 0, // flex 자식이 실제로 축소되도록
-      flex: "1 1 0", // grow/shrink/basis=0 → 남은 공간만큼 먹고 스크롤
-      padding: "0 8px 16px",
-      scrollbarWidth: "thin",
-      scrollbarColor: "#ddd transparent",
-   },
-   catRow: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "6px 4px",
-      borderRadius: 8,
-      cursor: "pointer",
-      transition: "background 0.1s",
-   },
-   catLeft: {
-      display: "flex",
-      alignItems: "center",
-      gap: 7,
-      flex: 1,
-      minWidth: 0,
-   },
-   catDot: {
-      width: 28,
-      height: 28,
-      borderRadius: "50%",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-      transition: "background 0.2s",
-   },
-   catName: {
-      fontSize: 12,
-      fontWeight: 600,
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      transition: "color 0.2s",
-   },
-   countChip: {
-      fontSize: 10,
-      fontWeight: 700,
-      padding: "1px 6px",
-      borderRadius: 10,
-      flexShrink: 0,
-      transition: "all 0.2s",
-   },
-   toggleBtn: {
-      border: "none",
-      borderRadius: 6,
-      padding: "3px 8px",
-      fontSize: 10,
-      fontWeight: 700,
-      cursor: "pointer",
-      flexShrink: 0,
-      transition: "all 0.2s",
-   },
-};

@@ -1,40 +1,37 @@
 /* ── 레이어 패널 ──────────────────────────────────────── */
 .lp-panel {
-   background: #fff;
-   border: 1px solid #ddd;
+   background: var(--glass-bg);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border: 1px solid var(--glass-border);
    border-radius: 10px;
    padding: 16px;
    min-width: 230px;
-   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-.dark .lp-panel {
-   background: var(--card);
-   border-color: var(--border);
+   box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.05),
+      0 4px 12px rgba(0, 0, 0, 0.05),
+      0 16px 32px rgba(0, 0, 0, 0.05);
 }
 
 .lp-title {
    font-size: 13px;
    font-weight: 700;
-   color: #111;
    margin-bottom: 12px;
    padding-bottom: 8px;
-   border-bottom: 1px solid #f0f0f0;
-}
-.dark .lp-title {
-   color: var(--foreground);
-   border-bottom-color: var(--border);
+   border-bottom: 1px solid var(--border);
+   background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+   -webkit-background-clip: text;
+   -webkit-text-fill-color: transparent;
+   background-clip: text;
 }
 
 .lp-section-label {
    font-size: 10px;
    font-weight: 700;
-   color: #aaa;
+   color: var(--muted-foreground);
    text-transform: uppercase;
    letter-spacing: 1px;
    margin: 10px 0 4px 2px;
-}
-.dark .lp-section-label {
-   color: var(--muted-foreground);
 }
 
 /* ── 레이어 행 ──────────────────────────────────────── */
@@ -43,33 +40,32 @@
    align-items: center;
    gap: 12px;
    padding: 10px;
-   background: #f9f9f9;
+   background: var(--glass-bg);
+   backdrop-filter: blur(12px);
+   -webkit-backdrop-filter: blur(12px);
+   border: 1px solid var(--glass-border);
    border-radius: 8px;
    margin-bottom: 6px;
+   transition: transform 0.2s, box-shadow 0.2s;
 }
-.dark .lp-row {
-   background: var(--secondary);
+.lp-row:hover {
+   transform: translateY(-2px);
+   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .lp-layer-name {
    font-size: 13px;
    font-weight: 600;
-   color: #333;
-}
-.dark .lp-layer-name {
    color: var(--foreground);
 }
 
 .lp-layer-desc {
    font-size: 11px;
-   color: #999;
+   color: var(--muted-foreground);
    margin-top: 2px;
 }
-.dark .lp-layer-desc {
-   color: var(--muted-foreground);
-}
 
-/* OFF 상태 토글 버튼 */
+/* ── 토글 버튼 ────────────────────────────────────────── */
 .lp-toggle {
    border: none;
    border-radius: 6px;
@@ -80,24 +76,16 @@
    transition: all 0.2s;
 }
 .lp-toggle--off {
-   background: #e0e0e0;
-   color: #555;
-}
-.dark .lp-toggle--off {
    background: var(--muted);
    color: var(--muted-foreground);
 }
 
 .lp-notice {
    font-size: 11px;
-   color: #bbb;
+   color: var(--muted-foreground);
    padding: 8px;
-   background: #f9f9f9;
+   background: var(--secondary);
    border-radius: 6px;
    text-align: center;
    margin-top: 4px;
-}
-.dark .lp-notice {
-   color: var(--muted-foreground);
-   background: var(--secondary);
 }

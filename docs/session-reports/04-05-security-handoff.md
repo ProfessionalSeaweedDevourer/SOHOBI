@@ -87,12 +87,12 @@ fetch(`${REALESTATE_URL}/realestate/sangkwon?...`, { headers: _mapHeaders })
 ```bash
 # 인증 없이 → 401
 curl -s -o /dev/null -w "%{http_code}" \
-  "https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/map/stores-by-dong?adm_cd=1100000"
+  "<BACKEND_HOST>/map/stores-by-dong?adm_cd=1100000"
 
 # 인증 포함 → 200
 curl -s -o /dev/null -w "%{http_code}" \
   -H "X-API-Key: <API_SECRET_KEY>" \
-  "https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io/map/stores-by-dong?adm_cd=1100000"
+  "<BACKEND_HOST>/map/stores-by-dong?adm_cd=1100000"
 ```
 
 ---
@@ -164,7 +164,7 @@ curl -s ifconfig.me
 # 각 IP 등록
 az containerapp ingress access-restriction set \
   --name sohobi-backend \
-  --resource-group rg-ejp-9638 \
+  --resource-group <RESOURCE_GROUP> \
   --rule-name "allow-dev-PARK" \
   --ip-address <공인IP>/32 \
   --action Allow
@@ -179,9 +179,9 @@ az containerapp ingress access-restriction set \
 
 | 리소스 | 이름 | 리소스 그룹 |
 |--------|------|-------------|
-| Container Apps | `sohobi-backend` | `rg-ejp-9638` |
-| Static Web Apps | `sohobi-frontend` | `rg-ejp-9638` |
-| Subscription | `5919b1b2-b639-42e1-8678-c28553b1661b` | — |
+| Container Apps | `sohobi-backend` | `<RESOURCE_GROUP>` |
+| Static Web Apps | `sohobi-frontend` | `<RESOURCE_GROUP>` |
+| Subscription | `<AZURE_SUBSCRIPTION_ID>` | — |
 
 ## 주요 환경변수 (Container Apps에 설정됨)
 

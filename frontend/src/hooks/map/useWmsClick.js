@@ -25,7 +25,7 @@ export const LAYER_META = {
 export function parseWmsProps(p, layerType) {
    if (layerType === "cadastral") {
       return {
-         pnu: p.pnu || "",
+         pnu: p.pnu || p.PNU || p.필지번호 || p.jibun_cd || "",
          addr: p.addr || p.uname || "",
          jibun: p.jibun || (p.bubun ? `${p.bubun}-${p.bonbun}` : ""),
          sido: p.ctp_nm || p.sido_name || "",
@@ -108,31 +108,40 @@ export function parseWmsProps(p, layerType) {
  */
 
 const CADASTRAL_MIN_ZOOM = 17; // Layerpanel.jsx minZoom: 17 과 동기화
+export const CADASTRAL_QUERY_LAYER = "lp_pa_cbnd_bubun";
+export const CADASTRAL_LAYERS = `${CADASTRAL_QUERY_LAYER},lp_pa_cbnd_bonbun`;
 
 // ── WMS 레이어 클릭 처리 ────────────────────────────────────────
-export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } = {}) {
-   const wmsLayers = map
-      .getLayers()
-      .getArray()
-      .filter((l) =>
-         ["cadastral", "tourist_info", "tourist_spot", "market"].includes(
-            l.get("name"),
-         ),
-      );
+export async function handleWmsClick(
+   map,
+   coordinate,
+   { skipZoomGuard = false } = {},
+) {
+   const LAYER_ORDER = ["cadastral", "tourist_info", "tourist_spot", "market"];
+   const allLayers = map.getLayers().getArray();
+   const wmsLayers = LAYER_ORDER.map((name) =>
+      allLayers.find((l) => l.get("name") === name),
+   ).filter(Boolean);
 
    for (const wmsLayer of wmsLayers) {
       if (!wmsLayer.getVisible()) continue;
+      const layerName = wmsLayer.get("name");
 
       // cadastral: minZoom 이하에서 타일 없음 → GetFeatureInfo 스킵 (프로그래매틱 호출은 예외)
-      if (!skipZoomGuard && wmsLayer.get("name") === "cadastral") {
+      if (!skipZoomGuard && layerName === "cadastral") {
          if ((map.getView().getZoom() ?? 0) < CADASTRAL_MIN_ZOOM) continue;
       }
       const source = wmsLayer.getSource();
+      const extraParams = {
+         INFO_FORMAT: "application/json",
+         FEATURE_COUNT: 1,
+         ...(layerName === "cadastral" && { QUERY_LAYERS: CADASTRAL_QUERY_LAYER }),
+      };
       const url = source.getFeatureInfoUrl(
          coordinate,
          map.getView().getResolution(),
          "EPSG:3857",
-         { INFO_FORMAT: "application/json", FEATURE_COUNT: 1 },
+         extraParams,
       );
       if (!url) continue;
       try {
@@ -148,12 +157,11 @@ export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } 
          }
          if (!feat) continue;
 
-         const layerType = wmsLayer.get("name");
-         const parsed = parseWmsProps(feat.properties, layerType);
+         const parsed = parseWmsProps(feat.properties, layerName);
 
          // 지적도 공시지가 처리
          let landValue = null;
-         if (layerType === "cadastral" && parsed.jiga && parsed.gosi_year) {
+         if (layerName === "cadastral" && parsed.jiga && parsed.gosi_year) {
             const price = parseInt(String(parsed.jiga).replace(/,/g, ""));
             const manwon = Math.round(price / 10000);
             landValue = [
@@ -167,8 +175,8 @@ export async function handleWmsClick(map, coordinate, { skipZoomGuard = false } 
             ];
          }
          return {
-            parsed: { ...parsed, type: layerType },
-            layerType,
+            parsed: { ...parsed, type: layerName },
+            layerType: layerName,
             landValue,
          };
       } catch (err) {

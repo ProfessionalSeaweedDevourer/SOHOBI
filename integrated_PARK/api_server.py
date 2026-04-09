@@ -4,6 +4,7 @@
 - POST /api/v1/query         — Q&A: 질문 → 도메인 라우팅 → 에이전트 → Sign-off
 - POST /api/v1/signoff       — draft 단독 Sign-off 검증
 - POST /api/v1/doc/chat      — 문서 생성: 대화형 정보 수집 → 식품 영업 신고서 PDF (NAM)
+- GET  /api/v1/stats         — 성능 통계 집계 (에이전트별 latency, 등급/상태 분포)
 - GET  /api/v1/logs          — JSONL 로그 조회 (프론트엔드 로그 뷰어용)
 """
 
@@ -24,6 +25,9 @@ from fastapi.middleware.gzip import GZipMiddleware
 import httpx
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from dotenv import load_dotenv
 
@@ -57,6 +61,35 @@ import checklist_store
 load_dotenv()
 
 
+# ── 헬퍼 함수 (Rate Limiter + 로깅 공용) ────────────────────────
+def _get_client_ip(request: Request) -> str:
+    """X-Forwarded-For 마지막 hop → 실제 클라이언트 IP (Azure Container Apps 환경)."""
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        # Azure Container Apps proxy가 append한 마지막 IP = 실제 클라이언트
+        return forwarded.split(",")[-1].strip()
+    return request.client.host if request.client else "unknown"
+
+
+# ── Rate Limiter ─────────────────────────────────────────────────
+_RATE_LIMIT_EXEMPT_IPS: set[str] = {"127.0.0.1", "::1"}
+
+_extra = os.getenv("RATE_LIMIT_EXEMPT_IPS", "")
+if _extra:
+    _RATE_LIMIT_EXEMPT_IPS.update(ip.strip() for ip in _extra.split(",") if ip.strip())
+
+
+def _rate_limit_key(request: Request) -> str:
+    """면제 IP → 빈 문자열(slowapi가 limit 체크 스킵), 그 외 → 실제 IP."""
+    ip = _get_client_ip(request)
+    return "" if ip in _RATE_LIMIT_EXEMPT_IPS else ip
+
+limiter = Limiter(
+    key_func=_rate_limit_key,
+    default_limits=["60/minute"],
+)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
@@ -65,6 +98,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SOHOBI Integrated API", version="1.1.0", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(
+    RateLimitExceeded,
+    lambda req, exc: JSONResponse(
+        status_code=429,
+        content={"error": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."},
+        headers={"Retry-After": str(exc.limit.limit.get_expiry())},
+    ),
+)
+app.add_middleware(SlowAPIMiddleware)
 app.include_router(auth_router)
 app.include_router(my_router)
 app.include_router(map_router)
@@ -73,7 +116,7 @@ app.include_router(realestate_router, dependencies=[Depends(verify_api_key)])
 app.include_router(feedback_router,   dependencies=[Depends(verify_api_key)])
 app.include_router(event_router,       dependencies=[Depends(verify_api_key)])
 app.include_router(checklist_router,   dependencies=[Depends(verify_api_key)])
-app.include_router(report_router,      dependencies=[Depends(verify_api_key)])
+app.include_router(report_router)
 app.include_router(roadmap_router,     dependencies=[Depends(verify_api_key)])
 
 # ── CORS: 허용 origin 명시적 화이트리스트 ─────────────────────
@@ -105,10 +148,7 @@ class _IPFilterMiddleware(BaseHTTPMiddleware):
         self.allowed_ips = allowed_ips
 
     async def dispatch(self, request: Request, call_next):
-        forwarded = request.headers.get("X-Forwarded-For", "")
-        client_ip = forwarded.split(",")[0].strip() if forwarded else (
-            request.client.host if request.client else ""
-        )
+        client_ip = _get_client_ip(request)
         if client_ip not in self.allowed_ips:
             import logging
             logging.getLogger("sohobi.security").warning(
@@ -120,6 +160,8 @@ class _IPFilterMiddleware(BaseHTTPMiddleware):
 _allowed_ips_raw = os.getenv("ALLOWED_IPS", "")
 _allowed_ips = {ip.strip() for ip in _allowed_ips_raw.split(",") if ip.strip()}
 if _allowed_ips:
+    # rate limit 면제 IP는 IP 필터도 자동 통과
+    _allowed_ips |= _RATE_LIMIT_EXEMPT_IPS
     app.add_middleware(_IPFilterMiddleware, allowed_ips=_allowed_ips)
 
 
@@ -209,19 +251,11 @@ async def _extract_and_save(sid: str, session: dict, draft: str) -> None:
         _logger.warning("재무 변수 백그라운드 추출 실패 sid=%s: %s", sid, e)
 
 
-# ── 헬퍼 함수 ────────────────────────────────────────────────
-
-def _get_client_ip(request: Request) -> str:
-    """X-Forwarded-For 헤더 → 실제 클라이언트 IP 추출 (Azure 로드밸런서 환경)."""
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else ""
-
 
 # ── 엔드포인트 ────────────────────────────────────────────────
 
 @app.get("/health")
+@limiter.exempt
 async def health():
     return {
         "status": "ok",
@@ -231,7 +265,15 @@ async def health():
     }
 
 
+@app.get("/api/v1/my-ip")
+@limiter.limit("30/minute")
+async def my_ip(request: Request):
+    """서버가 인식하는 클라이언트 IP 반환 (RATE_LIMIT_EXEMPT_IPS 등록용)."""
+    return {"ip": _get_client_ip(request)}
+
+
 @app.post("/api/v1/query", dependencies=[Depends(verify_api_key)])
+@limiter.limit("10/minute")
 async def query(req: QueryRequest, request: Request):
     """Q&A 플로우: 질문 → 도메인 분류 → 에이전트(창업자 컨텍스트 주입) → Sign-off → 최종 응답"""
     t0 = time.monotonic()
@@ -390,6 +432,7 @@ async def query(req: QueryRequest, request: Request):
 
 
 @app.post("/api/v1/stream", dependencies=[Depends(verify_api_key)])
+@limiter.limit("10/minute")
 async def stream_query(req: QueryRequest, request: Request):
     """Q&A 플로우: SSE로 실시간 진행 상황 전달.
     각 단계(에이전트 시작/완료, Sign-off 판정, 최종 결과)를 이벤트로 스트리밍한다.
@@ -448,6 +491,20 @@ async def stream_query(req: QueryRequest, request: Request):
                     if ev.get("updated_context"):
                         session.setdefault("context", {}).update(ev["updated_context"])
 
+                    # 프론트 렌더링용 메시지 메타데이터 축적 (Cosmos 2MB 문서 한도 대비 cap)
+                    _MAX_SESSION_MESSAGES = 50
+                    msgs = session.setdefault("messages", [])
+                    msgs.append({
+                        "question": req.question,
+                        "domain": domain,
+                        "grade": ev.get("grade", ""),
+                        "draft": ev.get("draft", ""),
+                        "confidence_note": ev.get("confidence_note", ""),
+                        "suggested_actions": ev.get("suggested_actions", []),
+                    })
+                    if len(msgs) > _MAX_SESSION_MESSAGES:
+                        session["messages"] = msgs[-_MAX_SESSION_MESSAGES:]
+
                     await save_query_session(sid, session)
 
                     # rejection_history 포맷 변환 후 complete 이벤트에 포함
@@ -498,7 +555,8 @@ async def stream_query(req: QueryRequest, request: Request):
 
 
 @app.post("/api/v1/signoff", dependencies=[Depends(verify_api_key)])
-async def signoff(req: SignoffRequest):
+@limiter.limit("10/minute")
+async def signoff(req: SignoffRequest, request: Request):
     """기존 draft를 Sign-off Agent에 단독으로 검증한다."""
     try:
         if req.domain not in ("admin", "finance", "legal", "location"):
@@ -511,7 +569,8 @@ async def signoff(req: SignoffRequest):
 
 
 @app.post("/api/v1/doc/chat", dependencies=[Depends(verify_api_key)])
-async def doc_chat(req: DocChatRequest):
+@limiter.limit("10/minute")
+async def doc_chat(req: DocChatRequest, request: Request):
     """
     문서 생성 플로우 (NAM):
     대화형으로 사용자 정보를 수집한 뒤 식품 영업 신고서 PDF를 생성한다.
@@ -585,6 +644,75 @@ async def doc_chat(req: DocChatRequest):
         return {"reply": reply, "pdf_url": pdf_url}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# ── 성능 통계 ──────────────────────────────────────────────────────
+
+
+def _percentile(sorted_vals: list[float], p: float) -> float:
+    if not sorted_vals:
+        return 0.0
+    idx = min(int(len(sorted_vals) * p), len(sorted_vals) - 1)
+    return sorted_vals[idx]
+
+
+def _latency_stats(latencies: list[float]) -> dict:
+    if not latencies:
+        return {"n": 0, "avg_ms": 0, "p50_ms": 0, "p90_ms": 0, "max_ms": 0}
+    latencies.sort()
+    return {
+        "n": len(latencies),
+        "avg_ms": round(sum(latencies) / len(latencies)),
+        "p50_ms": round(_percentile(latencies, 0.5)),
+        "p90_ms": round(_percentile(latencies, 0.9)),
+        "max_ms": round(latencies[-1]),
+    }
+
+
+@app.get("/api/v1/stats", dependencies=[Depends(verify_api_key)])
+async def get_stats(hours: int = Query(24, ge=1, le=2160)):
+    """최근 N시간 쿼리·에러 로그를 집계하여 성능 통계를 반환한다."""
+    from datetime import datetime, timezone, timedelta
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    cutoff_str = cutoff.isoformat()
+
+    queries = [
+        e for e in load_entries_json(log_type="queries", limit=0)
+        if e.get("ts", "") >= cutoff_str
+    ]
+    errors = [
+        e for e in load_entries_json(log_type="errors", limit=0)
+        if e.get("ts", "") >= cutoff_str
+    ]
+
+    all_latencies = [e["latency_ms"] for e in queries if e.get("latency_ms")]
+
+    by_domain: dict[str, list[float]] = {}
+    by_status: dict[str, int] = {}
+    by_grade: dict[str, int] = {}
+    for e in queries:
+        domain = e.get("domain", "unknown")
+        by_domain.setdefault(domain, [])
+        if e.get("latency_ms"):
+            by_domain[domain].append(e["latency_ms"])
+        status = e.get("status", "unknown")
+        by_status[status] = by_status.get(status, 0) + 1
+        grade = e.get("grade", "-")
+        if grade and grade != "-":
+            by_grade[grade] = by_grade.get(grade, 0) + 1
+
+    total = len(queries) + len(errors)
+    return {
+        "range_hours": hours,
+        "total": total,
+        "overall": _latency_stats(all_latencies),
+        "by_domain": {d: _latency_stats(lats) for d, lats in sorted(by_domain.items())},
+        "by_status": by_status,
+        "by_grade": by_grade,
+        "error_count": len(errors),
+        "error_rate": round(len(errors) / len(queries), 4) if queries else 0.0,
+    }
 
 
 @app.get("/api/v1/logs/export", dependencies=[Depends(verify_api_key)])

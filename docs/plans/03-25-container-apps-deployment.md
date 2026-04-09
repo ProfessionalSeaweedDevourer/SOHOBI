@@ -62,12 +62,12 @@ Container App 환경변수에 이 두 값이 비어 있어 기본값 사용 중.
 ```bash
 az cosmosdb sql database list \
   --account-name sohobi-ejp-9638 \
-  --resource-group rg-ejp-9638 \
+  --resource-group <RESOURCE_GROUP> \
   --query "[].id" -o tsv
 
 az cosmosdb sql container list \
   --account-name sohobi-ejp-9638 \
-  --resource-group rg-ejp-9638 \
+  --resource-group <RESOURCE_GROUP> \
   --database-name sohobi \
   --query "[].id" -o tsv
 ```
@@ -77,7 +77,7 @@ DB/컨테이너 이름이 다르면:
 ```bash
 az containerapp update \
   --name sohobi-backend \
-  --resource-group rg-ejp-9638 \
+  --resource-group <RESOURCE_GROUP> \
   --set-env-vars COSMOS_DATABASE=<실제DB명> COSMOS_CONTAINER=<실제컨테이너명>
 ```
 
@@ -92,7 +92,7 @@ Container App 환경변수에 임의 값 등록 필요 (Azure 설정, 코드 변
 ```bash
 az containerapp secret set \
   --name sohobi-backend \
-  --resource-group rg-ejp-9638 \
+  --resource-group <RESOURCE_GROUP> \
   --secrets export-secret=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
 ```
 

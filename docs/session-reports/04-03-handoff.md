@@ -45,7 +45,7 @@ integrated_PARK/.env.example          ← VWORLD/KAKAO/KTO 키 항목 추가
 ```
 VWORLD_API_KEY, KAKAO_REST_KEY, KTO_GW_INFO_KEY
 ```
-Container App: `sohobi-backend` / Resource Group: `rg-ejp-9638`
+Container App: `sohobi-backend` / Resource Group: `<RESOURCE_GROUP>`
 
 **검증**: 로컬 import 오류 없음, 전체 27개 라우트 정상 등록, Azure DB 테이블 전부 존재 확인 (`store_seoul`, `law_adm_map`, `law_dong_seoul`, `rtms_commercial`, `rtms_officetel`, `landmark`, `school_seoul`, `sangkwon_sales`, `sangkwon_store`)
 

@@ -30,7 +30,7 @@ export function useMap(targetRef) {
             layers: [baseLayer],
             view: new View({
                center: center,
-               zoom: 16,
+               zoom: 17,
                minZoom: 5,
                maxZoom: 19,
             }),
@@ -40,8 +40,8 @@ export function useMap(targetRef) {
          setTimeout(() => setMapReady(true), 100);
       };
 
-      // 서울 종로구 종로코아빌딩 기준
-      initMap(fromLonLat([126.9784, 37.5713]));
+      // 서울시청 (서울 중심부) — 서비스 스코프가 서울 지역이므로 고정 좌표 사용
+      initMap(fromLonLat([126.9780, 37.5665]));
 
       return () => {
          if (mapInstance.current) {

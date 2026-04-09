@@ -28,7 +28,7 @@
 |------|------|------|------|
 | 1 | gpt-5.4-pro Responses API (원본) | 254초 hang | 추론 모델 속도 > Container Apps 240초 timeout |
 | 2 | effort="low" 추가 | 400 unsupported_value | gpt-5.4-pro는 low 미지원 (medium/high/xhigh만) |
-| 3 | gpt-5-nano 전환 시도 | DeploymentNotFound | gpt-5-nano는 ejp-9638-resource에 미배포 |
+| 3 | gpt-5-nano 전환 시도 | DeploymentNotFound | gpt-5-nano는 <AZURE_OPENAI_RESOURCE>에 미배포 |
 | 4 | gpt-4.1-mini + Chat Completions API (AI Foundry 엔드포인트) | 401 wrong API key | get_signoff_client()에 AZURE_OPENAI_API_KEY 폴백 로직 실수로 추가 |
 | 5 | API 키 폴백 제거 | 401 incorrect audience | services.ai.azure.com은 cognitiveservices.azure.com 토큰 거부 |
 | 6 | _SIGNOFF_TOKEN_PROVIDER → ai.azure.com/.default | 400 API version not supported | **← 현재 위치** |
@@ -42,13 +42,13 @@
 
 현재 설정값:
 ```
-https://ejp-9638-resource.services.ai.azure.com/api/projects/ejp-9638
+https://<AZURE_OPENAI_RESOURCE>.services.ai.azure.com/api/projects/ejp-9638
   /openai/deployments/gpt-4.1-mini/chat/completions?api-version=2024-12-01-preview
 ```
 
 AI Foundry의 실제 OpenAI 호환 엔드포인트 (api-version 없음):
 ```
-https://ejp-9638-resource.services.ai.azure.com/api/projects/ejp-9638/openai/v1/chat/completions
+https://<AZURE_OPENAI_RESOURCE>.services.ai.azure.com/api/projects/ejp-9638/openai/v1/chat/completions
 ```
 
 `AsyncAzureOpenAI`는 `/openai/deployments/.../` 경로 + api-version을 강제로 붙이지만,
@@ -60,14 +60,14 @@ AI Foundry는 `/openai/v1/` 경로를 사용하며 api-version을 받지 않음 
 
 ### 1단계: classic 엔드포인트로 전환 시도 (추천)
 
-gpt-4.1-mini가 `ejp-9638-resource`에 배포된 경우, classic Azure OpenAI 엔드포인트로
+gpt-4.1-mini가 `<AZURE_OPENAI_RESOURCE>`에 배포된 경우, classic Azure OpenAI 엔드포인트로
 접근 가능 — SDK 경로 불일치 문제 없음, 토큰 audience도 기존 것 그대로 사용 가능.
 
 **Cloud Shell에서 먼저 확인:**
 ```bash
 az cognitiveservices account deployment list \
-  --name ejp-9638-resource \
-  --resource-group rg-ejp-9638 \
+  --name <AZURE_OPENAI_RESOURCE> \
+  --resource-group <RESOURCE_GROUP> \
   --query "[].{name:name, model:properties.model.name}" -o table
 ```
 gpt-4.1-mini가 목록에 있으면 → 1단계 진행.
@@ -78,7 +78,7 @@ gpt-4.1-mini가 목록에 있으면 → 1단계 진행.
 
 **환경변수 변경 (로컬 .env):**
 ```
-AZURE_SIGNOFF_ENDPOINT=https://ejp-9638-resource.openai.azure.com/
+AZURE_SIGNOFF_ENDPOINT=https://<AZURE_OPENAI_ENDPOINT>/
 AZURE_SIGNOFF_DEPLOYMENT=gpt-4.1-mini
 ```
 
@@ -117,9 +117,9 @@ gpt-4.1-mini가 classic 엔드포인트에 없는 경우:
 
 | 항목 | 값 |
 |------|-----|
-| Container Apps URL | https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io |
+| Container Apps URL | <BACKEND_HOST> |
 | 배포된 코드 | PR #41까지 (Chat Completions 전환) |
-| AZURE_SIGNOFF_ENDPOINT | https://ejp-9638-resource.services.ai.azure.com/api/projects/ejp-9638 |
+| AZURE_SIGNOFF_ENDPOINT | https://<AZURE_OPENAI_RESOURCE>.services.ai.azure.com/api/projects/ejp-9638 |
 | AZURE_SIGNOFF_DEPLOYMENT | gpt-4.1-mini |
 | signoff 동작 여부 | ❌ API version 오류 (400) |
 | 서브 에이전트 | ✅ 정상 (~6–7초) |

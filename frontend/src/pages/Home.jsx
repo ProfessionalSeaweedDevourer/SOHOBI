@@ -30,7 +30,7 @@ const modes = [
     path: "/dev",
     label: "개발자 모드",
     icon: "🛠",
-    desc: "에이전트 응답과 함께 Sign-off 판정 내역, 루브릭 통과 여부, 로그를 확인합니다.",
+    desc: "요청 로그, 성능 통계, 거부 이력 등 내부 모니터링 도구를 확인합니다.",
     glowClass: "hover-glow-orange",
     badge: "개발자",
     badgeStyle: { background: "rgba(249,115,22,0.15)", color: "var(--brand-orange)" },

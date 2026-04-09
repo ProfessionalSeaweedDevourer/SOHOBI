@@ -22,7 +22,7 @@ gh pr view 148 --repo ProfessionalSeaweedDevourer/SOHOBI
 
 ## Phase 2: E2E Playwright 검증
 
-배포 환경 기준 (`https://sohobi-backend.livelybay-7bc24b2f.koreacentral.azurecontainerapps.io`)
+배포 환경 기준 (`<BACKEND_HOST>`)
 
 프론트엔드 URL은 `integrated_PARK/.env`의 `FRONTEND_URL` 확인 필요.
 

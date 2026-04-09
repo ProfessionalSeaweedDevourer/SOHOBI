@@ -1,0 +1,250 @@
+/* ── CategoryPanel ─────────────────────────────────────── */
+
+.cp-sidebar {
+   height: 100%;
+   background: var(--glass-bg);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border-right: 1px solid var(--glass-border);
+   border-radius: 0 12px 12px 0;
+   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+   display: flex;
+   flex-direction: column;
+   transition: width 0.2s ease;
+   overflow: hidden;
+   isolation: isolate;
+   flex-shrink: 0;
+   min-width: 0;
+}
+
+/* ── 헤더 (gradient) ──────────────────────────────────── */
+.cp-header {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   padding: 14px 12px 10px;
+   background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+   flex-shrink: 0;
+}
+
+.cp-header__title {
+   font-size: 13px;
+   font-weight: 700;
+   color: #fff;
+}
+
+.cp-collapse-btn {
+   background: rgba(255, 255, 255, 0.2);
+   border: none;
+   border-radius: 6px;
+   cursor: pointer;
+   font-size: 12px;
+   color: #fff;
+   padding: 2px 6px;
+   margin-left: auto;
+   transition: background 0.2s;
+}
+.cp-collapse-btn:hover {
+   background: rgba(255, 255, 255, 0.35);
+}
+
+/* ── 검색 ─────────────────────────────────────────────── */
+.cp-search-box {
+   display: flex;
+   gap: 4px;
+   padding: 10px 12px 0;
+   flex-shrink: 0;
+   position: relative;
+   z-index: 1;
+}
+
+.cp-search-input {
+   flex: 1;
+   padding: 5px 8px;
+   border: 1px solid var(--glass-border);
+   border-radius: 8px;
+   font-size: 12px;
+   outline: none;
+   background: var(--glass-bg);
+   color: var(--foreground);
+   min-width: 0;
+   box-sizing: border-box;
+   transition: box-shadow 0.2s, border-color 0.2s;
+}
+.cp-search-input:focus {
+   border-color: var(--brand-blue);
+   box-shadow: var(--glow-blue);
+}
+
+.cp-search-btn {
+   padding: 5px 8px;
+   background: var(--brand-blue);
+   border: none;
+   border-radius: 8px;
+   cursor: pointer;
+   font-size: 13px;
+   color: #fff;
+   flex-shrink: 0;
+   transition: box-shadow 0.2s;
+}
+.cp-search-btn:hover {
+   box-shadow: var(--glow-blue);
+}
+
+/* ── 통계 뱃지 ────────────────────────────────────────── */
+.cp-total-badge {
+   margin: 10px 12px 0;
+   padding: 7px 10px;
+   background: rgba(8, 145, 178, 0.1);
+   border: 1px solid rgba(8, 145, 178, 0.25);
+   border-radius: 8px;
+   font-size: 12px;
+   color: var(--brand-blue);
+   text-align: center;
+}
+.dark .cp-total-badge {
+   background: rgba(20, 184, 166, 0.12);
+   border-color: rgba(20, 184, 166, 0.3);
+   color: var(--brand-teal);
+}
+
+/* ── Show / Hide 버튼 ─────────────────────────────────── */
+.cp-all-btns {
+   display: flex;
+   gap: 6px;
+   padding: 10px 12px 0;
+}
+
+.cp-hide-all-btn {
+   flex: 1;
+   padding: 5px 0;
+   background: var(--secondary);
+   border: 1px solid var(--border);
+   border-radius: 6px;
+   font-size: 11px;
+   font-weight: 600;
+   color: var(--foreground);
+   cursor: pointer;
+   transition: all 0.18s;
+}
+.cp-hide-all-btn:hover {
+   background: var(--muted);
+}
+
+.cp-show-all-btn {
+   flex: 1;
+   padding: 5px 0;
+   background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+   border: none;
+   border-radius: 6px;
+   font-size: 11px;
+   font-weight: 600;
+   color: #fff;
+   cursor: pointer;
+   transition: all 0.18s;
+}
+.cp-show-all-btn:hover {
+   box-shadow: var(--glow-teal);
+}
+
+/* ── 구분선 ───────────────────────────────────────────── */
+.cp-divider {
+   height: 1px;
+   background: var(--border);
+   margin: 10px 0 4px;
+   flex-shrink: 0;
+}
+
+/* ── 카테고리 리스트 (스크롤) ──────────────────────────── */
+.cp-cat-list {
+   overflow-y: scroll;
+   height: 0;
+   flex: 1 1 0;
+   padding: 0 8px 16px;
+   scrollbar-width: thin;
+   scrollbar-color: var(--muted-foreground) transparent;
+}
+.cp-cat-list::-webkit-scrollbar {
+   width: 4px;
+}
+.cp-cat-list::-webkit-scrollbar-thumb {
+   background: var(--muted-foreground);
+   border-radius: 4px;
+}
+.cp-cat-list::-webkit-scrollbar-track {
+   background: transparent;
+}
+
+/* ── 카테고리 행 ──────────────────────────────────────── */
+.cp-cat-row {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   padding: 6px 8px;
+   border-radius: 8px;
+   cursor: pointer;
+   transition: transform 0.2s, box-shadow 0.2s, background 0.1s;
+   margin-bottom: 2px;
+}
+.cp-cat-row:hover {
+   transform: translateY(-2px);
+   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.cp-cat-left {
+   display: flex;
+   align-items: center;
+   gap: 7px;
+   flex: 1;
+   min-width: 0;
+}
+
+.cp-cat-dot {
+   width: 28px;
+   height: 28px;
+   border-radius: 50%;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   flex-shrink: 0;
+   transition: background 0.2s;
+}
+
+.cp-cat-icon {
+   font-size: 12px;
+}
+
+.cp-cat-name {
+   font-size: 12px;
+   font-weight: 600;
+   white-space: nowrap;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   transition: color 0.2s;
+   cursor: pointer;
+}
+
+.cp-count-chip {
+   font-size: 10px;
+   font-weight: 700;
+   padding: 1px 6px;
+   border-radius: 10px;
+   flex-shrink: 0;
+   transition: all 0.2s;
+}
+
+/* ── ON/OFF 토글 ──────────────────────────────────────── */
+.cp-toggle-btn {
+   border: none;
+   border-radius: 6px;
+   padding: 3px 8px;
+   font-size: 10px;
+   font-weight: 700;
+   cursor: pointer;
+   flex-shrink: 0;
+   transition: all 0.2s;
+}
+.cp-toggle-btn--off {
+   background: var(--muted);
+   color: var(--muted-foreground);
+}

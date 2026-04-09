@@ -23,11 +23,11 @@ az login --tenant 62ae463a-9f12-4edf-8544-4f6ca3834524
 ### 2단계: SWA 리소스 그룹 및 staging environment 확인
 ```bash
 # SWA 리소스 그룹 확인
-az staticwebapp list --query "[?name=='delightful-rock-0de6c000f'].{name:name, rg:resourceGroup}" -o table
+az staticwebapp list --query "[?name=='<SWA_RESOURCE_NAME>'].{name:name, rg:resourceGroup}" -o table
 
 # staging environment 목록 조회
 az staticwebapp environment list \
-  --name delightful-rock-0de6c000f \
+  --name <SWA_RESOURCE_NAME> \
   --resource-group <리소스그룹명> \
   -o table
 ```
@@ -36,7 +36,7 @@ az staticwebapp environment list \
 PR #77 (NAM 브랜치) 외 나머지 환경 삭제:
 ```bash
 az staticwebapp environment delete \
-  --name delightful-rock-0de6c000f \
+  --name <SWA_RESOURCE_NAME> \
   --resource-group <리소스그룹명> \
   --environment-name <환경명> \
   --yes
