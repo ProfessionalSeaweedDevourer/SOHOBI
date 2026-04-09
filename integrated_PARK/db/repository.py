@@ -597,7 +597,8 @@ class CommercialRepository:
                 cursor.execute(sql_exact, [adm_nm])
                 rows = cursor.fetchall()
                 if not rows and re.search(r"동\d*$", adm_nm):
-                    cursor.execute(sql_like, [f"%{adm_nm}"])
+                    escaped = adm_nm.replace("%", "").replace("_", "")
+                    cursor.execute(sql_like, [f"%{escaped}"])
                     rows = cursor.fetchall()
             return [r[0] for r in rows]
         except Exception:

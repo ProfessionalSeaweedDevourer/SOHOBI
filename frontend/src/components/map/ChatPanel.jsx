@@ -158,22 +158,24 @@ export default function ChatPanel({
       if (key === prevContextRef.current) return;
       prevContextRef.current = key;
 
-      const label = mapContext.guName
+      const displayLabel = mapContext.guName
          ? `${mapContext.guName} ${mapContext.dongName}`
          : mapContext.dongName;
+      // 백엔드 전송은 동 이름만 사용 — 구 포함 여부와 무관하게 구/신 백엔드 모두 호환
+      const sendLabel = mapContext.dongName;
 
       setMessages((prev) => [
          ...prev,
          {
             id: crypto.randomUUID(),
             role: "system",
-            content: `${label} 선택됨`,
+            content: `${displayLabel} 선택됨`,
          },
       ]);
       // 지역만 담긴 쿼리 → 백엔드가 업종 선택 버튼 반환 (300ms debounce: 빠른 연속 클릭 방어)
       clearTimeout(autoSendTimerRef.current);
       autoSendTimerRef.current = setTimeout(() => {
-         handleSendRef.current?.(`${label} 상권 분석`);
+         handleSendRef.current?.(`${sendLabel} 상권 분석`);
       }, 300);
       return () => clearTimeout(autoSendTimerRef.current);
       // eslint-disable-next-line react-hooks/exhaustive-deps
