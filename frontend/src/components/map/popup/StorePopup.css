@@ -20,6 +20,14 @@
    right: calc(var(--dong-panel-width) + 16px);
 }
 
+.sp-popup--chat-open {
+   right: 416px;
+}
+
+.sp-popup--chat-open.sp-popup--dong-open {
+   right: calc(var(--dong-panel-width) + 16px);
+}
+
 /* Body padding */
 .sp-body {
    padding: 12px 16px 16px;
