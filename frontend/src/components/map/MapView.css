@@ -335,93 +335,12 @@
    z-index: 300;
    width: 320px;
    background: var(--glass-bg);
-   backdrop-filter: blur(20px);
-   -webkit-backdrop-filter: blur(20px);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border: 1px solid var(--glass-border);
    border-radius: 16px;
    box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
    overflow: hidden;
-}
-/* ── 동 hover 분석 제안 버블 ─────────────────────────────── */
-.mv-hover-bubble {
-   position: absolute;
-   z-index: 480;
-   display: flex;
-   align-items: center;
-   gap: 8px;
-   padding: 6px 10px 6px 12px;
-   background: var(--glass-bg, rgba(255,255,255,0.92));
-   backdrop-filter: blur(12px);
-   -webkit-backdrop-filter: blur(12px);
-   border: 1px solid var(--glass-border, rgba(8,145,178,0.25));
-   border-radius: 20px;
-   box-shadow: 0 4px 16px rgba(0,0,0,0.14);
-   pointer-events: auto;
-   white-space: nowrap;
-   max-width: calc(100vw - 24px);
-   animation: mv-bubble-in 0.18s ease;
-}
-.mv-wms-popup__close {
-   background: transparent;
-   border: none;
-   color: var(--muted-foreground);
-   cursor: pointer;
-   font-size: 16px;
-}
-.mv-wms-popup__title {
-   font-size: 17px;
-   font-weight: 700;
-   color: var(--foreground);
-   margin-bottom: 4px;
-}
-.mv-wms-popup__divider {
-   height: 1px;
-   background: var(--border);
-   margin: 10px 0;
-}
-.mv-wms-popup__rows {
-   display: flex;
-   flex-direction: column;
-   gap: 6px;
-}
-.mv-wms-popup__row {
-   display: flex;
-   align-items: flex-start;
-   gap: 7px;
-}
-.mv-wms-popup__row-icon {
-   font-size: 13px;
-   flex-shrink: 0;
-   margin-top: 1px;
-}
-.mv-wms-popup__row-text {
-   font-size: 13px;
-   color: var(--muted-foreground);
-   line-height: 1.4;
-}
-
-/* 공시지가 */
-.mv-landval {
-   margin-top: 12px;
-   background: rgba(20, 184, 166, 0.08);
-   border: 1px solid rgba(20, 184, 166, 0.25);
-   border-radius: 10px;
-   padding: 12px 14px;
-}
-.mv-landval__label {
-   font-size: 11px;
-   color: var(--brand-teal);
-   font-weight: 600;
-   color: var(--foreground, #1e293b);
-}
-.mv-landval__value {
-   font-size: 18px;
-   font-weight: 800;
-   color: var(--brand-deep-cyan);
-}
-.mv-landval__sub {
-   font-size: 11px;
-   color: var(--brand-teal);
-   margin-top: 2px;
 }
 .dark .mv-landval__value {
    color: var(--brand-mint);
