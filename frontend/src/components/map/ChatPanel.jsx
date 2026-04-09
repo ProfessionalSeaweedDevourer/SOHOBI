@@ -265,6 +265,31 @@ export default function ChatPanel({
             /카페|한식|중식|일식|양식|치킨|분식|호프|술집|베이커리|패스트푸드|미용실|네일|노래방|편의점|커피/;
          const hasBizKeyword = bizPattern.test(text);
 
+         // ── 광범위 음식 업종어 감지 → 세부 업종 선택 버튼 표시 ──────────
+         const FOOD_BROAD = /음식점|요식업|식당|외식/;
+         if (FOOD_BROAD.test(text) && !hasBizKeyword) {
+            const areaHint =
+               mapContext?.guName?.replace(/구$/, "") ||
+               AREA_KEYWORDS.find((kw) => text.includes(kw)) ||
+               "";
+            const prefix = areaHint ? `${areaHint} ` : "";
+            const foodActions = [
+               "카페", "한식", "치킨", "분식", "중식", "일식",
+               "양식", "술집", "베이커리", "패스트푸드",
+            ].map((biz) => ({ label: biz, value: `${prefix}${biz} 상권 분석` }));
+            setMessages((prev) => [
+               ...prev,
+               {
+                  id: crypto.randomUUID(),
+                  role: "assistant",
+                  content: `어떤 음식 업종을 분석할까요?${areaHint ? ` (${areaHint} 기준)` : ""}`,
+                  suggestedActions: foodActions,
+               },
+            ]);
+            return;
+         }
+
+         // admCd 사용 조건: 지도에서 동을 선택했고, 사용자가 다른 지역을 언급하지 않았을 때
          const useAdmCd =
             mapContext?.admCd && (!userMentionedArea || mentionedCurrentArea);
 
@@ -467,8 +492,8 @@ export default function ChatPanel({
               "홍대 카페 상권 분석",
               "강남 한식 경쟁 분석",
               "잠실 상권 현황",
-              "명동 관광 업종 분석",
-              "여의도 음식점 창업 전망",
+              "명동 카페 상권 분석",
+              "여의도 한식 창업 전망",
            ]),
       [mapContext?.dongName, areaLabel],
    );
