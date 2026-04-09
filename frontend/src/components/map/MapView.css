@@ -402,6 +402,7 @@
    box-shadow: 0 4px 16px rgba(0,0,0,0.14);
    pointer-events: auto;
    white-space: nowrap;
+   max-width: calc(100vw - 24px);
    animation: mv-bubble-in 0.18s ease;
 }
 @keyframes mv-bubble-in {

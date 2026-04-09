@@ -241,6 +241,9 @@
   background: #fff;
   flex-shrink: 0;
 }
+.mv-chat-chips + .mv-chat-input-area {
+  border-top: none;
+}
 .mv-chat-input {
   flex: 1;
   border: 1px solid #cbd5e1;

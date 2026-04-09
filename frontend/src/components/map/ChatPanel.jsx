@@ -18,6 +18,7 @@ const AREA_KEYWORDS = [
   "여의도","목동","합정","망원","연남","성수","왕십리","혜화",
   "대학로","을지로","명동","남대문","북촌","서촌","익선동",
 ];
+// NOTE: "g" flag는 matchAll 전용. .test()/.exec() 직접 사용 금지 (lastIndex 오염)
 const AREA_PATTERN = new RegExp(AREA_KEYWORDS.join("|"), "g");
 
 function renderWithAreaLinks(text, onHighlight, keyBase) {
@@ -44,8 +45,7 @@ function renderWithAreaLinks(text, onHighlight, keyBase) {
 // "강남역 보여줘" 같은 지도 이동 패턴
 const NAV_PATTERN = /(.+?)\s*(보여줘|보여 줘|이동|찾아줘|찾아 줘|어디)/;
 
-export default function ChatPanel({ chatState = false, onToggle, dongPanelOpen, onNavigate, mapContext, onClearContext, onHighlightArea, onFindAndHighlightByName, onSearchArea }) {
-  const isOpen = !!chatState;
+export default function ChatPanel({ isOpen = false, onToggle, dongPanelOpen, onNavigate, mapContext, onClearContext, onHighlightArea, onFindAndHighlightByName, onSearchArea }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -60,6 +60,7 @@ export default function ChatPanel({ chatState = false, onToggle, dongPanelOpen, 
   const chipsRef = useRef(null);
   const chipsDragRef = useRef({ dragging: false, moved: false, startX: 0, scrollLeft: 0 });
   const autoSendTimerRef = useRef(null);
+  const handleSendRef = useRef(null);
   const lastLocationRef = useRef(null);  // 직전 분석 지역 (대화 맥락 자동 보완)
   const lastBusinessRef = useRef(null);  // 직전 분석 업종 (대화 맥락 자동 보완)
 
@@ -102,7 +103,7 @@ export default function ChatPanel({ chatState = false, onToggle, dongPanelOpen, 
     // 지역만 담긴 쿼리 → 백엔드가 업종 선택 버튼 반환 (300ms debounce: 빠른 연속 클릭 방어)
     clearTimeout(autoSendTimerRef.current);
     autoSendTimerRef.current = setTimeout(() => {
-      handleSend(`${label} 상권 분석`);
+      handleSendRef.current?.(`${label} 상권 분석`);
     }, 300);
     return () => clearTimeout(autoSendTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -277,6 +278,8 @@ export default function ChatPanel({ chatState = false, onToggle, dongPanelOpen, 
     }
   }, [input, loading, sessionId, mapContext, geocodeAndNavigate, onSearchArea]);
 
+  useEffect(() => { handleSendRef.current = handleSend; }, [handleSend]);
+
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -446,17 +449,17 @@ export default function ChatPanel({ chatState = false, onToggle, dongPanelOpen, 
           <div
             className="mv-chat-chips"
             ref={chipsRef}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               chipsDragRef.current = { dragging: true, moved: false, startX: e.pageX, scrollLeft: chipsRef.current.scrollLeft };
             }}
-            onMouseMove={(e) => {
+            onPointerMove={(e) => {
               if (!chipsDragRef.current.dragging) return;
               const dx = e.pageX - chipsDragRef.current.startX;
               if (Math.abs(dx) > 4) chipsDragRef.current.moved = true;
               chipsRef.current.scrollLeft = chipsDragRef.current.scrollLeft - dx;
             }}
-            onMouseUp={() => { chipsDragRef.current.dragging = false; chipsDragRef.current.moved = false; }}
-            onMouseLeave={() => { chipsDragRef.current.dragging = false; chipsDragRef.current.moved = false; }}
+            onPointerUp={() => { chipsDragRef.current.dragging = false; chipsDragRef.current.moved = false; }}
+            onPointerLeave={() => { chipsDragRef.current.dragging = false; chipsDragRef.current.moved = false; }}
           >
             {quickChips.map((chip) => (
               <button

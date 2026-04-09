@@ -70,7 +70,7 @@ export default function MapView() {
    const [hoverBubble, setHoverBubble] = useState(null);
    const hoverBubbleTimerRef = useRef(null);
    const hoverPixelRef = useRef(null);
-   const [chatState, setChatState] = useState(false);
+   const [chatOpen, setChatOpen] = useState(false);
    const [chatContext, setChatContext] = useState(null);
    const [landmarkLoaded, setLandmarkLoaded] = useState(false);
    const [landmarkPopup, setLandmarkPopup] = useState(null);
@@ -104,6 +104,11 @@ export default function MapView() {
    } = useDongPanel();
 
    const currentZoom = useMapZoom(mapInstance, mapRef, mapReady);
+
+   // 동패널 열릴 때 챗패널 자동 닫기
+   useEffect(() => {
+      if (dongPanel) setChatOpen(false);
+   }, [dongPanel]);
 
    const allCatKeys = new Set(CATEGORIES.map((c) => c.key));
    const [visibleCats, setVisibleCats] = useState(allCatKeys);
@@ -721,8 +726,14 @@ export default function MapView() {
       };
 
       map.on("pointermove", moveHandler);
+      const clearBubble = () => {
+         clearTimeout(hoverBubbleTimerRef.current);
+         setHoverBubble(null);
+      };
+      map.on("movestart", clearBubble);
       return () => {
          map.un("pointermove", moveHandler);
+         map.un("movestart", clearBubble);
          if (map.getTargetElement()) map.getTargetElement().style.cursor = "";
          clearTimeout(hoverBubbleTimerRef.current);
       };
@@ -1035,7 +1046,7 @@ export default function MapView() {
             onQuarterChange={(q) => setSelectedQtr(q)}
             onAiAnalyze={(ctx) => {
                setChatContext(ctx);
-               setChatState(true);
+               setChatOpen(true);
                setDongPanel(null);
             }}
          />
@@ -1047,8 +1058,8 @@ export default function MapView() {
             }}
          />
          <ChatPanel
-            chatState={chatState}
-            onToggle={() => setChatState((s) => !s)}
+            isOpen={chatOpen}
+            onToggle={() => setChatOpen((s) => !s)}
             dongPanelOpen={!!dongPanel}
             mapContext={chatContext}
             onNavigate={handleChatNavigate}
@@ -1070,7 +1081,7 @@ export default function MapView() {
                   className="mv-hover-bubble__btn"
                   onClick={() => {
                      setChatContext({ guName: hoverBubble.guNm, dongName: hoverBubble.dongNm, admCd: hoverBubble.admCd });
-                     setChatState(true);
+                     setChatOpen(true);
                      setHoverBubble(null);
                   }}
                >
