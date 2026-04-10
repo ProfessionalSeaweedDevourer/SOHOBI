@@ -166,6 +166,23 @@
 
 ---
 
+## 프로젝트 성과
+
+| 지표 | 수치 |
+| ---- | ---- |
+| 총 커밋 | 566건 (non-merge) |
+| Pull Request | 264건+ |
+| AI 에이전트 | 5개 (행정·재무·법률·상권·안내) |
+| Sign-off 루브릭 코드 | 4계층 33개 |
+| 정부지원사업 RAG 데이터 | 5,600건+ |
+| 몬테카를로 시뮬레이션 | 10,000회/요청 |
+| 응답 레이턴시 개선 | -63.6% (avg 32.7s → 11.9s) |
+| 일일 개발 요약 | 73건 |
+| 플랜 문서 | 113건 |
+| 세션 인수인계 | 47건 |
+
+---
+
 ## 주요 기능
 
 ### AI 에이전트
@@ -331,11 +348,14 @@ SOHOBI/
 │       │   ├── report/           # 리포트 컴포넌트
 │       │   └── ui/               # Radix UI 기반 공통 UI
 │       └── contexts/             # React Context (AuthContext 등)
-├── docs/
-│   ├── plans/                    # 개선·테스트 플랜 문서
-│   ├── session-reports/          # 세션 인수인계 리포트 (44건+)
-│   ├── test-reports/             # 테스트·성능 베이스라인 리포트
-│   └── guides/                   # 운영 가이드 (로그 조회 등)
+├── docs/                         # → docs/README.md 참조
+│   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
+│   ├── dev-summary/              # 팀원별 일일 개발 요약 (73건)
+│   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
+│   ├── plans/                    # 설계·분석 플랜 문서 (113건)
+│   ├── session-reports/          # 세션 인수인계 리포트 (47건)
+│   └── test-reports/             # 보안 테스트·성능 베이스라인 리포트
+├── .github/workflows/            # CI/CD (프론트 배포, 백엔드 배포, 스모크 테스트)
 └── CLAUDE.md                     # Claude Code 영구 지시
 ```
 
@@ -364,7 +384,7 @@ pip install -r requirements.txt
 ```bash
 cd frontend
 npm install
-npm run dev                        # http://localhost:5173
+npm run dev                        # http://localhost:3000
 ```
 
 ### API 동작 확인
