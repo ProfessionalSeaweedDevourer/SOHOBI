@@ -440,6 +440,18 @@ F1 수치 제시
 
 ---
 
+## 하위 모듈 문서
+
+| 폴더 | README | 내용 |
+| ---- | ------ | ---- |
+| `agents/` | [agents/README.md](agents/README.md) | 5개 도메인 에이전트 상세 (담당자, 플러그인, 라우팅) |
+| `plugins/` | [plugins/README.md](plugins/README.md) | Semantic Kernel 플러그인 목록 및 외부 의존성 |
+| `signoff/` | [signoff/README.md](signoff/README.md) | Sign-off 에이전트 동작, grade 체계, 보안 |
+| `db/` | [db/README.md](db/README.md) | DB 구조, DAO 목록, 환경변수 |
+| `prompts/` | [prompts/README.md](prompts/README.md) | Sign-off 루브릭 수정 가이드 (940줄 상세) |
+
+---
+
 ## 폴더 구조
 
 ```text
@@ -460,9 +472,11 @@ integrated_PARK/
 │   ├── legal_agent.py            # 법무 에이전트 (프로필 주입 + 법령 RAG)
 │   ├── location_agent.py         # 상권분석 에이전트 (Azure PostgreSQL 조회 + LLM 분析)
 │   └── chat_agent.py             # 안내 에이전트 (Sign-off 바이패스, 서비스 안내 전담)
-├── db/
+├── db/                           # → db/README.md 참조
 │   ├── repository.py             # CommercialRepository — Azure PostgreSQL 연결 풀
-│   └── commercial.db             # 로컬 개발용 SQLite DB 13 MB (참고용)
+│   ├── finance_db.py             # 재무 시뮬레이션용 DB 조회
+│   ├── schema_pg.sql             # PostgreSQL 스키마 정의
+│   └── dao/                      # 지도 모드용 DAO 모듈 (9개)
 ├── plugins/
 │   ├── admin_procedure_plugin.py    # 법령 검증 절차 KB (영업신고·위생교육·사업자등록·보건증·소방)
 │   ├── finance_simulation_plugin.py # 몬테카를로 시뮬레이션 + 차트 (CHANG)
