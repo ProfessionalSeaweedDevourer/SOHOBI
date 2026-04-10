@@ -158,22 +158,24 @@ export default function ChatPanel({
       if (key === prevContextRef.current) return;
       prevContextRef.current = key;
 
-      const label = mapContext.guName
-         ? `${mapContext.guName.replace(/구$/, "")} ${mapContext.dongName}`
+      const displayLabel = mapContext.guName
+         ? `${mapContext.guName} ${mapContext.dongName}`
          : mapContext.dongName;
+      // 백엔드 전송은 동 이름만 사용 — 구 포함 여부와 무관하게 구/신 백엔드 모두 호환
+      const sendLabel = mapContext.dongName;
 
       setMessages((prev) => [
          ...prev,
          {
             id: crypto.randomUUID(),
             role: "system",
-            content: `${mapContext.guName ? `${mapContext.guName} ` : ""}${mapContext.dongName} 선택됨`,
+            content: `${displayLabel} 선택됨`,
          },
       ]);
       // 지역만 담긴 쿼리 → 백엔드가 업종 선택 버튼 반환 (300ms debounce: 빠른 연속 클릭 방어)
       clearTimeout(autoSendTimerRef.current);
       autoSendTimerRef.current = setTimeout(() => {
-         handleSendRef.current?.(`${label} 상권 분석`);
+         handleSendRef.current?.(`${sendLabel} 상권 분석`);
       }, 300);
       return () => clearTimeout(autoSendTimerRef.current);
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -265,6 +267,31 @@ export default function ChatPanel({
             /카페|한식|중식|일식|양식|치킨|분식|호프|술집|베이커리|패스트푸드|미용실|네일|노래방|편의점|커피/;
          const hasBizKeyword = bizPattern.test(text);
 
+         // ── 광범위 음식 업종어 감지 → 세부 업종 선택 버튼 표시 ──────────
+         const FOOD_BROAD = /음식점|요식업|식당|외식/;
+         if (FOOD_BROAD.test(text) && !hasBizKeyword) {
+            const areaHint =
+               mapContext?.guName?.replace(/구$/, "") ||
+               AREA_KEYWORDS.find((kw) => text.includes(kw)) ||
+               "";
+            const prefix = areaHint ? `${areaHint} ` : "";
+            const foodActions = [
+               "카페", "한식", "치킨", "분식", "중식", "일식",
+               "양식", "술집", "베이커리", "패스트푸드",
+            ].map((biz) => ({ label: biz, value: `${prefix}${biz} 상권 분석` }));
+            setMessages((prev) => [
+               ...prev,
+               {
+                  id: crypto.randomUUID(),
+                  role: "assistant",
+                  content: `어떤 음식 업종을 분석할까요?${areaHint ? ` (${areaHint} 기준)` : ""}`,
+                  suggestedActions: foodActions,
+               },
+            ]);
+            return;
+         }
+
+         // admCd 사용 조건: 지도에서 동을 선택했고, 사용자가 다른 지역을 언급하지 않았을 때
          const useAdmCd =
             mapContext?.admCd && (!userMentionedArea || mentionedCurrentArea);
 
@@ -412,7 +439,7 @@ export default function ChatPanel({
                   ? renderWithAreaLinks(
                        child,
                        onFindAndHighlightByName,
-                       i * 1000,
+                       `p-${i}`,
                     )
                   : [child],
             );
@@ -425,7 +452,7 @@ export default function ChatPanel({
                   ? renderWithAreaLinks(
                        child,
                        onFindAndHighlightByName,
-                       i * 1000 + 500,
+                       `li-${i}`,
                     )
                   : [child],
             );
@@ -448,24 +475,30 @@ export default function ChatPanel({
       [onFindAndHighlightByName],
    );
 
-   // 빠른 쿼리 칩
-   const areaLabel = mapContext?.dongName
-      ? mapContext.dongName.replace(/동$/, "")
-      : mapContext?.guName?.replace(/구$/, "") || "";
-   const quickChips = mapContext?.dongName
-      ? [
-           `${areaLabel} 카페 창업 가능성 분석`,
-           `${areaLabel} 한식 경쟁 분석`,
-           `${areaLabel} 매출 추이 분석`,
-           `${areaLabel} 인근 지역 비교`,
-        ]
-      : [
-           "홍대 카페 상권 분석",
-           "강남 한식 경쟁 분석",
-           "잠실 상권 현황",
-           "명동 관광 업종 분석",
-           "여의도 음식점 창업 전망",
-        ];
+   // 빠른 쿼리 칩 — mapContext 유무에 따라 동적 생성
+   const areaLabel = useMemo(
+      () => (mapContext?.dongName
+         ? mapContext.dongName.replace(/동$/, "")
+         : mapContext?.guName?.replace(/구$/, "") || ""),
+      [mapContext?.dongName, mapContext?.guName],
+   );
+   const quickChips = useMemo(
+      () => (mapContext?.dongName
+         ? [
+              `${areaLabel} 카페 창업 가능성 분석`,
+              `${areaLabel} 한식 경쟁 분석`,
+              `${areaLabel} 매출 추이 분석`,
+              `${areaLabel} 인근 지역 비교`,
+           ]
+         : [
+              "홍대 카페 상권 분석",
+              "강남 한식 경쟁 분석",
+              "잠실 상권 현황",
+              "명동 카페 상권 분석",
+              "여의도 한식 창업 전망",
+           ]),
+      [mapContext?.dongName, areaLabel],
+   );
 
    return (
       <>
