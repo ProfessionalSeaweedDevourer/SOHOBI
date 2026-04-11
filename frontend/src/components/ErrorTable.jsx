@@ -13,8 +13,11 @@ function fmtTs(ts) {
   try {
     const normalized = ts.replace(/(\.\d{3})\d+/, "$1");
     return new Date(normalized).toLocaleString("ko-KR", {
-      month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   } catch {
     return ts;
@@ -55,28 +58,28 @@ export default function ErrorTable({ entries = [], loading = false }) {
               onClick={() => setSelected(isSelected ? null : idx)}
               className={`
                 text-left rounded-xl px-3 py-2.5 border transition-colors
-                ${isSelected
-                  ? "border-red-300 bg-red-50"
-                  : "border-slate-100 bg-white hover:bg-slate-50"}
+                ${
+                  isSelected
+                    ? "border-red-300 bg-red-50"
+                    : "border-slate-100 bg-white hover:bg-slate-50"
+                }
               `}
             >
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold text-red-600 bg-red-100 rounded px-1.5 py-0.5">
                   오류
                 </span>
-                <span className={`text-xs rounded px-1.5 py-0.5 font-medium ${DOMAIN_COLOR[domain] || DOMAIN_COLOR.unknown}`}>
+                <span
+                  className={`text-xs rounded px-1.5 py-0.5 font-medium ${DOMAIN_COLOR[domain] || DOMAIN_COLOR.unknown}`}
+                >
                   {DOMAIN_KR[domain] || domain}
                 </span>
-                <span className="ml-auto text-xs text-slate-400">
-                  {fmtTs(entry.ts)}
-                </span>
+                <span className="ml-auto text-xs text-slate-400">{fmtTs(entry.ts)}</span>
               </div>
               <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed">
                 {entry.question || "(질문 없음)"}
               </p>
-              <p className="text-xs text-red-500 mt-1 truncate">
-                {entry.error || ""}
-              </p>
+              <p className="text-xs text-red-500 mt-1 truncate">{entry.error || ""}</p>
             </button>
           );
         })}
@@ -87,7 +90,9 @@ export default function ErrorTable({ entries = [], loading = false }) {
         <div className="hidden md:flex flex-col flex-1 overflow-y-auto bg-white border border-slate-100 rounded-2xl p-5 gap-4">
           {/* 메타 */}
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className={`rounded-lg px-2 py-1 font-medium ${DOMAIN_COLOR[selectedEntry.domain] || DOMAIN_COLOR.unknown}`}>
+            <span
+              className={`rounded-lg px-2 py-1 font-medium ${DOMAIN_COLOR[selectedEntry.domain] || DOMAIN_COLOR.unknown}`}
+            >
               {DOMAIN_KR[selectedEntry.domain] || selectedEntry.domain || "미분류"}
             </span>
             <span className="text-slate-400">{fmtTs(selectedEntry.ts)}</span>

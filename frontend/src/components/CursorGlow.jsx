@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { motion, useMotionValue, useSpring } from 'motion/react';
+import { useEffect, useState } from "react";
+import { motion, useMotionValue, useSpring } from "motion/react";
 
 export function CursorGlow() {
   const [isVisible, setIsVisible] = useState(false);
@@ -18,11 +18,11 @@ export function CursorGlow() {
     };
     const hideCursor = () => setIsVisible(false);
 
-    window.addEventListener('mousemove', moveCursor);
-    window.addEventListener('mouseleave', hideCursor);
+    window.addEventListener("mousemove", moveCursor);
+    window.addEventListener("mouseleave", hideCursor);
     return () => {
-      window.removeEventListener('mousemove', moveCursor);
-      window.removeEventListener('mouseleave', hideCursor);
+      window.removeEventListener("mousemove", moveCursor);
+      window.removeEventListener("mouseleave", hideCursor);
     };
   }, [cursorX, cursorY, isVisible]);
 
@@ -36,8 +36,8 @@ export function CursorGlow() {
         style={{
           left: cursorXSpring,
           top: cursorYSpring,
-          background: 'radial-gradient(circle, rgba(20, 184, 166, 0.08) 0%, transparent 70%)',
-          filter: 'blur(40px)',
+          background: "radial-gradient(circle, rgba(20, 184, 166, 0.08) 0%, transparent 70%)",
+          filter: "blur(40px)",
         }}
       />
     </motion.div>

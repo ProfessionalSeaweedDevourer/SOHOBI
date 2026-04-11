@@ -10,8 +10,9 @@ Azure 연결이 필요한 테스트(T-04, T-05, T-06)는 실제 환경변수가 
 """
 
 import os
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -71,8 +72,10 @@ class TestT02TopKZero:
         """top_k=0이면 ValueError가 발생해야 합니다."""
         from plugins.legal_search_plugin import LegalSearchPlugin
 
-        with patch("plugins.legal_search_plugin.AzureOpenAI"), \
-             patch("plugins.legal_search_plugin.SearchClient"):
+        with (
+            patch("plugins.legal_search_plugin.AzureOpenAI"),
+            patch("plugins.legal_search_plugin.SearchClient"),
+        ):
             plugin = LegalSearchPlugin()
 
         with pytest.raises(ValueError, match="top_k"):
@@ -96,8 +99,10 @@ class TestT03TopKNegative:
         """top_k=-1이면 ValueError가 발생해야 합니다."""
         from plugins.legal_search_plugin import LegalSearchPlugin
 
-        with patch("plugins.legal_search_plugin.AzureOpenAI"), \
-             patch("plugins.legal_search_plugin.SearchClient"):
+        with (
+            patch("plugins.legal_search_plugin.AzureOpenAI"),
+            patch("plugins.legal_search_plugin.SearchClient"),
+        ):
             plugin = LegalSearchPlugin()
 
         with pytest.raises(ValueError, match="top_k"):
@@ -139,8 +144,10 @@ class TestT04EmptySearchResult:
         mock_search = MagicMock()
         mock_search.search.return_value = iter([])  # 빈 결과
 
-        with patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai), \
-             patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search):
+        with (
+            patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai),
+            patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search),
+        ):
             plugin = LegalSearchPlugin()
 
         result = plugin.search_legal_docs(query="XYZ존재하지않는법령12345")
@@ -172,13 +179,25 @@ class TestT05HappyPath:
         mock_ai.embeddings.create.return_value = mock_embedding_resp
 
         # mock 검색 결과 2건
-        doc1 = {"id": "1", "title": "식품위생법 제36조", "content": "영업신고 절차...", "category": "위생법"}
-        doc2 = {"id": "2", "title": "식품위생법 시행규칙", "content": "영업신고 서류...", "category": "시행규칙"}
+        doc1 = {
+            "id": "1",
+            "title": "식품위생법 제36조",
+            "content": "영업신고 절차...",
+            "category": "위생법",
+        }
+        doc2 = {
+            "id": "2",
+            "title": "식품위생법 시행규칙",
+            "content": "영업신고 서류...",
+            "category": "시행규칙",
+        }
         mock_search = MagicMock()
         mock_search.search.return_value = iter([doc1, doc2])
 
-        with patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai), \
-             patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search):
+        with (
+            patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai),
+            patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search),
+        ):
             plugin = LegalSearchPlugin()
 
         result = plugin.search_legal_docs(query="음식점 영업신고 절차")
@@ -191,7 +210,6 @@ class TestT05HappyPath:
     def test_top_k_passed_to_vector_query(self):
         """top_k 파라미터가 VectorizedQuery의 k_nearest_neighbors로 전달되는지 확인"""
         from plugins.legal_search_plugin import LegalSearchPlugin
-        from azure.search.documents.models import VectorizedQuery
 
         mock_embedding_resp = MagicMock()
         mock_embedding_resp.data = [MagicMock(embedding=[0.1] * 1536)]
@@ -202,16 +220,22 @@ class TestT05HappyPath:
         mock_search = MagicMock()
         mock_search.search.return_value = iter([])
 
-        with patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai), \
-             patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search):
+        with (
+            patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai),
+            patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search),
+        ):
             plugin = LegalSearchPlugin()
 
         plugin.search_legal_docs(query="테스트", top_k=5)
 
         call_kwargs = mock_search.search.call_args
-        vector_queries = call_kwargs.kwargs.get("vector_queries") or call_kwargs[1].get("vector_queries")
+        vector_queries = call_kwargs.kwargs.get("vector_queries") or call_kwargs[1].get(
+            "vector_queries"
+        )
         assert vector_queries is not None, "vector_queries 인자가 전달되어야 합니다"
-        assert vector_queries[0].k_nearest_neighbors == 5, "k_nearest_neighbors가 top_k 값과 일치해야 합니다"
+        assert vector_queries[0].k_nearest_neighbors == 5, (
+            "k_nearest_neighbors가 top_k 값과 일치해야 합니다"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -240,8 +264,10 @@ class TestT06EmptyQuery:
         mock_search = MagicMock()
         mock_search.search.return_value = iter([])
 
-        with patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai), \
-             patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search):
+        with (
+            patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai),
+            patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search),
+        ):
             plugin = LegalSearchPlugin()
 
         result = plugin.search_legal_docs(query="")
@@ -259,7 +285,9 @@ class TestT07InitFailure:
     def mock_env(self, monkeypatch):
         monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://invalid-endpoint")
         monkeypatch.setenv("AZURE_OPENAI_API_KEY", "wrongkey")
-        monkeypatch.setenv("AZURE_SEARCH_ENDPOINT", "https://invalid.search.windows.net")
+        monkeypatch.setenv(
+            "AZURE_SEARCH_ENDPOINT", "https://invalid.search.windows.net"
+        )
         monkeypatch.setenv("AZURE_SEARCH_KEY", "wrongsearchkey")
 
     def test_init_exception_propagates(self):
@@ -310,8 +338,10 @@ class TestT08MissingFields:
         mock_search = MagicMock()
         mock_search.search.return_value = iter([doc_no_category])
 
-        with patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai), \
-             patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search):
+        with (
+            patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai),
+            patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search),
+        ):
             plugin = LegalSearchPlugin()
 
         result = plugin.search_legal_docs(query="테스트")
@@ -336,8 +366,10 @@ class TestT08MissingFields:
         mock_search = MagicMock()
         mock_search.search.return_value = iter([doc_minimal])
 
-        with patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai), \
-             patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search):
+        with (
+            patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai),
+            patch("plugins.legal_search_plugin.SearchClient", return_value=mock_search),
+        ):
             plugin = LegalSearchPlugin()
 
         result = plugin.search_legal_docs(query="테스트")

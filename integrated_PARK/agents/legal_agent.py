@@ -8,11 +8,13 @@ import asyncio
 import logging
 
 from semantic_kernel import Kernel
+from semantic_kernel.connectors.ai.function_choice_behavior import (
+    FunctionChoiceBehavior,
+)
 from semantic_kernel.connectors.ai.open_ai import (
     AzureChatCompletion,
     OpenAIChatPromptExecutionSettings,
 )
-from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import kernel_function
 
@@ -98,7 +100,11 @@ class LegalAgent:
                 parts.append(f"지역: {ctx['location_name']}")
             if ctx.get("business_type"):
                 parts.append(f"업종: {ctx['business_type']}")
-            context_note = "[창업자 현재 컨텍스트] " + ", ".join(parts) + "\n위 컨텍스트를 고려하여 해당 지역·업종에 적합한 법령 정보를 우선 제공하십시오.\n\n"
+            context_note = (
+                "[창업자 현재 컨텍스트] "
+                + ", ".join(parts)
+                + "\n위 컨텍스트를 고려하여 해당 지역·업종에 적합한 법령 정보를 우선 제공하십시오.\n\n"
+            )
 
         system = (
             (PROFILE_PREFIX.format(profile=profile) if profile else "")
@@ -109,7 +115,7 @@ class LegalAgent:
 
         history = ChatHistory()
         history.add_system_message(system)
-        for msg in (prior_history or []):
+        for msg in prior_history or []:
             role = msg.get("role", "")
             content = msg.get("content", "")
             if role == "user" and content:
@@ -130,9 +136,11 @@ class LegalAgent:
                 ),
                 timeout=60.0,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("LegalAgent LLM 타임아웃 (60초)")
-            raise ValueError("AI 응답 생성 중 타임아웃이 발생했습니다. 잠시 후 다시 시도해 주세요.")
+            raise ValueError(
+                "AI 응답 생성 중 타임아웃이 발생했습니다. 잠시 후 다시 시도해 주세요."
+            )
         except Exception as e:
             logger.error("LegalAgent LLM 호출 실패: %s", e)
             raise ValueError(f"AI 응답 생성 중 오류가 발생했습니다: {e}") from e

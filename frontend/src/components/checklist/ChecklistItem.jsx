@@ -41,7 +41,10 @@ export default function ChecklistItem({
           {/* 체크 토글 버튼 */}
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onToggle(id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle(id);
+            }}
             className="shrink-0 mt-0.5 flex items-center justify-center transition-all duration-200"
             style={{
               width: 18,
@@ -59,7 +62,10 @@ export default function ChecklistItem({
                   animate={{ scale: 1 }}
                   exit={{ scale: 0 }}
                   transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                  width="9" height="7" viewBox="0 0 9 7" fill="none"
+                  width="9"
+                  height="7"
+                  viewBox="0 0 9 7"
+                  fill="none"
                 >
                   <path
                     d="M1 3.5L3.5 6L8 1"
@@ -75,10 +81,7 @@ export default function ChecklistItem({
 
           {/* 라벨 + 설명 (클릭 → 확장) */}
           <Collapsible.Trigger asChild>
-            <button
-              type="button"
-              className="flex-1 text-left min-w-0"
-            >
+            <button type="button" className="flex-1 text-left min-w-0">
               <div className="flex items-center gap-1.5">
                 <span
                   className="text-xs font-medium leading-tight"
@@ -98,7 +101,10 @@ export default function ChecklistItem({
                   </span>
                 )}
               </div>
-              <div className="text-[11px] mt-0.5 leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+              <div
+                className="text-[11px] mt-0.5 leading-relaxed"
+                style={{ color: "var(--muted-foreground)" }}
+              >
                 {item.shortDesc}
               </div>
             </button>
@@ -156,13 +162,23 @@ export default function ChecklistItem({
                   {/* 준비 단계 */}
                   {item.subSteps?.length > 0 && (
                     <div>
-                      <div className="text-[10px] font-semibold mb-1" style={{ color: "var(--muted-foreground)" }}>
+                      <div
+                        className="text-[10px] font-semibold mb-1"
+                        style={{ color: "var(--muted-foreground)" }}
+                      >
                         준비 단계
                       </div>
                       <ul className="flex flex-col gap-1">
                         {item.subSteps.map((step, i) => (
-                          <li key={i} className="flex items-start gap-1.5 text-[11px] leading-relaxed" style={{ color: "var(--foreground)" }}>
-                            <span className="shrink-0 mt-1 w-1 h-1 rounded-full" style={{ background: item.color }} />
+                          <li
+                            key={i}
+                            className="flex items-start gap-1.5 text-[11px] leading-relaxed"
+                            style={{ color: "var(--foreground)" }}
+                          >
+                            <span
+                              className="shrink-0 mt-1 w-1 h-1 rounded-full"
+                              style={{ background: item.color }}
+                            />
                             {step}
                           </li>
                         ))}
@@ -173,7 +189,10 @@ export default function ChecklistItem({
                   {/* AI에게 물어보기 */}
                   {item.suggestedQuestions?.length > 0 && onAskQuestion && (
                     <div>
-                      <div className="text-[10px] font-semibold mb-1 flex items-center gap-1" style={{ color: "var(--muted-foreground)" }}>
+                      <div
+                        className="text-[10px] font-semibold mb-1 flex items-center gap-1"
+                        style={{ color: "var(--muted-foreground)" }}
+                      >
                         <MessageSquare size={10} />
                         AI에게 물어보기
                       </div>
@@ -195,7 +214,8 @@ export default function ChecklistItem({
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.borderLeftColor = "transparent";
-                              e.currentTarget.style.background = "var(--glass-bg, rgba(255,255,255,0.03))";
+                              e.currentTarget.style.background =
+                                "var(--glass-bg, rgba(255,255,255,0.03))";
                             }}
                           >
                             {q}

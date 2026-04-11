@@ -1,11 +1,16 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 
-const ChatInput = forwardRef(function ChatInput({ onSubmit, loading, placeholder, defaultValue }, ref) {
+const ChatInput = forwardRef(function ChatInput(
+  { onSubmit, loading, placeholder, defaultValue },
+  ref,
+) {
   const [value, setValue] = useState(defaultValue || "");
   const textareaRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
-    clear() { setValue(""); },
+    clear() {
+      setValue("");
+    },
   }));
 
   useEffect(() => {

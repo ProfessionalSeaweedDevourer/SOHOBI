@@ -41,7 +41,7 @@ export default function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    trackEvent('feature_discovery', { page: 'home' });
+    trackEvent("feature_discovery", { page: "home" });
   }, []);
 
   async function handleModeClick(path) {
@@ -60,9 +60,7 @@ export default function Home() {
       </div>
       <ScrollReveal className="mb-10 text-center">
         <h1 className="text-3xl font-bold gradient-text mb-2">SOHOBI</h1>
-        <p className="text-muted-foreground text-sm">
-          소호비 — 1인 창업가를 위한 AI 상담 에이전트
-        </p>
+        <p className="text-muted-foreground text-sm">소호비 — 1인 창업가를 위한 AI 상담 에이전트</p>
       </ScrollReveal>
 
       <div className="flex flex-col sm:flex-row gap-6 w-full max-w-2xl">
@@ -84,9 +82,7 @@ export default function Home() {
                   {m.badge}
                 </span>
               </div>
-              <div className="text-lg font-semibold text-foreground mb-1">
-                {m.label}
-              </div>
+              <div className="text-lg font-semibold text-foreground mb-1">{m.label}</div>
               <p className="text-sm text-muted-foreground leading-relaxed">{m.desc}</p>
             </motion.button>
           </ScrollReveal>

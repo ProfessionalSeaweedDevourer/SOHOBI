@@ -7,49 +7,94 @@ import asyncio
 import concurrent.futures
 import math
 import random
-from semantic_kernel.functions import kernel_function
 
 from db.repository import INDUSTRY_CODE_MAP
+from semantic_kernel.functions import kernel_function
 
 try:
     from db.finance_db import DBWork
+
     _DBWORK_AVAILABLE = True
 except Exception:
     _DBWORK_AVAILABLE = False
 
 INDUSTRY_RATIO = {
     "CS100001": {  # 한식
-        "cost": 0.35, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+        "cost": 0.35,
+        "salary": 0.20,
+        "rent": 0.10,
+        "admin": 0.03,
+        "fee": 0.03,
     },
     "CS100002": {  # 중식
-        "cost": 0.40, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+        "cost": 0.40,
+        "salary": 0.20,
+        "rent": 0.10,
+        "admin": 0.03,
+        "fee": 0.03,
     },
     "CS100003": {  # 일식
-        "cost": 0.45, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+        "cost": 0.45,
+        "salary": 0.20,
+        "rent": 0.10,
+        "admin": 0.03,
+        "fee": 0.03,
     },
     "CS100004": {  # 양식
-        "cost": 0.45, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+        "cost": 0.45,
+        "salary": 0.20,
+        "rent": 0.10,
+        "admin": 0.03,
+        "fee": 0.03,
     },
     "CS100005": {  # 베이커리
-        "cost": 0.55, "salary": 0.20, "rent": 0.08, "admin": 0.03, "fee": 0.03,
+        "cost": 0.55,
+        "salary": 0.20,
+        "rent": 0.08,
+        "admin": 0.03,
+        "fee": 0.03,
     },
     "CS100006": {  # 패스트푸드
-        "cost": 0.40, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.05,
+        "cost": 0.40,
+        "salary": 0.20,
+        "rent": 0.10,
+        "admin": 0.03,
+        "fee": 0.05,
     },
     "CS100007": {  # 치킨
-        "cost": 0.52, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.05,
+        "cost": 0.52,
+        "salary": 0.20,
+        "rent": 0.10,
+        "admin": 0.03,
+        "fee": 0.05,
     },
     "CS100008": {  # 분식
-        "cost": 0.40, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+        "cost": 0.40,
+        "salary": 0.20,
+        "rent": 0.10,
+        "admin": 0.03,
+        "fee": 0.03,
     },
     "CS100009": {  # 호프/술집
-        "cost": 0.40, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+        "cost": 0.40,
+        "salary": 0.20,
+        "rent": 0.10,
+        "admin": 0.03,
+        "fee": 0.03,
     },
     "CS100010": {  # 카페/커피
-        "cost": 0.36, "salary": 0.20, "rent": 0.15, "admin": 0.03, "fee": 0.03,
+        "cost": 0.36,
+        "salary": 0.20,
+        "rent": 0.15,
+        "admin": 0.03,
+        "fee": 0.03,
     },
     "default": {
-        "cost": 0.35, "salary": 0.20, "rent": 0.10, "admin": 0.03, "fee": 0.03,
+        "cost": 0.35,
+        "salary": 0.20,
+        "rent": 0.10,
+        "admin": 0.03,
+        "fee": 0.03,
     },
 }
 
@@ -60,6 +105,7 @@ class FinanceSimulationPlugin:
     월매출 데이터를 기반으로 순이익 분포, 손실 확률, 손익분기점,
     투자 회수 기간을 산출한다. 업종별 비용 비율은 INDUSTRY_RATIO 참조.
     """
+
     def __init__(self) -> None:
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
@@ -89,19 +135,21 @@ class FinanceSimulationPlugin:
             left = min_val + i * bin_size
             right = left + bin_size
             count = sum(1 for r in results if left <= r < right)
-            bins.append({
-                "left":  round(left),
-                "right": round(right),
-                "count": count,
-                "type":  "loss" if left < 0 else "p20" if left < p20 else "profit",
-            })
+            bins.append(
+                {
+                    "left": round(left),
+                    "right": round(right),
+                    "count": count,
+                    "type": "loss" if left < 0 else "p20" if left < p20 else "profit",
+                }
+            )
 
         return {
             "bins": bins,
-            "avg":  round(avg),
-            "p20":  round(p20),
-            "min":  round(min_val),
-            "max":  round(max_val),
+            "avg": round(avg),
+            "p20": round(p20),
+            "min": round(min_val),
+            "max": round(max_val),
         }
 
     @kernel_function(
@@ -154,11 +202,16 @@ class FinanceSimulationPlugin:
         avg_sales = sum(revenue) / len(revenue)
         ratio = self.get_industry_ratio(industry)
 
-        if cost   is None: cost   = avg_sales * ratio["cost"]
-        if salary is None: salary = avg_sales * ratio["salary"]
-        if rent   is None: rent   = avg_sales * ratio["rent"]
-        if admin  is None: admin  = avg_sales * ratio["admin"]
-        if fee    is None: fee    = avg_sales * ratio["fee"]
+        if cost is None:
+            cost = avg_sales * ratio["cost"]
+        if salary is None:
+            salary = avg_sales * ratio["salary"]
+        if rent is None:
+            rent = avg_sales * ratio["rent"]
+        if admin is None:
+            admin = avg_sales * ratio["admin"]
+        if fee is None:
+            fee = avg_sales * ratio["fee"]
 
         salary_cost = self._calculate_salary(salary, hours)
 
@@ -184,19 +237,19 @@ class FinanceSimulationPlugin:
 
         p20 = sorted_results[int(iterations * 0.20)]
         chart = self._generate_chart(results, avg, p20)
-        chart["total_cost"]  = round(cost + salary_cost + rent + admin + fee)
+        chart["total_cost"] = round(cost + salary_cost + rent + admin + fee)
 
         return {
             "average_net_profit": round(avg),
-            "loss_probability":   round(loss_prob, 4),
-            "avg_loss_amount":    avg_loss,
-            "p20":                round(p20),
-            "actual_cost":        round(cost),
-            "actual_salary":      round(salary_cost),
-            "actual_rent":        round(rent),
-            "actual_admin":       round(admin),
-            "actual_fee":         round(fee),
-            "chart":              chart,
+            "loss_probability": round(loss_prob, 4),
+            "avg_loss_amount": avg_loss,
+            "p20": round(p20),
+            "actual_cost": round(cost),
+            "actual_salary": round(salary_cost),
+            "actual_rent": round(rent),
+            "actual_admin": round(admin),
+            "actual_fee": round(fee),
+            "chart": chart,
         }
 
     async def monte_carlo_simulation_async(self, **kwargs) -> dict:
@@ -266,8 +319,8 @@ class FinanceSimulationPlugin:
         safety_margin = (avg_revenue - breakeven_revenue) / avg_revenue
         return {
             "breakeven_revenue": round(breakeven_revenue),
-            "breakeven_daily":   round(breakeven_revenue / 30),
-            "safety_margin":     round(safety_margin, 4),
+            "breakeven_daily": round(breakeven_revenue / 30),
+            "safety_margin": round(safety_margin, 4),
         }
 
     def load_initial(self, region: list = None, industry: str = None) -> dict:
@@ -294,7 +347,11 @@ class FinanceSimulationPlugin:
                 dbwork = DBWork()
                 if region is None and industry is None:
                     result = dbwork.get_average_sales()
-                    revenue = [float(v) for v in result] if hasattr(result, '__iter__') else [float(result)]
+                    revenue = (
+                        [float(v) for v in result]
+                        if hasattr(result, "__iter__")
+                        else [float(result)]
+                    )
                 else:
                     revenue = [float(v) for v in dbwork.get_sales(region, industry_cd)]
             except Exception:

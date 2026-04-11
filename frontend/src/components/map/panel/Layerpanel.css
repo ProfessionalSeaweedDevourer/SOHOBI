@@ -1,91 +1,93 @@
 /* ── 레이어 패널 ──────────────────────────────────────── */
 .lp-panel {
-   background: var(--glass-bg);
-   backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
-   border: 1px solid var(--glass-border);
-   border-radius: 10px;
-   padding: 16px;
-   min-width: 230px;
-   box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.05),
-      0 4px 12px rgba(0, 0, 0, 0.05),
-      0 16px 32px rgba(0, 0, 0, 0.05);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 16px;
+  min-width: 230px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 4px 12px rgba(0, 0, 0, 0.05),
+    0 16px 32px rgba(0, 0, 0, 0.05);
 }
 
 .lp-title {
-   font-size: 13px;
-   font-weight: 700;
-   margin-bottom: 12px;
-   padding-bottom: 8px;
-   border-bottom: 1px solid var(--border);
-   background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
-   -webkit-background-clip: text;
-   -webkit-text-fill-color: transparent;
-   background-clip: text;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .lp-section-label {
-   font-size: 10px;
-   font-weight: 700;
-   color: var(--muted-foreground);
-   text-transform: uppercase;
-   letter-spacing: 1px;
-   margin: 10px 0 4px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 10px 0 4px 2px;
 }
 
 /* ── 레이어 행 ──────────────────────────────────────── */
 .lp-row {
-   display: flex;
-   align-items: center;
-   gap: 12px;
-   padding: 10px;
-   background: var(--glass-bg);
-   backdrop-filter: blur(12px);
-   -webkit-backdrop-filter: blur(12px);
-   border: 1px solid var(--glass-border);
-   border-radius: 8px;
-   margin-bottom: 6px;
-   transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 .lp-row:hover {
-   transform: translateY(-2px);
-   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .lp-layer-name {
-   font-size: 13px;
-   font-weight: 600;
-   color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
 }
 
 .lp-layer-desc {
-   font-size: 11px;
-   color: var(--muted-foreground);
-   margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
 }
 
 /* ── 토글 버튼 ────────────────────────────────────────── */
 .lp-toggle {
-   border: none;
-   border-radius: 6px;
-   padding: 6px 14px;
-   font-size: 12px;
-   font-weight: 700;
-   flex-shrink: 0;
-   transition: all 0.2s;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.2s;
 }
 .lp-toggle--off {
-   background: var(--muted);
-   color: var(--muted-foreground);
+  background: var(--muted);
+  color: var(--muted-foreground);
 }
 
 .lp-notice {
-   font-size: 11px;
-   color: var(--muted-foreground);
-   padding: 8px;
-   background: var(--secondary);
-   border-radius: 6px;
-   text-align: center;
-   margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  padding: 8px;
+  background: var(--secondary);
+  border-radius: 6px;
+  text-align: center;
+  margin-top: 4px;
 }

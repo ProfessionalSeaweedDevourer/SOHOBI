@@ -16,8 +16,8 @@ Sign-off Agent는 실제 LLM을 호출하므로 AZURE_OPENAI_API_KEY가 필요�
 """
 
 import os
-import pytest
 
+import pytest
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("AZURE_OPENAI_API_KEY"),
@@ -29,9 +29,11 @@ pytestmark = pytest.mark.skipif(
 # 공통 픽스처
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="module")
 def signoff_client():
     from kernel_setup import get_signoff_client
+
     return get_signoff_client()
 
 
@@ -212,16 +214,33 @@ class TestT19FullCompliantDraft:
         )
 
         required_codes = {
-            "C1", "C2", "C3", "C4", "C5",
-            "G1", "G2", "G3", "G4",
-            "SEC1", "SEC2", "SEC3",
-            "RJ1", "RJ2", "RJ3",
+            "C1",
+            "C2",
+            "C3",
+            "C4",
+            "C5",
+            "G1",
+            "G2",
+            "G3",
+            "G4",
+            "SEC1",
+            "SEC2",
+            "SEC3",
+            "RJ1",
+            "RJ2",
+            "RJ3",
         }
 
         all_evaluated = (
             set(verdict.get("passed", []))
-            | {item["code"] if isinstance(item, dict) else item for item in verdict.get("issues", [])}
-            | {item["code"] if isinstance(item, dict) else item for item in verdict.get("warnings", [])}
+            | {
+                item["code"] if isinstance(item, dict) else item
+                for item in verdict.get("issues", [])
+            }
+            | {
+                item["code"] if isinstance(item, dict) else item
+                for item in verdict.get("warnings", [])
+            }
         )
 
         missing = required_codes - all_evaluated

@@ -12,23 +12,25 @@ import threading
 
 try:
     import matplotlib
+
     matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
     import matplotlib.font_manager as fm
-    from matplotlib.ticker import FuncFormatter
+    import matplotlib.pyplot as plt
     import numpy as np
+    from matplotlib.ticker import FuncFormatter
 
     # 한글 폰트 설정 (integrated_PARK/nam/malgun.ttf 번들 폰트 또는 시스템 폰트)
-    _BUNDLED_FONT = os.path.join(
-        os.path.dirname(__file__), "..", "nam", "malgun.ttf"
-    )
+    _BUNDLED_FONT = os.path.join(os.path.dirname(__file__), "..", "nam", "malgun.ttf")
     if os.path.exists(_BUNDLED_FONT):
         fm.fontManager.addfont(_BUNDLED_FONT)
         _ko_font = fm.FontProperties(fname=_BUNDLED_FONT).get_name()
     else:
         _KO_FONT_CANDIDATES = [
-            "Malgun Gothic", "Apple SD Gothic Neo", "Nanum Gothic",
-            "NanumGothic", "Noto Sans CJK KR",
+            "Malgun Gothic",
+            "Apple SD Gothic Neo",
+            "Nanum Gothic",
+            "NanumGothic",
+            "Noto Sans CJK KR",
         ]
         _available = {f.name for f in fm.fontManager.ttflist}
         _ko_font = next((f for f in _KO_FONT_CANDIDATES if f in _available), None)
@@ -76,6 +78,7 @@ def _fig_to_base64(fig) -> str:
 
 # ── 개별 차트 함수들 ─────────────────────────────────────────
 
+
 def _chart_day(sales_summary: dict, title_prefix: str = "") -> str | None:
     """요일별 매출 막대 차트"""
     try:
@@ -85,8 +88,13 @@ def _chart_day(sales_summary: dict, title_prefix: str = "") -> str | None:
 
         day_labels = ["월", "화", "수", "목", "금", "토", "일"]
         day_keys = [
-            "mon_sales_krw", "tue_sales_krw", "wed_sales_krw",
-            "thu_sales_krw", "fri_sales_krw", "sat_sales_krw", "sun_sales_krw",
+            "mon_sales_krw",
+            "tue_sales_krw",
+            "wed_sales_krw",
+            "thu_sales_krw",
+            "fri_sales_krw",
+            "sat_sales_krw",
+            "sun_sales_krw",
         ]
         day_vals = [sales_summary.get(k, 0) / 4 for k in day_keys]
 
@@ -94,7 +102,9 @@ def _chart_day(sales_summary: dict, title_prefix: str = "") -> str | None:
         if max(day_vals) > 0:
             bar_colors[day_vals.index(max(day_vals))] = _BAR_HIGHLIGHT
 
-        bars = ax.bar(day_labels, day_vals, color=bar_colors, width=0.55, edgecolor="none")
+        bars = ax.bar(
+            day_labels, day_vals, color=bar_colors, width=0.55, edgecolor="none"
+        )
         ax.set_title("요일별 평균 매출(일단위)", fontsize=13, fontweight="bold", pad=8)
         ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
         ax.spines[["top", "right"]].set_visible(False)
@@ -103,8 +113,13 @@ def _chart_day(sales_summary: dict, title_prefix: str = "") -> str | None:
         for bar, val in zip(bars, day_vals):
             if val > 0:
                 ax.text(
-                    bar.get_x() + bar.get_width() / 2, bar.get_height(),
-                    _억만_label(val), ha="center", va="bottom", fontsize=9, color="#475569",
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height(),
+                    _억만_label(val),
+                    ha="center",
+                    va="bottom",
+                    fontsize=9,
+                    color="#475569",
                 )
 
         plt.tight_layout()
@@ -121,8 +136,12 @@ def _chart_time(sales_summary: dict, title_prefix: str = "") -> str | None:
             fig.suptitle(f"{title_prefix}", fontsize=13, fontweight="bold")
 
         time_keys = [
-            "time_00_06_krw", "time_06_11_krw", "time_11_14_krw",
-            "time_14_17_krw", "time_17_21_krw", "time_21_24_krw",
+            "time_00_06_krw",
+            "time_06_11_krw",
+            "time_11_14_krw",
+            "time_14_17_krw",
+            "time_17_21_krw",
+            "time_21_24_krw",
         ]
         time_vals = [sales_summary.get(k, 0) for k in time_keys]
         has_time_data = max(time_vals) > 0
@@ -130,20 +149,38 @@ def _chart_time(sales_summary: dict, title_prefix: str = "") -> str | None:
         if has_time_data:
             time_labels = ["00-06", "06-11", "11-14", "14-17", "17-21", "21-24"]
             ax.plot(
-                time_labels, time_vals,
-                color=_LINE_COLOR, linewidth=2.5, marker="o", markersize=8, zorder=3,
+                time_labels,
+                time_vals,
+                color=_LINE_COLOR,
+                linewidth=2.5,
+                marker="o",
+                markersize=8,
+                zorder=3,
             )
-            ax.fill_between(range(len(time_labels)), time_vals, alpha=0.12, color=_LINE_COLOR)
+            ax.fill_between(
+                range(len(time_labels)), time_vals, alpha=0.12, color=_LINE_COLOR
+            )
             ax.set_xticks(range(len(time_labels)))
             ax.set_xticklabels(time_labels, fontsize=11)
 
             peak_idx = time_vals.index(max(time_vals))
-            ax.plot(peak_idx, time_vals[peak_idx], "o", color=_BAR_HIGHLIGHT, markersize=11, zorder=4)
+            ax.plot(
+                peak_idx,
+                time_vals[peak_idx],
+                "o",
+                color=_BAR_HIGHLIGHT,
+                markersize=11,
+                zorder=4,
+            )
             ax.annotate(
                 _억만_label(time_vals[peak_idx]),
                 (peak_idx, time_vals[peak_idx]),
-                textcoords="offset points", xytext=(0, 12),
-                ha="center", fontsize=10, fontweight="bold", color=_BAR_HIGHLIGHT,
+                textcoords="offset points",
+                xytext=(0, 12),
+                ha="center",
+                fontsize=10,
+                fontweight="bold",
+                color=_BAR_HIGHLIGHT,
             )
             ax.set_title("시간대별 매출", fontsize=13, fontweight="bold", pad=8)
             ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
@@ -152,22 +189,42 @@ def _chart_time(sales_summary: dict, title_prefix: str = "") -> str | None:
             wkend = sales_summary.get("weekend_sales_krw", 0) / 4
             if wkday + wkend > 0:
                 wd_bars = ax.bar(
-                    ["주중", "주말"], [wkday, wkend],
-                    color=[_BAR_COLOR, _BAR_HIGHLIGHT], width=0.4, edgecolor="none",
+                    ["주중", "주말"],
+                    [wkday, wkend],
+                    color=[_BAR_COLOR, _BAR_HIGHLIGHT],
+                    width=0.4,
+                    edgecolor="none",
                 )
                 for bar, val in zip(wd_bars, [wkday, wkend]):
                     if val > 0:
                         ax.text(
-                            bar.get_x() + bar.get_width() / 2, bar.get_height(),
-                            _억만_label(val), ha="center", va="bottom",
-                            fontsize=11, fontweight="bold", color="#475569",
+                            bar.get_x() + bar.get_width() / 2,
+                            bar.get_height(),
+                            _억만_label(val),
+                            ha="center",
+                            va="bottom",
+                            fontsize=11,
+                            fontweight="bold",
+                            color="#475569",
                         )
                 ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
-                ax.set_title("주중 / 주말 평균 매출(일단위)", fontsize=13, fontweight="bold", pad=8)
+                ax.set_title(
+                    "주중 / 주말 평균 매출(일단위)",
+                    fontsize=13,
+                    fontweight="bold",
+                    pad=8,
+                )
             else:
-                ax.text(0.5, 0.5, "시간대 / 주중주말 데이터 없음",
-                        transform=ax.transAxes, ha="center", va="center",
-                        fontsize=12, color="#94a3b8")
+                ax.text(
+                    0.5,
+                    0.5,
+                    "시간대 / 주중주말 데이터 없음",
+                    transform=ax.transAxes,
+                    ha="center",
+                    va="center",
+                    fontsize=12,
+                    color="#94a3b8",
+                )
                 ax.set_title("시간대별 매출", fontsize=13, fontweight="bold", pad=8)
                 ax.axis("off")
 
@@ -187,8 +244,12 @@ def _chart_age(sales_summary: dict, title_prefix: str = "") -> str | None:
 
         age_labels_full = ["10대", "20대", "30대", "40대", "50대", "60대+"]
         age_keys = [
-            "age_10s_krw", "age_20s_krw", "age_30s_krw",
-            "age_40s_krw", "age_50s_krw", "age_60s_krw",
+            "age_10s_krw",
+            "age_20s_krw",
+            "age_30s_krw",
+            "age_40s_krw",
+            "age_50s_krw",
+            "age_60s_krw",
         ]
         age_vals_full = [sales_summary.get(k, 0) for k in age_keys]
 
@@ -201,8 +262,11 @@ def _chart_age(sales_summary: dict, title_prefix: str = "") -> str | None:
 
         if age_vals:
             wedges, texts, autotexts = ax.pie(
-                age_vals, labels=age_labels, colors=age_colors,
-                autopct="%1.1f%%", pctdistance=0.78,
+                age_vals,
+                labels=age_labels,
+                colors=age_colors,
+                autopct="%1.1f%%",
+                pctdistance=0.78,
                 wedgeprops=dict(width=0.42, edgecolor="white", linewidth=2),
                 textprops={"fontsize": 13},
                 startangle=90,
@@ -211,8 +275,16 @@ def _chart_age(sales_summary: dict, title_prefix: str = "") -> str | None:
                 at.set_fontsize(11)
                 at.set_color("#1e293b")
         else:
-            ax.text(0.5, 0.5, "데이터 없음", transform=ax.transAxes,
-                    ha="center", va="center", fontsize=12, color="#94a3b8")
+            ax.text(
+                0.5,
+                0.5,
+                "데이터 없음",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=12,
+                color="#94a3b8",
+            )
 
         ax.set_title("연령대별 매출", fontsize=13, fontweight="bold", pad=8)
         ax.set_aspect("equal")
@@ -234,8 +306,11 @@ def _chart_gender(sales_summary: dict, title_prefix: str = "") -> str | None:
 
         if male + female > 0:
             wedges, texts, autotexts = ax.pie(
-                [male, female], labels=["남성", "여성"], colors=_GENDER_COLORS,
-                autopct="%1.1f%%", pctdistance=0.78,
+                [male, female],
+                labels=["남성", "여성"],
+                colors=_GENDER_COLORS,
+                autopct="%1.1f%%",
+                pctdistance=0.78,
                 wedgeprops=dict(width=0.42, edgecolor="white", linewidth=2),
                 textprops={"fontsize": 14},
                 startangle=90,
@@ -246,11 +321,27 @@ def _chart_gender(sales_summary: dict, title_prefix: str = "") -> str | None:
                 at.set_color("white")
 
             total = male + female
-            ax.text(0, 0, _억만_label(total),
-                    ha="center", va="center", fontsize=15, fontweight="bold", color="#1e293b")
+            ax.text(
+                0,
+                0,
+                _억만_label(total),
+                ha="center",
+                va="center",
+                fontsize=15,
+                fontweight="bold",
+                color="#1e293b",
+            )
         else:
-            ax.text(0.5, 0.5, "데이터 없음", transform=ax.transAxes,
-                    ha="center", va="center", fontsize=12, color="#94a3b8")
+            ax.text(
+                0.5,
+                0.5,
+                "데이터 없음",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=12,
+                color="#94a3b8",
+            )
 
         ax.set_title("성별 매출", fontsize=13, fontweight="bold", pad=8)
         ax.set_aspect("equal")
@@ -261,6 +352,7 @@ def _chart_gender(sales_summary: dict, title_prefix: str = "") -> str | None:
 
 
 # ── 공개 API ────────────────────────────────────────────────
+
 
 def generate_analyze_charts(
     sales_summary: dict,
@@ -322,15 +414,22 @@ def generate_compare_charts(
                 ax.set_xticks(x)
                 ax.set_xticklabels(locations, fontsize=13)
                 ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
-                ax.set_title("지역별 월매출 비교", fontsize=13, fontweight="bold", pad=8)
+                ax.set_title(
+                    "지역별 월매출 비교", fontsize=13, fontweight="bold", pad=8
+                )
                 ax.spines[["top", "right"]].set_visible(False)
 
                 for bar in bars1:
                     h = bar.get_height()
                     if h > 0:
                         ax.text(
-                            bar.get_x() + bar.get_width() / 2, h,
-                            _억만_label(h), ha="center", va="bottom", fontsize=9, color="#475569",
+                            bar.get_x() + bar.get_width() / 2,
+                            h,
+                            _억만_label(h),
+                            ha="center",
+                            va="bottom",
+                            fontsize=9,
+                            color="#475569",
                         )
 
                 plt.tight_layout()
@@ -344,19 +443,28 @@ def generate_compare_charts(
                     fig, ax = plt.subplots(figsize=(9, 5))
                     fig.suptitle(title, fontsize=13, fontweight="bold")
 
-                    bars2 = ax.bar(x, avg_store, width=0.5, color=loc_colors, alpha=0.85)
+                    bars2 = ax.bar(
+                        x, avg_store, width=0.5, color=loc_colors, alpha=0.85
+                    )
                     ax.set_xticks(x)
                     ax.set_xticklabels(locations, fontsize=13)
                     ax.yaxis.set_major_formatter(FuncFormatter(_억만_formatter))
-                    ax.set_title("점포당 평균 매출 비교", fontsize=13, fontweight="bold", pad=8)
+                    ax.set_title(
+                        "점포당 평균 매출 비교", fontsize=13, fontweight="bold", pad=8
+                    )
                     ax.spines[["top", "right"]].set_visible(False)
 
                     for bar in bars2:
                         h = bar.get_height()
                         if h > 0:
                             ax.text(
-                                bar.get_x() + bar.get_width() / 2, h,
-                                _억만_label(h), ha="center", va="bottom", fontsize=9, color="#475569",
+                                bar.get_x() + bar.get_width() / 2,
+                                h,
+                                _억만_label(h),
+                                ha="center",
+                                va="bottom",
+                                fontsize=9,
+                                color="#475569",
                             )
 
                     plt.tight_layout()
@@ -372,11 +480,27 @@ def generate_compare_charts(
                     fig, ax = plt.subplots(figsize=(9, 5))
                     fig.suptitle(title, fontsize=13, fontweight="bold")
 
-                    bars3 = ax.bar(x - w / 2, open_rates, w, label="개업률", color="#2ecc71", alpha=0.85)
-                    bars4 = ax.bar(x + w / 2, close_rates, w, label="폐업률", color="#e74c3c", alpha=0.85)
+                    bars3 = ax.bar(
+                        x - w / 2,
+                        open_rates,
+                        w,
+                        label="개업률",
+                        color="#2ecc71",
+                        alpha=0.85,
+                    )
+                    bars4 = ax.bar(
+                        x + w / 2,
+                        close_rates,
+                        w,
+                        label="폐업률",
+                        color="#e74c3c",
+                        alpha=0.85,
+                    )
                     ax.set_xticks(x)
                     ax.set_xticklabels(locations, fontsize=13)
-                    ax.set_title("점포 지표 비교", fontsize=13, fontweight="bold", pad=8)
+                    ax.set_title(
+                        "점포 지표 비교", fontsize=13, fontweight="bold", pad=8
+                    )
                     ax.set_ylabel("%", fontsize=11)
                     ax.legend(fontsize=10)
                     ax.spines[["top", "right"]].set_visible(False)
@@ -386,8 +510,13 @@ def generate_compare_charts(
                             h = bar.get_height()
                             if h > 0:
                                 ax.text(
-                                    bar.get_x() + bar.get_width() / 2, h,
-                                    f"{h:.1f}%", ha="center", va="bottom", fontsize=10, color="#475569",
+                                    bar.get_x() + bar.get_width() / 2,
+                                    h,
+                                    f"{h:.1f}%",
+                                    ha="center",
+                                    va="bottom",
+                                    fontsize=10,
+                                    color="#475569",
                                 )
 
                     plt.tight_layout()

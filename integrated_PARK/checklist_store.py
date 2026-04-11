@@ -9,14 +9,15 @@ Cosmos DB 구조:
 
 orchestrator.py에서 직접 import하여 사용한다.
 """
+
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 # ── 싱글턴 ────────────────────────────────────────────────────
 _checklist_container = None
-_checklist_client    = None
+_checklist_client = None
 
 # ── 인메모리 폴백 (COSMOS_ENDPOINT 미설정 시) ─────────────────
 _checklist_memory: dict[str, dict] = {}
@@ -35,14 +36,14 @@ CHECKLIST_ITEM_IDS: list[str] = [
 
 # ── 자동 체크 키워드 (orchestrator draft 매칭용) ──────────────
 CHECKLIST_KEYWORDS: dict[str, list[str]] = {
-    "biz_type":    ["업종", "업태", "일반음식점", "휴게음식점", "제과제빵", "소매업"],
-    "location":    ["상권", "입지", "유동인구", "상가", "동네", "매장 위치"],
-    "capital":     ["초기 자금", "창업 비용", "자본금", "투자금", "대출", "손익분기"],
-    "biz_reg":     ["사업자등록", "사업자 등록", "세무서", "개인사업자", "법인"],
-    "permit":      ["영업신고", "영업 신고", "위생교육", "허가", "인허가", "식품위생"],
-    "labor":       ["직원", "아르바이트", "알바", "4대보험", "근로계약", "인건비"],
+    "biz_type": ["업종", "업태", "일반음식점", "휴게음식점", "제과제빵", "소매업"],
+    "location": ["상권", "입지", "유동인구", "상가", "동네", "매장 위치"],
+    "capital": ["초기 자금", "창업 비용", "자본금", "투자금", "대출", "손익분기"],
+    "biz_reg": ["사업자등록", "사업자 등록", "세무서", "개인사업자", "법인"],
+    "permit": ["영업신고", "영업 신고", "위생교육", "허가", "인허가", "식품위생"],
+    "labor": ["직원", "아르바이트", "알바", "4대보험", "근로계약", "인건비"],
     "finance_sim": ["수익성", "손익", "매출", "순이익", "재료비", "시뮬레이션", "BEP"],
-    "lease":       ["임대차", "임대 계약", "권리금", "보증금", "월세", "임차인"],
+    "lease": ["임대차", "임대 계약", "권리금", "보증금", "월세", "임차인"],
 }
 
 
@@ -65,8 +66,8 @@ async def _get_checklist_container():
     if not endpoint:
         return None
 
-    from azure.cosmos.aio import CosmosClient
     from azure.cosmos import PartitionKey
+    from azure.cosmos.aio import CosmosClient
     from azure.identity.aio import DefaultAzureCredential
 
     db_name = os.getenv("COSMOS_DATABASE", "sohobi")
@@ -113,11 +114,11 @@ async def upsert_checklist(session_id: str, items: dict) -> None:
     """
     ttl = int(os.getenv("COSMOS_SESSION_TTL", "86400"))
     document = {
-        "id":         session_id,
+        "id": session_id,
         "session_id": session_id,
-        "items":      items,
-        "ttl":        ttl,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "items": items,
+        "ttl": ttl,
+        "updated_at": datetime.now(UTC).isoformat(),
     }
 
     container = await _get_checklist_container()
@@ -148,9 +149,9 @@ async def auto_check_items(session_id: str, draft: str) -> list[str]:
             continue  # 이미 체크된 항목은 스킵
         if any(kw in draft for kw in keywords):
             items[item_id] = {
-                "checked":    True,
-                "source":     "auto",
-                "checked_at": datetime.now(timezone.utc).isoformat(),
+                "checked": True,
+                "source": "auto",
+                "checked_at": datetime.now(UTC).isoformat(),
             }
             newly_checked.append(item_id)
 

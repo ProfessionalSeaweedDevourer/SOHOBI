@@ -1,19 +1,19 @@
-import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from '../components/ui/button';
-import { AgentCard } from '../components/AgentCard';
-import { AnimatedBackground } from '../components/AnimatedBackground';
-import { ThemeToggle } from '../components/ThemeToggle';
-import { ScrollReveal } from '../components/ScrollReveal';
-import { agentData } from '../data/mockData';
-import { MessageSquare, Shield, Zap, TrendingUp, Sparkles, ArrowRight } from 'lucide-react';
-import { GlowCTA } from '../components/GlowCTA';
-import { motion } from 'motion/react';
-import { trackEvent } from '../utils/trackEvent';
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "../components/ui/button";
+import { AgentCard } from "../components/AgentCard";
+import { AnimatedBackground } from "../components/AnimatedBackground";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { ScrollReveal } from "../components/ScrollReveal";
+import { agentData } from "../data/mockData";
+import { MessageSquare, Shield, Zap, TrendingUp, Sparkles, ArrowRight } from "lucide-react";
+import { GlowCTA } from "../components/GlowCTA";
+import { motion } from "motion/react";
+import { trackEvent } from "../utils/trackEvent";
 
 export default function Landing() {
   useEffect(() => {
-    trackEvent('feature_discovery', { page: 'landing' });
+    trackEvent("feature_discovery", { page: "landing" });
   }, []);
 
   return (
@@ -45,9 +45,7 @@ export default function Landing() {
             <ThemeToggle />
             <Link to="/user">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button className="shadow-lg hover-glow-blue transition-glow">
-                  지금 시작하기
-                </Button>
+                <Button className="shadow-lg hover-glow-blue transition-glow">지금 시작하기</Button>
               </motion.div>
             </Link>
           </div>
@@ -73,8 +71,10 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-5xl md:text-6xl lg:text-7xl mb-8 leading-tight tracking-tight"
           >
-            외식업 창업,<br />
-            <span className="gradient-text inline-block">AI 전문가</span>와 함께<br className="md:hidden" /> 시작하세요
+            외식업 창업,
+            <br />
+            <span className="gradient-text inline-block">AI 전문가</span>와 함께
+            <br className="md:hidden" /> 시작하세요
           </motion.h1>
 
           <motion.p
@@ -83,8 +83,7 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed"
           >
-            행정, 상권분석, 재무까지. 분야별 AI 컨설턴트가
-            당신의 성공적인 창업을 도와드립니다.
+            행정, 상권분석, 재무까지. 분야별 AI 컨설턴트가 당신의 성공적인 창업을 도와드립니다.
           </motion.p>
 
           <motion.div
@@ -95,21 +94,32 @@ export default function Landing() {
           >
             <Link to="/user">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="lg" className="px-10 py-6 text-lg shadow-elevated-lg hover-glow-blue transition-glow">
+                <Button
+                  size="lg"
+                  className="px-10 py-6 text-lg shadow-elevated-lg hover-glow-blue transition-glow"
+                >
                   무료로 상담 시작하기
                 </Button>
               </motion.div>
             </Link>
             <Link to="/map">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="lg" variant="outline" className="px-10 py-6 text-lg glass border-2 shadow-elevated">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="px-10 py-6 text-lg glass border-2 shadow-elevated"
+                >
                   지도·상권분석 보기
                 </Button>
               </motion.div>
             </Link>
             <Link to="/features">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="lg" variant="outline" className="px-10 py-6 text-lg glass border-2 shadow-elevated">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="px-10 py-6 text-lg glass border-2 shadow-elevated"
+                >
                   기능 둘러보기
                 </Button>
               </motion.div>
@@ -139,23 +149,25 @@ export default function Landing() {
             {[
               {
                 icon: Shield,
-                title: 'SignOff 품질 검증',
-                description: 'AI가 생성한 답변을 별도의 검증 AI가 한 번 더 검토해, 오류나 부정확한 정보를 사전에 걸러냅니다',
-                color: 'var(--brand-blue)',
+                title: "SignOff 품질 검증",
+                description:
+                  "AI가 생성한 답변을 별도의 검증 AI가 한 번 더 검토해, 오류나 부정확한 정보를 사전에 걸러냅니다",
+                color: "var(--brand-blue)",
                 delay: 0,
               },
               {
                 icon: MessageSquare,
-                title: '자연스러운 대화',
-                description: '복잡한 메뉴 없이 편하게 한국어로 질문하세요. 적합한 전문가가 자동 배정됩니다',
-                color: 'var(--brand-teal)',
+                title: "자연스러운 대화",
+                description:
+                  "복잡한 메뉴 없이 편하게 한국어로 질문하세요. 적합한 전문가가 자동 배정됩니다",
+                color: "var(--brand-teal)",
                 delay: 0.1,
               },
               {
                 icon: TrendingUp,
-                title: '실시간 데이터',
-                description: '1,440개 정부지원금 정보와 서울 상권 데이터를 실시간으로 활용합니다',
-                color: 'var(--brand-orange)',
+                title: "실시간 데이터",
+                description: "1,440개 정부지원금 정보와 서울 상권 데이터를 실시간으로 활용합니다",
+                color: "var(--brand-orange)",
                 delay: 0.2,
               },
             ].map((feature, idx) => (
@@ -185,7 +197,11 @@ export default function Landing() {
                       className="absolute inset-0 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"
                       style={{ backgroundColor: feature.color }}
                     />
-                    <feature.icon size={32} style={{ color: feature.color }} className="relative z-10" />
+                    <feature.icon
+                      size={32}
+                      style={{ color: feature.color }}
+                      className="relative z-10"
+                    />
                   </motion.div>
 
                   <h3 className="mb-3 text-xl">{feature.title}</h3>
@@ -218,7 +234,8 @@ export default function Landing() {
             ))}
           </div>
           <p className="text-xs text-muted-foreground text-center mt-6 opacity-60">
-            * 카드를 클릭하면 자세한 설명을 볼 수 있습니다 · 흐리게 표시된 카드는 출시 예정 기능입니다
+            * 카드를 클릭하면 자세한 설명을 볼 수 있습니다 · 흐리게 표시된 카드는 출시 예정
+            기능입니다
           </p>
         </div>
       </section>
@@ -239,7 +256,10 @@ export default function Landing() {
             </p>
             <Link to="/user">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="lg" className="px-12 py-7 text-lg shadow-elevated-lg hover-glow-blue transition-glow">
+                <Button
+                  size="lg"
+                  className="px-12 py-7 text-lg shadow-elevated-lg hover-glow-blue transition-glow"
+                >
                   상담 시작하기
                 </Button>
               </motion.div>
@@ -253,15 +273,24 @@ export default function Landing() {
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p className="mb-2">© 2026 SOHOBI.</p>
           <p className="mb-3">소상공인을 위한 AI 컨설팅 플랫폼</p>
-          <Link to="/privacy" className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2">
+          <Link
+            to="/privacy"
+            className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2"
+          >
             개인정보처리방침
           </Link>
           <span className="mx-2 opacity-30">·</span>
-          <Link to="/changelog" className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2">
+          <Link
+            to="/changelog"
+            className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2"
+          >
             업데이트 로그
           </Link>
           <span className="mx-2 opacity-30">·</span>
-          <Link to="/roadmap" className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2">
+          <Link
+            to="/roadmap"
+            className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2"
+          >
             로드맵
           </Link>
         </div>

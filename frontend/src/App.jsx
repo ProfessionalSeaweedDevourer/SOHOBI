@@ -11,18 +11,18 @@ import AutoSEO from "./components/AutoSEO";
 import { AuthProvider } from "./contexts/AuthContext";
 import { LoadingSpinner } from "./components/LoadingSpinner";
 
-const MapPage       = lazy(() => import("./pages/MapPage"));
-const LogViewer     = lazy(() => import("./pages/LogViewer"));
+const MapPage = lazy(() => import("./pages/MapPage"));
+const LogViewer = lazy(() => import("./pages/LogViewer"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
-const Roadmap       = lazy(() => import("./pages/Roadmap"));
-const Changelog     = lazy(() => import("./pages/Changelog"));
-const MyReport      = lazy(() => import("./pages/MyReport"));
-const MyLogs        = lazy(() => import("./pages/MyLogs"));
-const Features      = lazy(() => import("./pages/Features"));
-const DevHub        = lazy(() => import("./pages/DevHub"));
-const DevLogin      = lazy(() => import("./pages/DevLogin"));
-const StatsPage     = lazy(() => import("./pages/StatsPage"));
-const AuthCallback  = lazy(() => import("./pages/AuthCallback"));
+const Roadmap = lazy(() => import("./pages/Roadmap"));
+const Changelog = lazy(() => import("./pages/Changelog"));
+const MyReport = lazy(() => import("./pages/MyReport"));
+const MyLogs = lazy(() => import("./pages/MyLogs"));
+const Features = lazy(() => import("./pages/Features"));
+const DevHub = lazy(() => import("./pages/DevHub"));
+const DevLogin = lazy(() => import("./pages/DevLogin"));
+const StatsPage = lazy(() => import("./pages/StatsPage"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -38,9 +38,30 @@ function AnimatedRoutes() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/features" element={<Features />} />
           <Route path="/dev/login" element={<DevLogin />} />
-          <Route path="/dev" element={<RequireDevAuth><DevHub /></RequireDevAuth>} />
-          <Route path="/dev/logs" element={<RequireDevAuth><LogViewer /></RequireDevAuth>} />
-          <Route path="/dev/stats" element={<RequireDevAuth><StatsPage /></RequireDevAuth>} />
+          <Route
+            path="/dev"
+            element={
+              <RequireDevAuth>
+                <DevHub />
+              </RequireDevAuth>
+            }
+          />
+          <Route
+            path="/dev/logs"
+            element={
+              <RequireDevAuth>
+                <LogViewer />
+              </RequireDevAuth>
+            }
+          />
+          <Route
+            path="/dev/stats"
+            element={
+              <RequireDevAuth>
+                <StatsPage />
+              </RequireDevAuth>
+            }
+          />
           <Route path="/changelog" element={<Changelog />} />
           <Route path="/my-report" element={<MyReport />} />
           <Route path="/my-logs" element={<MyLogs />} />

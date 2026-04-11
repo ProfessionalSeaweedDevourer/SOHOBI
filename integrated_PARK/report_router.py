@@ -14,17 +14,17 @@ import logging
 import os
 from collections import Counter
 
-from fastapi import APIRouter, Depends, HTTPException
-
 from auth import verify_api_key
 from auth_router import get_current_user
 from checklist_store import CHECKLIST_ITEM_IDS
+from fastapi import APIRouter, Depends, HTTPException
 from log_formatter import load_entries_json
 from session_store import get_sessions_by_user, session_exists
 
 _logger = logging.getLogger("sohobi.report")
 
 router = APIRouter()
+
 
 # ── Cosmos DB 클라이언트 헬퍼 (feedback / checklist 용) ────────────
 async def _get_container(container_name: str, partition_path: str):
@@ -33,8 +33,8 @@ async def _get_container(container_name: str, partition_path: str):
     if not endpoint:
         return None
 
-    from azure.cosmos.aio import CosmosClient
     from azure.cosmos import PartitionKey
+    from azure.cosmos.aio import CosmosClient
     from azure.identity.aio import DefaultAzureCredential
 
     db_name = os.getenv("COSMOS_DATABASE", "sohobi")
@@ -51,6 +51,7 @@ async def _get_container(container_name: str, partition_path: str):
 def _get_fallback_feedback():
     try:
         from feedback_router import _feedback_fallback
+
         return list(_feedback_fallback)
     except Exception:
         return []
@@ -86,7 +87,9 @@ def _aggregate_events(session_ids: list[str]) -> dict:
         "by_agent": counts,
         "first_active": first_ts,
         "last_active": last_ts,
-        "most_used_agent": {"type": most_used, "count": counts[most_used]} if most_used else None,
+        "most_used_agent": {"type": most_used, "count": counts[most_used]}
+        if most_used
+        else None,
     }
 
 
@@ -143,11 +146,13 @@ async def _aggregate_checklist(session_id: str) -> dict:
     items = doc.get("items", {})
 
     completed_ids = [
-        item_id for item_id in CHECKLIST_ITEM_IDS
+        item_id
+        for item_id in CHECKLIST_ITEM_IDS
         if items.get(item_id, {}).get("checked")
     ]
     incomplete_ids = [
-        item_id for item_id in CHECKLIST_ITEM_IDS
+        item_id
+        for item_id in CHECKLIST_ITEM_IDS
         if not items.get(item_id, {}).get("checked")
     ]
     total = len(CHECKLIST_ITEM_IDS)
@@ -177,7 +182,9 @@ def _merge_feedback(results: list[dict]) -> dict:
         "negative": negative,
         "total": total,
         "positive_rate": round(positive / total, 3) if total > 0 else None,
-        "top_negative_tags": [{"tag": t, "count": c} for t, c in tag_counter.most_common(5)],
+        "top_negative_tags": [
+            {"tag": t, "count": c} for t, c in tag_counter.most_common(5)
+        ],
     }
 
 
@@ -200,6 +207,7 @@ def _merge_checklist(results: list[dict]) -> dict:
 
 # ── 엔드포인트 ────────────────────────────────────────────────────
 
+
 # /api/report/me 를 {session_id} 보다 먼저 선언해야 FastAPI가 "me"를 path param으로 잡지 않음
 @router.get("/api/report/me")
 async def get_my_report(user: dict = Depends(get_current_user)):
@@ -216,8 +224,20 @@ async def get_my_report(user: dict = Depends(get_current_user)):
             "most_used_agent": None,
             "first_active": None,
             "last_active": None,
-            "feedback": {"positive": 0, "negative": 0, "total": 0, "positive_rate": None, "top_negative_tags": []},
-            "checklist": {"completed": 0, "total": 0, "progress_pct": 0, "completed_items": [], "incomplete_items": []},
+            "feedback": {
+                "positive": 0,
+                "negative": 0,
+                "total": 0,
+                "positive_rate": None,
+                "top_negative_tags": [],
+            },
+            "checklist": {
+                "completed": 0,
+                "total": 0,
+                "progress_pct": 0,
+                "completed_items": [],
+                "incomplete_items": [],
+            },
         }
 
     events_data = _aggregate_events(session_ids)
@@ -232,14 +252,14 @@ async def get_my_report(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="집계 중 오류가 발생했습니다.")
 
     return {
-        "user_id":         user_id,
-        "total_queries":   events_data["total"],
-        "agent_usage":     events_data["by_agent"],
+        "user_id": user_id,
+        "total_queries": events_data["total"],
+        "agent_usage": events_data["by_agent"],
         "most_used_agent": events_data["most_used_agent"],
-        "first_active":    events_data["first_active"],
-        "last_active":     events_data["last_active"],
-        "feedback":        _merge_feedback(feedback_results),
-        "checklist":       _merge_checklist(checklist_results),
+        "first_active": events_data["first_active"],
+        "last_active": events_data["last_active"],
+        "feedback": _merge_feedback(feedback_results),
+        "checklist": _merge_checklist(checklist_results),
     }
 
 
@@ -260,12 +280,12 @@ async def get_report(session_id: str):
         raise HTTPException(status_code=500, detail="집계 중 오류가 발생했습니다.")
 
     return {
-        "session_id":      session_id,
-        "total_queries":   events_data["total"],
-        "agent_usage":     events_data["by_agent"],
+        "session_id": session_id,
+        "total_queries": events_data["total"],
+        "agent_usage": events_data["by_agent"],
         "most_used_agent": events_data["most_used_agent"],
-        "first_active":    events_data["first_active"],
-        "last_active":     events_data["last_active"],
-        "feedback":        feedback_data,
-        "checklist":       checklist_data,
+        "first_active": events_data["first_active"],
+        "last_active": events_data["last_active"],
+        "feedback": feedback_data,
+        "checklist": checklist_data,
     }

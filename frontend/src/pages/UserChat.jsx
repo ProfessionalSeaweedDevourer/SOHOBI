@@ -69,10 +69,7 @@ const DOMAIN_CARDS = [
     colorHex: "#14b8a6",
     colorBg: "rgba(20,184,166,0.08)",
     borderColor: "rgba(20,184,166,0.25)",
-    questions: [
-      "홍대 카페 상권 분석해 줘",
-      "마포구 치킨집 월평균 매출과 경쟁 현황 알려줘",
-    ],
+    questions: ["홍대 카페 상권 분석해 줘", "마포구 치킨집 월평균 매출과 경쟁 현황 알려줘"],
   },
   {
     id: "gov",
@@ -118,10 +115,10 @@ export default function UserChat() {
   const [showBanner, setShowBanner] = useState(() => !localStorage.getItem("sohobi_tip_dismissed"));
   const [showSamples, setShowSamples] = useState(false);
   const [showLoginNudge, setShowLoginNudge] = useState(
-    () => !user && !localStorage.getItem("sohobi_login_nudge_dismissed")
+    () => !user && !localStorage.getItem("sohobi_login_nudge_dismissed"),
   );
   const [placeholder] = useState(
-    () => PLACEHOLDER_QUESTIONS[Math.floor(Math.random() * PLACEHOLDER_QUESTIONS.length)]
+    () => PLACEHOLDER_QUESTIONS[Math.floor(Math.random() * PLACEHOLDER_QUESTIONS.length)],
   );
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
   const [loadingElapsed, setLoadingElapsed] = useState(0);
@@ -132,17 +129,31 @@ export default function UserChat() {
   const navRef = useRef(null);
 
   const {
-    messages, sessionId, setSessionId, latestParams, setLatestParams,
-    addMessage, updateAt, restoreFromApi,
+    messages,
+    sessionId,
+    setSessionId,
+    latestParams,
+    setLatestParams,
+    addMessage,
+    updateAt,
+    restoreFromApi,
   } = useChatMessages();
   const layer2Fetched = useRef(false);
 
-  const { items: checklistItems, progress: checklistProgress, toggleItem, syncFromDraft } = useChecklistState(sessionId, messages.length > 0);
+  const {
+    items: checklistItems,
+    progress: checklistProgress,
+    toggleItem,
+    syncFromDraft,
+  } = useChecklistState(sessionId, messages.length > 0);
 
-  const handleSessionId = useCallback((id) => {
-    setSessionId(id);
-    localStorage.setItem("sohobi_session_id", id);
-  }, [setSessionId]);
+  const handleSessionId = useCallback(
+    (id) => {
+      setSessionId(id);
+      localStorage.setItem("sohobi_session_id", id);
+    },
+    [setSessionId],
+  );
 
   const { loading, activeEvents, pendingQuestion, submit, regenerate } = useStreamQuery({
     sessionId,
@@ -169,8 +180,11 @@ export default function UserChat() {
   }, [userMenuOpen, navOpen]);
 
   useEffect(() => {
-    if (!loading) { setLoadingElapsed(0); return; }
-    const interval = setInterval(() => setLoadingElapsed(s => s + 1), 1000);
+    if (!loading) {
+      setLoadingElapsed(0);
+      return;
+    }
+    const interval = setInterval(() => setLoadingElapsed((s) => s + 1), 1000);
     return () => clearInterval(interval);
   }, [loading]);
 
@@ -202,9 +216,11 @@ export default function UserChat() {
         // 네트워크 오류 — 빈 상태로 fallback
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, sessionId]);  // user 비동기 로드 완료 시 재평가
+  }, [user, sessionId]); // user 비동기 로드 완료 시 재평가
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -277,9 +293,26 @@ export default function UserChat() {
                   {(user.name || user.email || "?")[0].toUpperCase()}
                 </motion.button>
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 rounded-2xl border shadow-elevated z-50 overflow-hidden min-w-[9rem]" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-                    <div className="px-3 py-2 text-xs border-b truncate" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}>{user.email}</div>
-                    <button onClick={() => { setUserMenuOpen(false); logout(); }} className="w-full text-left px-3 py-2 text-xs transition-colors hover:bg-[var(--muted)]" style={{ color: "var(--foreground)" }}>로그아웃</button>
+                  <div
+                    className="absolute right-0 top-full mt-2 rounded-2xl border shadow-elevated z-50 overflow-hidden min-w-[9rem]"
+                    style={{ background: "var(--card)", borderColor: "var(--border)" }}
+                  >
+                    <div
+                      className="px-3 py-2 text-xs border-b truncate"
+                      style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}
+                    >
+                      {user.email}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        logout();
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs transition-colors hover:bg-[var(--muted)]"
+                      style={{ color: "var(--foreground)" }}
+                    >
+                      로그아웃
+                    </button>
                   </div>
                 )}
               </div>
@@ -341,26 +374,53 @@ export default function UserChat() {
       {/* 대화 영역 + 사이드패널 */}
       <div className="flex-1 flex overflow-hidden max-w-5xl mx-auto w-full">
         <main className="flex-1 overflow-y-auto px-4 py-6 min-w-0">
-
           {/* 빈 상태: 온보딩 */}
           {messages.length === 0 && !loading && !pendingQuestion && (
             <div className="mt-6">
               {showBanner && (
-                <div className="mb-6 rounded-2xl px-5 py-4 border text-sm" style={{ background: "rgba(8,145,178,0.07)", borderColor: "rgba(8,145,178,0.2)" }}>
+                <div
+                  className="mb-6 rounded-2xl px-5 py-4 border text-sm"
+                  style={{ background: "rgba(8,145,178,0.07)", borderColor: "rgba(8,145,178,0.2)" }}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="font-semibold text-foreground mb-1">💡 이렇게 질문하면 더 정확해요</div>
-                      <p className="text-muted-foreground leading-relaxed">업종·지역·수치를 함께 적어주실수록 정확한 분석을 드립니다. 재무 질문은 매출·비용·인건비를, 상권 질문은 동네 이름과 업종을 포함해 보세요.</p>
-                      <p className="mt-2 text-xs text-muted-foreground italic">예: "강남 카페, 보증금 5천만원 월세 200만원, 직원 1명일 때 수익성과 손익분기점 알려줘"</p>
-                      <button onClick={() => navigate("/features")} className="mt-3 text-xs font-medium underline underline-offset-2" style={{ color: "var(--brand-blue)" }}>SOHOBI 기능 전체 안내 →</button>
+                      <div className="font-semibold text-foreground mb-1">
+                        💡 이렇게 질문하면 더 정확해요
+                      </div>
+                      <p className="text-muted-foreground leading-relaxed">
+                        업종·지역·수치를 함께 적어주실수록 정확한 분석을 드립니다. 재무 질문은
+                        매출·비용·인건비를, 상권 질문은 동네 이름과 업종을 포함해 보세요.
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground italic">
+                        예: "강남 카페, 보증금 5천만원 월세 200만원, 직원 1명일 때 수익성과
+                        손익분기점 알려줘"
+                      </p>
+                      <button
+                        onClick={() => navigate("/features")}
+                        className="mt-3 text-xs font-medium underline underline-offset-2"
+                        style={{ color: "var(--brand-blue)" }}
+                      >
+                        SOHOBI 기능 전체 안내 →
+                      </button>
                     </div>
-                    <button onClick={() => { localStorage.setItem("sohobi_tip_dismissed", "1"); setShowBanner(false); }} className="shrink-0 text-muted-foreground hover:text-foreground text-lg leading-none mt-0.5 transition-colors" aria-label="닫기">✕</button>
+                    <button
+                      onClick={() => {
+                        localStorage.setItem("sohobi_tip_dismissed", "1");
+                        setShowBanner(false);
+                      }}
+                      className="shrink-0 text-muted-foreground hover:text-foreground text-lg leading-none mt-0.5 transition-colors"
+                      aria-label="닫기"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
               )}
               <div className="text-center mb-5">
                 <div className="text-3xl mb-2">💬</div>
-                <p className="text-sm text-muted-foreground">무엇이 궁금하신가요? 아래 영역에서 예시 질문을 골라보세요.</p>
+                <p className="text-sm text-muted-foreground">
+                  무엇이 궁금하신가요? 아래 영역에서 예시 질문을 골라보세요.
+                </p>
               </div>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -381,12 +441,17 @@ export default function UserChat() {
                     {/* Gradient overlay on hover */}
                     <div
                       className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-2xl pointer-events-none"
-                      style={{ background: `linear-gradient(135deg, ${card.colorHex}40, transparent)` }}
+                      style={{
+                        background: `linear-gradient(135deg, ${card.colorHex}40, transparent)`,
+                      }}
                     />
                     <div className="relative z-10">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
-                          <div className="absolute inset-0 rounded-xl blur-lg opacity-25" style={{ backgroundColor: card.colorHex }} />
+                          <div
+                            className="absolute inset-0 rounded-xl blur-lg opacity-25"
+                            style={{ backgroundColor: card.colorHex }}
+                          />
                           <span className="text-xl relative z-10">{card.icon}</span>
                         </div>
                         <div>
@@ -395,16 +460,26 @@ export default function UserChat() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        {card.questions.map(q => (
+                        {card.questions.map((q) => (
                           <motion.button
                             key={q}
                             onClick={() => handleSubmit(q)}
                             whileHover={{ scale: 1.01, x: 3 }}
                             whileTap={{ scale: 0.98 }}
                             className="text-left text-xs px-3 py-2 rounded-xl leading-relaxed border-l-2 border-transparent transition-colors duration-200 hover:shadow-sm"
-                            style={{ background: "var(--glass-bg)", color: "var(--foreground)", borderLeftColor: "transparent" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.borderLeftColor = card.colorHex; e.currentTarget.style.background = `${card.colorHex}12`; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.borderLeftColor = "transparent"; e.currentTarget.style.background = "var(--glass-bg)"; }}
+                            style={{
+                              background: "var(--glass-bg)",
+                              color: "var(--foreground)",
+                              borderLeftColor: "transparent",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderLeftColor = card.colorHex;
+                              e.currentTarget.style.background = `${card.colorHex}12`;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderLeftColor = "transparent";
+                              e.currentTarget.style.background = "var(--glass-bg)";
+                            }}
                           >
                             {q}
                           </motion.button>
@@ -456,7 +531,12 @@ export default function UserChat() {
             ))}
 
             {pendingQuestion && (
-              <div className="self-end max-w-[80%] text-white rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-relaxed" style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}>
+              <div
+                className="self-end max-w-[80%] text-white rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-relaxed"
+                style={{
+                  background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))",
+                }}
+              >
                 {pendingQuestion}
               </div>
             )}
@@ -489,14 +569,23 @@ export default function UserChat() {
 
         {/* 체크리스트 사이드패널 (데스크톱 전용) */}
         <aside className="hidden lg:block w-64 shrink-0 border-l border-[var(--border)] px-3 py-4 overflow-y-auto">
-          <StartupChecklist items={checklistItems} progress={checklistProgress} onToggle={toggleItem} onAskQuestion={handleSubmit} />
+          <StartupChecklist
+            items={checklistItems}
+            progress={checklistProgress}
+            onToggle={toggleItem}
+            onAskQuestion={handleSubmit}
+          />
         </aside>
       </div>
 
       {/* 입력창 */}
       <footer className="sticky bottom-0 bg-background border-t border-[var(--border)] max-w-5xl mx-auto w-full">
         <div className="lg:hidden border-b border-[var(--border)] px-4 py-2">
-          <ChecklistProgress progress={checklistProgress} total={8} onClick={() => setChecklistDrawerOpen(true)} />
+          <ChecklistProgress
+            progress={checklistProgress}
+            total={8}
+            onClick={() => setChecklistDrawerOpen(true)}
+          />
         </div>
 
         <AnimatePresence>
@@ -505,7 +594,10 @@ export default function UserChat() {
               items={checklistItems}
               progress={checklistProgress}
               onToggle={toggleItem}
-              onAskQuestion={(q) => { setChecklistDrawerOpen(false); handleSubmit(q); }}
+              onAskQuestion={(q) => {
+                setChecklistDrawerOpen(false);
+                handleSubmit(q);
+              }}
               onClose={() => setChecklistDrawerOpen(false)}
             />
           )}
@@ -525,7 +617,9 @@ export default function UserChat() {
                 >
                   <div
                     className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-xl pointer-events-none"
-                    style={{ background: `linear-gradient(135deg, ${card.colorHex}40, transparent)` }}
+                    style={{
+                      background: `linear-gradient(135deg, ${card.colorHex}40, transparent)`,
+                    }}
                   />
                   <div className="relative z-10">
                     <div className="flex items-center gap-1.5 mb-2">
@@ -533,16 +627,29 @@ export default function UserChat() {
                       <span className="font-semibold text-xs text-foreground">{card.label}</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      {card.questions.map(q => (
+                      {card.questions.map((q) => (
                         <motion.button
                           key={q}
-                          onClick={() => { setShowSamples(false); handleSubmit(q); }}
+                          onClick={() => {
+                            setShowSamples(false);
+                            handleSubmit(q);
+                          }}
                           whileHover={{ scale: 1.01, x: 2 }}
                           whileTap={{ scale: 0.98 }}
                           className="text-left text-xs px-2.5 py-1.5 rounded-lg leading-relaxed border-l-2 border-transparent transition-colors duration-200"
-                          style={{ background: "var(--glass-bg)", color: "var(--foreground)", borderLeftColor: "transparent" }}
-                          onMouseEnter={(e) => { e.currentTarget.style.borderLeftColor = card.colorHex; e.currentTarget.style.background = `${card.colorHex}12`; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.borderLeftColor = "transparent"; e.currentTarget.style.background = "var(--glass-bg)"; }}
+                          style={{
+                            background: "var(--glass-bg)",
+                            color: "var(--foreground)",
+                            borderLeftColor: "transparent",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderLeftColor = card.colorHex;
+                            e.currentTarget.style.background = `${card.colorHex}12`;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderLeftColor = "transparent";
+                            e.currentTarget.style.background = "var(--glass-bg)";
+                          }}
                         >
                           {q}
                         </motion.button>
@@ -557,7 +664,7 @@ export default function UserChat() {
 
         <div className="px-4 py-3 flex flex-col gap-2">
           <button
-            onClick={() => setShowSamples(v => !v)}
+            onClick={() => setShowSamples((v) => !v)}
             className="self-start text-xs px-3 py-1.5 rounded-full border transition-colors"
             style={{
               borderColor: showSamples ? "var(--brand-blue)" : "var(--border)",
@@ -567,7 +674,12 @@ export default function UserChat() {
           >
             {showSamples ? "▲ 샘플 질문 닫기" : "💬 샘플 질문 보기"}
           </button>
-          <ChatInput ref={inputRef} onSubmit={handleSubmit} loading={loading} defaultValue={placeholder} />
+          <ChatInput
+            ref={inputRef}
+            onSubmit={handleSubmit}
+            loading={loading}
+            defaultValue={placeholder}
+          />
         </div>
       </footer>
     </div>

@@ -1,143 +1,166 @@
-import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from '../components/ui/button';
-import { AnimatedBackground } from '../components/AnimatedBackground';
-import { ThemeToggle } from '../components/ThemeToggle';
-import { ScrollReveal } from '../components/ScrollReveal';
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "../components/ui/button";
+import { AnimatedBackground } from "../components/AnimatedBackground";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { ScrollReveal } from "../components/ScrollReveal";
 import {
-  MessageSquare, ArrowLeft, ArrowRight, FileText, MapPin, Calculator,
-  Landmark, Gift, CheckCircle2, Sparkles, Receipt, Users, UtensilsCrossed, ShieldCheck,
-} from 'lucide-react';
-import { motion } from 'motion/react';
-import { GlowCTA } from '../components/GlowCTA';
-import { trackEvent } from '../utils/trackEvent';
+  MessageSquare,
+  ArrowLeft,
+  ArrowRight,
+  FileText,
+  MapPin,
+  Calculator,
+  Landmark,
+  Gift,
+  CheckCircle2,
+  Sparkles,
+  Receipt,
+  Users,
+  UtensilsCrossed,
+  ShieldCheck,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { GlowCTA } from "../components/GlowCTA";
+import { trackEvent } from "../utils/trackEvent";
 
 const features = [
   {
-    id: 'admin',
+    id: "admin",
     icon: FileText,
-    color: '#0891b2',
-    title: '행정 절차 안내',
-    description: '영업신고·위생교육·사업자등록 등 식품업 창업에 필요한 모든 행정 절차를 법령 기반으로 단계별 안내합니다.',
+    color: "#0891b2",
+    title: "행정 절차 안내",
+    description:
+      "영업신고·위생교육·사업자등록 등 식품업 창업에 필요한 모든 행정 절차를 법령 기반으로 단계별 안내합니다.",
     examples: [
-      '카페 창업 영업신고는 어디서 어떻게 하나요?',
-      '위생교육 언제, 어디서 받아야 하나요?',
-      '사업자등록증 발급 절차가 어떻게 되나요?',
+      "카페 창업 영업신고는 어디서 어떻게 하나요?",
+      "위생교육 언제, 어디서 받아야 하나요?",
+      "사업자등록증 발급 절차가 어떻게 되나요?",
     ],
   },
   {
-    id: 'finance',
+    id: "finance",
     icon: Calculator,
-    color: '#f97316',
-    title: '재무 시뮬레이션',
-    description: '몬테카를로 시뮬레이션(10,000회)으로 창업 수익성을 분석합니다. 손익분기점, 손실 확률, 투자 회수 시나리오를 차트로 확인하세요.',
+    color: "#f97316",
+    title: "재무 시뮬레이션",
+    description:
+      "몬테카를로 시뮬레이션(10,000회)으로 창업 수익성을 분석합니다. 손익분기점, 손실 확률, 투자 회수 시나리오를 차트로 확인하세요.",
     examples: [
-      '월매출 2,000만, 임대료 200만이면 수익이 얼마나 될까요?',
-      '초기투자 5,000만이면 몇 달 만에 회수할 수 있나요?',
-      '인건비 350만, 원가율 30%로 손익분기점 계산해주세요.',
+      "월매출 2,000만, 임대료 200만이면 수익이 얼마나 될까요?",
+      "초기투자 5,000만이면 몇 달 만에 회수할 수 있나요?",
+      "인건비 350만, 원가율 30%로 손익분기점 계산해주세요.",
     ],
   },
   {
-    id: 'legal',
+    id: "legal",
     icon: Landmark,
-    color: '#8b5cf6',
-    title: '법무 정보',
-    description: '임대차 계약·권리금·상가건물임대차보호법 등 창업자가 꼭 알아야 할 법적 정보를 법령 조항 인용과 함께 제공합니다.',
+    color: "#8b5cf6",
+    title: "법무 정보",
+    description:
+      "임대차 계약·권리금·상가건물임대차보호법 등 창업자가 꼭 알아야 할 법적 정보를 법령 조항 인용과 함께 제공합니다.",
     examples: [
-      '권리금 계약할 때 주의할 점이 뭔가요?',
-      '임대인이 계약 갱신을 거부할 수 있나요?',
-      '상가 임대차보호법 적용 요건이 뭔가요?',
+      "권리금 계약할 때 주의할 점이 뭔가요?",
+      "임대인이 계약 갱신을 거부할 수 있나요?",
+      "상가 임대차보호법 적용 요건이 뭔가요?",
     ],
   },
   {
-    id: 'location',
+    id: "location",
     icon: MapPin,
-    color: '#14b8a6',
-    title: '상권 분석',
-    description: '서울 2025년 4분기 데이터 기반 상권 분석. 월매출·유동인구·경쟁업체·개폐업률을 분석하고, 복수 지역 비교도 가능합니다.',
+    color: "#14b8a6",
+    title: "상권 분석",
+    description:
+      "서울 2025년 4분기 데이터 기반 상권 분석. 월매출·유동인구·경쟁업체·개폐업률을 분석하고, 복수 지역 비교도 가능합니다.",
     examples: [
-      '홍대 카페 상권 어떤가요?',
-      '연남동 vs 합정동, 한식당 어디가 더 나은가요?',
-      '강남역 주변 분식집 월매출 평균이 얼마예요?',
+      "홍대 카페 상권 어떤가요?",
+      "연남동 vs 합정동, 한식당 어디가 더 나은가요?",
+      "강남역 주변 분식집 월매출 평균이 얼마예요?",
     ],
   },
   {
-    id: 'gov',
+    id: "gov",
     icon: Gift,
-    color: '#ec4899',
-    title: '정부 지원 추천',
-    description: '업종·나이·지역을 알려주시면 5,600건+ 지원사업 중 수혜 가능한 보조금·창업패키지·대출·신용보증을 자동으로 매칭해드립니다.',
+    color: "#ec4899",
+    title: "정부 지원 추천",
+    description:
+      "업종·나이·지역을 알려주시면 5,600건+ 지원사업 중 수혜 가능한 보조금·창업패키지·대출·신용보증을 자동으로 매칭해드립니다.",
     examples: [
-      '청년 창업자가 받을 수 있는 지원금이 있나요?',
-      '소상공인 창업 대출 어디서 신청하나요?',
-      '음식점 창업 관련 정부 지원 사업 추천해주세요.',
+      "청년 창업자가 받을 수 있는 지원금이 있나요?",
+      "소상공인 창업 대출 어디서 신청하나요?",
+      "음식점 창업 관련 정부 지원 사업 추천해주세요.",
     ],
   },
   {
-    id: 'tax',
+    id: "tax",
     icon: Receipt,
-    color: '#10b981',
-    title: '세무 신고 가이드',
+    color: "#10b981",
+    title: "세무 신고 가이드",
     comingSoon: true,
-    description: '부가세·종합소득세 신고 시기, 서식, 납부 방법을 법령 기반으로 단계별 안내할 예정입니다. 업종별 절세 팁도 함께 제공됩니다.',
+    description:
+      "부가세·종합소득세 신고 시기, 서식, 납부 방법을 법령 기반으로 단계별 안내할 예정입니다. 업종별 절세 팁도 함께 제공됩니다.",
     examples: [
-      '음식점 부가세 신고는 언제, 어떻게 하나요?',
-      '종합소득세 신고 대상이 되는 기준이 뭔가요?',
-      '간이과세자와 일반과세자 차이가 뭔가요?',
+      "음식점 부가세 신고는 언제, 어떻게 하나요?",
+      "종합소득세 신고 대상이 되는 기준이 뭔가요?",
+      "간이과세자와 일반과세자 차이가 뭔가요?",
     ],
   },
   {
-    id: 'hr',
+    id: "hr",
     icon: Users,
-    color: '#f59e0b',
-    title: 'HR/노무 안내',
+    color: "#f59e0b",
+    title: "HR/노무 안내",
     comingSoon: true,
-    description: '최저임금·주휴수당·근로계약서·해고예고·퇴직금 등 외식업 인사노무 법령 정보를 제공할 예정입니다.',
+    description:
+      "최저임금·주휴수당·근로계약서·해고예고·퇴직금 등 외식업 인사노무 법령 정보를 제공할 예정입니다.",
     examples: [
-      '아르바이트생 주휴수당 꼭 줘야 하나요?',
-      '직원 해고할 때 예고 기간이 얼마나 되나요?',
-      '근로계약서에 반드시 들어가야 할 내용이 뭔가요?',
+      "아르바이트생 주휴수당 꼭 줘야 하나요?",
+      "직원 해고할 때 예고 기간이 얼마나 되나요?",
+      "근로계약서에 반드시 들어가야 할 내용이 뭔가요?",
     ],
   },
   {
-    id: 'menu',
+    id: "menu",
     icon: UtensilsCrossed,
-    color: '#84cc16',
-    title: '메뉴 원가 계산',
+    color: "#84cc16",
+    title: "메뉴 원가 계산",
     comingSoon: true,
-    description: '식재료 투입량 기반 원가율·판매가·목표마진 최적화 시뮬레이션과 위생/안전 점검 체크리스트를 추가할 예정입니다.',
+    description:
+      "식재료 투입량 기반 원가율·판매가·목표마진 최적화 시뮬레이션과 위생/안전 점검 체크리스트를 추가할 예정입니다.",
     examples: [
-      '아메리카노 원가율 계산해주세요.',
-      '목표 마진 30%로 판매가를 얼마로 해야 하나요?',
-      '영업 전 위생 점검 항목이 뭐가 있나요?',
+      "아메리카노 원가율 계산해주세요.",
+      "목표 마진 30%로 판매가를 얼마로 해야 하나요?",
+      "영업 전 위생 점검 항목이 뭐가 있나요?",
     ],
   },
 ];
 
 const steps = [
   {
-    number: '01',
-    title: '자유롭게 질문하세요',
-    description: '메뉴 선택 없이 상황을 편하게 한국어로 설명하세요. 지역, 업종, 자본금을 알려주시면 더 정확한 답변을 드립니다.',
-    color: 'var(--brand-blue)',
+    number: "01",
+    title: "자유롭게 질문하세요",
+    description:
+      "메뉴 선택 없이 상황을 편하게 한국어로 설명하세요. 지역, 업종, 자본금을 알려주시면 더 정확한 답변을 드립니다.",
+    color: "var(--brand-blue)",
   },
   {
-    number: '02',
-    title: 'AI가 전문가를 배정합니다',
-    description: '질문 내용에 따라 행정·재무·법무·상권·세무·노무 에이전트 중 가장 적합한 전문가가 자동으로 배정됩니다.',
-    color: 'var(--brand-teal)',
+    number: "02",
+    title: "AI가 전문가를 배정합니다",
+    description:
+      "질문 내용에 따라 행정·재무·법무·상권·세무·노무 에이전트 중 가장 적합한 전문가가 자동으로 배정됩니다.",
+    color: "var(--brand-teal)",
   },
   {
-    number: '03',
-    title: '검증된 답변을 받으세요',
-    description: 'Sign-off 루브릭이 모든 답변의 법령·수치·절차를 자동 검증합니다. 미흡하면 자동으로 재작성합니다.',
-    color: 'var(--brand-orange)',
+    number: "03",
+    title: "검증된 답변을 받으세요",
+    description:
+      "Sign-off 루브릭이 모든 답변의 법령·수치·절차를 자동 검증합니다. 미흡하면 자동으로 재작성합니다.",
+    color: "var(--brand-orange)",
   },
 ];
 
 export default function Features() {
   useEffect(() => {
-    trackEvent('feature_discovery', { page: 'features' });
+    trackEvent("feature_discovery", { page: "features" });
   }, []);
 
   return (
@@ -211,7 +234,8 @@ export default function Features() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight tracking-tight"
         >
-          외식업 창업,<br />
+          외식업 창업,
+          <br />
           <span className="gradient-text">어떤 질문이든</span> 괜찮아요
         </motion.h1>
         <motion.p
@@ -220,7 +244,8 @@ export default function Features() {
           transition={{ duration: 0.6, delay: 0.35 }}
           className="text-lg text-muted-foreground max-w-xl mx-auto"
         >
-          행정부터 상권, 재무, 법무, 정부지원까지 — 전문 에이전트가 법령과 데이터를 기반으로 답합니다.
+          행정부터 상권, 재무, 법무, 정부지원까지 — 전문 에이전트가 법령과 데이터를 기반으로
+          답합니다.
         </motion.p>
       </section>
 
@@ -234,7 +259,7 @@ export default function Features() {
                 key={feature.id}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-60px' }}
+                viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.5, delay: idx * 0.05 }}
                 whileHover="cardHover"
                 variants={{ cardHover: {} }}
@@ -258,7 +283,11 @@ export default function Features() {
                           className="absolute inset-0 rounded-xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity"
                           style={{ backgroundColor: feature.color }}
                         />
-                        <Icon size={26} style={{ color: feature.color }} className="relative z-10" />
+                        <Icon
+                          size={26}
+                          style={{ color: feature.color }}
+                          className="relative z-10"
+                        />
                       </motion.div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -266,7 +295,13 @@ export default function Features() {
                             {feature.title}
                           </h3>
                           {feature.comingSoon && (
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                            <span
+                              className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                              style={{
+                                background: "var(--muted)",
+                                color: "var(--muted-foreground)",
+                              }}
+                            >
                               출시 예정
                             </span>
                           )}
@@ -283,7 +318,9 @@ export default function Features() {
                         {feature.description}
                       </p>
                       <div className="space-y-2">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">예시 질문</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+                          예시 질문
+                        </p>
                         {feature.examples.map((ex, i) => (
                           <motion.div
                             key={i}
@@ -335,10 +372,7 @@ export default function Features() {
                 whileHover={{ y: -6 }}
               >
                 <div className="glass rounded-2xl p-8 text-center shadow-elevated h-full">
-                  <div
-                    className="text-5xl font-bold mb-4 opacity-20"
-                    style={{ color: step.color }}
-                  >
+                  <div className="text-5xl font-bold mb-4 opacity-20" style={{ color: step.color }}>
                     {step.number}
                   </div>
                   <h3 className="text-lg mb-3">{step.title}</h3>
@@ -370,7 +404,10 @@ export default function Features() {
                 whileTap={{ scale: 0.95 }}
                 className="inline-block"
               >
-                <Button size="lg" className="px-10 py-6 text-lg shadow-elevated-lg hover-glow-blue transition-glow">
+                <Button
+                  size="lg"
+                  className="px-10 py-6 text-lg shadow-elevated-lg hover-glow-blue transition-glow"
+                >
                   무료 상담 시작하기
                   <ArrowRight size={18} className="ml-2" />
                 </Button>
@@ -384,7 +421,10 @@ export default function Features() {
       <footer className="glass border-t border-white/20 py-10 backdrop-blur-xl">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p className="mb-2">© 2026 SOHOBI. 소상공인을 위한 AI 컨설팅 플랫폼</p>
-          <Link to="/privacy" className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2">
+          <Link
+            to="/privacy"
+            className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2"
+          >
             개인정보처리방침
           </Link>
         </div>

@@ -10,8 +10,7 @@ Cosmos DB 구조:
 
 import logging
 import os
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi import APIRouter
@@ -35,8 +34,8 @@ async def _get_events_container():
     if not endpoint:
         return None  # 로컬 개발: 폴백 모드
 
-    from azure.cosmos.aio import CosmosClient
     from azure.cosmos import PartitionKey
+    from azure.cosmos.aio import CosmosClient
     from azure.identity.aio import DefaultAzureCredential
 
     db_name = os.getenv("COSMOS_DATABASE", "sohobi")
@@ -63,11 +62,11 @@ _events_fallback: list = []
 # ── 스키마 ────────────────────────────────────────────────────────
 class EventRequest(BaseModel):
     event_name: str
-    session_id: Optional[str] = None
-    agent_type: Optional[str] = None
-    message_id: Optional[str] = None
-    page:       Optional[str] = None
-    timestamp:  Optional[str] = None
+    session_id: str | None = None
+    agent_type: str | None = None
+    message_id: str | None = None
+    page: str | None = None
+    timestamp: str | None = None
 
 
 # ── 엔드포인트 ────────────────────────────────────────────────────
@@ -75,14 +74,14 @@ class EventRequest(BaseModel):
 async def track_event(event: EventRequest):
     """사용 이벤트를 Cosmos DB(또는 인메모리)에 저장한다."""
     document = {
-        "id":         str(uuid4()),
+        "id": str(uuid4()),
         "event_name": event.event_name,
         "session_id": event.session_id or "anonymous",
         "agent_type": event.agent_type,
         "message_id": event.message_id,
-        "page":       event.page,
-        "timestamp":  event.timestamp,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "page": event.page,
+        "timestamp": event.timestamp,
+        "created_at": datetime.now(UTC).isoformat(),
     }
 
     container = await _get_events_container()

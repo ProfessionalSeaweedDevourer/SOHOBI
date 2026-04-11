@@ -10,6 +10,7 @@
 
 import logging
 import os
+import re
 from collections.abc import Mapping
 from typing import Annotated
 
@@ -20,14 +21,19 @@ from dotenv import load_dotenv
 from openai import AzureOpenAI
 from semantic_kernel.functions import kernel_function
 
-import re
-
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-_AMT_RE = re.compile(r'(\d[\d,]*)\s*(만원|천만원|백만원|억원|억|만)')
-_AMT_UNIT = {"만원": 10000, "만": 10000, "천만원": 10000000, "백만원": 1000000, "억원": 100000000, "억": 100000000}
+_AMT_RE = re.compile(r"(\d[\d,]*)\s*(만원|천만원|백만원|억원|억|만)")
+_AMT_UNIT = {
+    "만원": 10000,
+    "만": 10000,
+    "천만원": 10000000,
+    "백만원": 1000000,
+    "억원": 100000000,
+    "억": 100000000,
+}
 
 
 def _parse_amount(text: str) -> int:
@@ -40,11 +46,24 @@ def _parse_amount(text: str) -> int:
         return 0
     return int(int(m.group(1).replace(",", "")) * _AMT_UNIT.get(m.group(2), 1))
 
+
 REGION_MAP = {
-    "서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천",
-    "광주": "광주", "대전": "대전", "울산": "울산", "세종": "세종",
-    "경기": "경기", "강원": "강원", "충북": "충북", "충남": "충남",
-    "전북": "전북", "전남": "전남", "경북": "경북", "경남": "경남",
+    "서울": "서울",
+    "부산": "부산",
+    "대구": "대구",
+    "인천": "인천",
+    "광주": "광주",
+    "대전": "대전",
+    "울산": "울산",
+    "세종": "세종",
+    "경기": "경기",
+    "강원": "강원",
+    "충북": "충북",
+    "충남": "충남",
+    "전북": "전북",
+    "전남": "전남",
+    "경북": "경북",
+    "경남": "경남",
     "제주": "제주",
 }
 
@@ -52,12 +71,27 @@ RECOMMEND_CATEGORIES = [
     {
         "name": "보조금/창업패키지",
         "query_template": "{업종} {지역} {창업단계} 소상공인 창업 지원사업 보조금 사업화 패키지",
-        "trigger_keywords": ["보조금", "지원금", "패키지", "창업지원", "지원사업", "창업"],
+        "trigger_keywords": [
+            "보조금",
+            "지원금",
+            "패키지",
+            "창업지원",
+            "지원사업",
+            "창업",
+        ],
     },
     {
         "name": "대출/융자",
         "query_template": "{업종} 소상공인 정책자금 대출 융자 {자금용도} 경영안정자금",
-        "trigger_keywords": ["대출", "융자", "정책자금", "자금", "운전자금", "시설자금", "인테리어"],
+        "trigger_keywords": [
+            "대출",
+            "융자",
+            "정책자금",
+            "자금",
+            "운전자금",
+            "시설자금",
+            "인테리어",
+        ],
     },
     {
         "name": "신용보증",
@@ -67,7 +101,15 @@ RECOMMEND_CATEGORIES = [
     {
         "name": "고용지원",
         "query_template": "소상공인 고용지원 채용장려금 사회보험 인건비 {직원수}",
-        "trigger_keywords": ["고용", "채용", "직원", "인건비", "사회보험", "두루누리", "일자리"],
+        "trigger_keywords": [
+            "고용",
+            "채용",
+            "직원",
+            "인건비",
+            "사회보험",
+            "두루누리",
+            "일자리",
+        ],
     },
     {
         "name": "교육/컨설팅",
@@ -77,7 +119,18 @@ RECOMMEND_CATEGORIES = [
     {
         "name": "외식업/F&B 특화",
         "query_template": "{업종} 외식업 음식점 카페 소상공인 {창업단계} 지원사업 {지역}",
-        "trigger_keywords": ["위생", "HACCP", "배달", "공유주방", "외식", "식품", "음식점", "카페", "베이커리", "제과"],
+        "trigger_keywords": [
+            "위생",
+            "HACCP",
+            "배달",
+            "공유주방",
+            "외식",
+            "식품",
+            "음식점",
+            "카페",
+            "베이커리",
+            "제과",
+        ],
     },
 ]
 
@@ -88,14 +141,20 @@ class GovSupportPlugin:
     def __init__(self):
         # GOV_* 전용 자격증명 우선 — 프로덕션 AZURE_* 변수와 충돌 방지
         # (gov-programs-index는 text-embedding-3-large 3072d로 구축됨)
-        openai_endpoint = os.getenv("GOV_OPENAI_ENDPOINT") or os.getenv("AZURE_OPENAI_ENDPOINT", "")
-        openai_key = os.getenv("GOV_OPENAI_API_KEY") or os.getenv("AZURE_OPENAI_API_KEY", "")
+        openai_endpoint = os.getenv("GOV_OPENAI_ENDPOINT") or os.getenv(
+            "AZURE_OPENAI_ENDPOINT", ""
+        )
+        openai_key = os.getenv("GOV_OPENAI_API_KEY") or os.getenv(
+            "AZURE_OPENAI_API_KEY", ""
+        )
         search_key = (
             os.getenv("GOV_SEARCH_API_KEY")
             or os.getenv("AZURE_SEARCH_API_KEY")
             or os.getenv("AZURE_SEARCH_KEY", "")
         )
-        search_endpoint = os.getenv("GOV_SEARCH_ENDPOINT") or os.getenv("AZURE_SEARCH_ENDPOINT", "")
+        search_endpoint = os.getenv("GOV_SEARCH_ENDPOINT") or os.getenv(
+            "AZURE_SEARCH_ENDPOINT", ""
+        )
         search_index = (
             os.getenv("GOV_SEARCH_INDEX_NAME")
             or os.getenv("AZURE_SEARCH_INDEX_NAME")
@@ -107,11 +166,14 @@ class GovSupportPlugin:
             or os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-large")
         )
 
-        self._available = bool(search_key and search_endpoint and openai_endpoint and openai_key)
+        self._available = bool(
+            search_key and search_endpoint and openai_endpoint and openai_key
+        )
         if self._available:
             self._ai_client = AzureOpenAI(
                 api_key=openai_key,
-                api_version=os.getenv("GOV_OPENAI_API_VERSION") or os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview"),
+                api_version=os.getenv("GOV_OPENAI_API_VERSION")
+                or os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview"),
                 azure_endpoint=openai_endpoint,
             )
             self._search_client = SearchClient(
@@ -156,10 +218,14 @@ class GovSupportPlugin:
 
         if startup_stage:
             stage_map = {
-                "예비창업": "예비창업", "예비": "예비창업",
-                "초기창업": "초기창업", "초기": "초기창업",
-                "운영중": "운영중", "운영": "운영중",
-                "폐업": "폐업재기", "재창업": "폐업재기",
+                "예비창업": "예비창업",
+                "예비": "예비창업",
+                "초기창업": "초기창업",
+                "초기": "초기창업",
+                "운영중": "운영중",
+                "운영": "운영중",
+                "폐업": "폐업재기",
+                "재창업": "폐업재기",
             }
             mapped = stage_map.get(startup_stage, "")
             if mapped:
@@ -173,7 +239,7 @@ class GovSupportPlugin:
         if min_amount > 0:
             filters.append(f"max_amount ge {min_amount}")
 
-        for ind in (exclude_industries or []):
+        for ind in exclude_industries or []:
             filters.append(f"not industries/any(i: i eq '{ind}')")
 
         filter_str = " and ".join(filters) if filters else None
@@ -186,12 +252,24 @@ class GovSupportPlugin:
             semantic_configuration_name="sohobi-semantic",
             query_caption="extractive",
             select=[
-                "program_name", "field", "summary", "target",
-                "support_content", "criteria", "apply_deadline",
-                "apply_method", "org_name", "phone", "url",
-                "support_type", "target_region",
-                "startup_stages", "industries", "support_types",
-                "max_amount", "quality_score",
+                "program_name",
+                "field",
+                "summary",
+                "target",
+                "support_content",
+                "criteria",
+                "apply_deadline",
+                "apply_method",
+                "org_name",
+                "phone",
+                "url",
+                "support_type",
+                "target_region",
+                "startup_stages",
+                "industries",
+                "support_types",
+                "max_amount",
+                "quality_score",
             ],
             top=top_k * 3,
         )
@@ -199,7 +277,9 @@ class GovSupportPlugin:
         scored = []
         for r in results:
             if not isinstance(r, Mapping):
-                logger.warning("gov_support_plugin: 예상치 못한 결과 타입 %s — 건너뜀", type(r))
+                logger.warning(
+                    "gov_support_plugin: 예상치 못한 결과 타입 %s — 건너뜀", type(r)
+                )
                 continue
             reranker_score = r.get("@search.reranker_score") or 0.0
             if not apply_threshold or reranker_score >= self.RERANKER_THRESHOLD:
@@ -211,19 +291,32 @@ class GovSupportPlugin:
         return scored[:top_k]
 
     @staticmethod
-    def _select_categories(business_type: str, funding_purpose: str, additional_info: str, startup_stage: str = "") -> list[dict]:
+    def _select_categories(
+        business_type: str,
+        funding_purpose: str,
+        additional_info: str,
+        startup_stage: str = "",
+    ) -> list[dict]:
         """사용자 입력에서 관련 카테고리만 선택. 매칭 없으면 보조금+대출 기본 제공."""
         context = f"{business_type} {funding_purpose} {additional_info}".lower()
         matched = [
-            cat for cat in RECOMMEND_CATEGORIES
+            cat
+            for cat in RECOMMEND_CATEGORIES
             if any(kw in context for kw in cat["trigger_keywords"])
         ]
         if not matched:
-            matched = [c for c in RECOMMEND_CATEGORIES if c["name"] in ("보조금/창업패키지", "대출/융자")]
+            matched = [
+                c
+                for c in RECOMMEND_CATEGORIES
+                if c["name"] in ("보조금/창업패키지", "대출/융자")
+            ]
 
         # 예비창업/초기창업이면 보조금/창업패키지 강제 포함
         if startup_stage in ("예비창업", "예비", "초기창업", "초기"):
-            subsidy = next((c for c in RECOMMEND_CATEGORIES if c["name"] == "보조금/창업패키지"), None)
+            subsidy = next(
+                (c for c in RECOMMEND_CATEGORIES if c["name"] == "보조금/창업패키지"),
+                None,
+            )
             if subsidy and subsidy not in matched:
                 matched.insert(0, subsidy)
 
@@ -241,13 +334,26 @@ class GovSupportPlugin:
     )
     def recommend_programs(
         self,
-        business_type: Annotated[str, "사용자 업종 (예: 카페, 음식점, 베이커리, 식품제조). 모르면 '미정'"],
+        business_type: Annotated[
+            str, "사용자 업종 (예: 카페, 음식점, 베이커리, 식품제조). 모르면 '미정'"
+        ],
         region: Annotated[str, "사용자 지역 (예: 서울, 경기, 부산). 모르면 빈 문자열"],
-        startup_stage: Annotated[str, "예비창업/초기창업(3년이내)/운영중/폐업예정/재창업. 모르면 '미정'"],
-        employee_count: Annotated[str, "현재 또는 예상 직원수 (예: 0명, 3명, 10명). 모르면 '미정'"] = "미정",
-        funding_needed: Annotated[str, "필요한 자금 규모 (예: 3천만원, 1억). 모르면 '미정'"] = "미정",
-        funding_purpose: Annotated[str, "자금 용도 (예: 인테리어, 운전자금, 장비구매). 모르면 '미정'"] = "미정",
-        additional_info: Annotated[str, "기타 사용자 상황 (예: 폐업 경험 있음, 청년, 여성 등). 없으면 빈 문자열"] = "",
+        startup_stage: Annotated[
+            str, "예비창업/초기창업(3년이내)/운영중/폐업예정/재창업. 모르면 '미정'"
+        ],
+        employee_count: Annotated[
+            str, "현재 또는 예상 직원수 (예: 0명, 3명, 10명). 모르면 '미정'"
+        ] = "미정",
+        funding_needed: Annotated[
+            str, "필요한 자금 규모 (예: 3천만원, 1억). 모르면 '미정'"
+        ] = "미정",
+        funding_purpose: Annotated[
+            str, "자금 용도 (예: 인테리어, 운전자금, 장비구매). 모르면 '미정'"
+        ] = "미정",
+        additional_info: Annotated[
+            str,
+            "기타 사용자 상황 (예: 폐업 경험 있음, 청년, 여성 등). 없으면 빈 문자열",
+        ] = "",
     ) -> str:
         if not self._available:
             return "추천 서비스가 설정되지 않았습니다. (AZURE_SEARCH_API_KEY, AZURE_SEARCH_ENDPOINT 확인)"
@@ -262,7 +368,9 @@ class GovSupportPlugin:
                 "지역": region or "전국",
                 "창업단계": startup_stage if startup_stage != "미정" else "",
                 "직원수": employee_count if employee_count != "미정" else "",
-                "자금용도": funding_purpose if funding_purpose != "미정" else "운전자금",
+                "자금용도": funding_purpose
+                if funding_purpose != "미정"
+                else "운전자금",
             }
 
             profile_summary = (
@@ -274,19 +382,34 @@ class GovSupportPlugin:
                 profile_summary += f", 기타: {additional_info}"
 
             # 관련 카테고리만 선택 (최대 3개)
-            selected_cats = self._select_categories(business_type, funding_purpose, additional_info, startup_stage)
+            selected_cats = self._select_categories(
+                business_type, funding_purpose, additional_info, startup_stage
+            )
 
             flat_results = []
             seen_names = set()
 
             # 외식업 계열이면 제조업 전용 사업 제외
-            _FB_TYPES = ["카페", "음식점", "식당", "베이커리", "제과", "푸드트럭", "주점", "외식"]
-            exclude_inds = ["제조업"] if any(t in business_type for t in _FB_TYPES) else []
+            _FB_TYPES = [
+                "카페",
+                "음식점",
+                "식당",
+                "베이커리",
+                "제과",
+                "푸드트럭",
+                "주점",
+                "외식",
+            ]
+            exclude_inds = (
+                ["제조업"] if any(t in business_type for t in _FB_TYPES) else []
+            )
 
             for cat in selected_cats:
                 query = cat["query_template"].format(**profile)
                 results = self._search_one(
-                    query, extracted_region, top_k=8,
+                    query,
+                    extracted_region,
+                    top_k=8,
                     startup_stage=startup_stage if startup_stage != "미정" else "",
                     min_amount=_parse_amount(funding_needed),
                     exclude_industries=exclude_inds,
@@ -315,7 +438,11 @@ class GovSupportPlugin:
                 for r in flat_results:
                     stages = r.get("startup_stages") or []
                     # 태깅 없는 프로그램은 범용 지원으로 간주 — 필터 대상 제외
-                    if stages and set(stages) <= set(exclude_stages) and "전체" not in stages:
+                    if (
+                        stages
+                        and set(stages) <= set(exclude_stages)
+                        and "전체" not in stages
+                    ):
                         continue
                     filtered.append(r)
                 flat_results = filtered
@@ -353,9 +480,13 @@ class GovSupportPlugin:
     )
     def search_gov_programs(
         self,
-        query: Annotated[str, "검색 질문 (예: '예비창업패키지 신청방법', '긴급경영자금 금리')"],
+        query: Annotated[
+            str, "검색 질문 (예: '예비창업패키지 신청방법', '긴급경영자금 금리')"
+        ],
         top_k: int = 10,
-        region: Annotated[str, "지역 필터 (예: 서울, 경기). 없으면 쿼리에서 자동 추출"] = "",
+        region: Annotated[
+            str, "지역 필터 (예: 서울, 경기). 없으면 쿼리에서 자동 추출"
+        ] = "",
     ) -> str:
         if not self._available:
             return "검색 서비스가 설정되지 않았습니다."
@@ -383,7 +514,9 @@ class GovSupportPlugin:
                     f"  링크: {r.get('url', '-')}"
                 )
 
-            header = f"[검색: '{query}', 지역: {region or '전국'}] {len(programs)}건\n\n"
+            header = (
+                f"[검색: '{query}', 지역: {region or '전국'}] {len(programs)}건\n\n"
+            )
             return header + "\n\n".join(programs)
 
         except Exception as e:

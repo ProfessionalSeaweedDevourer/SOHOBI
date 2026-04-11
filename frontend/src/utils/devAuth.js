@@ -24,7 +24,7 @@ export async function isDevAuthenticated() {
       hashBytes,
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["verify"]
+      ["verify"],
     );
     const nonce = hexToBytes(nonceHex);
     const tokenBytes = hexToBytes(storedToken);
@@ -42,7 +42,7 @@ export async function setDevAuthenticated(hashHex) {
     hashBytes,
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
   const tokenBuffer = await crypto.subtle.sign("HMAC", key, nonce);
   sessionStorage.setItem(SESSION_NONCE_KEY, bytesToHex(nonce));

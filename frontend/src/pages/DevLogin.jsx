@@ -2,11 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import { AnimatedBackground } from "../components/AnimatedBackground";
-import {
-  checkDevPassword,
-  setDevAuthenticated,
-  isDevAuthenticated,
-} from "../utils/devAuth";
+import { checkDevPassword, setDevAuthenticated, isDevAuthenticated } from "../utils/devAuth";
 
 export default function DevLogin() {
   const navigate = useNavigate();
@@ -57,18 +53,11 @@ export default function DevLogin() {
         <div className="text-center mb-8">
           <div className="text-3xl mb-2">🛠</div>
           <h1 className="text-xl font-bold text-foreground">개발자 모드</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            내부 개발자 전용 영역입니다.
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">내부 개발자 전용 영역입니다.</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="glass-card rounded-2xl p-8"
-        >
-          <label className="block text-sm font-medium text-foreground mb-2">
-            비밀번호
-          </label>
+        <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-8">
+          <label className="block text-sm font-medium text-foreground mb-2">비밀번호</label>
           <input
             type="password"
             value={password}
@@ -79,9 +68,7 @@ export default function DevLogin() {
             disabled={loading}
           />
 
-          {error && (
-            <p className="mt-2 text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
           <button
             type="submit"

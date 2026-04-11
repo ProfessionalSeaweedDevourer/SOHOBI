@@ -5,8 +5,16 @@ import { fetchStats } from "../api";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { AnimatedBackground } from "../components/AnimatedBackground";
 import {
-  ArrowLeft, BarChart3, RefreshCw, Activity,
-  Hash, Clock, Gauge, AlertTriangle, AlertCircle, PieChart,
+  ArrowLeft,
+  BarChart3,
+  RefreshCw,
+  Activity,
+  Hash,
+  Clock,
+  Gauge,
+  AlertTriangle,
+  AlertCircle,
+  PieChart,
 } from "lucide-react";
 import {
   Chart,
@@ -21,36 +29,53 @@ import {
 } from "chart.js";
 
 Chart.register(
-  BarController, BarElement, CategoryScale, LinearScale,
-  DoughnutController, ArcElement, Tooltip, Legend,
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  DoughnutController,
+  ArcElement,
+  Tooltip,
+  Legend,
 );
 
 const PERIODS = [
-  { label: "6h",  hours: 6 },
+  { label: "6h", hours: 6 },
   { label: "24h", hours: 24 },
   { label: "48h", hours: 48 },
-  { label: "7d",  hours: 168 },
+  { label: "7d", hours: 168 },
   { label: "30d", hours: 720 },
   { label: "90d", hours: 2160 },
 ];
 
 const AGENT_LABELS = {
-  finance: "재무", legal: "법률·세무", location: "상권",
-  admin: "행정", chat: "일반", unknown: "기타",
+  finance: "재무",
+  legal: "법률·세무",
+  location: "상권",
+  admin: "행정",
+  chat: "일반",
+  unknown: "기타",
 };
 const AGENT_COLORS = {
-  finance: "rgba(139,92,246,0.75)", legal: "rgba(8,145,178,0.75)",
-  location: "rgba(20,184,166,0.75)", admin: "rgba(234,179,8,0.75)",
-  chat: "rgba(100,116,139,0.75)", unknown: "rgba(203,213,225,0.75)",
+  finance: "rgba(139,92,246,0.75)",
+  legal: "rgba(8,145,178,0.75)",
+  location: "rgba(20,184,166,0.75)",
+  admin: "rgba(234,179,8,0.75)",
+  chat: "rgba(100,116,139,0.75)",
+  unknown: "rgba(203,213,225,0.75)",
 };
 
 const GRADE_COLORS = { A: "#10b981", B: "#eab308", C: "#ef4444" };
 const STATUS_COLORS = {
-  approved: "rgba(20,184,166,0.75)", pending: "rgba(234,179,8,0.75)",
-  rejected: "rgba(239,68,68,0.75)", unknown: "rgba(148,163,184,0.75)",
+  approved: "rgba(20,184,166,0.75)",
+  pending: "rgba(234,179,8,0.75)",
+  rejected: "rgba(239,68,68,0.75)",
+  unknown: "rgba(148,163,184,0.75)",
 };
 
-function ms2s(ms) { return ((ms ?? 0) / 1000).toFixed(1) + "s"; }
+function ms2s(ms) {
+  return ((ms ?? 0) / 1000).toFixed(1) + "s";
+}
 
 function SummaryCard({ label, value, sub, icon: Icon, color }) {
   return (
@@ -96,13 +121,15 @@ function LatencyBarChart({ byDomain }) {
       type: "bar",
       data: {
         labels: entries.map(([k]) => AGENT_LABELS[k] ?? k),
-        datasets: [{
-          label: "avg latency",
-          data: entries.map(([, v]) => +(v.avg_ms / 1000).toFixed(2)),
-          backgroundColor: entries.map(([k]) => AGENT_COLORS[k] ?? "rgba(148,163,184,0.75)"),
-          borderRadius: 6,
-          maxBarThickness: 48,
-        }],
+        datasets: [
+          {
+            label: "avg latency",
+            data: entries.map(([, v]) => +(v.avg_ms / 1000).toFixed(2)),
+            backgroundColor: entries.map(([k]) => AGENT_COLORS[k] ?? "rgba(148,163,184,0.75)"),
+            borderRadius: 6,
+            maxBarThickness: 48,
+          },
+        ],
       },
       options: {
         indexAxis: "y",
@@ -113,13 +140,20 @@ function LatencyBarChart({ byDomain }) {
           tooltip: { callbacks: { label: (ctx) => ` ${ctx.parsed.x}s` } },
         },
         scales: {
-          x: { beginAtZero: true, ticks: { callback: (v) => v + "s", font: { size: 11 } }, grid: { color: "rgba(148,163,184,0.15)" } },
+          x: {
+            beginAtZero: true,
+            ticks: { callback: (v) => v + "s", font: { size: 11 } },
+            grid: { color: "rgba(148,163,184,0.15)" },
+          },
           y: { grid: { display: false }, ticks: { font: { size: 12 } } },
         },
       },
     });
 
-    return () => { chartRef.current?.destroy(); chartRef.current = null; };
+    return () => {
+      chartRef.current?.destroy();
+      chartRef.current = null;
+    };
   }, [byDomain]);
 
   const domainCount = byDomain ? Object.keys(byDomain).length : 0;
@@ -160,11 +194,13 @@ function DoughnutChart({ title, dataMap, colorMap, icon: Icon, iconColor }) {
       type: "doughnut",
       data: {
         labels: entries.map(([k]) => k),
-        datasets: [{
-          data: entries.map(([, v]) => v),
-          backgroundColor: entries.map(([k]) => colorMap[k] ?? "rgba(148,163,184,0.75)"),
-          borderWidth: 0,
-        }],
+        datasets: [
+          {
+            data: entries.map(([, v]) => v),
+            backgroundColor: entries.map(([k]) => colorMap[k] ?? "rgba(148,163,184,0.75)"),
+            borderWidth: 0,
+          },
+        ],
       },
       options: {
         responsive: true,
@@ -174,7 +210,10 @@ function DoughnutChart({ title, dataMap, colorMap, icon: Icon, iconColor }) {
       },
     });
 
-    return () => { chartRef.current?.destroy(); chartRef.current = null; };
+    return () => {
+      chartRef.current?.destroy();
+      chartRef.current = null;
+    };
   }, [dataMap, colorMap]);
 
   return (
@@ -221,13 +260,17 @@ export default function StatsPage() {
     }
   }, []);
 
-  useEffect(() => { load(hours); }, [hours, load]);
+  useEffect(() => {
+    load(hours);
+  }, [hours, load]);
 
   const gradeLabeled = data?.by_grade
-    ? Object.fromEntries(Object.entries(data.by_grade).map(([k, v]) => [GRADE_LABEL_MAP[k] ?? k, v]))
+    ? Object.fromEntries(
+        Object.entries(data.by_grade).map(([k, v]) => [GRADE_LABEL_MAP[k] ?? k, v]),
+      )
     : null;
   const gradeLabeledColors = Object.fromEntries(
-    Object.entries(GRADE_COLORS).map(([k, v]) => [GRADE_LABEL_MAP[k] ?? k, v])
+    Object.entries(GRADE_COLORS).map(([k, v]) => [GRADE_LABEL_MAP[k] ?? k, v]),
   );
 
   return (
@@ -356,17 +399,46 @@ export default function StatsPage() {
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <SummaryCard label="총 요청" value={data.total} icon={Hash} color="#0891b2" />
-              <SummaryCard label="평균 응답" value={ms2s(data.overall?.avg_ms)} sub={`n=${data.overall?.n ?? 0}`} icon={Clock} color="#14b8a6" />
-              <SummaryCard label="P90" value={ms2s(data.overall?.p90_ms)} icon={Gauge} color="#f97316" />
-              <SummaryCard label="에러율" value={`${(Math.min(data.error_rate ?? 0, 1) * 100).toFixed(1)}%`} sub={`${data.error_count}건`} icon={AlertTriangle} color="#ef4444" />
+              <SummaryCard
+                label="평균 응답"
+                value={ms2s(data.overall?.avg_ms)}
+                sub={`n=${data.overall?.n ?? 0}`}
+                icon={Clock}
+                color="#14b8a6"
+              />
+              <SummaryCard
+                label="P90"
+                value={ms2s(data.overall?.p90_ms)}
+                icon={Gauge}
+                color="#f97316"
+              />
+              <SummaryCard
+                label="에러율"
+                value={`${(Math.min(data.error_rate ?? 0, 1) * 100).toFixed(1)}%`}
+                sub={`${data.error_count}건`}
+                icon={AlertTriangle}
+                color="#ef4444"
+              />
             </div>
 
             <LatencyBarChart byDomain={data.by_domain} />
 
             {/* Doughnut Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <DoughnutChart title="등급 분포" dataMap={gradeLabeled} colorMap={gradeLabeledColors} icon={PieChart} iconColor="#14b8a6" />
-              <DoughnutChart title="상태 분포" dataMap={data.by_status} colorMap={STATUS_COLORS} icon={Activity} iconColor="#0891b2" />
+              <DoughnutChart
+                title="등급 분포"
+                dataMap={gradeLabeled}
+                colorMap={gradeLabeledColors}
+                icon={PieChart}
+                iconColor="#14b8a6"
+              />
+              <DoughnutChart
+                title="상태 분포"
+                dataMap={data.by_status}
+                colorMap={STATUS_COLORS}
+                icon={Activity}
+                iconColor="#0891b2"
+              />
             </div>
           </div>
         )}

@@ -10,10 +10,7 @@ const PARAMS_KEY = "sohobi_latest_params";
 function persistToSession(sessionId, messages, latestParams) {
   if (!sessionId) return;
   try {
-    sessionStorage.setItem(
-      STORAGE_KEY_PREFIX + sessionId,
-      JSON.stringify(messages),
-    );
+    sessionStorage.setItem(STORAGE_KEY_PREFIX + sessionId, JSON.stringify(messages));
     if (latestParams) {
       sessionStorage.setItem(PARAMS_KEY, JSON.stringify(latestParams));
     }

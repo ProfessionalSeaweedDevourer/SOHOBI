@@ -22,7 +22,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-REQUIRED_VARS = ["ORACLE_USER", "ORACLE_PASSWORD", "ORACLE_HOST", "ORACLE_PORT", "ORACLE_SID"]
+REQUIRED_VARS = [
+    "ORACLE_USER",
+    "ORACLE_PASSWORD",
+    "ORACLE_HOST",
+    "ORACLE_PORT",
+    "ORACLE_SID",
+]
 for var in REQUIRED_VARS:
     if not os.getenv(var):
         print(f"[ERROR] 환경변수 {var} 가 설정되지 않았습니다.", file=sys.stderr)
@@ -89,8 +95,12 @@ def main():
 
     conn.close()
     print("\n완료. 다음 명령으로 PostgreSQL에 적재하세요:")
-    print('  psql "$PG_DSN" -c "\\COPY sangkwon_sales FROM \'db/sangkwon_sales.csv\' CSV HEADER"')
-    print('  psql "$PG_DSN" -c "\\COPY sangkwon_store FROM \'db/sangkwon_store.csv\' CSV HEADER"')
+    print(
+        '  psql "$PG_DSN" -c "\\COPY sangkwon_sales FROM \'db/sangkwon_sales.csv\' CSV HEADER"'
+    )
+    print(
+        '  psql "$PG_DSN" -c "\\COPY sangkwon_store FROM \'db/sangkwon_store.csv\' CSV HEADER"'
+    )
 
 
 if __name__ == "__main__":

@@ -1,14 +1,14 @@
-import { motion, useInView } from 'motion/react';
-import { useRef } from 'react';
+import { motion, useInView } from "motion/react";
+import { useRef } from "react";
 
-export function ScrollReveal({ children, delay = 0, direction = 'up', className = '' }) {
+export function ScrollReveal({ children, delay = 0, direction = "up", className = "" }) {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   const variants = {
-    up:    { y: 40,  opacity: 0 },
-    down:  { y: -40, opacity: 0 },
-    left:  { x: 40,  opacity: 0 },
+    up: { y: 40, opacity: 0 },
+    down: { y: -40, opacity: 0 },
+    left: { x: 40, opacity: 0 },
     right: { x: -40, opacity: 0 },
   };
 

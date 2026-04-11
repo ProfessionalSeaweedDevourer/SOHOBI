@@ -1,6 +1,16 @@
-import { useState } from 'react';
-import { FileText, MapPin, Calculator, Scale, Receipt, Users, UtensilsCrossed, ShieldCheck, ChevronDown } from 'lucide-react';
-import { motion } from 'motion/react';
+import { useState } from "react";
+import {
+  FileText,
+  MapPin,
+  Calculator,
+  Scale,
+  Receipt,
+  Users,
+  UtensilsCrossed,
+  ShieldCheck,
+  ChevronDown,
+} from "lucide-react";
+import { motion } from "motion/react";
 
 const iconMap = {
   FileText,
@@ -18,11 +28,15 @@ export function AgentCard({ agent, index = 0 }) {
   const Icon = iconMap[agent.icon];
   const isComingSoon = !!agent.comingSoon;
 
-  const glowClass = isComingSoon ? '' :
-    agent.id === 'admin' ? 'hover-glow-blue' :
-    agent.id === 'legal' ? 'hover-glow-blue' :
-    agent.id === 'commercial' ? 'hover-glow-teal' :
-    'hover-glow-orange';
+  const glowClass = isComingSoon
+    ? ""
+    : agent.id === "admin"
+      ? "hover-glow-blue"
+      : agent.id === "legal"
+        ? "hover-glow-blue"
+        : agent.id === "commercial"
+          ? "hover-glow-teal"
+          : "hover-glow-orange";
 
   const handleClick = () => {
     if (!isComingSoon && agent.detailKo) {
@@ -36,11 +50,11 @@ export function AgentCard({ agent, index = 0 }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className={`group h-full${isComingSoon ? ' opacity-60' : ''}`}
+      className={`group h-full${isComingSoon ? " opacity-60" : ""}`}
     >
       <div
         onClick={handleClick}
-        className={`glass rounded-2xl p-6 border-2 border-white/20 shadow-elevated h-full flex flex-col ${isComingSoon ? '' : `transition-glow ${glowClass} cursor-pointer`} relative overflow-hidden`}
+        className={`glass rounded-2xl p-6 border-2 border-white/20 shadow-elevated h-full flex flex-col ${isComingSoon ? "" : `transition-glow ${glowClass} cursor-pointer`} relative overflow-hidden`}
       >
         {!isComingSoon && (
           <div
@@ -50,7 +64,10 @@ export function AgentCard({ agent, index = 0 }) {
         )}
 
         {isComingSoon && (
-          <span className="absolute top-4 right-4 text-xs font-semibold px-2 py-0.5 rounded-full z-20" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+          <span
+            className="absolute top-4 right-4 text-xs font-semibold px-2 py-0.5 rounded-full z-20"
+            style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
+          >
             출시 예정
           </span>
         )}
@@ -94,11 +111,11 @@ export function AgentCard({ agent, index = 0 }) {
         {!isComingSoon && agent.detailKo && (
           <div className="flex items-center justify-center gap-1 mt-4 relative z-10">
             <span className="text-xs text-muted-foreground">
-              {expanded ? '접기' : '자세히 보기'}
+              {expanded ? "접기" : "자세히 보기"}
             </span>
             <ChevronDown
               size={14}
-              className={`text-muted-foreground transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
+              className={`text-muted-foreground transition-transform duration-300 ${expanded ? "rotate-180" : ""}`}
             />
           </div>
         )}
@@ -107,13 +124,11 @@ export function AgentCard({ agent, index = 0 }) {
         {!isComingSoon && agent.detailKo && (
           <div
             className="relative z-10 transition-[grid-template-rows] duration-300 ease-in-out grid"
-            style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
+            style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
           >
             <div className="overflow-hidden">
               <div className="pt-4 mt-4 border-t border-white/10">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {agent.detailKo}
-                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{agent.detailKo}</p>
               </div>
             </div>
           </div>

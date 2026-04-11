@@ -17,9 +17,9 @@ Azure LLM·PostgreSQL DB 호출 없이 mock만 사용합니다.
 """
 
 import json
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 # ────────────────────────────────────────────────────────────────────────────
 # 공통 샘플 데이터
@@ -140,11 +140,18 @@ class TestExtractParams:
         """T-LA-01: 정상 JSON 파싱"""
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         payload = json.dumps(
-            {"mode": "analyze", "locations": ["홍대"], "business_type": "카페", "quarter": "20244"},
+            {
+                "mode": "analyze",
+                "locations": ["홍대"],
+                "business_type": "카페",
+                "quarter": "20244",
+            },
             ensure_ascii=False,
         )
         fake_kernel.get_service.return_value.get_chat_message_content = AsyncMock(
@@ -162,7 +169,9 @@ class TestExtractParams:
         """T-LA-02: ```json 코드블록 래핑 제거 후 파싱"""
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         wrapped = (
@@ -183,7 +192,9 @@ class TestExtractParams:
         """T-LA-03: LLM이 JSON 반환 실패 시 기본값으로 폴백"""
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         fake_kernel.get_service.return_value.get_chat_message_content = AsyncMock(
@@ -211,11 +222,18 @@ class TestGenerateDraftGuard:
         """T-LA-04: locations 빈 배열 → 안내 메시지 반환 (LLM 호출 없음)"""
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         empty_params = json.dumps(
-            {"mode": "analyze", "locations": [], "business_type": "카페", "quarter": "20244"},
+            {
+                "mode": "analyze",
+                "locations": [],
+                "business_type": "카페",
+                "quarter": "20244",
+            },
             ensure_ascii=False,
         )
         fake_kernel.get_service.return_value.get_chat_message_content = AsyncMock(
@@ -231,11 +249,18 @@ class TestGenerateDraftGuard:
         """T-LA-05: business_type 빈 문자열 → 안내 메시지 반환"""
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         empty_params = json.dumps(
-            {"mode": "analyze", "locations": ["홍대"], "business_type": "", "quarter": "20244"},
+            {
+                "mode": "analyze",
+                "locations": ["홍대"],
+                "business_type": "",
+                "quarter": "20244",
+            },
             ensure_ascii=False,
         )
         fake_kernel.get_service.return_value.get_chat_message_content = AsyncMock(
@@ -251,11 +276,18 @@ class TestGenerateDraftGuard:
         """T-LA-06: prior_history=None 전달 시 예외 없이 처리"""
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         empty_params = json.dumps(
-            {"mode": "analyze", "locations": [], "business_type": "", "quarter": "20244"},
+            {
+                "mode": "analyze",
+                "locations": [],
+                "business_type": "",
+                "quarter": "20244",
+            },
             ensure_ascii=False,
         )
         fake_kernel.get_service.return_value.get_chat_message_content = AsyncMock(
@@ -280,7 +312,9 @@ class TestAnalyze:
         """T-LA-07: 지원하지 않는 업종 → 안내 메시지 반환 (DB 호출 없음)"""
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         result = await agent.analyze("홍대", "피자", "20244")
@@ -296,7 +330,9 @@ class TestAnalyze:
         mock_repo.get_sales.return_value = None
         mock_repo.get_store_count.return_value = None
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         result = await agent.analyze("부산", "카페", "20244")
@@ -312,7 +348,9 @@ class TestAnalyze:
         """
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         # KeyError가 발생하면 이 테스트가 실패합니다
@@ -332,12 +370,12 @@ class TestAnalyze:
         zero_store = dict(SAMPLE_STORE)
         zero_store["summary"] = dict(SAMPLE_STORE["summary"])
         zero_store["summary"]["store_count"] = 0
-        zero_store["breakdown"] = [
-            {**SAMPLE_STORE["breakdown"][0], "store_count": 0}
-        ]
+        zero_store["breakdown"] = [{**SAMPLE_STORE["breakdown"][0], "store_count": 0}]
         mock_repo.get_store_count.return_value = zero_store
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         # ZeroDivisionError 없이 반환되어야 합니다
@@ -362,7 +400,9 @@ class TestCompare:
         mock_repo.get_sales.return_value = None
         mock_repo.get_store_count.return_value = None
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         result = await agent.compare(["가나다", "라마바"], "카페", "20244")
@@ -383,7 +423,9 @@ class TestCompare:
         mock_repo.get_sales.side_effect = selective_sales
         mock_repo.get_store_count.side_effect = selective_store
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         result = await agent.compare(["홍대", "없는지역"], "카페", "20244")
@@ -402,16 +444,19 @@ class TestCallLlm:
     """_call_llm 내부 동작 검증"""
 
     @pytest.mark.asyncio
-    async def test_13_content_filter_retry_includes_user_msg(self, fake_kernel, mock_repo):
+    async def test_13_content_filter_retry_includes_user_msg(
+        self, fake_kernel, mock_repo
+    ):
         """T-LA-13 [Bug-2]: content_filter 재시도 시 user_msg 포함 여부
 
         Bug: ChatHistory(system_message=safe_sys) 만 생성 → user_msg 누락
         Fix: safe_history에 add_user_message(user_msg) 추가
         """
         from agents.location_agent import LocationAgent
-        from semantic_kernel.contents import ChatHistory
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         # 첫 호출에서 content_filter 예외, 두 번째 호출에서 정상 반환
@@ -428,9 +473,11 @@ class TestCallLlm:
 
         fake_kernel.get_service.return_value.get_chat_message_content = mock_get_content
 
-        result = await agent._call_llm("시스템 메시지", "유저 메시지")
+        result = await agent._call_llm("시스템 메시지", "유저 메시지")  # noqa: F841
 
-        assert len(captured_histories) == 2, "content_filter 시 재시도가 1회 발생해야 합니다"
+        assert len(captured_histories) == 2, (
+            "content_filter 시 재시도가 1회 발생해야 합니다"
+        )
         retry_history = captured_histories[1]
 
         # Bug-2 수정 검증: 재시도 히스토리에 user 메시지가 포함되어야 함
@@ -447,7 +494,9 @@ class TestCallLlm:
         """T-LA-14: LLM 빈 응답 → ValueError 발생"""
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         fake_kernel.get_service.return_value.get_chat_message_content = AsyncMock(
@@ -473,9 +522,12 @@ class TestAsyncioAndRegex:
         Fix: psycopg2 동기 호출이 이벤트 루프를 블로킹하지 않도록 asyncio.to_thread() 래핑
         """
         import asyncio
+
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         to_thread_funcs = []
@@ -508,7 +560,9 @@ class TestAsyncioAndRegex:
         """
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         # LLM이 설명 텍스트 + JSON 코드블록 형태로 반환
@@ -548,7 +602,9 @@ class TestEdgeCases:
         """
         from agents.location_agent import LocationAgent
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         result = await agent.compare(["홍대", "강남"], "피자", "20244")
@@ -558,7 +614,9 @@ class TestEdgeCases:
         mock_repo.get_sales.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_21_generate_draft_retry_calls_llm_extra(self, fake_kernel, mock_repo):
+    async def test_21_generate_draft_retry_calls_llm_extra(
+        self, fake_kernel, mock_repo
+    ):
         """T-LA-21: retry_prompt 있을 때 LLM 호출이 1회 추가되는지 검증
 
         흐름: _extract_params(1회) → _run_agent(1회) → retry(1회) = 총 3회
@@ -567,7 +625,12 @@ class TestEdgeCases:
         from agents.location_agent import LocationAgent
 
         params_json = json.dumps(
-            {"mode": "analyze", "locations": ["홍대"], "business_type": "카페", "quarter": "20244"},
+            {
+                "mode": "analyze",
+                "locations": ["홍대"],
+                "business_type": "카페",
+                "quarter": "20244",
+            },
             ensure_ascii=False,
         )
         r_params = MagicMock()
@@ -581,7 +644,9 @@ class TestEdgeCases:
             side_effect=[r_params, r_analysis, r_retry]
         )
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         result = await agent.generate_draft(
@@ -589,14 +654,18 @@ class TestEdgeCases:
             retry_prompt="800자 이내로 작성하십시오.",
         )
 
-        call_count = fake_kernel.get_service.return_value.get_chat_message_content.call_count
+        call_count = (
+            fake_kernel.get_service.return_value.get_chat_message_content.call_count
+        )
         assert call_count == 3, (
             f"retry_prompt 있을 때 LLM 호출이 3회여야 합니다. 실제: {call_count}회"
         )
         assert result["draft"] == "재시도 분석 결과입니다."
 
     @pytest.mark.asyncio
-    async def test_22_generate_draft_llm_failure_returns_guidance(self, fake_kernel, mock_repo):
+    async def test_22_generate_draft_llm_failure_returns_guidance(
+        self, fake_kernel, mock_repo
+    ):
         """T-LA-22: _run_agent LLM 실패 시 ValueError가 전파되지 않고 안내 메시지 반환
 
         수정 전: ValueError가 generate_draft() 밖으로 전파 → FastAPI 500 오류
@@ -605,7 +674,12 @@ class TestEdgeCases:
         from agents.location_agent import LocationAgent
 
         params_json = json.dumps(
-            {"mode": "analyze", "locations": ["홍대"], "business_type": "카페", "quarter": "20244"},
+            {
+                "mode": "analyze",
+                "locations": ["홍대"],
+                "business_type": "카페",
+                "quarter": "20244",
+            },
             ensure_ascii=False,
         )
         call_count = 0
@@ -621,7 +695,9 @@ class TestEdgeCases:
 
         fake_kernel.get_service.return_value.get_chat_message_content = selective_fail
 
-        with patch("agents.location_agent.CommercialRepository", return_value=mock_repo):
+        with patch(
+            "agents.location_agent.CommercialRepository", return_value=mock_repo
+        ):
             agent = LocationAgent(fake_kernel)
 
         # ValueError가 전파되지 않고 dict 반환되어야 함

@@ -13,50 +13,50 @@ import json
 import logging
 import os
 import time
-from contextlib import asynccontextmanager
 import traceback
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 _logger = logging.getLogger("sohobi.api")
 
+import checklist_store
+import domain_router
+import httpx
+import orchestrator
+import session_store
+from auth import verify_api_key
+from auth_router import router as auth_router
+from checklist_router import router as checklist_router
+from dotenv import load_dotenv
+from event_router import router as event_router
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-import httpx
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
+from feedback_router import router as feedback_router
+from kernel_setup import _TOKEN_PROVIDER, get_signoff_client
+from log_formatter import load_entries_json
+from logger import _format_rejection_history, log_error, log_query
+from map_data_router import router as map_data_router
+from map_router import router as map_router
+from my_router import router as my_router
 from pydantic import BaseModel, Field
+from realestate_router import router as realestate_router
+from report_router import router as report_router
+from roadmap_router import router as roadmap_router
+from session_store import (
+    get_doc_history,
+    get_query_session,
+    get_recent_history,
+    save_doc_history,
+    save_query_session,
+)
+from signoff.signoff_agent import run_signoff
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from dotenv import load_dotenv
-
-import domain_router
-import orchestrator
-from auth import verify_api_key
-from auth_router import router as auth_router
-from my_router import router as my_router
-from map_router import router as map_router
-from map_data_router import router as map_data_router
-from realestate_router import router as realestate_router
-from feedback_router import router as feedback_router
-from event_router import router as event_router
-from checklist_router import router as checklist_router
-from report_router import router as report_router
-from roadmap_router import router as roadmap_router
-from signoff.signoff_agent import run_signoff
-from kernel_setup import get_kernel, get_signoff_client, _TOKEN_PROVIDER
-from logger import log_query, log_error
-from log_formatter import load_entries_json
-from logger import _format_rejection_history
 from variable_extractor import extract_financial_vars
-from session_store import (
-    get_query_session, save_query_session,
-    get_doc_history, save_doc_history,
-    get_recent_history,
-)
-import session_store
-import checklist_store
 
 load_dotenv()
 
@@ -83,6 +83,7 @@ def _rate_limit_key(request: Request) -> str:
     """면제 IP → 빈 문자열(slowapi가 limit 체크 스킵), 그 외 → 실제 IP."""
     ip = _get_client_ip(request)
     return "" if ip in _RATE_LIMIT_EXEMPT_IPS else ip
+
 
 limiter = Limiter(
     key_func=_rate_limit_key,
@@ -111,13 +112,13 @@ app.add_middleware(SlowAPIMiddleware)
 app.include_router(auth_router)
 app.include_router(my_router)
 app.include_router(map_router)
-app.include_router(map_data_router,   dependencies=[Depends(verify_api_key)])
+app.include_router(map_data_router, dependencies=[Depends(verify_api_key)])
 app.include_router(realestate_router, dependencies=[Depends(verify_api_key)])
-app.include_router(feedback_router,   dependencies=[Depends(verify_api_key)])
-app.include_router(event_router,       dependencies=[Depends(verify_api_key)])
-app.include_router(checklist_router,   dependencies=[Depends(verify_api_key)])
+app.include_router(feedback_router, dependencies=[Depends(verify_api_key)])
+app.include_router(event_router, dependencies=[Depends(verify_api_key)])
+app.include_router(checklist_router, dependencies=[Depends(verify_api_key)])
 app.include_router(report_router)
-app.include_router(roadmap_router,     dependencies=[Depends(verify_api_key)])
+app.include_router(roadmap_router, dependencies=[Depends(verify_api_key)])
 
 # ── CORS: 허용 origin 명시적 화이트리스트 ─────────────────────
 _ALLOWED_ORIGINS = [
@@ -141,6 +142,7 @@ app.add_middleware(
 # 1KB 이상 응답만 gzip 압축 (SSE 스트림은 자동 제외됨)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+
 # ── IP 화이트리스트 미들웨어 (환경변수 미설정 시 비활성화) ────
 class _IPFilterMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, allowed_ips: set[str]):
@@ -151,11 +153,15 @@ class _IPFilterMiddleware(BaseHTTPMiddleware):
         client_ip = _get_client_ip(request)
         if client_ip not in self.allowed_ips:
             import logging
+
             logging.getLogger("sohobi.security").warning(
                 "IP_BLOCKED ip=%r path=%r", client_ip, request.url.path
             )
-            return JSONResponse(status_code=403, content={"error": "접근이 제한된 IP입니다."})
+            return JSONResponse(
+                status_code=403, content={"error": "접근이 제한된 IP입니다."}
+            )
         return await call_next(request)
+
 
 _allowed_ips_raw = os.getenv("ALLOWED_IPS", "")
 _allowed_ips = {ip.strip() for ip in _allowed_ips_raw.split(",") if ip.strip()}
@@ -178,15 +184,20 @@ async def add_response_time_header(request: Request, call_next):
 
 # ── 스키마 ────────────────────────────────────────────────────
 
+
 class QueryRequest(BaseModel):
     question: str = Field(..., max_length=2000, description="최대 2,000자")
-    session_id: str | None = Field(default=None, description="생략 시 서버가 새 UUID를 발급한다")
+    session_id: str | None = Field(
+        default=None, description="생략 시 서버가 새 UUID를 발급한다"
+    )
     founder_context: str | None = Field(
         default=None,
         description="창업자 상황 요약 (예: '서울 마포구, 자본금 1000만 원, 테이크아웃 카페'). "
-                    "동일 세션에서는 최초 한 번만 전달하면 이후 요청에 자동 적용된다.",
+        "동일 세션에서는 최초 한 번만 전달하면 이후 요청에 자동 적용된다.",
     )
-    domain: str | None = Field(default=None, description="없으면 domain_router로 자동 분류")
+    domain: str | None = Field(
+        default=None, description="없으면 domain_router로 자동 분류"
+    )
     max_retries: int = Field(default=3, ge=0, le=10)
     current_params: dict | None = Field(
         default=None,
@@ -206,6 +217,7 @@ class DocChatRequest(BaseModel):
 
 # ── 보안: 프롬프트 인젝션 의심 패턴 ──────────────────────────
 import re as _re
+from datetime import UTC
 
 _INJECTION_PATTERNS = [
     r"ignore\s+(all\s+)?.*instruction",
@@ -219,6 +231,7 @@ _INJECTION_PATTERNS = [
     r"평가\s*(규칙|기준).*(무시|비활성|적용\s*하지)",
 ]
 
+
 def _detect_injection(text: str) -> bool:
     """의심 패턴 감지 — 거부가 아닌 로깅 목적."""
     t = text.lower()
@@ -228,8 +241,9 @@ def _detect_injection(text: str) -> bool:
 # signoff 구분자 인젝션 제거 — 질문에 삽입된 <<<DRAFT_END>>> 등을 사전 차단
 _STRIP_PATTERNS = [
     (r"<<<DRAFT_END>>>\s*\{.*?\}\s*<<<DRAFT_START>>>", ""),  # signoff 판정 삽입 패턴
-    (r"<<<[A-Z_]+>>>", ""),                                    # 구분자 일반
+    (r"<<<[A-Z_]+>>>", ""),  # 구분자 일반
 ]
+
 
 def _sanitize_question(text: str) -> str:
     """질문에서 signoff 구분자 및 판정 삽입 패턴을 제거한다."""
@@ -239,6 +253,7 @@ def _sanitize_question(text: str) -> str:
 
 
 # ── 내부 헬퍼 ─────────────────────────────────────────────────
+
 
 async def _extract_and_save(sid: str, session: dict, draft: str) -> None:
     """재무 변수를 백그라운드에서 추출해 세션에 저장한다. 실패해도 메인 플로우에 영향 없음."""
@@ -251,8 +266,8 @@ async def _extract_and_save(sid: str, session: dict, draft: str) -> None:
         _logger.warning("재무 변수 백그라운드 추출 실패 sid=%s: %s", sid, e)
 
 
-
 # ── 엔드포인트 ────────────────────────────────────────────────
+
 
 @app.get("/health")
 @limiter.exempt
@@ -284,12 +299,13 @@ async def query(req: QueryRequest, request: Request):
         # ── 프롬프트 인젝션 의심 패턴 감지 (거부 없이 로깅만) ─
         if _detect_injection(question):
             import logging
+
             logging.getLogger("sohobi.security").warning(
                 "INJECTION_SUSPECT question=%r", req.question[:200]
             )
 
         # ── 세션 복원 또는 신규 생성 ──────────────────────────
-        sid     = req.session_id or str(uuid4())
+        sid = req.session_id or str(uuid4())
         session = await get_query_session(sid)
 
         # 새 창업자 컨텍스트가 전달되면 세션 프로필 갱신
@@ -311,19 +327,25 @@ async def query(req: QueryRequest, request: Request):
         if req.domain in ("admin", "finance", "legal", "location", "chat"):
             if router_domain != req.domain and router_confidence >= 0.8:
                 import logging
+
                 logging.getLogger("sohobi.security").warning(
                     "DOMAIN_OVERRIDE client=%r router=%r confidence=%.2f question=%r",
-                    req.domain, router_domain, router_confidence, req.question[:100],
+                    req.domain,
+                    router_domain,
+                    router_confidence,
+                    req.question[:100],
                 )
-                domain = router_domain   # 라우터 결과 우선
+                domain = router_domain  # 라우터 결과 우선
             else:
-                domain = req.domain      # 라우터 확신 부족 → 클라이언트 지정 존중
+                domain = req.domain  # 라우터 확신 부족 → 클라이언트 지정 존중
         else:
             domain = router_domain
 
         # ── 오케스트레이터 실행 ───────────────────────────────
         # current_params: 클라이언트 전달값 우선, 없으면 서버 세션 추출값 사용
-        params = req.current_params or (session["extracted"] if session["extracted"] else None)
+        params = req.current_params or (
+            session["extracted"] if session["extracted"] else None
+        )
         result = await orchestrator.run(
             domain=domain,
             question=question,
@@ -354,40 +376,40 @@ async def query(req: QueryRequest, request: Request):
 
         # ── 로깅 ─────────────────────────────────────────────
         log_query(
-            request_id        = result["request_id"],
-            session_id        = sid,
-            user_id           = session.get("user_id", ""),
-            client_ip         = _get_client_ip(request),
-            question          = req.question,
-            domain            = domain,
-            status            = result["status"],
-            grade             = result.get("grade", ""),
-            retry_count       = result["retry_count"],
-            rejection_history = result.get("rejection_history", []),
-            draft             = result["draft"],
-            latency_ms        = (time.monotonic() - t0) * 1000,
+            request_id=result["request_id"],
+            session_id=sid,
+            user_id=session.get("user_id", ""),
+            client_ip=_get_client_ip(request),
+            question=req.question,
+            domain=domain,
+            status=result["status"],
+            grade=result.get("grade", ""),
+            retry_count=result["retry_count"],
+            rejection_history=result.get("rejection_history", []),
+            draft=result["draft"],
+            latency_ms=(time.monotonic() - t0) * 1000,
         )
 
         return {
-            "session_id":        sid,
-            "request_id":        result["request_id"],
-            "status":            result["status"],
-            "domain":            domain,
-            "grade":             result.get("grade", ""),
-            "confidence_note":   result.get("confidence_note", ""),
-            "draft":             result["draft"],
-            "chart":             result.get("chart"),
-            "charts":            result.get("charts", []),
-            "updated_params":    result.get("updated_params"),
-            "retry_count":       result["retry_count"],
-            "agent_ms":          result.get("agent_ms", 0),
-            "signoff_ms":        result.get("signoff_ms", 0),
-            "message":           result["message"],
+            "session_id": sid,
+            "request_id": result["request_id"],
+            "status": result["status"],
+            "domain": domain,
+            "grade": result.get("grade", ""),
+            "confidence_note": result.get("confidence_note", ""),
+            "draft": result["draft"],
+            "chart": result.get("chart"),
+            "charts": result.get("charts", []),
+            "updated_params": result.get("updated_params"),
+            "retry_count": result["retry_count"],
+            "agent_ms": result.get("agent_ms", 0),
+            "signoff_ms": result.get("signoff_ms", 0),
+            "message": result["message"],
             "rejection_history": _format_rejection_history(
                 result.get("rejection_history", [])
             ),
             "suggested_actions": result.get("suggested_actions", []),
-            "is_partial":        result.get("is_partial", False),
+            "is_partial": result.get("is_partial", False),
         }
     except Exception as e:
         err_str = str(e).lower()
@@ -414,19 +436,19 @@ async def query(req: QueryRequest, request: Request):
         # 사용자 질의에서 500을 반환하지 않는다 — 내부 오류를 외부에 노출하지 않기 위해
         # 에러 메시지는 서버 로그에만 기록되고, 클라이언트에는 안전한 메시지만 반환한다
         return {
-            "session_id":        req.session_id or "",
-            "request_id":        str(uuid4()),
-            "status":            "error",
-            "domain":            req.domain or "unknown",
-            "grade":             "",
-            "confidence_note":   "",
-            "draft":             safe_draft,
-            "chart":             None,
-            "updated_params":    None,
-            "retry_count":       0,
-            "agent_ms":          0,
-            "signoff_ms":        0,
-            "message":           "",
+            "session_id": req.session_id or "",
+            "request_id": str(uuid4()),
+            "status": "error",
+            "domain": req.domain or "unknown",
+            "grade": "",
+            "confidence_note": "",
+            "draft": safe_draft,
+            "chart": None,
+            "updated_params": None,
+            "retry_count": 0,
+            "agent_ms": 0,
+            "signoff_ms": 0,
+            "message": "",
             "rejection_history": [],
         }
 
@@ -437,8 +459,8 @@ async def stream_query(req: QueryRequest, request: Request):
     """Q&A 플로우: SSE로 실시간 진행 상황 전달.
     각 단계(에이전트 시작/완료, Sign-off 판정, 최종 결과)를 이벤트로 스트리밍한다.
     """
-    sid       = req.session_id or str(uuid4())
-    session   = await get_query_session(sid)
+    sid = req.session_id or str(uuid4())
+    session = await get_query_session(sid)
     client_ip = _get_client_ip(request)
     if req.founder_context:
         session["profile"] = req.founder_context
@@ -461,7 +483,9 @@ async def stream_query(req: QueryRequest, request: Request):
             yield f"event: domain_classified\ndata: {json.dumps({'domain': domain, 'session_id': sid})}\n\n"
 
             # ── 오케스트레이터 스트리밍 ───────────────────────
-            params = req.current_params or (session["extracted"] if session["extracted"] else None)
+            params = req.current_params or (
+                session["extracted"] if session["extracted"] else None
+            )
             final_result = None
             async for ev in orchestrator.run_stream(
                 domain=domain,
@@ -494,14 +518,16 @@ async def stream_query(req: QueryRequest, request: Request):
                     # 프론트 렌더링용 메시지 메타데이터 축적 (Cosmos 2MB 문서 한도 대비 cap)
                     _MAX_SESSION_MESSAGES = 50
                     msgs = session.setdefault("messages", [])
-                    msgs.append({
-                        "question": req.question,
-                        "domain": domain,
-                        "grade": ev.get("grade", ""),
-                        "draft": ev.get("draft", ""),
-                        "confidence_note": ev.get("confidence_note", ""),
-                        "suggested_actions": ev.get("suggested_actions", []),
-                    })
+                    msgs.append(
+                        {
+                            "question": req.question,
+                            "domain": domain,
+                            "grade": ev.get("grade", ""),
+                            "draft": ev.get("draft", ""),
+                            "confidence_note": ev.get("confidence_note", ""),
+                            "suggested_actions": ev.get("suggested_actions", []),
+                        }
+                    )
                     if len(msgs) > _MAX_SESSION_MESSAGES:
                         session["messages"] = msgs[-_MAX_SESSION_MESSAGES:]
 
@@ -514,20 +540,20 @@ async def stream_query(req: QueryRequest, request: Request):
                     ev["domain"] = domain
 
                     log_query(
-                        request_id        = ev["request_id"],
-                        session_id        = sid,
-                        user_id           = session.get("user_id", ""),
-                        client_ip         = client_ip,
-                        question          = req.question,
-                        domain            = domain,
-                        status            = ev["status"],
-                        grade             = ev.get("grade", ""),
-                        retry_count       = ev["retry_count"],
-                        rejection_history = ev.get("rejection_history", []),
-                        draft             = ev["draft"],
-                        latency_ms        = (time.monotonic() - t0) * 1000,
+                        request_id=ev["request_id"],
+                        session_id=sid,
+                        user_id=session.get("user_id", ""),
+                        client_ip=client_ip,
+                        question=req.question,
+                        domain=domain,
+                        status=ev["status"],
+                        grade=ev.get("grade", ""),
+                        retry_count=ev["retry_count"],
+                        rejection_history=ev.get("rejection_history", []),
+                        draft=ev["draft"],
+                        latency_ms=(time.monotonic() - t0) * 1000,
                     )
-                    final_result = ev
+                    final_result = ev  # noqa: F841
 
                 yield f"event: {event_name}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n"
 
@@ -560,7 +586,10 @@ async def signoff(req: SignoffRequest, request: Request):
     """기존 draft를 Sign-off Agent에 단독으로 검증한다."""
     try:
         if req.domain not in ("admin", "finance", "legal", "location"):
-            return JSONResponse(status_code=400, content={"error": f"지원하지 않는 도메인: {req.domain}"})
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"지원하지 않는 도메인: {req.domain}"},
+            )
         client = get_signoff_client()
         verdict = await run_signoff(client=client, domain=req.domain, draft=req.draft)
         return verdict
@@ -576,11 +605,15 @@ async def doc_chat(req: DocChatRequest, request: Request):
     대화형으로 사용자 정보를 수집한 뒤 식품 영업 신고서 PDF를 생성한다.
     Sign-off 대상이 아닌 별도 플로우.
     """
-    from semantic_kernel import Kernel
-    from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
-    from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-    from plugins.food_business_plugin import FoodBusinessPlugin
     import re
+
+    from plugins.food_business_plugin import FoodBusinessPlugin
+    from semantic_kernel import Kernel
+    from semantic_kernel.connectors.ai.function_choice_behavior import (
+        FunctionChoiceBehavior,
+    )
+    from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+    from semantic_kernel.contents import ChatHistory
 
     _DOC_SYSTEM = (
         "당신은 1인 창업가를 돕는 AI 행정 비서입니다. "
@@ -606,13 +639,14 @@ async def doc_chat(req: DocChatRequest, request: Request):
             )
         )
         kernel.add_plugin(FoodBusinessPlugin(), plugin_name="BusinessDoc")
-        settings = kernel.get_service("default")\
-            .get_prompt_execution_settings_class()(service_id="default")
+        settings = kernel.get_service("default").get_prompt_execution_settings_class()(
+            service_id="default"
+        )
         settings.function_choice_behavior = FunctionChoiceBehavior.Auto()
 
         # 이력은 Cosmos DB에서 복원
         history_raw = await get_doc_history(sid)
-        history = ChatHistory()
+        history = ChatHistory()  # noqa: F821
         history.add_system_message(_DOC_SYSTEM)
         for msg in history_raw:
             if msg["role"] == "user":
@@ -631,7 +665,7 @@ async def doc_chat(req: DocChatRequest, request: Request):
 
         # 이력 저장 (system 메시지 제외)
         new_raw = history_raw + [
-            {"role": "user",      "content": req.message},
+            {"role": "user", "content": req.message},
             {"role": "assistant", "content": reply},
         ]
         await save_doc_history(sid, new_raw)
@@ -672,17 +706,19 @@ def _latency_stats(latencies: list[float]) -> dict:
 @app.get("/api/v1/stats", dependencies=[Depends(verify_api_key)])
 async def get_stats(hours: int = Query(24, ge=1, le=2160)):
     """최근 N시간 쿼리·에러 로그를 집계하여 성능 통계를 반환한다."""
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta
 
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=hours)
     cutoff_str = cutoff.isoformat()
 
     queries = [
-        e for e in load_entries_json(log_type="queries", limit=0)
+        e
+        for e in load_entries_json(log_type="queries", limit=0)
         if e.get("ts", "") >= cutoff_str
     ]
     errors = [
-        e for e in load_entries_json(log_type="errors", limit=0)
+        e
+        for e in load_entries_json(log_type="errors", limit=0)
         if e.get("ts", "") >= cutoff_str
     ]
 
@@ -721,12 +757,18 @@ async def export_logs(
 ):
     """로그 JSONL 파일 전체를 원본 그대로 다운로드한다."""
     if type not in ("queries", "rejections", "errors"):
-        return JSONResponse(status_code=400, content={"error": "type은 queries, rejections, errors 중 하나여야 합니다."})
+        return JSONResponse(
+            status_code=400,
+            content={"error": "type은 queries, rejections, errors 중 하나여야 합니다."},
+        )
 
     from log_formatter import LOGS_DIR
+
     path = LOGS_DIR / f"{type}.jsonl"
     if not path.exists():
-        return JSONResponse(status_code=404, content={"error": f"{type}.jsonl 파일이 없습니다."})
+        return JSONResponse(
+            status_code=404, content={"error": f"{type}.jsonl 파일이 없습니다."}
+        )
 
     return FileResponse(
         path=str(path),
@@ -736,14 +778,19 @@ async def export_logs(
 
 
 @app.get("/api/v1/logs", dependencies=[Depends(verify_api_key)])
-async def get_logs(type: str = "queries", limit: int = 50, user_id: str = "", session_id: str = ""):
+async def get_logs(
+    type: str = "queries", limit: int = 50, user_id: str = "", session_id: str = ""
+):
     """JSONL 로그 파일을 파싱해 JSON 배열로 반환 (프론트엔드 로그 뷰어용).
 
     user_id 파라미터를 지정하면 해당 사용자의 로그만 반환한다.
     응답 엔트리에는 user_id, user_email, user_name 필드가 보강된다.
     """
     if type not in ("queries", "rejections", "errors"):
-        return JSONResponse(status_code=400, content={"error": "type은 queries, rejections, errors 중 하나여야 합니다."})
+        return JSONResponse(
+            status_code=400,
+            content={"error": "type은 queries, rejections, errors 중 하나여야 합니다."},
+        )
     try:
         import session_store as _ss
         from auth_router import get_user_info
@@ -762,11 +809,14 @@ async def get_logs(type: str = "queries", limit: int = 50, user_id: str = "", se
 
         # 1단계: 기존 로그(user_id 없음)의 session_id → user_id 역조회 (gather 병렬)
         session_ids_to_lookup = {
-            e["session_id"] for e in entries
+            e["session_id"]
+            for e in entries
             if e.get("session_id") and not e.get("user_id")
         }
         sid_list = list(session_ids_to_lookup)
-        sid_results = await asyncio.gather(*[_ss.get_user_id_by_session(sid) for sid in sid_list])
+        sid_results = await asyncio.gather(
+            *[_ss.get_user_id_by_session(sid) for sid in sid_list]
+        )
         session_user_map: dict[str, str] = dict(zip(sid_list, sid_results))
 
         # 2단계: unique user_ids → {email, name} dedup 조회 (gather 병렬)
@@ -783,12 +833,14 @@ async def get_logs(type: str = "queries", limit: int = 50, user_id: str = "", se
         for e in entries:
             uid = e.get("user_id") or session_user_map.get(e.get("session_id", ""), "")
             info = user_info_map.get(uid, {})
-            enriched.append({
-                **e,
-                "user_id":    uid,
-                "user_email": info.get("email", ""),
-                "user_name":  info.get("name", ""),
-            })
+            enriched.append(
+                {
+                    **e,
+                    "user_id": uid,
+                    "user_email": info.get("email", ""),
+                    "user_name": info.get("name", ""),
+                }
+            )
 
         # 4단계: user_id 필터 적용 (enrichment 이후, user_id 필터 있을 때만)
         if user_id:
@@ -825,11 +877,14 @@ async def get_log_users():
         entries = load_entries_json(log_type="queries", limit=0)
 
         session_ids_to_lookup = {
-            e["session_id"] for e in entries
+            e["session_id"]
+            for e in entries
             if e.get("session_id") and not e.get("user_id")
         }
         sid_list = list(session_ids_to_lookup)
-        sid_results = await asyncio.gather(*[_ss.get_user_id_by_session(sid) for sid in sid_list])
+        sid_results = await asyncio.gather(
+            *[_ss.get_user_id_by_session(sid) for sid in sid_list]
+        )
         session_user_map: dict[str, str] = dict(zip(sid_list, sid_results))
 
         all_user_ids = {
@@ -840,7 +895,11 @@ async def get_log_users():
         uid_list = sorted(all_user_ids)
         uid_results = await asyncio.gather(*[get_user_info(uid) for uid in uid_list])
         users = [
-            {"user_id": uid, "email": info.get("email", ""), "name": info.get("name", "")}
+            {
+                "user_id": uid,
+                "email": info.get("email", ""),
+                "name": info.get("name", ""),
+            }
             for uid, info in zip(uid_list, uid_results)
         ]
 
@@ -852,6 +911,7 @@ async def get_log_users():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("api_server:app", host="0.0.0.0", port=8000, reload=True)
 
 
@@ -874,7 +934,4 @@ async def global_exception_handler(request: Request, exc: Exception):
     #   내부 파일 경로·코드 구조가 외부에 노출되므로 콘솔 로깅만 유지
     error_detail = traceback.format_exc()
     print(f"Unhandled error: {error_detail}")  # 서버 콘솔에만 출력
-    return JSONResponse(
-        status_code=500,
-        content={"detail": str(exc)}
-    )
+    return JSONResponse(status_code=500, content={"detail": str(exc)})

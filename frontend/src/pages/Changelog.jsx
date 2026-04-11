@@ -1,13 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import {
-  GitCommit,
-  ExternalLink,
-  RefreshCw,
-  AlertCircle,
-  ArrowLeft,
-} from "lucide-react";
+import { GitCommit, ExternalLink, RefreshCw, AlertCircle, ArrowLeft } from "lucide-react";
 import { AnimatedBackground } from "../components/AnimatedBackground";
 import { ThemeToggle } from "../components/ThemeToggle";
 
@@ -15,16 +9,16 @@ import { ThemeToggle } from "../components/ThemeToggle";
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
 const TYPE_MAP = {
-  feat:     { label: "새 기능",   color: "#0891b2" },
-  fix:      { label: "버그 수정", color: "#ef4444" },
-  docs:     { label: "문서",      color: "#8b5cf6" },
-  chore:    { label: "유지보수",  color: "#717182" },
+  feat: { label: "새 기능", color: "#0891b2" },
+  fix: { label: "버그 수정", color: "#ef4444" },
+  docs: { label: "문서", color: "#8b5cf6" },
+  chore: { label: "유지보수", color: "#717182" },
   refactor: { label: "리팩토링", color: "#f97316" },
-  perf:     { label: "성능",      color: "#14b8a6" },
-  test:     { label: "테스트",    color: "#eab308" },
-  ci:       { label: "CI/CD",     color: "#6366f1" },
-  security: { label: "보안",      color: "#ec4899" },
-  debug:    { label: "디버그",    color: "#a3a3a3" },
+  perf: { label: "성능", color: "#14b8a6" },
+  test: { label: "테스트", color: "#eab308" },
+  ci: { label: "CI/CD", color: "#6366f1" },
+  security: { label: "보안", color: "#ec4899" },
+  debug: { label: "디버그", color: "#a3a3a3" },
 };
 
 function isNotMerge(raw) {
@@ -39,18 +33,14 @@ async function fetchCommits(page = 1) {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const { fetchedAt, commits } = JSON.parse(raw);
-      if (Date.now() - new Date(fetchedAt).getTime() < CACHE_TTL_MS)
-        return commits;
+      if (Date.now() - new Date(fetchedAt).getTime() < CACHE_TTL_MS) return commits;
     }
   } catch (_) {}
   const url = `https://api.github.com/repos/ProfessionalSeaweedDevourer/SOHOBI/commits?per_page=100&page=${page}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`GitHub API ${res.status}`);
   const commits = await res.json();
-  localStorage.setItem(
-    cacheKey,
-    JSON.stringify({ fetchedAt: new Date().toISOString(), commits })
-  );
+  localStorage.setItem(cacheKey, JSON.stringify({ fetchedAt: new Date().toISOString(), commits }));
   return commits;
 }
 
@@ -182,7 +172,9 @@ export default function Changelog() {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function loadMore() {
@@ -232,8 +224,7 @@ export default function Changelog() {
             to="/"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft size={16} />
-            홈
+            <ArrowLeft size={16} />홈
           </Link>
 
           <div className="flex items-center gap-2">
@@ -270,8 +261,7 @@ export default function Changelog() {
           transition={{ delay: 0.15 }}
           className="text-4xl md:text-5xl font-bold mb-4 leading-tight tracking-tight"
         >
-          업데이트{" "}
-          <span className="gradient-text">로그</span>
+          업데이트 <span className="gradient-text">로그</span>
         </motion.h1>
 
         <motion.p
@@ -304,7 +294,7 @@ export default function Changelog() {
                       : "glass text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {type === "all" ? "전체" : TYPE_MAP[type]?.label ?? type}
+                  {type === "all" ? "전체" : (TYPE_MAP[type]?.label ?? type)}
                 </button>
               ))}
             </div>

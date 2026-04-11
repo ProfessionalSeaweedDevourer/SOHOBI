@@ -89,8 +89,8 @@ export default function StartupChecklist({ items, progress, onToggle, onAskQuest
                     🧭 창업 준비 가이드
                   </div>
                   <p style={{ color: "var(--muted-foreground)" }}>
-                    이 체크리스트는 소상공인 창업의 핵심 8단계를 안내합니다.
-                    필수 사항이 아닌 <strong style={{ color: "var(--foreground)" }}>참고용 가이드</strong>이니,
+                    이 체크리스트는 소상공인 창업의 핵심 8단계를 안내합니다. 필수 사항이 아닌{" "}
+                    <strong style={{ color: "var(--foreground)" }}>참고용 가이드</strong>이니,
                     대화하면서 자연스럽게 확인해 보세요.
                   </p>
                   <p className="mt-1" style={{ color: "var(--muted-foreground)" }}>
