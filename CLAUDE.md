@@ -48,23 +48,31 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 
 - 커밋 메시지: `type: 한국어 설명` (예: `fix: location 에이전트 버그 수정`)
 - 커밋 메시지와 PR 본문에 "Generated with Claude Code" 또는 "Co-Authored-By: Claude" attribution 포함 금지
-- 작업 브랜치는 `팀원브랜치-작업명` 패턴으로 **반드시 `origin/main` 기반으로 신규 생성**한다:
+- 모든 작업 브랜치는 **`origin/main` 기반 단명 브랜치**로 생성한다. 팀원 고정 브랜치는 존재하지 않는다.
+- 브랜치 명명: `<type>/<author>-<작업명>`
 
-  | GitHub 계정 | 네임스페이스 브랜치 | 작업 브랜치 예시 |
-  | ----------- | ------------------ | ---------------- |
-  | ProfessionalSeaweedDevourer | `PARK` | `PARK-fix-login` |
-  | zSob2048 | `CHANG` | `CHANG-refactor-agent` |
-  | delta115zx | `CHOI2` | `CHOI2-add-chart` |
-  | dannynam13 | `NAM` | `NAM-update-docs` |
-  | TerryBlackhoodWoo | `WOO-clean2` | `WOO-clean2-map-fix` |
+  | type | 용도 |
+  | ---- | ---- |
+  | `feat` | 새 기능 |
+  | `fix` | 버그 수정 |
+  | `refactor` | 리팩토링 |
+  | `chore` | 빌드·설정·잡무 |
+  | `docs` | 문서 |
+  | `test` / `perf` / `build` / `ci` | 기타 |
 
-  네임스페이스 브랜치(`PARK` 등)는 영구 보존하되 **직접 커밋하지 않는다**.  
-  > **주의**: git ref 제약으로 `PARK/작업명`(슬래시) 패턴은 사용 불가. 반드시 대시(`PARK-작업명`) 사용.
+  | GitHub 계정 | author |
+  | ----------- | ------ |
+  | ProfessionalSeaweedDevourer | `park` |
+  | zSob2048 | `chang` |
+  | delta115zx | `choi` |
+  | dannynam13 | `nam` |
+  | TerryBlackhoodWoo | `woo` |
+
+  예시: `feat/park-signoff-agent`, `fix/nam-gov-api-timeout`, `refactor/woo-map-loader`
 
 - 코드 수정·테스트 완료 후 정상 동작이 확인되면 Claude가 **스스로 커밋하고 main 머지용 PR**을 연다
 - PR 머지 지시는 검증 완료 후에만. 검증 전 추가 수정은 같은 브랜치에 커밋을 추가
-- `gh pr merge` 시 팀원 네임스페이스 브랜치(`PARK`, `CHANG` 등)와 장기 작업 브랜치는 **`--delete-branch` 사용 금지** — 영구 작업 공간으로 유지해야 함
-- 단, 특정 업데이트 작업 및 PR을 위해 생성한 **임시 브랜치**는 머지 후 삭제 허용
+- 머지 방식은 **Squash and merge만** 허용 (GitHub 설정으로 강제). 머지 후 브랜치는 자동 삭제됨
 - **PR 생성 직후** Test Plan의 각 TC를 직접 실행하고 결과를 보고한다 (아래 테스트 실행 루틴 참조)
 - **push 후 반드시** `gh pr list --head <브랜치> --state open` 으로 열린 PR을 확인한다:
   - 열린 PR이 있으면 해당 PR 번호를 사용자에게 알린다
@@ -73,35 +81,45 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 
 ## 브랜치 워크플로우
 
-이 프로젝트는 **squash merge**를 사용한다. 장기 브랜치에 쌓인 squash-merge 커밋들은 다음 rebase 시 `patch contents already upstream` 충돌을 반복 유발하며, 멀티 세션 환경에서 `git reset --hard` 리셋은 다른 세션의 미커밋 변경을 파괴할 수 있다. 이를 방지하기 위해 **PR마다 `origin/main` 기반 fresh 브랜치**를 사용한다.
+이 프로젝트는 **squash merge**를 사용한다 (GitHub 설정으로 강제). 모든 작업은 `origin/main` 기반 단명 브랜치에서 진행하며, 머지 후 브랜치는 자동 삭제된다.
 
 ### PR 시작 절차
 
 ```bash
-# 1. 최신 main 가져오기
 git fetch origin
-
-# 2. main 기반 작업 브랜치 생성 (슬래시 불가 → 대시 사용)
-git checkout -b PARK-<작업명> origin/main
-
-# 3. 작업 및 커밋
+git checkout -b feat/park-<작업명> origin/main
+# 작업 및 커밋
 ```
 
 ### PR 생성 전 절차
 
 ```bash
-# rebase (main 기반이므로 --skip 불필요)
-git rebase origin/main
-git push origin PARK-<작업명>
-
+git push origin feat/park-<작업명>
 # PR 커밋 범위 확인
 git log --oneline origin/main..HEAD
 ```
 
-### PR당 커밋 수 원칙
+main이 앞서갔을 경우:
+- 충돌 없으면: GitHub PR 화면의 "Update branch" 사용
+- 충돌 있으면: `git rebase origin/main` 후 `git push --force-with-lease`
 
-- PR 하나에 **관련 커밋만** 포함되어야 한다
-- 관련 없는 커밋이 보이면 `git rebase --onto origin/main <base-commit> <브랜치>` 로 정리 후 PR 생성
+### 머지 후 정리
+
+```bash
+git checkout main
+git pull origin main
+git branch -d feat/park-<작업명>
+```
+
+### 미커밋 변경 보호
+
+긴 작업 중간 저장은 stash 대신 WIP 커밋을 사용한다.
+
+```bash
+git add -A && git commit -m "WIP: <작업명>" --no-verify
+```
+
+PR 생성 전 `git reset --soft HEAD~1`로 정리한다.
 
 ## 워크트리 병렬 운용
 
