@@ -2,16 +2,22 @@ import { motion } from "motion/react";
 import { MessageSquare, Bot, ClipboardList, Calendar } from "lucide-react";
 
 const AGENT_LABEL = {
-  admin:    "행정",
-  finance:  "재무",
-  legal:    "법률·세무",
+  admin: "행정",
+  finance: "재무",
+  legal: "법률·세무",
   location: "상권",
-  chat:     "일반",
+  chat: "일반",
 };
 
 const CARD_ICONS = [MessageSquare, Bot, ClipboardList];
 
-export default function ReportSummary({ totalQueries, mostUsedAgent, checklist, firstActive, lastActive }) {
+export default function ReportSummary({
+  totalQueries,
+  mostUsedAgent,
+  checklist,
+  firstActive,
+  lastActive,
+}) {
   const agentLabel = mostUsedAgent?.type
     ? `${AGENT_LABEL[mostUsedAgent.type] ?? mostUsedAgent.type} 에이전트`
     : "-";
@@ -45,7 +51,11 @@ export default function ReportSummary({ totalQueries, mostUsedAgent, checklist, 
 
   const fmtDate = (iso) => {
     if (!iso) return null;
-    return new Date(iso).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "short", timeStyle: "short" });
+    return new Date(iso).toLocaleString("ko-KR", {
+      timeZone: "Asia/Seoul",
+      dateStyle: "short",
+      timeStyle: "short",
+    });
   };
 
   return (
@@ -86,20 +96,23 @@ export default function ReportSummary({ totalQueries, mostUsedAgent, checklist, 
                 </motion.div>
 
                 {/* 라벨 */}
-                <p className="text-xs font-medium relative z-10" style={{ color: "var(--muted-foreground)" }}>
+                <p
+                  className="text-xs font-medium relative z-10"
+                  style={{ color: "var(--muted-foreground)" }}
+                >
                   {card.label}
                 </p>
 
                 {/* 값 */}
                 <div className="relative z-10">
-                  <span
-                    className="text-2xl font-bold tabular-nums"
-                    style={{ color: card.color }}
-                  >
+                  <span className="text-2xl font-bold tabular-nums" style={{ color: card.color }}>
                     {card.value}
                   </span>
                   {card.unit && (
-                    <span className="text-sm font-normal ml-1" style={{ color: "var(--muted-foreground)" }}>
+                    <span
+                      className="text-sm font-normal ml-1"
+                      style={{ color: "var(--muted-foreground)" }}
+                    >
                       {card.unit}
                     </span>
                   )}

@@ -1,0 +1,19 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (import 정렬)
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line-length는 formatter에 위임
+    "E402",  # sys.path 조작 후 import하는 기존 패턴 허용
+]
+
+[tool.ruff.format]
+quote-style = "double"

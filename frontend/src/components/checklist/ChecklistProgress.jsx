@@ -20,14 +20,14 @@ export default function ChecklistProgress({ progress, total = 8, onClick }) {
         >
           {allDone ? "🎉 창업 준비 완료!" : "창업 준비 현황"}
         </span>
-        <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--muted-foreground)" }}>
+        <span
+          className="text-xs font-semibold tabular-nums"
+          style={{ color: "var(--muted-foreground)" }}
+        >
           {progress}/{total}
         </span>
       </div>
-      <div
-        className="h-1.5 rounded-full overflow-hidden"
-        style={{ background: "var(--muted)" }}
-      >
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--muted)" }}>
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{

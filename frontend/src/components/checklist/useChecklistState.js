@@ -10,7 +10,7 @@ const _HEADERS = {
 
 function defaultItems() {
   return Object.fromEntries(
-    CHECKLIST_ITEMS.map((item) => [item.id, { checked: false, source: null, checked_at: null }])
+    CHECKLIST_ITEMS.map((item) => [item.id, { checked: false, source: null, checked_at: null }]),
   );
 }
 
@@ -68,7 +68,7 @@ export function useChecklistState(sessionId, enabled = true) {
         }));
       }
     },
-    [items, sessionId]
+    [items, sessionId],
   );
 
   // complete 이벤트의 checked_items 배열을 로컬 상태에 즉시 반영 + toast 알림

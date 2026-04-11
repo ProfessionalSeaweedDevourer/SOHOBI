@@ -16,7 +16,7 @@ import json
 import os
 import sys
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
 import requests
@@ -24,7 +24,9 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-LOGS_DIR = Path(os.environ.get("LOGS_DIR", Path(__file__).parent.parent / "logs" / "remote"))
+LOGS_DIR = Path(
+    os.environ.get("LOGS_DIR", Path(__file__).parent.parent / "logs" / "remote")
+)
 
 
 # ── 데이터 로드 ────────────────────────────────────────────────────
@@ -55,8 +57,12 @@ def _load_remote(log_type: str = "queries") -> list[dict]:
         print("오류: BACKEND_HOST / API_SECRET_KEY 환경변수가 필요합니다.")
         sys.exit(1)
     url = f"{host.rstrip('/')}/api/v1/logs"
-    r = requests.get(url, params={"type": log_type, "limit": 0},
-                     headers={"X-API-Key": api_key}, timeout=60)
+    r = requests.get(
+        url,
+        params={"type": log_type, "limit": 0},
+        headers={"X-API-Key": api_key},
+        timeout=60,
+    )
     if r.status_code != 200:
         print(f"오류: HTTP {r.status_code} — {r.text[:200]}")
         sys.exit(1)
@@ -74,7 +80,7 @@ def _pct(sorted_vals: list[float], p: float) -> float:
 
 def compute_stats(entries: list[dict]) -> dict:
     latencies = sorted(e["latency_ms"] for e in entries if e.get("latency_ms"))
-    n = len(latencies)
+    n = len(latencies)  # noqa: F841
 
     by_domain: dict[str, list[float]] = defaultdict(list)
     by_status: dict[str, int] = defaultdict(int)
@@ -101,7 +107,9 @@ def compute_stats(entries: list[dict]) -> dict:
     return {
         "n": len(entries),
         "overall": lat_stats(latencies),
-        "by_domain": {d: lat_stats(sorted(lats)) for d, lats in sorted(by_domain.items())},
+        "by_domain": {
+            d: lat_stats(sorted(lats)) for d, lats in sorted(by_domain.items())
+        },
         "by_status": dict(by_status),
         "by_grade": dict(by_grade),
     }
@@ -114,7 +122,10 @@ def compute_hourly(entries: list[dict]) -> list[tuple[str, int, float]]:
         lat = e.get("latency_ms")
         if ts and lat:
             hourly[ts].append(lat)
-    return [(h, len(lats), sum(lats) / len(lats) / 1000) for h, lats in sorted(hourly.items())]
+    return [
+        (h, len(lats), sum(lats) / len(lats) / 1000)
+        for h, lats in sorted(hourly.items())
+    ]
 
 
 def top_slow(entries: list[dict], n: int = 5) -> list[dict]:
@@ -126,23 +137,35 @@ def top_slow(entries: list[dict], n: int = 5) -> list[dict]:
 # ── 출력 ───────────────────────────────────────────────────────────
 
 
-def print_report(stats: dict, title: str = "", entries: list[dict] | None = None) -> None:
+def print_report(
+    stats: dict, title: str = "", entries: list[dict] | None = None
+) -> None:
     o = stats["overall"]
     hdr = title or "SOHOBI 성능 리포트"
     print(f"\n{'═' * 50}")
     print(f"  {hdr}")
     print(f"{'═' * 50}")
-    print(f"\n전체: n={o['n']}  avg={o['avg']:.1f}s  p50={o['p50']:.1f}s  p90={o['p90']:.1f}s  max={o['max']:.1f}s")
+    print(
+        f"\n전체: n={o['n']}  avg={o['avg']:.1f}s  p50={o['p50']:.1f}s  p90={o['p90']:.1f}s  max={o['max']:.1f}s"
+    )
 
     print("\n── 에이전트별 ──")
     for domain, ds in stats["by_domain"].items():
-        print(f"  {domain:12s}  n={ds['n']:3d}  avg={ds['avg']:5.1f}s  p50={ds['p50']:5.1f}s  p90={ds['p90']:5.1f}s  max={ds['max']:5.1f}s")
+        print(
+            f"  {domain:12s}  n={ds['n']:3d}  avg={ds['avg']:5.1f}s  p50={ds['p50']:5.1f}s  p90={ds['p90']:5.1f}s  max={ds['max']:5.1f}s"
+        )
 
     print("\n── 등급/상태 ──")
     total = stats["n"]
-    status_parts = [f"{k}: {v} ({v/total*100:.1f}%)" for k, v in sorted(stats["by_status"].items())]
+    status_parts = [
+        f"{k}: {v} ({v / total * 100:.1f}%)"
+        for k, v in sorted(stats["by_status"].items())
+    ]
     print(f"  {', '.join(status_parts)}")
-    grade_parts = [f"Grade {k}: {v} ({v/total*100:.1f}%)" for k, v in sorted(stats["by_grade"].items())]
+    grade_parts = [
+        f"Grade {k}: {v} ({v / total * 100:.1f}%)"
+        for k, v in sorted(stats["by_grade"].items())
+    ]
     print(f"  {', '.join(grade_parts)}")
 
     if entries:
@@ -158,14 +181,16 @@ def print_report(stats: dict, title: str = "", entries: list[dict] | None = None
             print("\n── 느린 요청 TOP 5 ──")
             for i, e in enumerate(slow, 1):
                 q = e.get("question", "")[:40]
-                print(f"  {i}. {e['latency_ms']/1000:.1f}s  {e.get('domain','?'):8s}  \"{q}...\"")
+                print(
+                    f'  {i}. {e["latency_ms"] / 1000:.1f}s  {e.get("domain", "?"):8s}  "{q}..."'
+                )
 
     print()
 
 
 def print_comparison(before: dict, after: dict) -> None:
     print(f"\n{'═' * 60}")
-    print(f"  Before / After 비교")
+    print("  Before / After 비교")
     print(f"{'═' * 60}")
     print(f"\n{'':18s} {'Before':>14s}  {'After':>14s}  {'변화':>8s}")
     print(f"  {'─' * 54}")
@@ -211,14 +236,17 @@ def filter_by_date(entries: list[dict], since: str = "", until: str = "") -> lis
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="SOHOBI 성능 분석")
-    parser.add_argument("--remote", action="store_true",
-                        help="로컬 JSONL 대신 API에서 직접 조회")
+    parser.add_argument(
+        "--remote", action="store_true", help="로컬 JSONL 대신 API에서 직접 조회"
+    )
     parser.add_argument("--since", default="", help="시작 날짜 (YYYY-MM-DD)")
     parser.add_argument("--until", default="", help="종료 날짜 (YYYY-MM-DD)")
-    parser.add_argument("--compare", default="",
-                        help="기준일 (YYYY-MM-DD) — before/after 비교")
-    parser.add_argument("--dir", default="",
-                        help="로컬 JSONL 디렉토리 (기본값: logs/remote)")
+    parser.add_argument(
+        "--compare", default="", help="기준일 (YYYY-MM-DD) — before/after 비교"
+    )
+    parser.add_argument(
+        "--dir", default="", help="로컬 JSONL 디렉토리 (기본값: logs/remote)"
+    )
     args = parser.parse_args()
 
     global LOGS_DIR

@@ -20,7 +20,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 LOGS_DIR = Path(os.environ.get("LOGS_DIR", Path(__file__).parent / "logs"))
@@ -53,7 +53,7 @@ def _ts_sort_key(entry: dict):
     try:
         return datetime.fromisoformat(ts)
     except (ValueError, TypeError):
-        return datetime.min.replace(tzinfo=timezone.utc)
+        return datetime.min.replace(tzinfo=UTC)
 
 
 def _load_jsonl(path: Path) -> list[dict]:
@@ -63,7 +63,6 @@ def _load_jsonl(path: Path) -> list[dict]:
         try:
             from azure.identity import DefaultAzureCredential
             from azure.storage.blob import BlobServiceClient
-            from azure.core.exceptions import ResourceNotFoundError
 
             container = os.environ.get("BLOB_LOGS_CONTAINER", "sohobi-logs")
             service = BlobServiceClient(
@@ -86,7 +85,7 @@ def _load_jsonl(path: Path) -> list[dict]:
 def _fmt_ts(ts_str: str) -> str:
     """ISO 타임스탬프 → 'YYYY-MM-DD HH:MM:SS' (로컬 시간)"""
     try:
-        dt = datetime.fromisoformat(ts_str).replace(tzinfo=timezone.utc).astimezone()
+        dt = datetime.fromisoformat(ts_str).replace(tzinfo=UTC).astimezone()
         return dt.strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return ts_str
@@ -131,7 +130,9 @@ def _fmt_entry(entry: dict, index: int) -> str:
                 lines.append(f"     {FAIL_COLOR} 실패 {code}: {reason}")
             if retry_prompt:
                 prompt_preview = retry_prompt[:200].replace("\n", " ")
-                lines.append(f"     ↳ 수정 지시: {prompt_preview}{'...' if len(retry_prompt) > 200 else ''}")
+                lines.append(
+                    f"     ↳ 수정 지시: {prompt_preview}{'...' if len(retry_prompt) > 200 else ''}"
+                )
     else:
         lines.append("  거부 이력 없음 (1회 통과)")
 
@@ -142,12 +143,8 @@ def _fmt_summary(entries: list[dict]) -> str:
     total = len(entries)
     approved = sum(1 for e in entries if e.get("status") == "approved")
     escalated = total - approved
-    avg_latency = (
-        sum(e.get("latency_ms", 0) for e in entries) / total if total else 0
-    )
-    avg_retry = (
-        sum(e.get("retry_count", 0) for e in entries) / total if total else 0
-    )
+    avg_latency = sum(e.get("latency_ms", 0) for e in entries) / total if total else 0
+    avg_retry = sum(e.get("retry_count", 0) for e in entries) / total if total else 0
 
     domain_counts: dict[str, int] = {}
     for e in entries:
@@ -160,8 +157,12 @@ def _fmt_summary(entries: list[dict]) -> str:
         f"생성 시각: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "=" * 60,
         f"전체 요청: {total}건",
-        f"  ✅ approved:  {approved}건 ({approved/total*100:.1f}%)" if total else "  데이터 없음",
-        f"  ❌ escalated: {escalated}건 ({escalated/total*100:.1f}%)" if total else "",
+        f"  ✅ approved:  {approved}건 ({approved / total * 100:.1f}%)"
+        if total
+        else "  데이터 없음",
+        f"  ❌ escalated: {escalated}건 ({escalated / total * 100:.1f}%)"
+        if total
+        else "",
         f"평균 응답 시간: {avg_latency:.0f}ms",
         f"평균 재시도: {avg_retry:.2f}회",
         "",

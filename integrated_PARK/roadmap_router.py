@@ -12,10 +12,9 @@ import os
 from collections import defaultdict
 from datetime import datetime
 
+from auth_router import get_optional_user
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-
-from auth_router import get_optional_user
 from session_store import session_exists
 
 _logger = logging.getLogger("sohobi.roadmap")
@@ -26,31 +25,131 @@ router = APIRouter()
 #          "voting"      = 투표 가능
 ROADMAP_FEATURES = [
     # Phase 1 개발 중 (백로그 #1–5)
-    {"id": "tax_guide",         "label": "세무 신고 가이드",           "icon": "🧾", "status": "in_progress"},
-    {"id": "gov_support",       "label": "정부지원금 자동 매칭",        "icon": "🎁", "status": "in_progress"},
-    {"id": "hr_guide",          "label": "HR/노무 가이드",             "icon": "👥", "status": "in_progress"},
-    {"id": "menu_pricing",      "label": "메뉴 원가 계산",             "icon": "🍽️", "status": "in_progress"},
-    {"id": "safety_checklist",  "label": "위생/안전 점검 체크리스트",   "icon": "✅", "status": "in_progress"},
+    {
+        "id": "tax_guide",
+        "label": "세무 신고 가이드",
+        "icon": "🧾",
+        "status": "in_progress",
+    },
+    {
+        "id": "gov_support",
+        "label": "정부지원금 자동 매칭",
+        "icon": "🎁",
+        "status": "in_progress",
+    },
+    {
+        "id": "hr_guide",
+        "label": "HR/노무 가이드",
+        "icon": "👥",
+        "status": "in_progress",
+    },
+    {
+        "id": "menu_pricing",
+        "label": "메뉴 원가 계산",
+        "icon": "🍽️",
+        "status": "in_progress",
+    },
+    {
+        "id": "safety_checklist",
+        "label": "위생/안전 점검 체크리스트",
+        "icon": "✅",
+        "status": "in_progress",
+    },
     # Phase 1 투표 (백로그 #6–10)
-    {"id": "seasonal_forecast", "label": "계절성 매출 예측",           "icon": "📈", "status": "voting"},
-    {"id": "contract_analysis", "label": "계약서 독소조항 분석",        "icon": "📋", "status": "voting"},
-    {"id": "delivery_fee",      "label": "배달앱 수수료 최적화",        "icon": "🛵", "status": "voting"},
-    {"id": "commercial_trend",  "label": "상권 트렌드 모니터링",        "icon": "🔍", "status": "voting"},
-    {"id": "biz_closure",       "label": "폐업/양도 절차 안내",         "icon": "🚪", "status": "voting"},
+    {
+        "id": "seasonal_forecast",
+        "label": "계절성 매출 예측",
+        "icon": "📈",
+        "status": "voting",
+    },
+    {
+        "id": "contract_analysis",
+        "label": "계약서 독소조항 분석",
+        "icon": "📋",
+        "status": "voting",
+    },
+    {
+        "id": "delivery_fee",
+        "label": "배달앱 수수료 최적화",
+        "icon": "🛵",
+        "status": "voting",
+    },
+    {
+        "id": "commercial_trend",
+        "label": "상권 트렌드 모니터링",
+        "icon": "🔍",
+        "status": "voting",
+    },
+    {
+        "id": "biz_closure",
+        "label": "폐업/양도 절차 안내",
+        "icon": "🚪",
+        "status": "voting",
+    },
     # Phase 2 투표 (백로그 #11–24)
-    {"id": "franchise_compare", "label": "프랜차이즈 비교 분석",        "icon": "🏪", "status": "voting"},
-    {"id": "local_marketing",   "label": "SNS/로컬 마케팅 전략",        "icon": "📣", "status": "voting"},
-    {"id": "biz_insurance",     "label": "사업자 보험 설계",            "icon": "🛡️", "status": "voting"},
-    {"id": "claim_management",  "label": "고객 클레임 대응 가이드",      "icon": "💬", "status": "voting"},
-    {"id": "multi_store",       "label": "멀티 매장 입지 비교",         "icon": "🗺️", "status": "voting"},
-    {"id": "biz_type_change",   "label": "업종 전환 타당성 분석",        "icon": "🔄", "status": "voting"},
-    {"id": "premium_valuation", "label": "권리금 적정가 산정",           "icon": "💰", "status": "voting"},
-    {"id": "biz_plan",          "label": "사업계획서 작성 보조",         "icon": "📝", "status": "voting"},
-    {"id": "revenue_dashboard", "label": "매출/비용 분석 대시보드",      "icon": "📊", "status": "voting"},
-    {"id": "inventory",         "label": "재고 관리 도우미",            "icon": "📦", "status": "voting"},
-    {"id": "crm",               "label": "단골 고객 관리 (CRM)",        "icon": "💎", "status": "voting"},
+    {
+        "id": "franchise_compare",
+        "label": "프랜차이즈 비교 분석",
+        "icon": "🏪",
+        "status": "voting",
+    },
+    {
+        "id": "local_marketing",
+        "label": "SNS/로컬 마케팅 전략",
+        "icon": "📣",
+        "status": "voting",
+    },
+    {
+        "id": "biz_insurance",
+        "label": "사업자 보험 설계",
+        "icon": "🛡️",
+        "status": "voting",
+    },
+    {
+        "id": "claim_management",
+        "label": "고객 클레임 대응 가이드",
+        "icon": "💬",
+        "status": "voting",
+    },
+    {
+        "id": "multi_store",
+        "label": "멀티 매장 입지 비교",
+        "icon": "🗺️",
+        "status": "voting",
+    },
+    {
+        "id": "biz_type_change",
+        "label": "업종 전환 타당성 분석",
+        "icon": "🔄",
+        "status": "voting",
+    },
+    {
+        "id": "premium_valuation",
+        "label": "권리금 적정가 산정",
+        "icon": "💰",
+        "status": "voting",
+    },
+    {
+        "id": "biz_plan",
+        "label": "사업계획서 작성 보조",
+        "icon": "📝",
+        "status": "voting",
+    },
+    {
+        "id": "revenue_dashboard",
+        "label": "매출/비용 분석 대시보드",
+        "icon": "📊",
+        "status": "voting",
+    },
+    {"id": "inventory", "label": "재고 관리 도우미", "icon": "📦", "status": "voting"},
+    {"id": "crm", "label": "단골 고객 관리 (CRM)", "icon": "💎", "status": "voting"},
     # Phase 3 투표
-    {"id": "contract_pdf",      "label": "계약서 PDF 업로드 분석",      "icon": "📂", "status": "voting"},
+    {
+        "id": "contract_pdf",
+        "label": "계약서 PDF 업로드 분석",
+        "icon": "📂",
+        "status": "voting",
+    },
 ]
 _FEATURE_IDS = {f["id"] for f in ROADMAP_FEATURES}
 
@@ -105,7 +204,9 @@ async def get_roadmap_votes(
                 if fid in counts:
                     counts[fid] += 1
                     # voter_id 필드 우선, 없으면 레거시 session_id로 폴백
-                    item_voter = item.get("voter_id") or f"session:{item.get('session_id', '')}"
+                    item_voter = (
+                        item.get("voter_id") or f"session:{item.get('session_id', '')}"
+                    )
                     if my_voter_id and item_voter == my_voter_id:
                         user_voted[fid] = True
         else:
@@ -119,9 +220,9 @@ async def get_roadmap_votes(
     result = [
         {
             "feature_id": f["id"],
-            "label":      f["label"],
-            "icon":       f["icon"],
-            "status":     f.get("status", "voting"),
+            "label": f["label"],
+            "icon": f["icon"],
+            "status": f.get("status", "voting"),
             "vote_count": counts[f["id"]],
             "user_voted": user_voted[f["id"]],
         }
@@ -171,13 +272,15 @@ async def toggle_vote(
                 voted = False
             except Exception:
                 # 없음 → 생성 (투표 추가)
-                await container.create_item({
-                    "id":         doc_id,
-                    "feature_id": fid,
-                    "voter_id":   voter_id,
-                    "session_id": sid,
-                    "voted_at":   datetime.utcnow().isoformat(),
-                })
+                await container.create_item(
+                    {
+                        "id": doc_id,
+                        "feature_id": fid,
+                        "voter_id": voter_id,
+                        "session_id": sid,
+                        "voted_at": datetime.utcnow().isoformat(),
+                    }
+                )
                 voted = True
 
             # 현재 파티션 내 투표 수 집계
@@ -202,7 +305,9 @@ async def toggle_vote(
     except HTTPException:
         raise
     except Exception as e:
-        _logger.error("roadmap vote 토글 실패 feature=%s voter=%s: %s", fid, voter_id, e)
+        _logger.error(
+            "roadmap vote 토글 실패 feature=%s voter=%s: %s", fid, voter_id, e
+        )
         return {"feature_id": fid, "voted": False, "vote_count": 0}
 
     return {"feature_id": fid, "voted": voted, "vote_count": vote_count}

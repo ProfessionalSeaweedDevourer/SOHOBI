@@ -4,626 +4,656 @@
 
 /* ── CSS 변수 ───────────────────────────────────────────────── */
 :root {
-   --dong-panel-width: 300px;
-   --chat-panel-width: 400px;
+  --dong-panel-width: 300px;
+  --chat-panel-width: 400px;
 }
 
 /* ── 루트 레이아웃 ─────────────────────────────────────────── */
 .mv-root {
-   position: relative;
-   width: 100%;
-   height: 100vh;
-   overflow: hidden;
-   display: flex;
-   font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif;
 }
 .mv-map {
-   flex: 1;
-   height: 100%;
-   min-width: 0;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
 }
 
 /* ── 상단 컨트롤 바 ────────────────────────────────────────── */
 .mv-ctrl-bar {
-   position: absolute;
-   top: 14px;
-   left: 50%;
-   transform: translateX(-50%);
-   z-index: 200;
-   display: flex;
-   align-items: center;
-   gap: 8px;
-   background: var(--glass-bg);
-   backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
-   border: 1px solid var(--glass-border);
-   border-radius: 12px;
-   padding: 6px 10px;
-   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 6px 10px;
+  box-shadow:
+    0 4px 20px -4px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.06);
 }
 .mv-ctrl-btn {
-   border: none;
-   border-radius: 8px;
-   padding: 5px 14px;
-   font-size: 12px;
-   font-weight: 700;
-   cursor: pointer;
-   transition: all 0.18s;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
 }
 .mv-ctrl-btn--on {
-   background: var(--brand-blue);
-   color: #fff;
-   box-shadow: var(--glow-blue);
+  background: var(--brand-blue);
+  color: #fff;
+  box-shadow: var(--glow-blue);
 }
 .mv-ctrl-btn--off {
-   background: var(--muted);
-   color: var(--muted-foreground);
+  background: var(--muted);
+  color: var(--muted-foreground);
 }
 .mv-ctrl-badge {
-   background: rgba(8, 145, 178, 0.1);
-   border: 1px solid rgba(8, 145, 178, 0.25);
-   border-radius: 8px;
-   padding: 5px 12px;
-   font-size: 12px;
-   color: var(--brand-blue);
-   font-weight: 600;
+  background: rgba(8, 145, 178, 0.1);
+  border: 1px solid rgba(8, 145, 178, 0.25);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--brand-blue);
+  font-weight: 600;
 }
 .mv-ctrl-loading {
-   background: var(--card);
-   border: 1px solid var(--border);
-   border-radius: 8px;
-   padding: 5px 12px;
-   font-size: 12px;
-   color: var(--muted-foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--muted-foreground);
 }
 .mv-ctrl-clear {
-   background: var(--card);
-   border: 1px solid var(--border);
-   border-radius: 8px;
-   padding: 5px 12px;
-   font-size: 12px;
-   color: var(--muted-foreground);
-   cursor: pointer;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  cursor: pointer;
 }
 
 /* ── 레이어 패널 토글 ──────────────────────────────────────── */
 .mv-layer-btn {
-   background: var(--glass-bg);
-   backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
-   border: 1px solid var(--glass-border);
-   border-radius: 10px;
-   padding: 8px 12px;
-   font-size: 18px;
-   cursor: pointer;
-   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
-   color: var(--foreground);
-   transition: box-shadow 0.2s, background 0.2s;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow:
+    0 4px 20px -4px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+  color: var(--foreground);
+  transition:
+    box-shadow 0.2s,
+    background 0.2s;
 }
 .mv-layer-btn:hover {
-   box-shadow: var(--glow-blue);
+  box-shadow: var(--glow-blue);
 }
 .mv-layer-panel-wrap {
-   position: absolute;
-   top: 58px;
-   right: 14px;
-   z-index: 200;
+  position: absolute;
+  top: 58px;
+  right: 14px;
+  z-index: 200;
 }
 
 /* ── 행정동 모드 버튼 ──────────────────────────────────────── */
 .mv-dong-btns {
-   position: absolute;
-   bottom: 50px;
-   left: 14px;
-   z-index: 200;
-   display: flex;
-   flex-direction: column;
-   gap: 6px;
+  position: absolute;
+  bottom: 50px;
+  left: 14px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .mv-dong-btn {
-   display: flex;
-   align-items: center;
-   gap: 6px;
-   border: 1px solid var(--border);
-   border-radius: 10px;
-   padding: 7px 14px;
-   font-size: 12px;
-   font-weight: 700;
-   cursor: pointer;
-   transition: all 0.18s;
-   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
 }
 .mv-dong-btn--off {
-   background: var(--glass-bg);
-   backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
-   color: var(--muted-foreground);
-   border-color: var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--muted-foreground);
+  border-color: var(--glass-border);
 }
 .mv-dong-btn--sales {
-   background: var(--brand-teal);
-   color: #fff;
-   border-color: var(--brand-teal);
-   box-shadow: var(--glow-teal);
+  background: var(--brand-teal);
+  color: #fff;
+  border-color: var(--brand-teal);
+  box-shadow: var(--glow-teal);
 }
 .mv-dong-btn--re {
-   background: var(--brand-blue);
-   color: #fff;
-   border-color: var(--brand-blue);
-   box-shadow: var(--glow-blue);
+  background: var(--brand-blue);
+  color: #fff;
+  border-color: var(--brand-blue);
+  box-shadow: var(--glow-blue);
 }
 
 /* ── 행정동 로딩 ───────────────────────────────────────────── */
 .mv-dong-loading {
-   position: absolute;
-   top: 50%;
-   left: 50%;
-   transform: translate(-50%, -50%);
-   z-index: 400;
-   background: var(--glass-bg);
-   backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
-   border-radius: 12px;
-   padding: 16px 24px;
-   font-size: 13px;
-   color: var(--muted-foreground);
-   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 400;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  box-shadow:
+    0 4px 20px -4px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 /* ── 행정동 클릭 패널 ──────────────────────────────────────── */
 .mv-dong-panel {
-   position: absolute;
-   top: 0;
-   right: 0;
-   width: var(--dong-panel-width);
-   height: 100%;
-   background: var(--glass-bg);
-   backdrop-filter: blur(24px);
-   -webkit-backdrop-filter: blur(24px);
-   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08), -1px 0 4px rgba(0, 0, 0, 0.04);
-   z-index: 350;
-   display: flex;
-   flex-direction: column;
-   overflow: hidden;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--dong-panel-width);
+  height: 100%;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    -4px 0 24px rgba(0, 0, 0, 0.08),
+    -1px 0 4px rgba(0, 0, 0, 0.04);
+  z-index: 350;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .mv-dong-panel__header {
-   padding: 16px 16px 14px;
-   color: #fff;
+  padding: 16px 16px 14px;
+  color: #fff;
 }
 .mv-dong-panel__header--sales {
-   background: linear-gradient(135deg, var(--brand-teal), var(--brand-blue));
+  background: linear-gradient(135deg, var(--brand-teal), var(--brand-blue));
 }
 .mv-dong-panel__header--re {
-   background: linear-gradient(135deg, var(--brand-blue), var(--brand-bright-cyan));
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-bright-cyan));
 }
 .mv-dong-panel__header--store {
-   background: linear-gradient(135deg, #7c3aed, var(--brand-blue));
+  background: linear-gradient(135deg, #7c3aed, var(--brand-blue));
 }
 .mv-dong-panel__header-row {
-   display: flex;
-   justify-content: space-between;
-   align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 .mv-dong-panel__gu {
-   font-size: 11px;
-   opacity: 0.8;
-   margin-bottom: 2px;
+  font-size: 11px;
+  opacity: 0.8;
+  margin-bottom: 2px;
 }
 .mv-dong-panel__name {
-   font-size: 18px;
-   font-weight: 800;
+  font-size: 18px;
+  font-weight: 800;
 }
 .mv-dong-panel__close {
-   background: rgba(255, 255, 255, 0.2);
-   border: none;
-   border-radius: 8px;
-   padding: 4px 10px;
-   color: #fff;
-   cursor: pointer;
-   font-size: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 8px;
+  padding: 4px 10px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
 }
 .mv-dong-panel__mode-label {
-   margin-top: 8px;
-   font-size: 11px;
-   opacity: 0.85;
+  margin-top: 8px;
+  font-size: 11px;
+  opacity: 0.85;
 }
 .mv-dong-panel__body {
-   flex: 1;
-   overflow-y: auto;
-   padding: 16px;
-   display: flex;
-   flex-direction: column;
-   gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .mv-dong-panel__empty {
-   color: var(--muted-foreground);
-   font-size: 13px;
-   text-align: center;
-   margin-top: 40px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  text-align: center;
+  margin-top: 40px;
 }
 
 /* 패널 내 카드 */
 .mv-dp-card {
-   border-radius: 12px;
-   padding: 14px;
+  border-radius: 12px;
+  padding: 14px;
 }
 .mv-dp-card__label {
-   font-size: 10px;
-   color: var(--muted-foreground);
-   margin-bottom: 4px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+  margin-bottom: 4px;
 }
 .mv-dp-card__value {
-   font-size: 22px;
-   font-weight: 800;
+  font-size: 22px;
+  font-weight: 800;
 }
 .mv-dp-card__sub {
-   font-size: 11px;
-   color: var(--muted-foreground);
-   margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
 }
 .mv-dp-section {
-   background: var(--secondary);
-   border-radius: 12px;
-   padding: 14px;
+  background: var(--secondary);
+  border-radius: 12px;
+  padding: 14px;
 }
 .mv-dp-section__title {
-   font-size: 11px;
-   font-weight: 700;
-   color: var(--muted-foreground);
-   margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  margin-bottom: 8px;
 }
 
 /* 바 차트 */
 .mv-dp-bar-row {
-   margin-bottom: 8px;
+  margin-bottom: 8px;
 }
 .mv-dp-bar-header {
-   display: flex;
-   justify-content: space-between;
-   font-size: 12px;
-   margin-bottom: 3px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 3px;
 }
 .mv-dp-bar-track {
-   height: 6px;
-   background: var(--muted);
-   border-radius: 3px;
-   overflow: hidden;
+  height: 6px;
+  background: var(--muted);
+  border-radius: 3px;
+  overflow: hidden;
 }
 .mv-dp-bar-fill {
-   height: 100%;
-   border-radius: 3px;
+  height: 100%;
+  border-radius: 3px;
 }
 
 /* 그리드 */
 .mv-dp-grid {
-   display: grid;
-   grid-template-columns: 1fr 1fr;
-   gap: 6px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
 }
 .mv-dp-grid-item__label {
-   font-size: 10px;
-   color: var(--muted-foreground);
+  font-size: 10px;
+  color: var(--muted-foreground);
 }
 .mv-dp-grid-item__value {
-   font-size: 12px;
-   font-weight: 700;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 /* 액션 버튼 */
 .mv-dp-action-btn {
-   padding: 10px;
-   border: none;
-   border-radius: 8px;
-   font-size: 12px;
-   font-weight: 700;
-   cursor: pointer;
-   color: #fff;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
 }
 
 /* ── WMS 팝업 (glass morphism — 내부 스타일은 WmsPopup.css) ── */
 .mv-wms-popup {
-   position: absolute;
-   bottom: 20px;
-   right: 16px;
-   z-index: 300;
-   width: 320px;
-   background: var(--glass-bg);
-   backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
-   border: 1px solid var(--glass-border);
-   border-radius: 16px;
-   box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
-   overflow: hidden;
+  position: absolute;
+  bottom: 20px;
+  right: 16px;
+  z-index: 300;
+  width: 320px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px -8px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
 }
 /* ── 동 hover 분석 제안 버블 ─────────────────────────────── */
 .mv-hover-bubble {
-   position: absolute;
-   z-index: 480;
-   display: flex;
-   align-items: center;
-   gap: 8px;
-   padding: 6px 10px 6px 12px;
-   background: var(--glass-bg, rgba(255,255,255,0.92));
-   backdrop-filter: blur(12px);
-   -webkit-backdrop-filter: blur(12px);
-   border: 1px solid var(--glass-border, rgba(8,145,178,0.25));
-   border-radius: 20px;
-   box-shadow: 0 4px 16px rgba(0,0,0,0.14);
-   pointer-events: auto;
-   white-space: nowrap;
-   max-width: calc(100vw - 24px);
-   animation: mv-bubble-in 0.18s ease;
+  position: absolute;
+  z-index: 480;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 12px;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.92));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border, rgba(8, 145, 178, 0.25));
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  pointer-events: auto;
+  white-space: nowrap;
+  max-width: calc(100vw - 24px);
+  animation: mv-bubble-in 0.18s ease;
 }
 @keyframes mv-bubble-in {
-   from { opacity: 0; transform: translateY(4px); }
-   to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .mv-hover-bubble__name {
-   font-size: 12.5px;
-   font-weight: 600;
-   color: var(--foreground, #1e293b);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--foreground, #1e293b);
 }
 .mv-hover-bubble__btn {
-   padding: 3px 10px;
-   border-radius: 12px;
-   border: none;
-   background: linear-gradient(135deg, var(--brand-blue, #0891b2), var(--brand-teal, #06b6d4));
-   color: #fff;
-   font-size: 11.5px;
-   font-weight: 600;
-   cursor: pointer;
-   transition: opacity 0.15s;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, var(--brand-blue, #0891b2), var(--brand-teal, #06b6d4));
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
-.mv-hover-bubble__btn:hover { opacity: 0.88; }
+.mv-hover-bubble__btn:hover {
+  opacity: 0.88;
+}
 .dark .mv-hover-bubble {
-   background: rgba(15, 20, 32, 0.92);
-   border-color: rgba(34, 211, 238, 0.25);
+  background: rgba(15, 20, 32, 0.92);
+  border-color: rgba(34, 211, 238, 0.25);
 }
-.dark .mv-hover-bubble__name { color: #e8edf5; }
+.dark .mv-hover-bubble__name {
+  color: #e8edf5;
+}
 
 /* ── 좌표 표시바 ───────────────────────────────────────────── */
 .coord-bar {
-   position: absolute;
-   bottom: 14px;
-   left: 50%;
-   transform: translateX(-50%);
-   z-index: 200;
-   background: var(--glass-bg);
-   backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
-   border: 1px solid var(--glass-border);
-   border-radius: 8px;
-   padding: 5px 16px;
-   font-size: 12px;
-   color: var(--muted-foreground);
-   font-family: "JetBrains Mono", monospace;
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 5px 16px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  font-family: "JetBrains Mono", monospace;
 }
 
 /* ── 하위 호환 유틸 ────────────────────────────────────────── */
 .map-container {
-   width: 100%;
-   height: 100%;
-   position: relative;
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 .map-controls {
-   position: absolute;
-   top: 16px;
-   left: 16px;
-   z-index: 300;
-   display: flex;
-   gap: 8px;
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 300;
+  display: flex;
+  gap: 8px;
 }
 .map-btn {
-   background: var(--card);
-   border: 1px solid var(--border);
-   border-radius: 10px;
-   padding: 6px 12px;
-   font-size: 13px;
-   cursor: pointer;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
 }
 .map-btn:hover {
-   background: var(--muted);
+  background: var(--muted);
 }
 .summary-card {
-   position: absolute;
-   bottom: 50px;
-   left: 50%;
-   transform: translateX(-50%);
-   z-index: 300;
-   width: 320px;
-   background: var(--glass-bg);
-   backdrop-filter: blur(20px);
-   -webkit-backdrop-filter: blur(20px);
-   border-radius: 16px;
-   box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
-   overflow: hidden;
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  width: 320px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px -8px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
 }
 .summary-header {
-   padding: 14px;
-   border-bottom: 1px solid var(--border);
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
 }
 .summary-title {
-   font-size: 16px;
-   font-weight: 700;
+  font-size: 16px;
+  font-weight: 700;
 }
 .summary-sub {
-   font-size: 11px;
-   color: var(--muted-foreground);
-   margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
 }
 .category-tag {
-   border-radius: 20px;
-   padding: 3px 10px;
-   font-size: 11px;
-   font-weight: 700;
-   display: inline-block;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
 }
 .small-text {
-   font-size: 10px;
-   color: var(--muted-foreground);
+  font-size: 10px;
+  color: var(--muted-foreground);
 }
 .meta-text {
-   font-size: 11px;
-   color: var(--muted-foreground);
-   line-height: 1.4;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  line-height: 1.4;
 }
 .popup-card {
-   background: var(--card);
-   border-radius: 14px;
-   padding: 14px;
-   box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
-   width: 260px;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow:
+    0 8px 32px -8px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  width: 260px;
 }
 .popup-title {
-   font-size: 15px;
-   font-weight: 700;
-   margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
 }
 .popup-desc {
-   font-size: 13px;
-   color: var(--muted-foreground);
-   line-height: 1.4;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  line-height: 1.4;
 }
 
 /* ── 우상단 컨트롤 그룹 (ThemeToggle + 레이어 버튼) ──── */
 .mv-top-right-controls {
-   position: absolute;
-   top: 14px;
-   right: 14px;
-   z-index: 200;
-   display: flex;
-   align-items: center;
-   gap: 8px;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ── 지도 페이지 네비게이션 링크 ───────────────────────────────── */
 .mv-nav-btn {
-   background: var(--glass-bg);
-   backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
-   border: 1px solid var(--glass-border);
-   border-radius: 10px;
-   padding: 6px 12px;
-   font-size: 12px;
-   font-weight: 500;
-   color: var(--foreground);
-   text-decoration: none;
-   cursor: pointer;
-   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
-   transition: box-shadow 0.2s, background 0.2s;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--foreground);
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow:
+    0 4px 20px -4px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+  transition:
+    box-shadow 0.2s,
+    background 0.2s;
 }
 .mv-nav-btn:hover {
-   background: var(--glass-bg);
-   box-shadow: var(--glow-blue);
+  background: var(--glass-bg);
+  box-shadow: var(--glow-blue);
 }
 
 /* ── OL 줌 레벨 뱃지 기본 스타일 ─────────────────────── */
 .zoom-level-badge {
-   text-align: center;
-   font-size: 11px;
-   font-weight: 700;
-   color: var(--foreground);
-   padding: 2px 0;
-   background: var(--card);
-   border-left: 2px solid var(--border);
-   border-right: 2px solid var(--border);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--foreground);
+  padding: 2px 0;
+  background: var(--card);
+  border-left: 2px solid var(--border);
+  border-right: 2px solid var(--border);
 }
 
 /* ── OL 기본 줌 버튼 다크모드 ─────────────────────────── */
 .dark .ol-zoom .ol-zoom-in,
 .dark .ol-zoom .ol-zoom-out {
-   background: var(--card) !important;
-   color: var(--foreground) !important;
+  background: var(--card) !important;
+  color: var(--foreground) !important;
 }
 
 /* ── 다크모드 보정 (CSS 변수 자동 대응 외 추가 필요 항목만) ── */
 .dark .mv-ctrl-badge {
-   background: rgba(20, 184, 166, 0.12);
-   border-color: rgba(20, 184, 166, 0.3);
-   color: var(--brand-teal);
+  background: rgba(20, 184, 166, 0.12);
+  border-color: rgba(20, 184, 166, 0.3);
+  color: var(--brand-teal);
 }
 
 /* ══════════════════════════════════════════════════════════════
    모바일 반응형 (≤ 640px)
    ══════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
-   /* ── DongPanel: 300px → 전체 너비 ─────────────────────── */
-   .mv-dong-panel {
-      width: 100vw;
-      width: 100dvw;
-   }
-   .mv-dong-panel__name {
-      font-size: 16px;
-   }
-   /* 닫기 버튼 터치 타겟 44px 보장 */
-   .mv-dong-panel__close {
-      min-width: 44px;
-      min-height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-   }
-   /* 동 모드 버튼 터치 타겟 보강 */
-   .mv-dong-btn {
-      min-height: 44px;
-      padding: 10px 14px;
-   }
+  /* ── DongPanel: 300px → 전체 너비 ─────────────────────── */
+  .mv-dong-panel {
+    width: 100vw;
+    width: 100dvw;
+  }
+  .mv-dong-panel__name {
+    font-size: 16px;
+  }
+  /* 닫기 버튼 터치 타겟 44px 보장 */
+  .mv-dong-panel__close {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* 동 모드 버튼 터치 타겟 보강 */
+  .mv-dong-btn {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
 
-   /* ── WmsPopup: 고정 너비 → 양쪽 12px 마진 ───────────── */
-   .mv-wms-popup {
-      width: calc(100vw - 24px);
-      left: 12px;
-      right: 12px;
-      bottom: 12px;
-      box-sizing: border-box;
-   }
+  /* ── WmsPopup: 고정 너비 → 양쪽 12px 마진 ───────────── */
+  .mv-wms-popup {
+    width: calc(100vw - 24px);
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    box-sizing: border-box;
+  }
 
-   /* ── 우상단 컨트롤: 버튼 축소 + wrap ────────────────── */
-   .mv-top-right-controls {
-      gap: 4px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      max-width: calc(100vw - 28px);
-   }
-   .mv-nav-btn {
-      font-size: 11px;
-      padding: 5px 8px;
-      min-height: 32px;
-      display: flex;
-      align-items: center;
-   }
-   .mv-layer-btn {
-      padding: 6px 10px;
-      font-size: 16px;
-      min-height: 32px;
-      min-width: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-   }
+  /* ── 우상단 컨트롤: 버튼 축소 + wrap ────────────────── */
+  .mv-top-right-controls {
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: calc(100vw - 28px);
+  }
+  .mv-nav-btn {
+    font-size: 11px;
+    padding: 5px 8px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+  }
+  .mv-layer-btn {
+    padding: 6px 10px;
+    font-size: 16px;
+    min-height: 32px;
+    min-width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-   /* ── 좌표 바: 하단 중앙 → 우하단 (MapControls 겹침 방지) */
-   .coord-bar {
-      left: auto;
-      transform: none;
-      right: 12px;
-      bottom: 12px;
-      font-size: 10px;
-      padding: 4px 10px;
-      z-index: 190; /* WmsPopup(z:300) 아래로 */
-   }
+  /* ── 좌표 바: 하단 중앙 → 우하단 (MapControls 겹침 방지) */
+  .coord-bar {
+    left: auto;
+    transform: none;
+    right: 12px;
+    bottom: 12px;
+    font-size: 10px;
+    padding: 4px 10px;
+    z-index: 190; /* WmsPopup(z:300) 아래로 */
+  }
 }
 
 /* 동패널 열릴 때 WmsPopup 동패널 왼쪽에 붙음 */
 .mv-wms-popup--dong-open {
-   right: 316px;
-   left: auto;
+  right: 316px;
+  left: auto;
 }
 
 .mv-wms-popup--chat-open {
-   right: calc(var(--chat-panel-width) + 16px);
+  right: calc(var(--chat-panel-width) + 16px);
 }
 
 .mv-wms-popup--chat-open.mv-wms-popup--dong-open {
-   right: calc(var(--dong-panel-width) + var(--chat-panel-width) + 16px);
+  right: calc(var(--dong-panel-width) + var(--chat-panel-width) + 16px);
 }

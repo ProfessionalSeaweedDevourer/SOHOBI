@@ -25,10 +25,7 @@ export default function MyReport() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const sessionId =
-    typeof window !== "undefined"
-      ? localStorage.getItem(SESSION_KEY)
-      : null;
+  const sessionId = typeof window !== "undefined" ? localStorage.getItem(SESSION_KEY) : null;
 
   useEffect(() => {
     if (authLoading) return;
@@ -56,7 +53,9 @@ export default function MyReport() {
         setReport(data);
         trackEvent("report_view", { session_id: sessionId });
       })
-      .catch((e) => { if (e.name !== "AbortError") setError(e.message); })
+      .catch((e) => {
+        if (e.name !== "AbortError") setError(e.message);
+      })
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, [user?.token, sessionId, authLoading]);
@@ -98,7 +97,6 @@ export default function MyReport() {
 
       {/* 본문 */}
       <main className="relative z-10 flex-1 max-w-2xl w-full mx-auto px-4 py-10 flex flex-col gap-8">
-
         {/* 히어로 */}
         <div className="flex flex-col items-center text-center gap-4">
           <motion.div
@@ -127,7 +125,9 @@ export default function MyReport() {
             className="text-sm"
             style={{ color: "var(--muted-foreground)" }}
           >
-            {user ? "나의 전체 창업 준비 현황을 요약합니다" : "이번 세션의 창업 준비 현황을 요약합니다"}
+            {user
+              ? "나의 전체 창업 준비 현황을 요약합니다"
+              : "이번 세션의 창업 준비 현황을 요약합니다"}
           </motion.p>
         </div>
 
@@ -173,7 +173,9 @@ export default function MyReport() {
                 <a
                   href="/user"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105"
-                  style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
+                  style={{
+                    background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))",
+                  }}
                 >
                   AI 에이전트와 대화하기
                   <ArrowRight size={14} />

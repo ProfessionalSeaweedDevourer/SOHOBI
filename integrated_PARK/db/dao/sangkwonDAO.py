@@ -2,6 +2,7 @@
 # PostgreSQL (Azure) 버전
 
 import logging
+
 from .baseDAO import BaseDAO
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,6 @@ SELECT_SALES_SUM = """
 
 
 class SangkwonDAO(BaseDAO):
-
     def __init__(self):
         self._ensure_search_indexes()
 
@@ -121,19 +121,19 @@ class SangkwonDAO(BaseDAO):
             d = rows[0]
             cnt = d["qtr_cnt"] or 1
             return {
-                "adm_cd":          adstrd_cd,
-                "quarter":         "avg",
-                "qtr_cnt":         cnt,
-                "tot_sales_amt":   round((d["tot_sales_sum"]  or 0) / cnt),
-                "tot_selng_co":    round((d["tot_selng_sum"]  or 0) / cnt),
-                "ml_sales_amt":    round((d["ml_sales_sum"]   or 0) / cnt),
-                "fml_sales_amt":   round((d["fml_sales_sum"]  or 0) / cnt),
-                "mdwk_sales_amt":  round((d["mdwk_sales_sum"] or 0) / cnt),
-                "wkend_sales_amt": round((d["wkend_sales_sum"]or 0) / cnt),
-                "age20_amt":       round((d["age20_sum"]      or 0) / cnt),
-                "age30_amt":       round((d["age30_sum"]      or 0) / cnt),
-                "age40_amt":       round((d["age40_sum"]      or 0) / cnt),
-                "age50_amt":       round((d["age50_sum"]      or 0) / cnt),
+                "adm_cd": adstrd_cd,
+                "quarter": "avg",
+                "qtr_cnt": cnt,
+                "tot_sales_amt": round((d["tot_sales_sum"] or 0) / cnt),
+                "tot_selng_co": round((d["tot_selng_sum"] or 0) / cnt),
+                "ml_sales_amt": round((d["ml_sales_sum"] or 0) / cnt),
+                "fml_sales_amt": round((d["fml_sales_sum"] or 0) / cnt),
+                "mdwk_sales_amt": round((d["mdwk_sales_sum"] or 0) / cnt),
+                "wkend_sales_amt": round((d["wkend_sales_sum"] or 0) / cnt),
+                "age20_amt": round((d["age20_sum"] or 0) / cnt),
+                "age30_amt": round((d["age30_sum"] or 0) / cnt),
+                "age40_amt": round((d["age40_sum"] or 0) / cnt),
+                "age50_amt": round((d["age50_sum"] or 0) / cnt),
             }
         except Exception as e:
             logger.error(f"[SangkwonDAO] getSalesAvgByCode 실패: {e}")
@@ -167,14 +167,20 @@ class SangkwonDAO(BaseDAO):
             if quarter:
                 params["qtr"] = quarter
             result = self._query(sql, params)
-            logger.info(f"[SangkwonDAO] getSalesBySvcCd: adm_cd={adstrd_cd} → {len(result)}개 업종")
+            logger.info(
+                f"[SangkwonDAO] getSalesBySvcCd: adm_cd={adstrd_cd} → {len(result)}개 업종"
+            )
             return result
         except Exception as e:
             logger.error(f"[SangkwonDAO] getSalesBySvcCd 실패: {e}")
             return []
 
     def getSalesByCatCd(self, adstrd_cd: str, cat_cd: str, quarter: str = "") -> list:
-        qtr_cond = "AND ss.base_yr_qtr_cd = %(qtr)s" if quarter else f"AND ss.base_yr_qtr_cd = {LATEST_QTR}"
+        qtr_cond = (
+            "AND ss.base_yr_qtr_cd = %(qtr)s"
+            if quarter
+            else f"AND ss.base_yr_qtr_cd = {LATEST_QTR}"
+        )
         sql = f"""
             SELECT
                 ss.svc_induty_cd,

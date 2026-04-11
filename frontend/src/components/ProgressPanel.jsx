@@ -3,19 +3,19 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { LoadingDots } from "./LoadingSpinner";
 
 const DOMAIN_LABEL = {
-  admin:    "행정·신고",
-  finance:  "재무·시뮬레이션",
-  legal:    "법률·세무",
+  admin: "행정·신고",
+  finance: "재무·시뮬레이션",
+  legal: "법률·세무",
   location: "상권 분석",
-  chat:     "안내",
+  chat: "안내",
 };
 
 const SIGNOFF_MSG = {
-  finance:  "수치·단위·가정 전제를 검토하는 중이에요…",
-  legal:    "법령 인용과 조문 근거를 확인하는 중이에요…",
+  finance: "수치·단위·가정 전제를 검토하는 중이에요…",
+  legal: "법령 인용과 조문 근거를 확인하는 중이에요…",
   location: "상권 데이터와 출처를 점검하는 중이에요…",
-  admin:    "행정 절차와 서류 요건을 검증하는 중이에요…",
-  chat:     "답변의 완결성을 확인하는 중이에요…",
+  admin: "행정 절차와 서류 요건을 검증하는 중이에요…",
+  chat: "답변의 완결성을 확인하는 중이에요…",
 };
 
 const GRADE_COLOR = {
@@ -25,21 +25,43 @@ const GRADE_COLOR = {
 };
 
 const ITEM_LABELS = {
-  C1: "질문 응답성", C2: "완결성", C3: "내부 일관성", C4: "톤 적절성", C5: "할루시네이션",
-  F1: "수치 제시", F2: "단위 표기", F3: "가정 전제", F4: "불확실성", F5: "리스크 경고",
-  G1: "근거 출처", G2: "법령 인용", G3: "조문 번호", G4: "면책 고지",
-  A1: "지역 정보", A2: "업종 정보", A3: "수치 근거", A4: "기간 명시", A5: "출처 안내",
-  S1: "상권 범위", S2: "매출 데이터", S3: "유동인구", S4: "경쟁 현황", S5: "입지 평가",
+  C1: "질문 응답성",
+  C2: "완결성",
+  C3: "내부 일관성",
+  C4: "톤 적절성",
+  C5: "할루시네이션",
+  F1: "수치 제시",
+  F2: "단위 표기",
+  F3: "가정 전제",
+  F4: "불확실성",
+  F5: "리스크 경고",
+  G1: "근거 출처",
+  G2: "법령 인용",
+  G3: "조문 번호",
+  G4: "면책 고지",
+  A1: "지역 정보",
+  A2: "업종 정보",
+  A3: "수치 근거",
+  A4: "기간 명시",
+  A5: "출처 안내",
+  S1: "상권 범위",
+  S2: "매출 데이터",
+  S3: "유동인구",
+  S4: "경쟁 현황",
+  S5: "입지 평가",
 };
 
 function CodeBadge({ code, type }) {
   const styleMap = {
-    passed:  { background: "rgba(16,185,129,0.15)", color: "var(--grade-a)" },
-    warning: { background: "rgba(234,179,8,0.15)",  color: "var(--grade-b)" },
-    issue:   { background: "rgba(239,68,68,0.15)",  color: "var(--grade-c)" },
+    passed: { background: "rgba(16,185,129,0.15)", color: "var(--grade-a)" },
+    warning: { background: "rgba(234,179,8,0.15)", color: "var(--grade-b)" },
+    issue: { background: "rgba(239,68,68,0.15)", color: "var(--grade-c)" },
   };
   return (
-    <span className="font-mono text-[10px] px-1.5 py-0.5 rounded" style={styleMap[type] || styleMap.issue}>
+    <span
+      className="font-mono text-[10px] px-1.5 py-0.5 rounded"
+      style={styleMap[type] || styleMap.issue}
+    >
       {code}
     </span>
   );
@@ -48,8 +70,8 @@ function CodeBadge({ code, type }) {
 export default function ProgressPanel({ events = [], detailed = false }) {
   if (events.length === 0) return null;
 
-  const domain = events.find(e => e.event === "domain_classified")?.domain;
-  const error  = events.find(e => e.event === "error");
+  const domain = events.find((e) => e.event === "domain_classified")?.domain;
+  const error = events.find((e) => e.event === "error");
 
   const attemptMap = {};
   for (const ev of events) {
@@ -58,8 +80,8 @@ export default function ProgressPanel({ events = [], detailed = false }) {
     attemptMap[ev.attempt][ev.event] = ev;
   }
   const attempts = Object.entries(attemptMap).sort(([a], [b]) => Number(a) - Number(b));
-  const maxAttempts = events.find(e => e.event === "agent_start")?.max_attempts ?? "?";
-  const isComplete = events.some(e => e.event === "complete");
+  const maxAttempts = events.find((e) => e.event === "agent_start")?.max_attempts ?? "?";
+  const isComplete = events.some((e) => e.event === "complete");
 
   return (
     <div className="text-xs text-foreground space-y-1.5 py-1">
@@ -75,9 +97,9 @@ export default function ProgressPanel({ events = [], detailed = false }) {
       )}
 
       {attempts.map(([attemptNum, evs], idx) => {
-        const agentDone    = evs["agent_done"];
+        const agentDone = evs["agent_done"];
         const signoffStart = evs["signoff_start"];
-        const signoffResult= evs["signoff_result"];
+        const signoffResult = evs["signoff_result"];
 
         return (
           <motion.div
@@ -92,9 +114,11 @@ export default function ProgressPanel({ events = [], detailed = false }) {
             </div>
 
             <div className="flex items-center gap-1.5">
-              {agentDone
-                ? <CheckCircle2 size={12} style={{ color: "var(--grade-a)" }} />
-                : <LoadingDots />}
+              {agentDone ? (
+                <CheckCircle2 size={12} style={{ color: "var(--grade-a)" }} />
+              ) : (
+                <LoadingDots />
+              )}
               <span>
                 {agentDone
                   ? `에이전트 완료 (${(agentDone.agent_ms / 1000).toFixed(1)}초)`
@@ -104,20 +128,29 @@ export default function ProgressPanel({ events = [], detailed = false }) {
 
             {(signoffStart || signoffResult) && (
               <div className="flex items-center gap-1.5">
-                {signoffResult
-                  ? (signoffResult.approved
-                      ? <CheckCircle2 size={12} style={{ color: "var(--grade-a)" }} />
-                      : <XCircle size={12} style={{ color: "var(--grade-c)" }} />)
-                  : <LoadingDots />}
+                {signoffResult ? (
+                  signoffResult.approved ? (
+                    <CheckCircle2 size={12} style={{ color: "var(--grade-a)" }} />
+                  ) : (
+                    <XCircle size={12} style={{ color: "var(--grade-c)" }} />
+                  )
+                ) : (
+                  <LoadingDots />
+                )}
                 <span>
                   {signoffResult
-                    ? (signoffResult.approved
-                        ? `검증 통과`
-                        : (detailed ? `반려` : `재시도`))
-                    : (SIGNOFF_MSG[domain] || "답변 품질을 검증하는 중이에요…")}
+                    ? signoffResult.approved
+                      ? `검증 통과`
+                      : detailed
+                        ? `반려`
+                        : `재시도`
+                    : SIGNOFF_MSG[domain] || "답변 품질을 검증하는 중이에요…"}
                 </span>
                 {signoffResult && (
-                  <span className="font-semibold" style={{ color: GRADE_COLOR[signoffResult.grade] }}>
+                  <span
+                    className="font-semibold"
+                    style={{ color: GRADE_COLOR[signoffResult.grade] }}
+                  >
                     {signoffResult.grade}
                   </span>
                 )}
@@ -127,14 +160,32 @@ export default function ProgressPanel({ events = [], detailed = false }) {
             {detailed && signoffResult && !signoffResult.approved && (
               <div className="ml-4 space-y-1 mt-1">
                 <div className="flex flex-wrap gap-1">
-                  {(signoffResult.passed   || []).map(c => <CodeBadge key={c}      code={c}       type="passed"  />)}
-                  {(signoffResult.warnings || []).map(w => <CodeBadge key={w.code} code={w.code}  type="warning" />)}
-                  {(signoffResult.issues   || []).map(i => <CodeBadge key={i.code} code={i.code}  type="issue"   />)}
+                  {(signoffResult.passed || []).map((c) => (
+                    <CodeBadge key={c} code={c} type="passed" />
+                  ))}
+                  {(signoffResult.warnings || []).map((w) => (
+                    <CodeBadge key={w.code} code={w.code} type="warning" />
+                  ))}
+                  {(signoffResult.issues || []).map((i) => (
+                    <CodeBadge key={i.code} code={i.code} type="issue" />
+                  ))}
                 </div>
-                {(signoffResult.issues || []).map(i => (
-                  <div key={i.code} className="rounded px-2 py-1 border" style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.2)" }}>
-                    <span className="font-semibold" style={{ color: "var(--grade-c)" }}>{i.code}</span>
-                    <span style={{ color: "var(--grade-c)", opacity: 0.7 }}> — {ITEM_LABELS[i.code] || i.code}</span>
+                {(signoffResult.issues || []).map((i) => (
+                  <div
+                    key={i.code}
+                    className="rounded px-2 py-1 border"
+                    style={{
+                      background: "rgba(239,68,68,0.08)",
+                      borderColor: "rgba(239,68,68,0.2)",
+                    }}
+                  >
+                    <span className="font-semibold" style={{ color: "var(--grade-c)" }}>
+                      {i.code}
+                    </span>
+                    <span style={{ color: "var(--grade-c)", opacity: 0.7 }}>
+                      {" "}
+                      — {ITEM_LABELS[i.code] || i.code}
+                    </span>
                     {i.reason && <div className="text-muted-foreground mt-0.5">{i.reason}</div>}
                   </div>
                 ))}
@@ -152,12 +203,17 @@ export default function ProgressPanel({ events = [], detailed = false }) {
         );
       })}
 
-      {isComplete && (
-        <div className="text-muted-foreground pt-0.5">완료</div>
-      )}
+      {isComplete && <div className="text-muted-foreground pt-0.5">완료</div>}
 
       {error && (
-        <div className="rounded px-2 py-1 border" style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.2)", color: "var(--grade-c)" }}>
+        <div
+          className="rounded px-2 py-1 border"
+          style={{
+            background: "rgba(239,68,68,0.08)",
+            borderColor: "rgba(239,68,68,0.2)",
+            color: "var(--grade-c)",
+          }}
+        >
           오류: {error.message}
         </div>
       )}

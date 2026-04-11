@@ -1,11 +1,12 @@
 # 위치: backend/DAO/baseDAO.py
 # PostgreSQL (Azure) 버전 - psycopg2 기반
 
-import os
 import logging
+import os
+
 import psycopg2
-import psycopg2.pool
 import psycopg2.extras
+import psycopg2.pool
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,6 @@ def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
 
 
 class BaseDAO:
-
     def _db_con(self):
         """풀에서 커넥션 획득 → (conn, cursor) 반환"""
         conn = _get_pool().getconn()

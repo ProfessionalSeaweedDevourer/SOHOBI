@@ -1,16 +1,16 @@
 const colors = {
-  A: { bg: '#10b981', glow: '0 0 15px rgba(16,185,129,0.5)' },
-  B: { bg: '#eab308', glow: '0 0 15px rgba(234,179,8,0.5)' },
-  C: { bg: '#ef4444', glow: '0 0 15px rgba(239,68,68,0.5)' },
+  A: { bg: "#10b981", glow: "0 0 15px rgba(16,185,129,0.5)" },
+  B: { bg: "#eab308", glow: "0 0 15px rgba(234,179,8,0.5)" },
+  C: { bg: "#ef4444", glow: "0 0 15px rgba(239,68,68,0.5)" },
 };
 
 const sizes = {
-  sm: 'px-2 py-0.5 text-xs',
-  md: 'px-2.5 py-1 text-sm',
-  lg: 'px-3 py-1.5 text-base',
+  sm: "px-2 py-0.5 text-xs",
+  md: "px-2.5 py-1 text-sm",
+  lg: "px-3 py-1.5 text-base",
 };
 
-export function GradeBadge({ grade, size = 'md' }) {
+export function GradeBadge({ grade, size = "md" }) {
   const c = colors[grade] || colors.C;
   return (
     <span

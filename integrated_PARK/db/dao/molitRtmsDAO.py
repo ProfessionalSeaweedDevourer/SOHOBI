@@ -3,7 +3,6 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
 
 from .baseDAO import BaseDAO
 
@@ -25,15 +24,17 @@ def _ymds(months_back: int) -> list:
 
 
 class MolitRtmsDAO(BaseDAO):
-
     def get_law_nms_by_adm_cd(self, adm_cd: str) -> list:
         try:
-            rows = self._query("""
+            rows = self._query(
+                """
                 SELECT DISTINCT l.law_nm
                 FROM law_adm_map m
                 JOIN law_dong_seoul l ON m.law_cd = l.law_cd
                 WHERE m.adm_cd = %(adm_cd)s
-            """, {"adm_cd": adm_cd})
+            """,
+                {"adm_cd": adm_cd},
+            )
             return [r["law_nm"] for r in rows if r["law_nm"]]
         except Exception as e:
             logger.error(f"[MolitRtmsDAO] get_law_nms: {e}")
@@ -67,19 +68,34 @@ class MolitRtmsDAO(BaseDAO):
         전세, 월세 = [], []
         for r in rows:
             base = {
-                "건물명": r["offi_nm"], "법정동": r["umd_nm"], "층": r["floor"],
+                "건물명": r["offi_nm"],
+                "법정동": r["umd_nm"],
+                "층": r["floor"],
                 "면적": r["exclu_use_ar"],
                 "계약일": f"{r['deal_ymd']}{str(r['deal_day']).zfill(2) if r['deal_day'] else ''}",
-                "건축년도": r["build_year"], "구": r["sgg_nm"],
+                "건축년도": r["build_year"],
+                "구": r["sgg_nm"],
             }
             deposit = r["deposit"]
             monthly = r["monthly_rent"]
             if not monthly or monthly == 0:
-                전세.append({**base, "보증금만원": deposit, "보증금": f"{deposit:,}" if deposit else "-"})
+                전세.append(
+                    {
+                        **base,
+                        "보증금만원": deposit,
+                        "보증금": f"{deposit:,}" if deposit else "-",
+                    }
+                )
             else:
-                월세.append({**base, "보증금만원": deposit, "월세만원": monthly,
-                             "보증금": f"{deposit:,}" if deposit else "-",
-                             "월세": f"{monthly:,}" if monthly else "-"})
+                월세.append(
+                    {
+                        **base,
+                        "보증금만원": deposit,
+                        "월세만원": monthly,
+                        "보증금": f"{deposit:,}" if deposit else "-",
+                        "월세": f"{monthly:,}" if monthly else "-",
+                    }
+                )
 
         return {
             "has_data": len(전세) + len(월세) > 0,
@@ -116,14 +132,20 @@ class MolitRtmsDAO(BaseDAO):
             amt = r["deal_amount"]
             if not amt:
                 continue
-            매매.append({
-                "법정동": r["umd_nm"], "층": r["floor"],
-                "거래금액만원": amt, "거래금액": f"{amt:,}만원",
-                "용도": r["building_use"], "면적": r["building_ar"],
-                "용도지역": r["land_use"],
-                "계약일": f"{r['deal_ymd']}{str(r['deal_day']).zfill(2) if r['deal_day'] else ''}",
-                "건축년도": r["build_year"], "구": r["sgg_nm"],
-            })
+            매매.append(
+                {
+                    "법정동": r["umd_nm"],
+                    "층": r["floor"],
+                    "거래금액만원": amt,
+                    "거래금액": f"{amt:,}만원",
+                    "용도": r["building_use"],
+                    "면적": r["building_ar"],
+                    "용도지역": r["land_use"],
+                    "계약일": f"{r['deal_ymd']}{str(r['deal_day']).zfill(2) if r['deal_day'] else ''}",
+                    "건축년도": r["build_year"],
+                    "구": r["sgg_nm"],
+                }
+            )
 
         return {"has_data": len(매매) > 0, "매매": self._stats(매매, "거래금액만원")}
 
@@ -132,7 +154,13 @@ class MolitRtmsDAO(BaseDAO):
     def _stats(self, items: list, amt_key: str) -> dict:
         prices = [x[amt_key] for x in items if x.get(amt_key)]
         if not prices:
-            return {"건수": 0, "평균가": None, "최저가": None, "최고가": None, "목록": []}
+            return {
+                "건수": 0,
+                "평균가": None,
+                "최저가": None,
+                "최고가": None,
+                "목록": [],
+            }
         sorted_items = sorted(items, key=lambda x: x.get("계약일", ""), reverse=True)
         return {
             "건수": len(prices),

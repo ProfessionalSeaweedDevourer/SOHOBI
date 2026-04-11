@@ -40,8 +40,7 @@ export default function DevHub() {
             to="/"
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm"
           >
-            <ArrowLeft size={16} />
-            홈
+            <ArrowLeft size={16} />홈
           </Link>
 
           <div className="flex items-center gap-2">
@@ -59,7 +58,10 @@ export default function DevHub() {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <button
-              onClick={() => { clearDevAuth(); navigate("/"); }}
+              onClick={() => {
+                clearDevAuth();
+                navigate("/");
+              }}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               로그아웃
@@ -115,7 +117,10 @@ export default function DevHub() {
                 variants={{ cardHover: { y: -8 } }}
                 className="group"
               >
-                <Link to={tool.path} className="block glass rounded-2xl p-8 text-center shadow-elevated transition-glow hover-lift relative overflow-hidden h-full">
+                <Link
+                  to={tool.path}
+                  className="block glass rounded-2xl p-8 text-center shadow-elevated transition-glow hover-lift relative overflow-hidden h-full"
+                >
                   <div
                     className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300"
                     style={{ backgroundColor: tool.color }}
@@ -135,9 +140,7 @@ export default function DevHub() {
                   </motion.div>
 
                   <h3 className="mb-3 text-xl font-semibold">{tool.label}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {tool.desc}
-                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{tool.desc}</p>
                 </Link>
               </motion.div>
             );

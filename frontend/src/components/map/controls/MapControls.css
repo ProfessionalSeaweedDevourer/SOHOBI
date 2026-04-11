@@ -1,137 +1,137 @@
 /* ── MapControls 컨테이너 ──────────────────────────────── */
 .mv-map-controls {
-   position: absolute;
-   bottom: 170px;
-   left: 14px;
-   z-index: 400;
-   display: flex;
-   flex-direction: column;
-   background: rgba(255, 255, 255, 0.92);
-   backdrop-filter: blur(6px);
-   -webkit-backdrop-filter: blur(6px);
-   border-radius: 12px;
-   padding: 8px;
-   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
-   gap: 6px;
+  position: absolute;
+  bottom: 170px;
+  left: 14px;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  gap: 6px;
 }
 
 /* 로딩 표시 */
 .mv-map-controls__loading {
-   background: rgba(255, 255, 255, 0.95);
-   border-radius: 8px;
-   padding: 5px 12px;
-   font-size: 11px;
-   color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 11px;
+  color: #555;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 .dark .mv-map-controls__loading {
-   background: rgba(15, 20, 32, 0.95);
-   color: var(--muted-foreground);
+  background: rgba(15, 20, 32, 0.95);
+  color: var(--muted-foreground);
 }
 
 /* 버튼 행 */
 .mv-map-controls__mode-row {
-   display: flex;
-   flex-direction: row;
-   gap: 6px;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
 }
 .mv-map-controls__store-row {
-   display: flex;
-   gap: 6px;
+  display: flex;
+  gap: 6px;
 }
 
 /* 공통 버튼 */
 .mv-mode-btn {
-   border: 2px solid #e5e7eb;
-   border-radius: 10px;
-   padding: 7px 12px;
-   font-size: 12px;
-   font-weight: 700;
-   cursor: pointer;
-   background: #fff;
-   color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-   transition: all 0.18s;
-   white-space: nowrap;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  color: #555;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.18s;
+  white-space: nowrap;
 }
 .dark .mv-mode-btn {
-   background: var(--card);
-   border-color: var(--border);
-   color: var(--foreground);
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--foreground);
 }
 
 /* 상가 검색 버튼 (비활성) */
 .mv-store-btn {
-   border: 2px solid #e5e7eb;
-   border-radius: 10px;
-   padding: 7px 12px;
-   font-size: 12px;
-   font-weight: 700;
-   cursor: pointer;
-   background: #fff;
-   color: #555;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-   white-space: nowrap;
-   flex: 1;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  color: #555;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  flex: 1;
 }
 .dark .mv-store-btn {
-   background: var(--card);
-   border-color: var(--border);
-   color: var(--foreground);
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--foreground);
 }
 
 /* 새로고침 버튼 */
 .mv-refresh-btn {
-   border: 2px solid #0891b2;
-   border-radius: 10px;
-   padding: 7px 10px;
-   font-size: 12px;
-   font-weight: 700;
-   cursor: pointer;
-   background: #fff;
-   color: #0891b2;
-   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-   white-space: nowrap;
+  border: 2px solid #0891b2;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  color: #0891b2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
 }
 .dark .mv-refresh-btn {
-   background: var(--card);
-   border-color: var(--brand-teal);
-   color: var(--brand-teal);
+  background: var(--card);
+  border-color: var(--brand-teal);
+  color: var(--brand-teal);
 }
 
 /* ── 모바일 반응형 (≤ 640px) ──────────────────────────────── */
 @media (max-width: 640px) {
-   /* 버튼 그룹 위치: coord-bar 위로 이동 */
-   .mv-map-controls {
-      bottom: 120px;
-      left: 8px;
-      gap: 4px;
-   }
+  /* 버튼 그룹 위치: coord-bar 위로 이동 */
+  .mv-map-controls {
+    bottom: 120px;
+    left: 8px;
+    gap: 4px;
+  }
 
-   .mv-mode-btn,
-   .mv-store-btn {
-      padding: 6px 8px;
-      font-size: 11px;
-      min-height: 36px;
-      border-radius: 8px;
-   }
+  .mv-mode-btn,
+  .mv-store-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+    min-height: 36px;
+    border-radius: 8px;
+  }
 
-   .mv-refresh-btn {
-      padding: 6px 8px;
-      font-size: 11px;
-      min-height: 36px;
-      min-width: 36px;
-   }
+  .mv-refresh-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+    min-height: 36px;
+    min-width: 36px;
+  }
 
-   .mv-map-controls__loading {
-      font-size: 10px;
-      padding: 4px 10px;
-   }
+  .mv-map-controls__loading {
+    font-size: 10px;
+    padding: 4px 10px;
+  }
 }
 
 /* 다크모드 맵컨트롤 배경 */
 .dark .mv-map-controls {
-   background: rgba(15, 20, 32, 0.92);
+  background: rgba(15, 20, 32, 0.92);
 }
 
 /* 항상 왼쪽 고정 */

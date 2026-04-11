@@ -1,10 +1,11 @@
 import os
 import threading
-import semantic_kernel as sk
-from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
 import openai
+import semantic_kernel as sk
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
+from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 
 load_dotenv()
 
@@ -29,12 +30,12 @@ def _build_kernel() -> sk.Kernel:
     api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview")
 
     agent_services = [
-        ("admin",    "AZURE_ADMIN_DEPLOYMENT"),
-        ("finance",  "AZURE_FINANCE_DEPLOYMENT"),
-        ("legal",    "AZURE_LEGAL_DEPLOYMENT"),
+        ("admin", "AZURE_ADMIN_DEPLOYMENT"),
+        ("finance", "AZURE_FINANCE_DEPLOYMENT"),
+        ("legal", "AZURE_LEGAL_DEPLOYMENT"),
         ("location", "AZURE_LOCATION_DEPLOYMENT"),
-        ("chat",     "AZURE_CHAT_DEPLOYMENT"),
-        ("router",   "AZURE_ROUTER_DEPLOYMENT"),
+        ("chat", "AZURE_CHAT_DEPLOYMENT"),
+        ("router", "AZURE_ROUTER_DEPLOYMENT"),
     ]
     for service_id, env_var in agent_services:
         kernel.add_service(
@@ -61,9 +62,7 @@ def get_kernel() -> sk.Kernel:
 
 def get_signoff_client() -> openai.AsyncAzureOpenAI:
     signoff_endpoint = (
-        os.getenv("AZURE_SIGNOFF_ENDPOINT")
-        or os.getenv("AZURE_OPENAI_ENDPOINT")
-        or ""
+        os.getenv("AZURE_SIGNOFF_ENDPOINT") or os.getenv("AZURE_OPENAI_ENDPOINT") or ""
     )
     return openai.AsyncAzureOpenAI(
         azure_endpoint=signoff_endpoint,

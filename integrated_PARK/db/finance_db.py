@@ -57,10 +57,16 @@ class DBWork(BaseDAO):
             rows = cur.fetchall()
             if not rows:
                 return self.get_average_sales()
-            results = [float(r["avg_sales_per_store"]) for r in rows if r["avg_sales_per_store"] is not None]
+            results = [
+                float(r["avg_sales_per_store"])
+                for r in rows
+                if r["avg_sales_per_store"] is not None
+            ]
             return results if results else self.get_average_sales()
         except Exception as e:
-            logger.warning("DBWork.get_sales 실패 region=%s industry=%s: %s", region, industry, e)
+            logger.warning(
+                "DBWork.get_sales 실패 region=%s industry=%s: %s", region, industry, e
+            )
             return self.get_average_sales()
         finally:
             self._close(conn, cur)

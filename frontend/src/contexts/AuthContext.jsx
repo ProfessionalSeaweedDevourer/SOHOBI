@@ -7,7 +7,7 @@ const SESSION_KEY = "sohobi_session_id";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // JWT 토큰 → /auth/me 로 유저 정보 복원

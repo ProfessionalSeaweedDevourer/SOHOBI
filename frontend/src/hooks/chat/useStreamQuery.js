@@ -34,9 +34,15 @@ export function useStreamQuery({
   const onMessageRef = useRef(onMessage);
   const onUpdateAtRef = useRef(onUpdateAt);
   const onParamsRef = useRef(onParams);
-  useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
-  useEffect(() => { onUpdateAtRef.current = onUpdateAt; }, [onUpdateAt]);
-  useEffect(() => { onParamsRef.current = onParams; }, [onParams]);
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+  useEffect(() => {
+    onUpdateAtRef.current = onUpdateAt;
+  }, [onUpdateAt]);
+  useEffect(() => {
+    onParamsRef.current = onParams;
+  }, [onParams]);
 
   useEffect(() => {
     return () => controllerRef.current?.abort();
@@ -75,10 +81,14 @@ export function useStreamQuery({
             }
           },
           latestParams,
-          signal
+          signal,
         );
       } catch (e) {
-        if (e.name === "AbortError") { setActiveEvents([]); setLoading(false); return; }
+        if (e.name === "AbortError") {
+          setActiveEvents([]);
+          setLoading(false);
+          return;
+        }
         onError(question, e.message);
         setActiveEvents([]);
         setLoading(false);
@@ -89,7 +99,7 @@ export function useStreamQuery({
       setActiveEvents([]);
       setLoading(false);
     },
-    [sessionId, latestParams, onSessionId, onCheckedItems]
+    [sessionId, latestParams, onSessionId, onCheckedItems],
   );
 
   const submit = useCallback(
@@ -109,10 +119,10 @@ export function useStreamQuery({
           setPendingQuestion(null);
           onMessageRef.current({ question: q, status: "error", draft: interpretError(errMsg) });
           inputRef?.current?.clear();
-        }
+        },
       );
     },
-    [_runStream]
+    [_runStream],
   );
 
   const regenerate = useCallback(
@@ -126,10 +136,10 @@ export function useStreamQuery({
         },
         (_q, errMsg) => {
           onUpdateAtRef.current(index, { status: "error", draft: interpretError(errMsg) });
-        }
+        },
       );
     },
-    [_runStream]
+    [_runStream],
   );
 
   return { loading, activeEvents, pendingQuestion, submit, regenerate };
@@ -138,20 +148,20 @@ export function useStreamQuery({
 function _buildMsg(question, result) {
   return {
     question,
-    domain:           result.domain,
-    status:           result.status,
-    grade:            result.grade,
-    confidenceNote:   result.confidence_note,
-    draft:            result.draft,
-    retryCount:       result.retry_count,
-    agentMs:          result.agent_ms,
-    signoffMs:        result.signoff_ms,
+    domain: result.domain,
+    status: result.status,
+    grade: result.grade,
+    confidenceNote: result.confidence_note,
+    draft: result.draft,
+    retryCount: result.retry_count,
+    agentMs: result.agent_ms,
+    signoffMs: result.signoff_ms,
     rejectionHistory: result.rejection_history || [],
-    chart:            result.chart || null,
-    charts:           result.charts || [],
-    requestId:        result.request_id || null,
-    sessionId:        result.session_id || null,
+    chart: result.chart || null,
+    charts: result.charts || [],
+    requestId: result.request_id || null,
+    sessionId: result.session_id || null,
     suggestedActions: result.suggested_actions || [],
-    isPartial:        result.is_partial || false,
+    isPartial: result.is_partial || false,
   };
 }

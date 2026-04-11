@@ -25,15 +25,21 @@ export async function sendQuery(question, maxRetries = 3, sessionId = null, curr
   const body = { question, domain: null, max_retries: maxRetries };
   if (sessionId) body.session_id = sessionId;
   if (currentParams) body.current_params = currentParams;
-  const res = await fetchWithTimeout(`${BASE_URL}/api/v1/query`, {
-    method: "POST",
-    headers: _AUTH_HEADERS,
-    body: JSON.stringify(body),
-  }, 30000);
+  const res = await fetchWithTimeout(
+    `${BASE_URL}/api/v1/query`,
+    {
+      method: "POST",
+      headers: _AUTH_HEADERS,
+      body: JSON.stringify(body),
+    },
+    30000,
+  );
   if (!res.ok) {
     const text = await res.text();
     let err = {};
-    try { err = JSON.parse(text); } catch {}
+    try {
+      err = JSON.parse(text);
+    } catch {}
     throw new Error(err.error || err.message || `HTTP ${res.status}`);
   }
   return res.json();
@@ -47,7 +53,14 @@ export async function sendQuery(question, maxRetries = 3, sessionId = null, curr
  * @param {(eventName: string, data: object) => void} onEvent  이벤트 콜백
  * @returns {Promise<void>}  스트림 종료 시 resolve
  */
-export async function streamQuery(question, maxRetries = 3, sessionId = null, onEvent, currentParams = null, signal = null) {
+export async function streamQuery(
+  question,
+  maxRetries = 3,
+  sessionId = null,
+  onEvent,
+  currentParams = null,
+  signal = null,
+) {
   const body = { question, domain: null, max_retries: maxRetries };
   if (sessionId) body.session_id = sessionId;
   if (currentParams) body.current_params = currentParams;
@@ -61,7 +74,9 @@ export async function streamQuery(question, maxRetries = 3, sessionId = null, on
   if (!res.ok) {
     const text = await res.text();
     let err = {};
-    try { err = JSON.parse(text); } catch {}
+    try {
+      err = JSON.parse(text);
+    } catch {}
     throw new Error(err.error || err.message || `HTTP ${res.status}`);
   }
 
@@ -72,7 +87,10 @@ export async function streamQuery(question, maxRetries = 3, sessionId = null, on
   let currentDataLines = [];
 
   while (true) {
-    if (signal?.aborted) { reader.cancel(); break; }
+    if (signal?.aborted) {
+      reader.cancel();
+      break;
+    }
     const { done, value } = await reader.read();
     if (done) break;
 
@@ -87,7 +105,9 @@ export async function streamQuery(question, maxRetries = 3, sessionId = null, on
           try {
             const data = JSON.parse(currentDataLines.join("\n"));
             onEvent(currentEvent, data);
-          } catch (_) { /* ignore */ }
+          } catch (_) {
+            /* ignore */
+          }
         }
         currentEvent = "message";
         currentDataLines = [];
@@ -110,14 +130,15 @@ export async function streamQuery(question, maxRetries = 3, sessionId = null, on
 export async function fetchLogs(type = "queries", limit = 500, userId = "") {
   const params = new URLSearchParams({ type, limit });
   if (userId) params.append("user_id", userId);
-  const res = await fetchWithTimeout(
-    `${BASE_URL}/api/v1/logs?${params}`,
-    { headers: _AUTH_HEADERS }
-  );
+  const res = await fetchWithTimeout(`${BASE_URL}/api/v1/logs?${params}`, {
+    headers: _AUTH_HEADERS,
+  });
   if (!res.ok) {
     const text = await res.text();
     let err = {};
-    try { err = JSON.parse(text); } catch {}
+    try {
+      err = JSON.parse(text);
+    } catch {}
     throw new Error(err.error || err.message || `HTTP ${res.status}`);
   }
   return res.json();
@@ -130,14 +151,15 @@ export async function fetchLogs(type = "queries", limit = 500, userId = "") {
 export async function fetchStats(hours = 24) {
   const h = Math.max(1, Math.min(2160, Math.floor(hours)));
   const params = new URLSearchParams({ hours: h });
-  const res = await fetchWithTimeout(
-    `${BASE_URL}/api/v1/stats?${params}`,
-    { headers: _AUTH_HEADERS }
-  );
+  const res = await fetchWithTimeout(`${BASE_URL}/api/v1/stats?${params}`, {
+    headers: _AUTH_HEADERS,
+  });
   if (!res.ok) {
     const text = await res.text();
     let err = {};
-    try { err = JSON.parse(text); } catch {}
+    try {
+      err = JSON.parse(text);
+    } catch {}
     throw new Error(err.error || err.message || `HTTP ${res.status}`);
   }
   return res.json();
@@ -152,7 +174,9 @@ export async function fetchLogUsers() {
   if (!res.ok) {
     const text = await res.text();
     let err = {};
-    try { err = JSON.parse(text); } catch {}
+    try {
+      err = JSON.parse(text);
+    } catch {}
     throw new Error(err.error || err.message || `HTTP ${res.status}`);
   }
   return res.json();
@@ -167,7 +191,9 @@ export async function fetchRoadmapVotes() {
   if (!res.ok) {
     const text = await res.text();
     let err = {};
-    try { err = JSON.parse(text); } catch {}
+    try {
+      err = JSON.parse(text);
+    } catch {}
     throw new Error(err.error || err.message || `HTTP ${res.status}`);
   }
   return res.json();
@@ -179,14 +205,15 @@ export async function fetchRoadmapVotes() {
  * @returns {Promise<{count: number, items: Array}>}
  */
 export async function fetchFeedback(limit = 500) {
-  const res = await fetchWithTimeout(
-    `${BASE_URL}/api/feedback?limit=${limit}`,
-    { headers: _AUTH_HEADERS }
-  );
+  const res = await fetchWithTimeout(`${BASE_URL}/api/feedback?limit=${limit}`, {
+    headers: _AUTH_HEADERS,
+  });
   if (!res.ok) {
     const text = await res.text();
     let err = {};
-    try { err = JSON.parse(text); } catch {}
+    try {
+      err = JSON.parse(text);
+    } catch {}
     throw new Error(err.error || err.message || `HTTP ${res.status}`);
   }
   return res.json();

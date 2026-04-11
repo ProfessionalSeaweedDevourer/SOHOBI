@@ -15,8 +15,10 @@ export function interpretError(msg) {
     return "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
 
   if (
-    m.includes("'str'") || m.includes("'int'") ||
-    m.includes("unsupported operand") || m.includes("argument must be")
+    m.includes("'str'") ||
+    m.includes("'int'") ||
+    m.includes("unsupported operand") ||
+    m.includes("argument must be")
   )
     return "데이터 처리 중 형식 오류가 발생했습니다. 지역명 또는 수치를 정확히 입력해 주세요.";
 

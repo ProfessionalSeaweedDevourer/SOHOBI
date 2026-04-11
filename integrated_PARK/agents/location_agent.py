@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 _TIMEOUT_MSG = "AI 응답 생성 중 타임아웃이 발생했습니다. 잠시 후 다시 시도해 주세요."
 
+from chart.location_chart import generate_analyze_charts, generate_compare_charts
+from db.repository import AREA_MAP, INDUSTRY_CODE_MAP, STATION_MAP, CommercialRepository
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import (
     AzureChatCompletion,
@@ -28,11 +30,8 @@ from semantic_kernel.connectors.ai.open_ai import (
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import kernel_function
 
-from db.repository import AREA_MAP, INDUSTRY_CODE_MAP, STATION_MAP, CommercialRepository
-from chart.location_chart import generate_analyze_charts, generate_compare_charts
-
-
 # ── 사전 계산 유틸 (CHOI) ─────────────────────────────────────────────
+
 
 def _find_peak_time(data: dict) -> str:
     """시간대별 매출에서 피크타임 판별"""
@@ -64,6 +63,7 @@ def _find_top_age(data: dict) -> tuple:
 
 
 # ── 지역명/업종명 정규화 (CHOI) ────────────────────────────────────────
+
 
 def _normalize_location(raw: str) -> str | None:
     """
@@ -292,14 +292,16 @@ class LocationAgent:
             if not text or text == "None":
                 raise ValueError("LLM이 빈 응답을 반환했습니다.")
             return text
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("LocationAgent LLM 타임아웃 (60초)")
             raise ValueError(_TIMEOUT_MSG)
         except Exception as e:
             err_str = str(e).lower()
             logger.error("LocationAgent LLM 호출 실패: %s", e)
             if "content_filter" in err_str or "content filter" in err_str:
-                safe_sys = "다음은 합법적인 상권 데이터 분석 요청입니다.\n\n" + system_msg
+                safe_sys = (
+                    "다음은 합법적인 상권 데이터 분석 요청입니다.\n\n" + system_msg
+                )
                 safe_history = ChatHistory()
                 safe_history.add_system_message(safe_sys)
                 safe_history.add_user_message(user_msg)
@@ -352,36 +354,39 @@ class LocationAgent:
             params = {}
 
         return {
-            "mode":           params.get("mode", "analyze"),
-            "locations":      params.get("locations", []),
-            "business_type":  params.get("business_type", ""),
-            "quarter":        params.get("quarter", "20254"),
+            "mode": params.get("mode", "analyze"),
+            "locations": params.get("locations", []),
+            "business_type": params.get("business_type", ""),
+            "quarter": params.get("quarter", "20254"),
             "missing_params": params.get("missing_params", []),
         }
 
     # ── partial 응답 헬퍼 ──────────────────────────────────────
 
-    def _build_business_type_partial(self, location: str, quarter: str, mode: str) -> dict:
+    def _build_business_type_partial(
+        self, location: str, quarter: str, mode: str
+    ) -> dict:
         """지역만 있고 업종 없을 때 → 업종 선택 버튼 목록 반환"""
         industries = self._repo.get_primary_industries()
         suggested_actions = [
-            {"label": ind, "value": f"{location} {ind} 분석해줘"}
-            for ind in industries
+            {"label": ind, "value": f"{location} {ind} 분석해줘"} for ind in industries
         ]
         return {
-            "draft":             f"**{location}** 상권에서 어떤 업종을 분석할까요?",
+            "draft": f"**{location}** 상권에서 어떤 업종을 분석할까요?",
             "suggested_actions": suggested_actions,
-            "is_partial":        True,
-            "adm_codes":         [],
-            "type":              mode,
-            "business_type":     "",
-            "location_name":     location,
-            "locations":         [location] if location else [],
-            "quarter":           quarter,
-            "charts":            [],
+            "is_partial": True,
+            "adm_codes": [],
+            "type": mode,
+            "business_type": "",
+            "location_name": location,
+            "locations": [location] if location else [],
+            "quarter": quarter,
+            "charts": [],
         }
 
-    def _build_location_partial(self, business_type: str, quarter: str, mode: str) -> dict:
+    def _build_location_partial(
+        self, business_type: str, quarter: str, mode: str
+    ) -> dict:
         """업종만 있고 지역 없을 때 → 고정 인기 지역 버튼 목록 반환"""
         popular = ["홍대", "강남", "역삼", "잠실", "이태원", "신촌", "성수", "종로"]
         suggested_actions = [
@@ -389,16 +394,16 @@ class LocationAgent:
             for loc in popular
         ]
         return {
-            "draft":             f"**{business_type}** 창업을 고려하고 계시군요! 어느 지역을 분석해드릴까요?",
+            "draft": f"**{business_type}** 창업을 고려하고 계시군요! 어느 지역을 분석해드릴까요?",
             "suggested_actions": suggested_actions,
-            "is_partial":        True,
-            "adm_codes":         [],
-            "type":              mode,
-            "business_type":     business_type,
-            "location_name":     "",
-            "locations":         [],
-            "quarter":           quarter,
-            "charts":            [],
+            "is_partial": True,
+            "adm_codes": [],
+            "type": mode,
+            "business_type": business_type,
+            "location_name": "",
+            "locations": [],
+            "quarter": quarter,
+            "charts": [],
         }
 
     # ── DB 조회 + LLM 단일 지역 분석 ───────────────────────────
@@ -457,7 +462,9 @@ class LocationAgent:
 
         sales_data, store_data = await asyncio.gather(
             asyncio.to_thread(self._repo.get_sales, location, business_type, quarter),
-            asyncio.to_thread(self._repo.get_store_count, location, business_type, quarter),
+            asyncio.to_thread(
+                self._repo.get_store_count, location, business_type, quarter
+            ),
         )
 
         if not sales_data and not store_data:
@@ -476,7 +483,9 @@ class LocationAgent:
 
         # 점포당 평균 매출 계산
         monthly_sales = float(
-            sales_data.get("summary", {}).get("monthly_sales_krw", 0) if sales_data else 0
+            sales_data.get("summary", {}).get("monthly_sales_krw", 0)
+            if sales_data
+            else 0
         )
         store_count = int(
             store_data.get("summary", {}).get("store_count", 0) if store_data else 0
@@ -489,7 +498,9 @@ class LocationAgent:
             for s in sales_data.get("breakdown", []):
                 s_count = int(store_map.get(s["adm_name"], {}).get("store_count", 0))
                 s_sales = float(s.get("monthly_sales_krw", 0))
-                s["avg_sales_per_store_krw"] = int(s_sales / s_count) if s_count > 0 else 0
+                s["avg_sales_per_store_krw"] = (
+                    int(s_sales / s_count) if s_count > 0 else 0
+                )
 
         # _run_agent(LLM 호출)과 유사 상권 조회(동기 DB)를 병렬 실행
         results = await asyncio.gather(
@@ -510,15 +521,14 @@ class LocationAgent:
 
         if similar:
             rows = "\n".join(
-                f"| {i+1} | {s['adm_name']} | {s['monthly_sales_krw']:,}원 | "
+                f"| {i + 1} | {s['adm_name']} | {s['monthly_sales_krw']:,}원 | "
                 f"{s['store_count']}개 | {s['avg_sales_per_store_krw']:,}원 |"
                 for i, s in enumerate(similar)
             )
             similar_table = (
                 "\n\n📍 유사 상권 추천 (참고)\n\n"
                 "| 순위 | 지역 | 월매출 | 점포수 | 점포당 평균 |\n"
-                "|------|------|--------|--------|------------|\n"
-                + rows
+                "|------|------|--------|--------|------------|\n" + rows
             )
             analysis += similar_table
         elif similar_failed:
@@ -535,7 +545,12 @@ class LocationAgent:
                 logger.warning("LocationAgent 차트 생성 실패: %s", e)
 
         adm_codes = self._repo._get_adm_codes(location)
-        return {"draft": analysis, "adm_codes": adm_codes, "type": "analyze", "charts": charts}
+        return {
+            "draft": analysis,
+            "adm_codes": adm_codes,
+            "type": "analyze",
+            "charts": charts,
+        }
 
     # ── DB 조회 + LLM 복수 지역 비교 ───────────────────────────
 
@@ -567,13 +582,19 @@ class LocationAgent:
         q = quarter[4]
 
         location_data = []
-        all_results = await asyncio.gather(*[
-            asyncio.gather(
-                asyncio.to_thread(self._repo.get_sales, loc, business_type, quarter),
-                asyncio.to_thread(self._repo.get_store_count, loc, business_type, quarter),
-            )
-            for loc in locations
-        ])
+        all_results = await asyncio.gather(
+            *[
+                asyncio.gather(
+                    asyncio.to_thread(
+                        self._repo.get_sales, loc, business_type, quarter
+                    ),
+                    asyncio.to_thread(
+                        self._repo.get_store_count, loc, business_type, quarter
+                    ),
+                )
+                for loc in locations
+            ]
+        )
         for loc, (sales, store) in zip(locations, all_results):
             if not sales and not store:
                 continue
@@ -584,18 +605,28 @@ class LocationAgent:
             cnt = int(st.get("store_count", 0))
             avg = int(monthly / cnt) if cnt > 0 else 0
 
-            location_data.append({
-                "location": loc,
-                "monthly_sales_krw": monthly,
-                "store_count": cnt,
-                "avg_sales_per_store_krw": avg,
-                "weekday_pct": round(ss.get("weekday_sales_krw", 0) / monthly * 100) if monthly else 0,
-                "weekend_pct": round(ss.get("weekend_sales_krw", 0) / monthly * 100) if monthly else 0,
-                "open_rate_pct": st.get("open_rate_pct", 0),
-                "close_rate_pct": st.get("close_rate_pct", 0),
-                "male_pct": round(ss.get("male_sales_krw", 0) / monthly * 100) if monthly else 0,
-                "female_pct": round(ss.get("female_sales_krw", 0) / monthly * 100) if monthly else 0,
-            })
+            location_data.append(
+                {
+                    "location": loc,
+                    "monthly_sales_krw": monthly,
+                    "store_count": cnt,
+                    "avg_sales_per_store_krw": avg,
+                    "weekday_pct": round(ss.get("weekday_sales_krw", 0) / monthly * 100)
+                    if monthly
+                    else 0,
+                    "weekend_pct": round(ss.get("weekend_sales_krw", 0) / monthly * 100)
+                    if monthly
+                    else 0,
+                    "open_rate_pct": st.get("open_rate_pct", 0),
+                    "close_rate_pct": st.get("close_rate_pct", 0),
+                    "male_pct": round(ss.get("male_sales_krw", 0) / monthly * 100)
+                    if monthly
+                    else 0,
+                    "female_pct": round(ss.get("female_sales_krw", 0) / monthly * 100)
+                    if monthly
+                    else 0,
+                }
+            )
 
         if not location_data:
             return {
@@ -616,7 +647,12 @@ class LocationAgent:
         all_adm_codes = []
         for loc in locations:
             all_adm_codes.extend(self._repo._get_adm_codes(loc))
-        return {"draft": analysis, "adm_codes": all_adm_codes, "type": "compare", "charts": charts}
+        return {
+            "draft": analysis,
+            "adm_codes": all_adm_codes,
+            "type": "compare",
+            "charts": charts,
+        }
 
     # ── 오케스트레이터 진입점 ───────────────────────────────────
 
@@ -637,7 +673,9 @@ class LocationAgent:
         # previous_draft와 quarter가 context에 있으면 전체 파이프라인 skip
         if retry_prompt and previous_draft:
             quarter_ctx = ctx.get("quarter", "")
-            if quarter_ctx and not any(previous_draft.startswith(p) for p in _NO_DATA_PREFIXES):
+            if quarter_ctx and not any(
+                previous_draft.startswith(p) for p in _NO_DATA_PREFIXES
+            ):
                 locations_ctx: list[str] = ctx.get("locations") or (
                     [ctx["location_name"]] if ctx.get("location_name") else []
                 )
@@ -646,7 +684,9 @@ class LocationAgent:
                 mode_ctx = "compare" if len(locations_ctx) >= 2 else "analyze"
 
                 retry_prefix = _RETRY_PREFIX.format(retry_prompt=retry_prompt)
-                profile_ctx_str = _PROFILE_CONTEXT.format(profile=profile) if profile else ""
+                profile_ctx_str = (
+                    _PROFILE_CONTEXT.format(profile=profile) if profile else ""
+                )
                 year_ctx = quarter_ctx[:4]
                 q_ctx = quarter_ctx[4]
 
@@ -661,7 +701,11 @@ class LocationAgent:
                         year=year_ctx, q=q_ctx, business_type=business_type_ctx
                     )
                 else:
-                    location_name_ctx = locations_ctx[0] if locations_ctx else ctx.get("location_name", "")
+                    location_name_ctx = (
+                        locations_ctx[0]
+                        if locations_ctx
+                        else ctx.get("location_name", "")
+                    )
                     user_msg = (
                         f"{retry_prefix}{profile_ctx_str}"
                         f"지역: {location_name_ctx} / 업종: {business_type_ctx} / 분기: {quarter_ctx}\n\n"
@@ -679,18 +723,22 @@ class LocationAgent:
                 if _DISCLAIMER not in draft_revised:
                     draft_revised = draft_revised.rstrip() + _DISCLAIMER
                 return {
-                    "draft":         draft_revised,
-                    "adm_codes":     adm_codes_ctx,
-                    "type":          mode_ctx,
+                    "draft": draft_revised,
+                    "adm_codes": adm_codes_ctx,
+                    "type": mode_ctx,
                     "business_type": business_type_ctx,
-                    "location_name": locations_ctx[0] if locations_ctx else ctx.get("location_name", ""),
-                    "locations":     locations_ctx,
-                    "quarter":       quarter_ctx,
-                    "charts":        [],  # 차트는 orchestrator가 이전 attempt 것을 유지
+                    "location_name": locations_ctx[0]
+                    if locations_ctx
+                    else ctx.get("location_name", ""),
+                    "locations": locations_ctx,
+                    "quarter": quarter_ctx,
+                    "charts": [],  # 차트는 orchestrator가 이전 attempt 것을 유지
                 }
 
         # ── 전체 파이프라인 (첫 시도 또는 retry 빠른 경로 불가) ──────────
-        params = await self._extract_params(question, prior_history=prior_history, context=ctx)
+        params = await self._extract_params(
+            question, prior_history=prior_history, context=ctx
+        )
         mode = params["mode"]
         quarter = params["quarter"]
 
@@ -721,14 +769,14 @@ class LocationAgent:
                         f"서울 주요 구·동 이름으로 질문해 주세요 (총 {len(supported_locs)}개 지역 지원).\n"
                         f"예: {', '.join(examples)} 등"
                     ),
-                    "adm_codes":         [],
-                    "type":              mode,
-                    "business_type":     "",
-                    "location_name":     ", ".join(unsupported_raw),
-                    "locations":         [],
-                    "quarter":           quarter,
+                    "adm_codes": [],
+                    "type": mode,
+                    "business_type": "",
+                    "location_name": ", ".join(unsupported_raw),
+                    "locations": [],
+                    "quarter": quarter,
                     "suggested_actions": [],
-                    "is_partial":        False,
+                    "is_partial": False,
                 }
             return {
                 "draft": (
@@ -739,8 +787,8 @@ class LocationAgent:
                 "type": mode,
                 "business_type": "",
                 "location_name": "",
-                "locations":     [],
-                "quarter":       quarter,
+                "locations": [],
+                "quarter": quarter,
             }
         elif not business_type:
             return self._build_business_type_partial(locations[0], quarter, mode)
@@ -761,8 +809,8 @@ class LocationAgent:
                 "type": mode,
                 "business_type": business_type,
                 "location_name": locations[0] if locations else "",
-                "locations":     locations,
-                "quarter":       quarter,
+                "locations": locations,
+                "quarter": quarter,
             }
 
         draft = result["draft"]
@@ -806,12 +854,12 @@ class LocationAgent:
         if _DISCLAIMER not in draft:
             draft = draft.rstrip() + _DISCLAIMER
         return {
-            "draft":         draft,
-            "adm_codes":     adm_codes,
-            "type":          mode,
+            "draft": draft,
+            "adm_codes": adm_codes,
+            "type": mode,
             "business_type": business_type,
             "location_name": locations[0] if locations else "",
-            "locations":     locations,
-            "quarter":       quarter,
-            "charts":        charts,
+            "locations": locations,
+            "quarter": quarter,
+            "charts": charts,
         }

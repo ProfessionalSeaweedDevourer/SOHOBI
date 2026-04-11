@@ -2,7 +2,7 @@
 
 :root {
   --font-size: 16px;
-  --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  --font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -40,7 +40,7 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  
+
   /* SOHOBI Brand Colors */
   --brand-blue: #0891b2;
   --brand-teal: #14b8a6;
@@ -55,11 +55,11 @@
   --grade-a: #10b981;
   --grade-b: #eab308;
   --grade-c: #ef4444;
-  
+
   /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(255, 255, 255, 0.3);
-  
+
   /* Glow effects */
   --glow-blue: 0 0 20px rgba(8, 145, 178, 0.4);
   --glow-teal: 0 0 20px rgba(20, 184, 166, 0.4);
@@ -107,7 +107,7 @@
   /* Dark mode glassmorphism - 더 자연스러운 유리 효과 */
   --glass-bg: rgba(26, 32, 48, 0.6);
   --glass-border: rgba(136, 145, 168, 0.2);
-  
+
   /* Dark mode glow effects - 더 강렬하게 */
   --glow-blue: 0 0 30px rgba(8, 145, 178, 0.5);
   --glow-teal: 0 0 30px rgba(20, 184, 166, 0.5);

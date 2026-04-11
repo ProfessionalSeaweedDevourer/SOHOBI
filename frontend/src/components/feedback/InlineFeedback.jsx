@@ -11,7 +11,14 @@ export default function InlineFeedback({ sessionId, agentType, messageId, conver
 
   const handlePositive = async () => {
     setState("submitting");
-    await submitFeedback({ sessionId, agentType, messageId, feedbackType: "positive", tags: [], conversationContext });
+    await submitFeedback({
+      sessionId,
+      agentType,
+      messageId,
+      feedbackType: "positive",
+      tags: [],
+      conversationContext,
+    });
     setState("complete");
     setTimeout(() => setState("done"), 1500);
   };
@@ -22,13 +29,20 @@ export default function InlineFeedback({ sessionId, agentType, messageId, conver
 
   const handleTagToggle = (tagId) => {
     setSelectedTags((prev) =>
-      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
+      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId],
     );
   };
 
   const handleSubmitNegative = async () => {
     setState("submitting");
-    await submitFeedback({ sessionId, agentType, messageId, feedbackType: "negative", tags: selectedTags, conversationContext });
+    await submitFeedback({
+      sessionId,
+      agentType,
+      messageId,
+      feedbackType: "negative",
+      tags: selectedTags,
+      conversationContext,
+    });
     setState("complete");
     setTimeout(() => setState("done"), 1500);
   };
@@ -56,10 +70,7 @@ export default function InlineFeedback({ sessionId, agentType, messageId, conver
   }
 
   return (
-    <div
-      className="mt-3 pt-3"
-      style={{ borderTop: "1px solid var(--border)" }}
-    >
+    <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
       <div className="flex items-center gap-3">
         <span className="text-xs text-muted-foreground">{FEEDBACK_MESSAGES.prompt}</span>
         <button
@@ -73,8 +84,14 @@ export default function InlineFeedback({ sessionId, agentType, messageId, conver
               ? { background: "var(--muted)", borderColor: "var(--border)" }
               : { background: "transparent", borderColor: "var(--border)" }
           }
-          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(16,185,129,0.12)"; e.currentTarget.style.borderColor = "var(--grade-a)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--border)"; }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(16,185,129,0.12)";
+            e.currentTarget.style.borderColor = "var(--grade-a)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.borderColor = "var(--border)";
+          }}
         >
           👍
         </button>
@@ -89,8 +106,18 @@ export default function InlineFeedback({ sessionId, agentType, messageId, conver
               ? { background: "rgba(244,67,54,0.12)", borderColor: "#F44336" }
               : { background: "transparent", borderColor: "var(--border)" }
           }
-          onMouseEnter={(e) => { if (state !== "tagging") { e.currentTarget.style.background = "rgba(244,67,54,0.12)"; e.currentTarget.style.borderColor = "#F44336"; } }}
-          onMouseLeave={(e) => { if (state !== "tagging") { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--border)"; } }}
+          onMouseEnter={(e) => {
+            if (state !== "tagging") {
+              e.currentTarget.style.background = "rgba(244,67,54,0.12)";
+              e.currentTarget.style.borderColor = "#F44336";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (state !== "tagging") {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.borderColor = "var(--border)";
+            }
+          }}
         >
           👎
         </button>

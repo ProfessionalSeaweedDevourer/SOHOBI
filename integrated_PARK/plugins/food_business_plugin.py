@@ -66,10 +66,7 @@ class FoodBusinessPlugin:
                 output_path=output_pdf,
                 data=data,
             )
-            return (
-                f"✅ 서류 생성 완료. "
-                f"'{output_pdf}' 파일이 생성되었습니다."
-            )
+            return f"✅ 서류 생성 완료. '{output_pdf}' 파일이 생성되었습니다."
         except json.JSONDecodeError as e:
             return f"❌ JSON 파싱 오류: {e}"
         except Exception as e:

@@ -37,12 +37,21 @@ _EXTRACT_PROMPT = """다음 텍스트에서 창업 재무 시뮬레이션에 사
 
 JSON만 출력하십시오. 다른 텍스트는 절대 포함하지 마십시오."""
 
-_NUMERIC_KEYS = {"revenue", "cost", "salary", "hours", "rent", "admin", "fee", "initial_investment"}
+_NUMERIC_KEYS = {
+    "revenue",
+    "cost",
+    "salary",
+    "hours",
+    "rent",
+    "admin",
+    "fee",
+    "initial_investment",
+}
 
 
 async def extract_financial_vars(text: str) -> dict:
     """에이전트 응답 텍스트에서 재무 변수를 추출한다. 실패 시 {} 반환."""
-    if not text or not re.search(r'\d', text):
+    if not text or not re.search(r"\d", text):
         return {}
 
     try:
@@ -60,7 +69,7 @@ async def extract_financial_vars(text: str) -> dict:
         settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=300)
         result = await service.get_chat_message_content(history, settings=settings)
         raw = str(result).strip()
-        clean = re.sub(r'^```json\s*|\s*```$', '', raw, flags=re.MULTILINE)
+        clean = re.sub(r"^```json\s*|\s*```$", "", raw, flags=re.MULTILINE)
         parsed = json.loads(clean)
         if not isinstance(parsed, dict):
             return {}

@@ -86,7 +86,9 @@
   color: var(--foreground);
   min-width: 0;
   box-sizing: border-box;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .cp-search-input:focus {
   border-color: var(--brand-teal);

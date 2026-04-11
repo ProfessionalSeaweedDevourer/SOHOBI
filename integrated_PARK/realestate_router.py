@@ -16,25 +16,23 @@ origin: backend/realEstateController.py (WOO-clean2)
 
 import asyncio
 import logging
-from typing import Optional
 
+from db.dao.dongMappingDAO import DongMappingDAO
+from db.dao.landValueDAO import LandValueDAO
+from db.dao.molitRtmsDAO import MolitRtmsDAO
+from db.dao.sangkwonDAO import SangkwonDAO
+from db.dao.sangkwonStoreDAO import SangkwonStoreDAO
+from db.dao.seoulRtmsDAO import SeoulRtmsDAO
 from fastapi import APIRouter, Query
 
-from db.dao.sangkwonDAO import SangkwonDAO
-from db.dao.dongMappingDAO import DongMappingDAO
-from db.dao.molitRtmsDAO import MolitRtmsDAO
-from db.dao.seoulRtmsDAO import SeoulRtmsDAO
-from db.dao.landValueDAO import LandValueDAO
-from db.dao.sangkwonStoreDAO import SangkwonStoreDAO
+logger = logging.getLogger(__name__)
+router = APIRouter()
 
-logger   = logging.getLogger(__name__)
-router   = APIRouter()
-
-skDAO    = SangkwonDAO()
-dmDAO    = DongMappingDAO()
-rtmsDAO  = SeoulRtmsDAO()
+skDAO = SangkwonDAO()
+dmDAO = DongMappingDAO()
+rtmsDAO = SeoulRtmsDAO()
 molitDAO = MolitRtmsDAO()
-lvDAO    = LandValueDAO()
+lvDAO = LandValueDAO()
 storeDAO = SangkwonStoreDAO()
 
 
@@ -42,22 +40,23 @@ def _format_sangkwon_row(row: dict) -> dict:
     if not row:
         return None
     return {
-        "dong":         row.get("adm_nm", ""),
-        "code":         row.get("adm_cd", ""),
-        "quarter":      row.get("base_yr_qtr_cd", ""),
-        "sales":        row.get("tot_sales_amt"),
-        "sales_male":   row.get("ml_sales_amt"),
+        "dong": row.get("adm_nm", ""),
+        "code": row.get("adm_cd", ""),
+        "quarter": row.get("base_yr_qtr_cd", ""),
+        "sales": row.get("tot_sales_amt"),
+        "sales_male": row.get("ml_sales_amt"),
         "sales_female": row.get("fml_sales_amt"),
-        "sales_mdwk":   row.get("mdwk_sales_amt"),
-        "sales_wkend":  row.get("wkend_sales_amt"),
-        "age20":        row.get("age20_amt"),
-        "age30":        row.get("age30_amt"),
-        "age40":        row.get("age40_amt"),
-        "age50":        row.get("age50_amt"),
+        "sales_mdwk": row.get("mdwk_sales_amt"),
+        "sales_wkend": row.get("wkend_sales_amt"),
+        "age20": row.get("age20_amt"),
+        "age30": row.get("age30_amt"),
+        "age40": row.get("age40_amt"),
+        "age50": row.get("age50_amt"),
     }
 
 
 # ── 부동산 실거래 ─────────────────────────────────────────────────
+
 
 @router.get("/realestate/seoul-rtms")
 async def getSeoulRtms(adm_cd: str = Query(...)):
@@ -69,13 +68,15 @@ async def getSeoulRtms(adm_cd: str = Query(...)):
             asyncio.to_thread(molitDAO.fetch_commercial_trade, adm_cd),
         )
         return {
-            "has_data":     seoul.get("has_data") or officetel.get("has_data") or commercial.get("has_data"),
-            "매매":         seoul.get("매매",    {"건수": 0}),
-            "전세":         seoul.get("전세",    {"건수": 0}),
-            "월세":         seoul.get("월세",    {"건수": 0}),
+            "has_data": seoul.get("has_data")
+            or officetel.get("has_data")
+            or commercial.get("has_data"),
+            "매매": seoul.get("매매", {"건수": 0}),
+            "전세": seoul.get("전세", {"건수": 0}),
+            "월세": seoul.get("월세", {"건수": 0}),
             "오피스텔전세": officetel.get("전세", {"건수": 0}),
             "오피스텔월세": officetel.get("월세", {"건수": 0}),
-            "상업용매매":   commercial.get("매매", {"건수": 0}),
+            "상업용매매": commercial.get("매매", {"건수": 0}),
         }
     except Exception as e:
         logger.error(f"[seoul-rtms] {e}")
@@ -84,35 +85,37 @@ async def getSeoulRtms(adm_cd: str = Query(...)):
 
 # ── 상권 매출 ─────────────────────────────────────────────────────
 
+
 @router.get("/realestate/sangkwon")
 def getSangkwon(
-    adm_cd:  str = Query(""),
-    dong:    str = Query(""),
-    gu:      str = Query(""),
+    adm_cd: str = Query(""),
+    dong: str = Query(""),
+    gu: str = Query(""),
     quarter: str = Query(""),
 ):
     if adm_cd:
         logger.info(f"[sangkwon] adm_cd={adm_cd} quarter={quarter or '최신'}")
         row = (
             skDAO.getSalesByCodeAndQuarter(adm_cd, quarter)
-            if quarter else skDAO.getSalesByCode(adm_cd)
+            if quarter
+            else skDAO.getSalesByCode(adm_cd)
         )
     else:
         logger.info(f"[sangkwon] dong={dong} gu={gu}")
         results = skDAO.searchDong(dong)
-        row     = skDAO.getSalesByCode(results[0]["adm_cd"]) if results else None
+        row = skDAO.getSalesByCode(results[0]["adm_cd"]) if results else None
     if not row:
         return {"data": None, "avg": None, "message": "데이터 없음"}
     avg = skDAO.getSalesAvgByCode(adm_cd) if adm_cd else None
     return {
         "data": _format_sangkwon_row(row),
-        "avg":  _format_sangkwon_row(avg) if avg else None,
+        "avg": _format_sangkwon_row(avg) if avg else None,
     }
 
 
 @router.get("/realestate/sangkwon-svc")
 def getSangkwonBySvc(
-    adm_cd:  str = Query(...),
+    adm_cd: str = Query(...),
     quarter: str = Query(""),
 ):
     logger.info(f"[sangkwon-svc] adm_cd={adm_cd} quarter={quarter or '최신'}")
@@ -122,8 +125,8 @@ def getSangkwonBySvc(
 
 @router.get("/realestate/sangkwon-svc-by-cat")
 def getSangkwonSvcByCat(
-    adm_cd:  str = Query(...),
-    cat_cd:  str = Query(...),
+    adm_cd: str = Query(...),
+    cat_cd: str = Query(...),
     quarter: str = Query(""),
 ):
     logger.info(f"[sangkwon-svc-by-cat] adm_cd={adm_cd} cat_cd={cat_cd}")
@@ -137,9 +140,9 @@ def getSangkwonSvcByCat(
 
 @router.get("/realestate/sangkwon-store")
 def getSangkwonStore(
-    adm_cd:  str = Query(...),
+    adm_cd: str = Query(...),
     quarter: str = Query(""),
-    svc_cd:  str = Query(""),
+    svc_cd: str = Query(""),
 ):
     logger.info(f"[sangkwon-store] adm_cd={adm_cd} svc_cd={svc_cd or '전체'}")
     if svc_cd:
@@ -151,7 +154,7 @@ def getSangkwonStore(
 
 @router.get("/realestate/sangkwon-induty")
 def getSangkwonByInduty(
-    code:   str = Query(...),
+    code: str = Query(...),
     induty: str = Query(""),
 ):
     rows = skDAO.getSalesByInduty(code, induty)
@@ -166,6 +169,7 @@ def getSangkwonQuarters():
 
 # ── 검색 ─────────────────────────────────────────────────────────
 
+
 @router.get("/realestate/search-dong")
 def searchDong(q: str = Query(...)):
     logger.info(f"[search-dong] q={q}")
@@ -179,9 +183,10 @@ def searchDong(q: str = Query(...)):
 
 # ── 공시지가 ──────────────────────────────────────────────────────
 
+
 @router.get("/realestate/land-value")
 async def getLandValue(
-    pnu:   str = Query(...),
+    pnu: str = Query(...),
     years: int = Query(5),
 ):
     return await lvDAO.fetch(pnu, years)

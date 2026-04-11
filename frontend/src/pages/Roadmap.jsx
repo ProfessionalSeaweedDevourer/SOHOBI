@@ -19,8 +19,7 @@ export default function Roadmap() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const sessionId =
-    typeof window !== "undefined" ? localStorage.getItem(SESSION_KEY) || "" : "";
+  const sessionId = typeof window !== "undefined" ? localStorage.getItem(SESSION_KEY) || "" : "";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -28,7 +27,7 @@ export default function Roadmap() {
       try {
         const res = await fetch(
           `${BASE_URL}/api/roadmap/votes?session_id=${encodeURIComponent(sessionId)}`,
-          { headers: _HEADERS, signal: controller.signal }
+          { headers: _HEADERS, signal: controller.signal },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -57,7 +56,7 @@ export default function Roadmap() {
             vote_count: nowVoted ? f.vote_count + 1 : Math.max(0, f.vote_count - 1),
           };
         })
-        .sort((a, b) => b.vote_count - a.vote_count)
+        .sort((a, b) => b.vote_count - a.vote_count),
     );
 
     try {
@@ -73,9 +72,9 @@ export default function Roadmap() {
           .map((f) =>
             f.feature_id === featureId
               ? { ...f, user_voted: data.voted, vote_count: data.vote_count }
-              : f
+              : f,
           )
-          .sort((a, b) => b.vote_count - a.vote_count)
+          .sort((a, b) => b.vote_count - a.vote_count),
       );
     } catch {
       setFeatures((prev) =>
@@ -89,20 +88,20 @@ export default function Roadmap() {
               vote_count: revert ? f.vote_count + 1 : Math.max(0, f.vote_count - 1),
             };
           })
-          .sort((a, b) => b.vote_count - a.vote_count)
+          .sort((a, b) => b.vote_count - a.vote_count),
       );
       toast.error("투표에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     }
   }
 
   const inProgress = features.filter((f) => f.status === "in_progress");
-  const voting     = features.filter((f) => f.status !== "in_progress");
+  const voting = features.filter((f) => f.status !== "in_progress");
   const totalVotes = voting.reduce((sum, f) => sum + (f.vote_count ?? 0), 0);
 
   const stats = [
-    { icon: "🗳️", label: "전체 피처",  value: features.length, unit: "개", color: "#0891b2" },
-    { icon: "▲",  label: "총 투표 수", value: totalVotes,       unit: "표", color: "#14b8a6" },
-    { icon: "⚡", label: "개발 중",    value: inProgress.length, unit: "개", color: "#f97316" },
+    { icon: "🗳️", label: "전체 피처", value: features.length, unit: "개", color: "#0891b2" },
+    { icon: "▲", label: "총 투표 수", value: totalVotes, unit: "표", color: "#14b8a6" },
+    { icon: "⚡", label: "개발 중", value: inProgress.length, unit: "개", color: "#f97316" },
   ];
 
   return (
@@ -141,7 +140,6 @@ export default function Roadmap() {
       </motion.header>
 
       <main className="relative z-10 flex-1 max-w-2xl w-full mx-auto px-4 py-10 flex flex-col gap-10">
-
         {/* 히어로 */}
         <div className="flex flex-col items-center text-center gap-4">
           <motion.div
@@ -197,11 +195,17 @@ export default function Roadmap() {
                     style={{ color: stat.color }}
                   >
                     {stat.value}
-                    <span className="text-xs font-normal ml-0.5" style={{ color: "var(--muted-foreground)" }}>
+                    <span
+                      className="text-xs font-normal ml-0.5"
+                      style={{ color: "var(--muted-foreground)" }}
+                    >
                       {stat.unit}
                     </span>
                   </span>
-                  <span className="text-xs relative z-10" style={{ color: "var(--muted-foreground)" }}>
+                  <span
+                    className="text-xs relative z-10"
+                    style={{ color: "var(--muted-foreground)" }}
+                  >
                     {stat.label}
                   </span>
                 </div>
@@ -231,7 +235,9 @@ export default function Roadmap() {
                 <a
                   href="/user"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105"
-                  style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
+                  style={{
+                    background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))",
+                  }}
                 >
                   AI 에이전트와 대화하기
                   <ArrowRight size={14} />
@@ -265,7 +271,6 @@ export default function Roadmap() {
         {/* 피처 목록 */}
         {!loading && !error && features.length > 0 && (
           <div className="flex flex-col gap-8">
-
             {/* 개발 중 섹션 */}
             {inProgress.length > 0 && (
               <section className="flex flex-col gap-4">
@@ -306,7 +311,10 @@ export default function Roadmap() {
                           >
                             {feat.icon}
                           </div>
-                          <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                          <span
+                            className="text-sm font-medium"
+                            style={{ color: "var(--foreground)" }}
+                          >
                             {feat.label}
                           </span>
                         </div>
@@ -314,7 +322,10 @@ export default function Roadmap() {
                           animate={{ opacity: [1, 0.5, 1] }}
                           transition={{ duration: 1.5, repeat: Infinity }}
                           className="text-xs font-semibold px-3 py-1.5 rounded-xl relative z-10 shrink-0"
-                          style={{ background: "rgba(20,184,166,0.15)", color: "var(--brand-teal)" }}
+                          style={{
+                            background: "rgba(20,184,166,0.15)",
+                            color: "var(--brand-teal)",
+                          }}
                         >
                           개발 중
                         </motion.span>
@@ -362,7 +373,10 @@ export default function Roadmap() {
                           >
                             {feat.icon}
                           </div>
-                          <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                          <span
+                            className="text-sm font-medium"
+                            style={{ color: "var(--foreground)" }}
+                          >
                             {feat.label}
                           </span>
                         </div>
@@ -381,9 +395,7 @@ export default function Roadmap() {
                             borderColor: feat.user_voted ? "transparent" : "var(--brand-blue)",
                             cursor: sessionId ? "pointer" : "default",
                             opacity: sessionId ? 1 : 0.5,
-                            boxShadow: feat.user_voted
-                              ? "0 0 16px rgba(8,145,178,0.35)"
-                              : "none",
+                            boxShadow: feat.user_voted ? "0 0 16px rgba(8,145,178,0.35)" : "none",
                           }}
                         >
                           ▲ {feat.vote_count}

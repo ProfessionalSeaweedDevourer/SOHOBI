@@ -6,24 +6,49 @@ import InlineFeedback from "./feedback/InlineFeedback";
 import ActionButtons from "./ActionButtons";
 import { trackEvent } from "../utils/trackEvent";
 
-const DOMAIN_KR = { finance: "재무", admin: "행정", legal: "법무", location: "상권분석", chat: "안내" };
+const DOMAIN_KR = {
+  finance: "재무",
+  admin: "행정",
+  legal: "법무",
+  location: "상권분석",
+  chat: "안내",
+};
 const DOMAIN_COLOR = {
   finance: { background: "rgba(20,184,166,0.15)", color: "var(--brand-teal)" },
-  admin:   { background: "rgba(8,145,178,0.15)",  color: "var(--brand-blue)" },
-  legal:   { background: "rgba(249,115,22,0.15)", color: "var(--brand-orange)" },
-  location:{ background: "rgba(139,92,246,0.15)", color: "#8b5cf6" },
-  chat:    { background: "rgba(236,72,153,0.15)", color: "#ec4899" },
+  admin: { background: "rgba(8,145,178,0.15)", color: "var(--brand-blue)" },
+  legal: { background: "rgba(249,115,22,0.15)", color: "var(--brand-orange)" },
+  location: { background: "rgba(139,92,246,0.15)", color: "#8b5cf6" },
+  chat: { background: "rgba(236,72,153,0.15)", color: "#ec4899" },
 };
 
 const GRADE_STYLE = {
   A: { background: "rgba(16,185,129,0.15)", color: "var(--grade-a)" },
-  B: { background: "rgba(234,179,8,0.15)",  color: "var(--grade-b)" },
-  C: { background: "rgba(239,68,68,0.15)",  color: "var(--grade-c)" },
+  B: { background: "rgba(234,179,8,0.15)", color: "var(--grade-b)" },
+  C: { background: "rgba(239,68,68,0.15)", color: "var(--grade-c)" },
 };
 const GRADE_LABEL = { A: "A 통과", B: "B 경고", C: "C 반려" };
 
 // displayMode: 'full' = 개발자(도메인+등급+재시도), 'grade' = 사용자(등급+검증횟수), 'none' = 미표시
-export default function ResponseCard({ question, domain, status, grade, confidenceNote, draft, retryCount, chart, charts, displayMode = "none", sessionId, messageId, onRegenerate, regenerated, isLoading, suggestedActions, onSuggestedAction, actionsDisabled }) {
+export default function ResponseCard({
+  question,
+  domain,
+  status,
+  grade,
+  confidenceNote,
+  draft,
+  retryCount,
+  chart,
+  charts,
+  displayMode = "none",
+  sessionId,
+  messageId,
+  onRegenerate,
+  regenerated,
+  isLoading,
+  suggestedActions,
+  onSuggestedAction,
+  actionsDisabled,
+}) {
   const isEscalated = status === "escalated";
   const isError = status === "error";
   const [copyState, setCopyState] = useState("idle");
@@ -46,7 +71,7 @@ export default function ResponseCard({ question, domain, status, grade, confiden
 
   useEffect(() => {
     if (!isError) {
-      trackEvent('agent_response_view', {
+      trackEvent("agent_response_view", {
         session_id: sessionId,
         message_id: messageId,
         agent_type: domain,
@@ -54,7 +79,8 @@ export default function ResponseCard({ question, domain, status, grade, confiden
     }
   }, []);
   const effectiveGrade = grade || (isEscalated ? "C" : "A");
-  const showBadges = !isError && displayMode !== "none" && domain && (displayMode === "full" || domain !== "chat");
+  const showBadges =
+    !isError && displayMode !== "none" && domain && (displayMode === "full" || domain !== "chat");
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -73,7 +99,9 @@ export default function ResponseCard({ question, domain, status, grade, confiden
             className="glass rounded-2xl rounded-tl-sm px-5 py-4 shadow-elevated text-sm border"
             style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.3)" }}
           >
-            <div className="font-semibold mb-1" style={{ color: "var(--grade-c)" }}>⚠ 오류가 발생했습니다</div>
+            <div className="font-semibold mb-1" style={{ color: "var(--grade-c)" }}>
+              ⚠ 오류가 발생했습니다
+            </div>
             <div className="text-foreground">{draft}</div>
           </div>
         ) : null}
@@ -83,7 +111,12 @@ export default function ResponseCard({ question, domain, status, grade, confiden
             {displayMode === "full" && (
               <span
                 className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                style={DOMAIN_COLOR[domain] || { background: "var(--muted)", color: "var(--muted-foreground)" }}
+                style={
+                  DOMAIN_COLOR[domain] || {
+                    background: "var(--muted)",
+                    color: "var(--muted-foreground)",
+                  }
+                }
               >
                 {DOMAIN_KR[domain] || domain}
               </span>
@@ -91,7 +124,12 @@ export default function ResponseCard({ question, domain, status, grade, confiden
             {domain !== "chat" && (
               <span
                 className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                style={GRADE_STYLE[effectiveGrade] || { background: "var(--muted)", color: "var(--muted-foreground)" }}
+                style={
+                  GRADE_STYLE[effectiveGrade] || {
+                    background: "var(--muted)",
+                    color: "var(--muted-foreground)",
+                  }
+                }
               >
                 {GRADE_LABEL[effectiveGrade] || effectiveGrade}
               </span>
@@ -110,10 +148,15 @@ export default function ResponseCard({ question, domain, status, grade, confiden
               {isEscalated ? (
                 <div style={{ color: "var(--grade-b)" }}>
                   <div className="font-semibold mb-1">검토가 필요합니다</div>
-                  <div className="text-muted-foreground text-xs">이 질문은 에이전트가 최종 검증을 통과하지 못했습니다. 질문을 구체적으로 바꿔 다시 시도해 주세요.</div>
+                  <div className="text-muted-foreground text-xs">
+                    이 질문은 에이전트가 최종 검증을 통과하지 못했습니다. 질문을 구체적으로 바꿔
+                    다시 시도해 주세요.
+                  </div>
                   {draft && (
                     <details className="mt-3">
-                      <summary className="cursor-pointer text-xs text-muted-foreground">최종 draft 보기</summary>
+                      <summary className="cursor-pointer text-xs text-muted-foreground">
+                        최종 draft 보기
+                      </summary>
                       <div className="mt-2 prose-response">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{draft}</ReactMarkdown>
                       </div>
@@ -130,9 +173,7 @@ export default function ResponseCard({ question, domain, status, grade, confiden
                       disabled={actionsDisabled}
                     />
                   )}
-                  {chart && typeof chart === "object" && (
-                    <SimulationChart chartData={chart} />
-                  )}
+                  {chart && typeof chart === "object" && <SimulationChart chartData={chart} />}
                   {charts && charts.length > 0 && (
                     <div className="mt-4 flex flex-col gap-3">
                       {charts.map((b64, idx) => (
@@ -184,7 +225,11 @@ export default function ResponseCard({ question, domain, status, grade, confiden
                 <button
                   onClick={handleShare}
                   className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:opacity-70"
-                  style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", background: "transparent" }}
+                  style={{
+                    borderColor: "var(--border)",
+                    color: "var(--muted-foreground)",
+                    background: "transparent",
+                  }}
                 >
                   공유
                 </button>
@@ -193,7 +238,11 @@ export default function ResponseCard({ question, domain, status, grade, confiden
                     onClick={onRegenerate}
                     disabled={isLoading || regenerated}
                     className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ borderColor: "var(--border)", color: "var(--muted-foreground)", background: "transparent" }}
+                    style={{
+                      borderColor: "var(--border)",
+                      color: "var(--muted-foreground)",
+                      background: "transparent",
+                    }}
                   >
                     {regenerated ? "재생성됨" : "재생성"}
                   </button>

@@ -4,7 +4,7 @@ import { trackEvent } from "../utils/trackEvent";
 
 export default function MapPage() {
   useEffect(() => {
-    trackEvent('feature_discovery', { page: 'map' });
+    trackEvent("feature_discovery", { page: "map" });
   }, []);
 
   return <MapView />;
