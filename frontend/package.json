@@ -19,7 +19,7 @@
     "@radix-ui/react-tabs": "1.1.13",
     "@radix-ui/react-tooltip": "1.2.8",
     "@turf/turf": "^7.3.4",
-    "axios": "^1.13.6",
+    "axios": "1.15.0",
     "chart.js": "^4.5.1",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
@@ -47,6 +47,6 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "tailwindcss": "4.2.2",
-    "vite": "^7.3.1"
+    "vite": "7.3.2"
   }
 }
