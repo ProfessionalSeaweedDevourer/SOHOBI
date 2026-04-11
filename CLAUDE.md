@@ -103,6 +103,64 @@ git log --oneline origin/main..HEAD
 - PR 하나에 **관련 커밋만** 포함되어야 한다
 - 관련 없는 커밋이 보이면 `git rebase --onto origin/main <base-commit> <브랜치>` 로 정리 후 PR 생성
 
+## 워크트리 병렬 운용
+
+여러 브랜치를 동시에 작업해야 할 때 **git worktree**를 사용한다. 각 워크트리는 물리적으로 별도 디렉토리이므로 독립된 Claude Code 세션(또는 VS Code 창)에서 병렬 작업이 가능하다.
+
+### 언제 사용하는가
+
+- PR 리뷰 중 다른 브랜치에서 신규 작업을 병행할 때
+- 라이브 서버 장애 시 현재 작업을 중단하지 않고 핫픽스할 때
+- 여러 PR의 코드를 동시에 비교·수정할 때
+
+### 워크트리 생성
+
+```bash
+# 자동 스크립트 (환경 초기화 포함)
+./scripts/worktree-setup.sh PARK-fix-login           # origin/main 기반 새 브랜치
+./scripts/worktree-setup.sh PARK-review-231 pr-branch # 기존 브랜치 체크아웃
+```
+
+스크립트가 수행하는 것:
+
+1. `git worktree add` — 워크트리 생성
+2. `.env` 파일 복사 (backend / frontend)
+3. `npm install` (frontend)
+4. `python3 -m venv` + `pip install` (backend)
+
+생성 위치: `../SOHOBI-<브랜치명>/`
+
+### 수동 생성 (스크립트 없이)
+
+```bash
+git fetch origin
+git worktree add ../SOHOBI-<브랜치명> -b <브랜치명> origin/main
+cp integrated_PARK/.env ../SOHOBI-<브랜치명>/integrated_PARK/.env
+cd ../SOHOBI-<브랜치명>/frontend && npm install
+```
+
+### 제약 사항
+
+| 항목 | 설명 |
+| ------ | ------ |
+| 같은 브랜치 불가 | 두 워크트리가 동일 브랜치를 체크아웃할 수 없음 (git 제약) |
+| `.env` 별도 복사 | `.gitignore`된 파일은 워크트리 간 공유되지 않음 |
+| `node_modules` 별도 설치 | 각 워크트리에서 `npm install` 필요 |
+| `.git`은 공유 | reflog, stash, 브랜치 목록은 모든 워크트리가 동일한 `.git` 참조 |
+| 동시 rebase 주의 | 두 세션이 동시에 같은 원격 브랜치를 rebase하면 lock 충돌 가능 |
+
+### 정리
+
+```bash
+# 워크트리 제거
+git worktree remove ../SOHOBI-<브랜치명>
+
+# 현황 확인
+git worktree list
+```
+
+워크트리 디렉토리는 PR 머지 후 정리한다. 네임스페이스 브랜치(`PARK` 등)에 연결된 워크트리는 유지해도 무방하다.
+
 ## PR 생성 후 테스트 실행 루틴
 
 PR을 연 직후 Test Plan의 각 TC를 직접 실행하고 결과를 사용자에게 보고한다.
