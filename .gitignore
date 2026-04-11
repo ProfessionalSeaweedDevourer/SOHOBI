@@ -25,8 +25,9 @@ PARK/
 .DS_Store
 **/.DS_Store
 
-# Claude
-.claude/
+# Claude (commands/는 팀 공유)
+.claude/*
+!.claude/commands/
 
 # Playwright MCP 스냅샷
 .playwright-mcp/
