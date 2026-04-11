@@ -75,6 +75,7 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 - 코드 수정·테스트 완료 후 정상 동작이 확인되면 Claude가 **스스로 커밋하고 main 머지용 PR**을 연다
 - PR 머지 지시는 검증 완료 후에만. 검증 전 추가 수정은 같은 브랜치에 커밋을 추가
 - 머지 방식은 **Squash and merge만** 허용 (GitHub 설정으로 강제). 머지 후 브랜치는 자동 삭제됨
+- main branch protection(PR 필수 + 1인 리뷰)은 GitHub 미숙한 팀원의 무검토 main 직접 반영을 방지하기 위한 것. **ProfessionalSeaweedDevourer(PARK)** 계정은 `gh pr merge --admin`으로 리뷰 없이 머지 가능
 - **PR 생성 직후** Test Plan의 각 TC를 직접 실행하고 결과를 보고한다 (아래 테스트 실행 루틴 참조)
 - **push 후 반드시** `gh pr list --head <브랜치> --state open` 으로 열린 PR을 확인한다:
   - 열린 PR이 있으면 해당 PR 번호를 사용자에게 알린다
