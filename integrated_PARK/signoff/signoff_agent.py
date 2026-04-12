@@ -110,14 +110,34 @@ def _build_messages(domain: str, draft: str) -> list[dict]:
     return messages
 
 
+# severity 무시하고 강제로 high 취급 — 사용자 안전·거절 신호
+_FORCED_HIGH_CODES = _SECURITY_CODES | _REJECTION_CODES
+
+
+def _issue_severity(issue) -> str:
+    """issue 항목의 severity를 반환한다. 누락·미지정 시 'high' 기본값 (후방호환)."""
+    if not isinstance(issue, dict):
+        return "high"
+    if issue.get("code") in _FORCED_HIGH_CODES:
+        return "high"
+    sev = issue.get("severity", "high")
+    if sev not in ("high", "medium", "low"):
+        return "high"
+    return sev
+
+
 def _derive_grade(verdict: dict) -> str:
-    """issues/warnings 배열에서 grade를 결정한다.
-    C: issues 1개 이상 (blocking)
-    B: issues 없음, warnings 1개 이상 (non-blocking)
-    A: 둘 다 없음
+    """issues/warnings와 severity에서 grade를 결정한다.
+
+    C: high/medium severity issue 1개 이상 (blocking)
+    B: low severity issue만 있거나 warnings 1개 이상 (non-blocking)
+    A: issues·warnings 모두 없음
     """
-    if verdict.get("issues"):
-        return "C"
+    issues = verdict.get("issues", [])
+    if issues:
+        if any(_issue_severity(i) in ("high", "medium") for i in issues):
+            return "C"
+        return "B"
     if verdict.get("warnings"):
         return "B"
     return "A"
@@ -165,8 +185,7 @@ async def run_signoff(
         if not missing:
             # grade와 approved를 확정적으로 설정한다 (LLM 출력 신뢰도 보정)
             verdict["approved"] = len(issues_set) == 0
-            if "grade" not in verdict:
-                verdict["grade"] = _derive_grade(verdict)
+            verdict["grade"] = _derive_grade(verdict)
             # approved=False인데 retry_prompt가 없으면 빈 문자열 방지
             if not verdict["approved"] and not verdict.get("retry_prompt"):
                 verdict["retry_prompt"] = (
@@ -192,8 +211,7 @@ async def run_signoff(
         i["code"] if isinstance(i, dict) else i for i in verdict.get("issues", [])
     }
     verdict["approved"] = len(issues_codes) == 0
-    if "grade" not in verdict:
-        verdict["grade"] = _derive_grade(verdict)
+    verdict["grade"] = _derive_grade(verdict)
     # approved=False인데 retry_prompt가 없으면 빈 문자열 방지
     if not verdict["approved"] and not verdict.get("retry_prompt"):
         verdict["retry_prompt"] = (
@@ -234,12 +252,10 @@ def validate_verdict(verdict: dict, domain: str) -> None:
             "approved=false인데 retry_prompt가 비어 있음"
         )
 
-    # grade 일관성 검사
+    # grade 일관성 검사 (severity 반영)
     grade = verdict.get("grade")
     if grade:
-        if issues_set:
-            assert grade == "C", f"issues가 있는데 grade={grade}"
-        elif warnings_set:
-            assert grade == "B", f"warnings만 있는데 grade={grade}"
-        else:
-            assert grade == "A", f"issues/warnings 없는데 grade={grade}"
+        expected = _derive_grade(verdict)
+        assert grade == expected, (
+            f"grade={grade}이지만 severity 기반 계산값은 {expected}"
+        )
