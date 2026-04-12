@@ -6,7 +6,7 @@
 - 인자 예시: `rejections 100` → `type=rejections&limit=100`
 
 실행 절차:
-1. `source integrated_PARK/.env`로 환경변수 로드
+1. `source backend/.env`로 환경변수 로드
 2. `curl -s "$BACKEND_HOST/api/v1/logs?<파라미터>" | python3 -m json.tool`
 3. 결과를 요약한다:
    - 총 건수, 시간 범위

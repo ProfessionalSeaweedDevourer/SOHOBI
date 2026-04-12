@@ -1,4 +1,4 @@
-# integrated_PARK/db
+# backend/db
 
 데이터베이스 조회 레이어. Azure PostgreSQL Flexible Server에 연결하여 상권·재무·지도 데이터를 제공한다.
 
@@ -17,7 +17,7 @@ db/
 
 ## 환경변수
 
-`integrated_PARK/.env`에 다음 변수가 필요하다:
+`backend/.env`에 다음 변수가 필요하다:
 
 | 변수 | 설명 |
 |------|------|

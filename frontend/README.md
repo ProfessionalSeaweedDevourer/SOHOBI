@@ -1,6 +1,6 @@
 # SOHOBI 프론트엔드
 
-SOHOBI 통합 에이전트(`integrated_PARK/`)와 연동하는 React 기반 웹 UI입니다.
+SOHOBI 통합 에이전트(`backend/`)와 연동하는 React 기반 웹 UI입니다.
 
 ---
 
@@ -81,7 +81,7 @@ NeoFrontend_Mar30 기반으로 마이그레이션된 디자인 시스템:
 ### 필수 조건
 
 - Node.js 18 이상
-- `integrated_PARK/` 백엔드 서버가 **포트 8000**에서 실행 중이어야 합니다.
+- `backend/` 백엔드 서버가 **포트 8000**에서 실행 중이어야 합니다.
 
 ### 설치 및 실행
 

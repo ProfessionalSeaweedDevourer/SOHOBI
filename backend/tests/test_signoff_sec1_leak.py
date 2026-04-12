@@ -3,7 +3,7 @@
 LLM 호출 없이 detect_sec1_leakage / _enforce_sec1_issue 순수 로직만 검증한다.
 
 실행:
-    cd integrated_PARK
+    cd backend
     .venv/bin/python -m pytest tests/test_signoff_sec1_leak.py -v
 """
 

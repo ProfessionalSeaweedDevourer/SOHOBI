@@ -2,7 +2,7 @@
 T-09 ~ T-16: LegalAgent 단위 테스트
 
 실행:
-    cd integrated_PARK
+    cd backend
     .venv/bin/python -m pytest tests/test_legal_agent.py -v
 
 Azure LLM 호출이 필요한 테스트(T-15)는 환경변수 미설정 시 skip됩니다.

@@ -2,7 +2,7 @@
 T-LA-01 ~ T-LA-14: LocationAgent 단위 테스트
 
 실행:
-    cd integrated_PARK
+    cd backend
     .venv/bin/python -m pytest tests/test_location_agent.py -v
 
 Azure LLM·PostgreSQL DB 호출 없이 mock만 사용합니다.

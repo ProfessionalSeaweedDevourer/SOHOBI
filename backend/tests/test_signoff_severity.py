@@ -3,7 +3,7 @@
 LLM 호출 없이 _derive_grade / _issue_severity / validate_verdict 순수 로직만 검증한다.
 
 실행:
-    cd integrated_PARK
+    cd backend
     .venv/bin/python -m pytest tests/test_signoff_severity.py -v
 """
 

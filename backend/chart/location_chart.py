@@ -2,7 +2,7 @@
 location_chart.py
 상권분석 결과를 matplotlib 차트로 시각화하여 base64 PNG로 반환
 출처: CHOI/locationAgent_DB/chart/location_chart.py
-변경: 폰트 경로를 integrated_PARK 구조에 맞게 수정
+변경: 폰트 경로를 backend 구조에 맞게 수정
 """
 
 import base64
@@ -19,7 +19,7 @@ try:
     import numpy as np
     from matplotlib.ticker import FuncFormatter
 
-    # 한글 폰트 설정 (integrated_PARK/nam/malgun.ttf 번들 폰트 또는 시스템 폰트)
+    # 한글 폰트 설정 (backend/nam/malgun.ttf 번들 폰트 또는 시스템 폰트)
     _BUNDLED_FONT = os.path.join(os.path.dirname(__file__), "..", "nam", "malgun.ttf")
     if os.path.exists(_BUNDLED_FONT):
         fm.fontManager.addfont(_BUNDLED_FONT)

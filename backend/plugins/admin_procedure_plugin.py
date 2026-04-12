@@ -1,6 +1,6 @@
 """
 행정 절차 Knowledge Base 플러그인
-- 데이터 소스: integrated_PARK/data/admin_procedures.json (법령 검증된 절차 정보)
+- 데이터 소스: backend/data/admin_procedures.json (법령 검증된 절차 정보)
 - 목적: LLM 일반 지식 의존 제거 → 구조화된 절차 정보 직접 제공
 - 법령 근거: CHOI/vectorSearch/refined_law_data_1.json 기준 검증 완료
 """

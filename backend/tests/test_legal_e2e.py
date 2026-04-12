@@ -2,13 +2,13 @@
 T-20 ~ T-24: 통합/E2E 테스트
 
 실제 백엔드 서버가 실행 중이어야 합니다:
-    cd integrated_PARK && .venv/bin/python api_server.py
+    cd backend && .venv/bin/python api_server.py
 
 또는 로컬 서버 없이 Azure 배포 백엔드를 대상으로 실행:
     BACKEND_HOST=https://your-backend.azurecontainerapps.io pytest tests/test_legal_e2e.py -v
 
 실행:
-    cd integrated_PARK
+    cd backend
     .venv/bin/python -m pytest tests/test_legal_e2e.py -v
 """
 

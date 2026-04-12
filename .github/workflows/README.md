@@ -9,7 +9,7 @@ GitHub Actions CI/CD 파이프라인.
 | 파일 | 이름 | 트리거 | 대상 |
 |------|------|--------|------|
 | `azure-static-web-apps-*.yml` | Azure Static Web Apps CI/CD | `main` push, PR open/sync/close, 매일 자정(UTC) cron | 프론트엔드 (`frontend/`) → Azure Static Web Apps |
-| `deploy-backend.yml` | Deploy Backend to Azure Container Apps | `main` push (`integrated_PARK/**` 변경 시) | 백엔드 → Azure Container Apps (OIDC 인증) |
+| `deploy-backend.yml` | Deploy Backend to Azure Container Apps | `main` push (`backend/**` 변경 시) | 백엔드 → Azure Container Apps (OIDC 인증) |
 | `smoke-test.yml` | Backend Smoke Test | `main` push, PR | 배포 후 헬스 체크 + API 키 인증 검증 |
 
 ## 필요 GitHub Secrets

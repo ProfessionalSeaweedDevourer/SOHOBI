@@ -2,7 +2,7 @@
 T-01 ~ T-08: LegalSearchPlugin 단위 테스트
 
 실행:
-    cd integrated_PARK
+    cd backend
     .venv/bin/python -m pytest tests/test_legal_search_plugin.py -v
 
 Azure 연결이 필요한 테스트(T-04, T-05, T-06)는 실제 환경변수가 설정된 경우에만 통과합니다.

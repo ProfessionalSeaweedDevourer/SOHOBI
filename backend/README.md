@@ -1,4 +1,4 @@
-# SOHOBI 통합 에이전트 (integrated_PARK)
+# SOHOBI 통합 에이전트 (backend)
 
 PARK · CHOI · CHANG · NAM 각자의 작업물을 하나의 Semantic Kernel 시스템으로 통합한 폴더입니다.
 
@@ -112,7 +112,7 @@ B등급은 기존에 C(재시도)로 처리되던 "법령 개정일 미기재", 
 
 ```bash
 # 1. 이 폴더로 이동
-cd integrated_PARK
+cd backend
 
 # 2. Python 3.12로 가상환경 생성
 python3.12 -m venv .venv
@@ -128,7 +128,7 @@ pip install -r requirements.txt
 
 ## 환경 변수 설정
 
-`.env` 파일을 `integrated_PARK/` 폴더 안에 직접 생성합니다.
+`.env` 파일을 `backend/` 폴더 안에 직접 생성합니다.
 
 ```text
 # ── Azure PostgreSQL (상권 에이전트) ──
@@ -186,14 +186,14 @@ EXPORT_SECRET=<generate-with-secrets.token_urlsafe-32>
 
 ### 배포 환경 (Azure Container Apps)
 
-현재 운영 배포는 **Azure Container Apps**를 사용합니다. `BACKEND_HOST` 및 `EXPORT_SECRET`은 `integrated_PARK/.env`를 참고하십시오.
+현재 운영 배포는 **Azure Container Apps**를 사용합니다. `BACKEND_HOST` 및 `EXPORT_SECRET`은 `backend/.env`를 참고하십시오.
 
 ---
 
 ## 서버 실행
 
 ```bash
-# integrated_PARK/ 폴더 안에서 실행
+# backend/ 폴더 안에서 실행
 .venv/bin/python -m uvicorn api_server:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -455,7 +455,7 @@ F1 수치 제시
 ## 폴더 구조
 
 ```text
-integrated_PARK/
+backend/
 ├── api_server.py                 # FastAPI 서버 (세션 관리 + 엔드포인트)
 ├── kernel_setup.py               # Azure OpenAI 커널 초기화
 ├── domain_router.py              # 도메인 분류 (키워드 + LLM)
