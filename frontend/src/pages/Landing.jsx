@@ -8,6 +8,7 @@ import { ScrollReveal } from "../components/ScrollReveal";
 import { agentData } from "../data/mockData";
 import { MessageSquare, Shield, Zap, TrendingUp, Sparkles, ArrowRight } from "lucide-react";
 import { GlowCTA } from "../components/GlowCTA";
+import SurveyBanner from "../components/SurveyBanner";
 import { motion } from "motion/react";
 import { trackEvent } from "../utils/trackEvent";
 
@@ -295,6 +296,8 @@ export default function Landing() {
           </Link>
         </div>
       </footer>
+
+      <SurveyBanner />
     </div>
   );
 }
