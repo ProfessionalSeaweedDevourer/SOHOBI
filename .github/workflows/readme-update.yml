@@ -1,0 +1,75 @@
+name: Weekly README Auto-Update
+
+on:
+  schedule:
+    # 매주 일요일 15:00 UTC = 월요일 00:00 KST
+    - cron: "0 15 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Regenerate README via Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude --dangerously-skip-permissions --print \
+            "README.md의 내용을 현재 코드베이스 상태와 맞게 최신화해주세요.
+
+          규칙:
+          - 프로젝트 개요·팀 구성·라이브 서비스 URL 등 메타 섹션은 건드리지 않습니다.
+          - 시스템 아키텍처, 디렉토리 구조, 빌드/실행 명령, API 엔드포인트, 기능 목록 등 코드에서 검증 가능한 부분만 갱신합니다.
+          - 섹션 구조와 마크다운 스타일은 기존 README와 동일하게 유지합니다.
+          - 실제 변경이 필요 없으면 파일을 수정하지 않습니다.
+          - README.md 외 다른 파일은 수정하지 않습니다.
+
+          CLAUDE.md의 프로젝트 규칙을 참고하세요."
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet README.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "변경 없음 — PR 생성 생략"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Pull Request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/auto-readme-update
+          delete-branch: true
+          commit-message: "docs: README 주간 자동 갱신"
+          title: "docs: README 주간 자동 갱신"
+          body: |
+            주간 README 자동 갱신 워크플로우가 생성한 PR입니다.
+
+            - 트리거: 매주 일요일 15:00 UTC (월요일 00:00 KST)
+            - 실행 워크플로우: `.github/workflows/readme-update.yml`
+
+            코드베이스 현재 상태와 맞지 않는 부분만 수정되었는지 확인 후 머지해주세요.
+          labels: |
+            documentation
+            automated
+          add-paths: README.md
