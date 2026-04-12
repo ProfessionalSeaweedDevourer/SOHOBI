@@ -41,8 +41,8 @@
 
 ### ① HIGH — `getDongCentroids` 순차 Kakao API 호출
 
-**파일**: `integrated_PARK/map_data_router.py:481-504`  
-**문제**: dong_list를 순차 루프로 처리. 5개 동 요청 시 잠재적 50초 응답 지연.  
+**파일**: `integrated_PARK/map_data_router.py:481-504`
+**문제**: dong_list를 순차 루프로 처리. 5개 동 요청 시 잠재적 50초 응답 지연.
 **수정**: `asyncio.gather()`로 병렬화
 
 ```python
@@ -60,16 +60,16 @@ results = await asyncio.gather(*[_fetch_one(client, d) for d in dong_list])
 
 ### ② HIGH — `get_logs` 전체 로드 + N+1 쿼리
 
-**파일**: `integrated_PARK/api_server.py:587-605`  
-**문제**: `load_entries_json(limit=0)` → 전체 로그 메모리 로드 후, session/user별 개별 DB 쿼리 (N+1).  
+**파일**: `integrated_PARK/api_server.py:587-605`
+**문제**: `load_entries_json(limit=0)` → 전체 로그 메모리 로드 후, session/user별 개별 DB 쿼리 (N+1).
 **수정**: limit 파라미터를 enrichment 이전에 적용, user_id 일괄 조회로 배치화.
 
 ---
 
 ### ③ MEDIUM — `searchDong` LIKE 풀스캔
 
-**파일**: `integrated_PARK/db/dao/mapInfoDAO.py:132, 143`  
-**문제**: `WHERE adm_nm LIKE '%q%'` — 전체 테이블 스캔. 키 입력마다 실행.  
+**파일**: `integrated_PARK/db/dao/mapInfoDAO.py:132, 143`
+**문제**: `WHERE adm_nm LIKE '%q%'` — 전체 테이블 스캔. 키 입력마다 실행.
 **수정**:
 - 가능하면 prefix LIKE: `LIKE 'q%'` 로 변경 (B-tree 인덱스 활용)
 - `adm_nm`, `legal_nm` 컬럼에 B-tree 인덱스 추가
@@ -84,8 +84,8 @@ CREATE INDEX idx_dong_legal_nm ON dong_seoul (legal_nm text_pattern_ops);
 
 ### ④ MEDIUM — VWorld/Kakao 외부 API 캐싱 없음
 
-**파일**: `integrated_PARK/map_data_router.py:437-505`  
-**문제**: 동일 PNU/동 요청마다 외부 API 재호출. 레이트 제한 위험 + 불필요한 지연.  
+**파일**: `integrated_PARK/map_data_router.py:437-505`
+**문제**: 동일 PNU/동 요청마다 외부 API 재호출. 레이트 제한 위험 + 불필요한 지연.
 **수정**: TTL 캐시 적용 (Redis 또는 `functools.lru_cache` / `cachetools.TTLCache`)
 
 ```python
@@ -104,8 +104,8 @@ async def getLandUse(pnu: str):
 
 ### ⑤ MEDIUM — 오케스트레이터 재시도 시 전체 에이전트 재실행
 
-**파일**: `integrated_PARK/orchestrator.py:85-150`  
-**문제**: signoff 실패 시 LLM + DB 전체 재실행 (최대 3회 × 풀 비용).  
+**파일**: `integrated_PARK/orchestrator.py:85-150`
+**문제**: signoff 실패 시 LLM + DB 전체 재실행 (최대 3회 × 풀 비용).
 **수정**: 중간 결과 캐싱 + signoff 피드백 기반 부분 재생성.
 
 ---

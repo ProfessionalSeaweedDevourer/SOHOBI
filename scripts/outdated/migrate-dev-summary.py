@@ -75,7 +75,7 @@ def migrate_file(path: Path) -> bool:
             new_lines.append(line)
             new_lines.append(f"| 정상 근무 | {work_count}건 (09:30~18:20) |")
             new_lines.append(f"| 근무 외 | {off_count}건 |")
-            pr_row_passed = True
+            pr_row_passed = True  # noqa: F841
             continue
         # Skip old 작업 내역 section — we'll rebuild it
         new_lines.append(line)

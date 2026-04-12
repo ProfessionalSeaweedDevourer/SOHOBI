@@ -26,9 +26,7 @@ async def list_my_sessions(user: dict = Depends(get_current_user)):
     for s in sessions:
         ctx = s.get("context", {})
         ts = s.get("_ts", 0)
-        created_at = (
-            datetime.fromtimestamp(ts, tz=UTC).isoformat() if ts else None
-        )
+        created_at = datetime.fromtimestamp(ts, tz=UTC).isoformat() if ts else None
         result.append(
             {
                 "session_id": s["session_id"],

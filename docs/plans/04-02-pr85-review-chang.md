@@ -1,23 +1,23 @@
 # PR #85 코드 리뷰 — CHANG 브랜치 수정 요청
 
-**작성일**: 2026-04-02  
-**대상 PR**: #85 — "#79 변수 활용 및 DB활성화" (`CHANG` → `main`)  
-**작성자**: 리뷰 담당  
+**작성일**: 2026-04-02
+**대상 PR**: #85 — "#79 변수 활용 및 DB활성화" (`CHANG` → `main`)
+**작성자**: 리뷰 담당
 **수신**: CHANG
 
 ---
 
 ## 요약
 
-PR #85의 의도(지역코드·업종 기반 DB 조회, INDUSTRY_CODE_MAP 연동)는 올바르나,  
-**Oracle → PostgreSQL 이전 과정에서 발생한 API 호환성 문제 2건**이 확인되었습니다.  
+PR #85의 의도(지역코드·업종 기반 DB 조회, INDUSTRY_CODE_MAP 연동)는 올바르나,
+**Oracle → PostgreSQL 이전 과정에서 발생한 API 호환성 문제 2건**이 확인되었습니다.
 아래 수정 후 재푸시해 주세요.
 
 ---
 
 ## 배경: Oracle vs PostgreSQL cursor.execute() 차이
 
-프로젝트는 `949d10a` 커밋에서 Oracle(`oracledb`) → Azure PostgreSQL(`psycopg2`)로 이전되었습니다.  
+프로젝트는 `949d10a` 커밋에서 Oracle(`oracledb`) → Azure PostgreSQL(`psycopg2`)로 이전되었습니다.
 두 라이브러리는 `cursor.execute()` 반환값이 다릅니다:
 
 | 라이브러리 | `execute()` 반환값 | 결과 조회 방법 |
@@ -78,7 +78,7 @@ else:
 
 ### fallback 기본값 변경 여부 확인
 
-`finance_db.py`의 DB 조회 실패 시 fallback 기본값이 **10배** 증가해 있습니다.  
+`finance_db.py`의 DB 조회 실패 시 fallback 기본값이 **10배** 증가해 있습니다.
 의도적 변경인지, 오타인지 확인해 주세요:
 
 ```python

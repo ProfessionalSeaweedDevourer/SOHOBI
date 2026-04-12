@@ -1,6 +1,6 @@
 # PostgreSQL 이전 실행 가이드
 
-**작성일:** 2026-04-02  
+**작성일:** 2026-04-02
 **목적:** 코드 변경 완료 후 인프라·데이터·배포 단계 실행 가이드
 
 코드 변경(`repository.py`, `finance_db.py`, `requirements.txt`, `schema_pg.sql`)은 완료된 상태이다.

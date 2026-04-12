@@ -1,6 +1,6 @@
 # 백엔드 로그 조회 가이드
 
-현재 배포 백엔드: **Azure Container Apps**  
+현재 배포 백엔드: **Azure Container Apps**
 URL 및 시크릿은 `integrated_PARK/.env`의 `BACKEND_HOST`, `EXPORT_SECRET` 참조.
 
 > `/api/v1/logs/export` (파일 다운로드)는 Blob Storage 구성으로 인해 사용 불가.

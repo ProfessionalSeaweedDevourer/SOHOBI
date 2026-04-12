@@ -1,7 +1,7 @@
 # MapView 디자인 시스템 통일 + 좌측 컨트롤바 리디자인 — 세션 인수인계
 
-**날짜**: 2026-04-09  
-**브랜치**: `PARK-mapview-ui-redesign` (커밋 완료, PR 미생성)  
+**날짜**: 2026-04-09
+**브랜치**: `PARK-mapview-ui-redesign` (커밋 완료, PR 미생성)
 **상태**: MapView/ChatPanel/DongPanel 디자인 시스템 통일 완료, 좌측 컨트롤바+레이어 패널 리디자인 미착수
 
 ---

@@ -16,7 +16,7 @@
 ### 2. 수정 완료 — PR #122 (오픈, 미머지)
 **파일:** `integrated_PARK/realestate_router.py`, `integrated_PARK/map_data_router.py`
 
-**문제:** `async def` 핸들러 내에서 동기 psycopg2 직접 호출 → uvicorn event loop 전체 블로킹  
+**문제:** `async def` 핸들러 내에서 동기 psycopg2 직접 호출 → uvicorn event loop 전체 블로킹
 **수정 내용:**
 - `realestate_router.py` 7개 핸들러: `async def` → `def` (FastAPI thread pool 자동 실행)
 - `getSeoulRtms`: async DAO + sync DAO 혼재 → `asyncio.gather + asyncio.to_thread` 병렬화
@@ -99,7 +99,7 @@ CREATE INDEX idx_store_lat_lng ON store_seoul(lat, lng);
 ### [P6] 프론트엔드 — `drawMarkers` 전체 레이어 재생성 최적화
 **파일:** `frontend/src/hooks/map/useMarkers.js:L87`
 
-매 호출마다 OL Layer 삭제 후 재생성. `VectorSource.clear() + addFeatures()`로 소스만 교체하는 방식으로 최적화.  
+매 호출마다 OL Layer 삭제 후 재생성. `VectorSource.clear() + addFeatures()`로 소스만 교체하는 방식으로 최적화.
 복잡도가 있어 [P1]~[P4] 완료 후 진행 권장.
 
 ---

@@ -2,9 +2,9 @@
 
 ## Context
 
-전체 155개 PR 중 43개(MERGED 36, CLOSED 7)가 `type: 한국어 설명` 표준을 따르지 않는다.  
-PR 제목은 merged·closed 상태에서도 `gh pr edit --title` 으로 수정 가능하다.  
-커밋 메시지는 main 히스토리 재작성이 필요해 제외한다.  
+전체 155개 PR 중 43개(MERGED 36, CLOSED 7)가 `type: 한국어 설명` 표준을 따르지 않는다.
+PR 제목은 merged·closed 상태에서도 `gh pr edit --title` 으로 수정 가능하다.
+커밋 메시지는 main 히스토리 재작성이 필요해 제외한다.
 Changelog.jsx는 GitHub Commits API를 직접 호출하므로, Merge commit이 "기타" 배지로 잡음 노출되는 구조적 문제도 함께 수정한다.
 
 ---
@@ -116,7 +116,7 @@ debug: { label: "디버그", color: "#a3a3a3" },
 
 ## 실행 방식
 
-Phase A (6건) → Phase B (30건) → Changelog 코드 수정 → Phase C (7건, 선택) 순으로 진행.  
+Phase A (6건) → Phase B (30건) → Changelog 코드 수정 → Phase C (7건, 선택) 순으로 진행.
 각 Phase는 `gh pr edit <N> --title "..."` 명령을 일괄 실행한다.
 
 ---

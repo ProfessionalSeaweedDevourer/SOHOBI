@@ -1,8 +1,8 @@
 # CategoryPanel·Layerpanel Glass Morphism 리디자인 — 세션 인수인계
 
-**날짜**: 2026-04-09  
-**브랜치**: `PARK-mapview-ui-redesign`  
-**PR**: #255 (OPEN, 머지 대기)  
+**날짜**: 2026-04-09
+**브랜치**: `PARK-mapview-ui-redesign`
+**PR**: #255 (OPEN, 머지 대기)
 **상태**: CategoryPanel + Layerpanel 리디자인 완료, Phase D(Framer Motion 애니메이션) 미착수
 
 ---
@@ -40,7 +40,7 @@
 
 ### Phase D: 접기/펼치기 Framer Motion 애니메이션 (보류)
 
-**현재**: CSS `transition: width 0.2s ease`로 동작 중  
+**현재**: CSS `transition: width 0.2s ease`로 동작 중
 **계획**: Framer Motion `AnimatePresence` + `motion.div` + `staggerChildren`
 
 구체적 내용:

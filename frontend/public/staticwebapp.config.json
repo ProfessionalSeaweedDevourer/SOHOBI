@@ -1,7 +1,18 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/*.css", "/*.js", "/*.png", "/*.jpg", "/*.svg", "/*.ico", "/robots.txt", "/sitemap.xml", "/manifest.json"]
+    "exclude": [
+      "/assets/*",
+      "/*.css",
+      "/*.js",
+      "/*.png",
+      "/*.jpg",
+      "/*.svg",
+      "/*.ico",
+      "/robots.txt",
+      "/sitemap.xml",
+      "/manifest.json"
+    ]
   },
   "routes": [
     {

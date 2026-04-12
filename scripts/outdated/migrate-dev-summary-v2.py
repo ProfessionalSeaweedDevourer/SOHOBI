@@ -15,6 +15,7 @@ SUMMARY_DIR = Path(__file__).resolve().parent.parent / "docs" / "dev-summary"
 # 1. git log → commit lookup 구축
 # ──────────────────────────────────────────────
 
+
 def build_commit_lookup() -> dict:
     """hash(7) → body, PR# → body 매핑 구축."""
     raw = subprocess.check_output(
@@ -22,7 +23,7 @@ def build_commit_lookup() -> dict:
         text=True,
     )
     lookup_hash = {}  # hash7 → (subject, body)
-    lookup_pr = {}    # PR# → (subject, body)
+    lookup_pr = {}  # PR# → (subject, body)
 
     for record in raw.split("@@@"):
         record = record.strip()
@@ -36,7 +37,7 @@ def build_commit_lookup() -> dict:
         if pipe_idx < 0:
             continue
         full_hash = header[:pipe_idx]
-        subject = header[pipe_idx + 1:]
+        subject = header[pipe_idx + 1 :]
         hash7 = full_hash[:7]
 
         lookup_hash[hash7] = (subject, body)
@@ -65,7 +66,11 @@ def summarize_body(body: str) -> str:
             # sub-commit 제목 (squash merge)
             # "* feat: ..." → "feat: ..." 에서 prefix 제거
             title = line[2:].strip()
-            title = re.sub(r"^(feat|fix|refactor|chore|docs|style|perf|ci|test|revert):\s*", "", title)
+            title = re.sub(
+                r"^(feat|fix|refactor|chore|docs|style|perf|ci|test|revert):\s*",
+                "",
+                title,
+            )
             if title:
                 sub_commit_titles.append(title)
         elif line.startswith("- "):
@@ -184,7 +189,9 @@ def migrate_file(path: Path, lookup_hash: dict, lookup_pr: dict) -> bool:
                 # 제목: 기존 '내용'에서 PR번호 suffix 제거
                 title = re.sub(r"\s*\(#\d+\)\s*$", "", old_content).strip()
 
-                new_lines.append(f"| {time_col} | {pr_col} | {title} | {body_summary} |")
+                new_lines.append(
+                    f"| {time_col} | {pr_col} | {title} | {body_summary} |"
+                )
                 continue
             else:
                 in_table = False

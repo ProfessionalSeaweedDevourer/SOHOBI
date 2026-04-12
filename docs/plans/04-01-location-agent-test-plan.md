@@ -1,7 +1,7 @@
 # 상권분석 에이전트/플러그인 테스트 & 버그 수정
 
-**작성일**: 2026-04-01  
-**최종 업데이트**: 2026-04-02 (PostgreSQL 마이그레이션 반영, Issue-4·5 수정, 추가 버그 3건·테스트 3건)  
+**작성일**: 2026-04-01
+**최종 업데이트**: 2026-04-02 (PostgreSQL 마이그레이션 반영, Issue-4·5 수정, 추가 버그 3건·테스트 3건)
 **대상 파일**: `integrated_PARK/agents/location_agent.py`, `integrated_PARK/plugins/location_plugin.py`
 
 ---
@@ -99,7 +99,7 @@ main 브랜치 커밋 949d10a에서 DB가 Oracle → Azure PostgreSQL Flexible S
 | 테이블명 | `SANGKWON_SALES` | `sangkwon_sales` |
 | 연결 해제 | 자동 | `_release(conn)` 명시 |
 
-**기존 테스트 영향**: 없음 — 모든 테스트가 `CommercialRepository`를 `MagicMock()`으로 대체.  
+**기존 테스트 영향**: 없음 — 모든 테스트가 `CommercialRepository`를 `MagicMock()`으로 대체.
 단, `psycopg2-binary==2.9.9`가 venv에 설치되어 있어야 모듈 import가 성공함.
 
 ---

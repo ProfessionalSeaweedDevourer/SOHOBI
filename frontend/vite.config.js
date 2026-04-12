@@ -4,74 +4,74 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-   plugins: [react(), tailwindcss()],
-   server: {
-      port: 3000,
-      proxy: {
-         // 기존: 메인 에이전트 백엔드 (8000)
-         "/api/v1": "http://localhost:8000",
-         "/api/v1/": "http://localhost:8000",
-         "/health": "http://localhost:8000",
+  plugins: [react(), tailwindcss()],
+  server: {
+    port: 3000,
+    proxy: {
+      // 기존: 메인 에이전트 백엔드 (8000)
+      "/api/v1": "http://localhost:8000",
+      "/api/v1/": "http://localhost:8000",
+      "/health": "http://localhost:8000",
 
-         // 지도: 소상공인 DB (integrated_PARK 통합 서버, 포트 8000)
-         // /map-api: useLandmarkLayer.js 폴백 경로 (rewrite 필요)
-         "/map-api": {
-            target: "http://localhost:8000",
-            changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/map-api/, ""),
-         },
-         // /map/stores-*: MapView.jsx API 경로 (React Router /map 페이지와 충돌 방지)
-         "/map/stores-by-dong": { target: "http://localhost:8000", changeOrigin: true },
-         "/map/stores-by-building": { target: "http://localhost:8000", changeOrigin: true },
-
-         // 지도: 부동산/상권 데이터 API (integrated_PARK 통합 서버, 포트 8000)
-         "/realestate": {
-            target: "http://localhost:8000",
-            changeOrigin: true,
-         },
-
-         // 지도: VWorld 타일 및 WMS
-         "/vworld": {
-            target: "https://api.vworld.kr",
-            changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/vworld/, ""),
-         },
-         "/wms": {
-            target: "https://api.vworld.kr",
-            changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/wms/, ""),
-         },
-
-         // 지도: Kakao REST API (지오코딩)
-         "/kakao": {
-            target: "https://dapi.kakao.com",
-            changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/kakao/, ""),
-         },
+      // 지도: 소상공인 DB (integrated_PARK 통합 서버, 포트 8000)
+      // /map-api: useLandmarkLayer.js 폴백 경로 (rewrite 필요)
+      "/map-api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/map-api/, ""),
       },
-   },
-   build: {
-      rollupOptions: {
-         output: {
-            manualChunks: {
-               "vendor-react":    ["react", "react-dom", "react-router-dom"],
-               "vendor-motion":   ["motion"],
-               "vendor-icons":    ["lucide-react"],
-               "vendor-markdown": ["react-markdown", "remark-gfm"],
-               "vendor-map":   ["ol", "@turf/turf"],
-               "vendor-ui":    [
-                  "@radix-ui/react-collapsible",
-                  "@radix-ui/react-label",
-                  "@radix-ui/react-select",
-                  "@radix-ui/react-separator",
-                  "@radix-ui/react-slot",
-                  "@radix-ui/react-switch",
-                  "@radix-ui/react-tabs",
-                  "@radix-ui/react-tooltip",
-               ],
-            },
-         },
+      // /map/stores-*: MapView.jsx API 경로 (React Router /map 페이지와 충돌 방지)
+      "/map/stores-by-dong": { target: "http://localhost:8000", changeOrigin: true },
+      "/map/stores-by-building": { target: "http://localhost:8000", changeOrigin: true },
+
+      // 지도: 부동산/상권 데이터 API (integrated_PARK 통합 서버, 포트 8000)
+      "/realestate": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
       },
-      chunkSizeWarningLimit: 600,
-   },
+
+      // 지도: VWorld 타일 및 WMS
+      "/vworld": {
+        target: "https://api.vworld.kr",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/vworld/, ""),
+      },
+      "/wms": {
+        target: "https://api.vworld.kr",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/wms/, ""),
+      },
+
+      // 지도: Kakao REST API (지오코딩)
+      "/kakao": {
+        target: "https://dapi.kakao.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/kakao/, ""),
+      },
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-motion": ["motion"],
+          "vendor-icons": ["lucide-react"],
+          "vendor-markdown": ["react-markdown", "remark-gfm"],
+          "vendor-map": ["ol", "@turf/turf"],
+          "vendor-ui": [
+            "@radix-ui/react-collapsible",
+            "@radix-ui/react-label",
+            "@radix-ui/react-select",
+            "@radix-ui/react-separator",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-tooltip",
+          ],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
 });
