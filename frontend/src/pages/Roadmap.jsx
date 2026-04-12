@@ -4,7 +4,22 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { AnimatedBackground } from "../components/AnimatedBackground";
 import { GlowCTA } from "../components/GlowCTA";
 import { motion } from "motion/react";
-import { ArrowLeft, MessageSquare, Vote, Zap, CheckCircle2, ArrowRight } from "lucide-react";
+import {
+  ArrowLeft,
+  MessageSquare,
+  Vote,
+  Zap,
+  CheckCircle2,
+  ArrowRight,
+  ArrowUp,
+  ListChecks,
+  Hammer,
+} from "lucide-react";
+import {
+  ROADMAP_ICON_MAP,
+  ROADMAP_ICON_FALLBACK,
+  ROADMAP_COLOR_MAP,
+} from "../constants/roadmapIcons";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const _API_KEY = import.meta.env.VITE_API_KEY || "";
@@ -99,9 +114,27 @@ export default function Roadmap() {
   const totalVotes = voting.reduce((sum, f) => sum + (f.vote_count ?? 0), 0);
 
   const stats = [
-    { icon: "🗳️", label: "전체 피처", value: features.length, unit: "개", color: "#0891b2" },
-    { icon: "▲", label: "총 투표 수", value: totalVotes, unit: "표", color: "#14b8a6" },
-    { icon: "⚡", label: "개발 중", value: inProgress.length, unit: "개", color: "#f97316" },
+    {
+      Icon: ListChecks,
+      label: "전체 피처",
+      value: features.length,
+      unit: "개",
+      color: "var(--brand-blue)",
+    },
+    {
+      Icon: ArrowUp,
+      label: "총 투표 수",
+      value: totalVotes,
+      unit: "표",
+      color: "var(--brand-teal)",
+    },
+    {
+      Icon: Hammer,
+      label: "개발 중",
+      value: inProgress.length,
+      unit: "개",
+      color: "var(--brand-orange)",
+    },
   ];
 
   return (
@@ -189,7 +222,7 @@ export default function Roadmap() {
                     className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-2xl"
                     style={{ backgroundColor: stat.color }}
                   />
-                  <span className="text-xl relative z-10">{stat.icon}</span>
+                  <stat.Icon size={20} className="relative z-10" style={{ color: stat.color }} />
                   <span
                     className="text-xl font-bold tabular-nums relative z-10"
                     style={{ color: stat.color }}
@@ -287,51 +320,63 @@ export default function Roadmap() {
                 </motion.div>
 
                 <div className="flex flex-col gap-3">
-                  {inProgress.map((feat, idx) => (
-                    <motion.div
-                      key={feat.feature_id}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.4, delay: idx * 0.07 }}
-                      className="group"
-                    >
-                      <div
-                        className="glass rounded-2xl px-5 py-4 shadow-elevated flex items-center justify-between relative overflow-hidden"
-                        style={{ borderLeft: "4px solid var(--brand-teal)" }}
+                  {inProgress.map((feat, idx) => {
+                    const Icon = ROADMAP_ICON_MAP[feat.icon_name] ?? ROADMAP_ICON_FALLBACK;
+                    const tone = ROADMAP_COLOR_MAP[feat.color] ?? "var(--brand-teal)";
+                    return (
+                      <motion.div
+                        key={feat.feature_id}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: idx * 0.07 }}
+                        className="group"
                       >
                         <div
-                          className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300"
-                          style={{ backgroundColor: "#14b8a6" }}
-                        />
-                        <div className="flex items-center gap-3 relative z-10">
-                          <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
-                            style={{ backgroundColor: "rgba(20,184,166,0.12)" }}
-                          >
-                            {feat.icon}
-                          </div>
-                          <span
-                            className="text-sm font-medium"
-                            style={{ color: "var(--foreground)" }}
-                          >
-                            {feat.label}
-                          </span>
-                        </div>
-                        <motion.span
-                          animate={{ opacity: [1, 0.5, 1] }}
-                          transition={{ duration: 1.5, repeat: Infinity }}
-                          className="text-xs font-semibold px-3 py-1.5 rounded-xl relative z-10 shrink-0"
-                          style={{
-                            background: "rgba(20,184,166,0.15)",
-                            color: "var(--brand-teal)",
-                          }}
+                          className="glass rounded-2xl px-5 py-4 shadow-elevated flex items-start gap-3 relative overflow-hidden"
+                          style={{ borderLeft: "4px solid var(--brand-teal)" }}
                         >
-                          개발 중
-                        </motion.span>
-                      </div>
-                    </motion.div>
-                  ))}
+                          <div
+                            className="absolute inset-0 opacity-0 group-hover:opacity-[0.04] transition-opacity duration-300"
+                            style={{ backgroundColor: tone }}
+                          />
+                          <div
+                            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 relative z-10"
+                            style={{ backgroundColor: "rgba(20,184,166,0.14)" }}
+                          >
+                            <Icon size={20} style={{ color: tone }} />
+                          </div>
+                          <div className="flex-1 min-w-0 relative z-10 flex flex-col gap-1">
+                            <span
+                              className="text-sm font-semibold"
+                              style={{ color: "var(--foreground)" }}
+                            >
+                              {feat.label}
+                            </span>
+                            {feat.description && (
+                              <span
+                                className="text-xs leading-relaxed"
+                                style={{ color: "var(--muted-foreground)" }}
+                              >
+                                {feat.description}
+                              </span>
+                            )}
+                          </div>
+                          <motion.span
+                            animate={{ opacity: [1, 0.5, 1] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-xl relative z-10 shrink-0 self-start"
+                            style={{
+                              background: "rgba(20,184,166,0.15)",
+                              color: "var(--brand-teal)",
+                            }}
+                          >
+                            개발 중
+                          </motion.span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -352,57 +397,72 @@ export default function Roadmap() {
                 </motion.div>
 
                 <div className="flex flex-col gap-3">
-                  {voting.map((feat, idx) => (
-                    <motion.div
-                      key={feat.feature_id}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.4, delay: idx * 0.05 }}
-                      className="group"
-                    >
-                      <div className="glass rounded-2xl px-5 py-4 shadow-elevated flex items-center justify-between relative overflow-hidden transition-glow hover-lift">
-                        <div
-                          className="absolute inset-0 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-300"
-                          style={{ backgroundColor: "var(--brand-blue)" }}
-                        />
-                        <div className="flex items-center gap-3 relative z-10">
+                  {voting.map((feat, idx) => {
+                    const Icon = ROADMAP_ICON_MAP[feat.icon_name] ?? ROADMAP_ICON_FALLBACK;
+                    const tone = ROADMAP_COLOR_MAP[feat.color] ?? "var(--brand-blue)";
+                    return (
+                      <motion.div
+                        key={feat.feature_id}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: idx * 0.05 }}
+                        className="group"
+                      >
+                        <div className="glass rounded-2xl px-5 py-4 shadow-elevated flex items-start gap-3 relative overflow-hidden transition-glow hover-lift">
                           <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
-                            style={{ backgroundColor: "rgba(8,145,178,0.10)" }}
+                            className="absolute inset-0 opacity-0 group-hover:opacity-[0.04] transition-opacity duration-300"
+                            style={{ backgroundColor: tone }}
+                          />
+                          <div
+                            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 relative z-10"
+                            style={{
+                              backgroundColor: `color-mix(in srgb, ${tone} 12%, transparent)`,
+                            }}
                           >
-                            {feat.icon}
+                            <Icon size={20} style={{ color: tone }} />
                           </div>
-                          <span
-                            className="text-sm font-medium"
-                            style={{ color: "var(--foreground)" }}
-                          >
-                            {feat.label}
-                          </span>
-                        </div>
+                          <div className="flex-1 min-w-0 relative z-10 flex flex-col gap-1">
+                            <span
+                              className="text-sm font-semibold"
+                              style={{ color: "var(--foreground)" }}
+                            >
+                              {feat.label}
+                            </span>
+                            {feat.description && (
+                              <span
+                                className="text-xs leading-relaxed"
+                                style={{ color: "var(--muted-foreground)" }}
+                              >
+                                {feat.description}
+                              </span>
+                            )}
+                          </div>
 
-                        <motion.button
-                          onClick={() => handleVote(feat.feature_id)}
-                          disabled={!sessionId}
-                          whileHover={sessionId ? { scale: 1.05 } : {}}
-                          whileTap={sessionId ? { scale: 0.95 } : {}}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border transition-all relative z-10 shrink-0"
-                          style={{
-                            background: feat.user_voted
-                              ? "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))"
-                              : "transparent",
-                            color: feat.user_voted ? "#fff" : "var(--brand-blue)",
-                            borderColor: feat.user_voted ? "transparent" : "var(--brand-blue)",
-                            cursor: sessionId ? "pointer" : "default",
-                            opacity: sessionId ? 1 : 0.5,
-                            boxShadow: feat.user_voted ? "0 0 16px rgba(8,145,178,0.35)" : "none",
-                          }}
-                        >
-                          ▲ {feat.vote_count}
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  ))}
+                          <motion.button
+                            onClick={() => handleVote(feat.feature_id)}
+                            disabled={!sessionId}
+                            whileHover={sessionId ? { scale: 1.05 } : {}}
+                            whileTap={sessionId ? { scale: 0.95 } : {}}
+                            className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-all relative z-10 shrink-0 self-start tabular-nums"
+                            style={{
+                              background: feat.user_voted
+                                ? "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))"
+                                : "transparent",
+                              color: feat.user_voted ? "#fff" : "var(--brand-blue)",
+                              borderColor: feat.user_voted ? "transparent" : "var(--brand-blue)",
+                              cursor: sessionId ? "pointer" : "default",
+                              opacity: sessionId ? 1 : 0.5,
+                              boxShadow: feat.user_voted ? "0 0 16px rgba(8,145,178,0.35)" : "none",
+                            }}
+                          >
+                            <ArrowUp size={14} strokeWidth={2.5} />
+                            {feat.vote_count}
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </section>
             )}
