@@ -113,7 +113,7 @@ export default function SurveyBanner({ bottomOffset = "bottom-6" }) {
 
           <div className="mt-2.5 flex items-center justify-center gap-1.5 text-[10.5px] text-muted-foreground/80">
             <Gift className="h-3 w-3" />
-            <span>참여자 추첨 — 편의점 상품권 지급</span>
+            <span>참여자 추첨 — 스타벅스 1만원 상품권 지급</span>
           </div>
         </motion.aside>
       )}
