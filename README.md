@@ -114,11 +114,13 @@
 
 | 도메인 | 필수 코드 |
 | ------ | --------- |
-| `admin` | C1~C5 (공통) + A1~A5 (행정) |
-| `finance` | C1~C5 (공통) + F1~F5 (재무) |
-| `legal` | C1~C5 (공통) + G1~G4 (법무) |
-| `location` | C1~C5 (공통) + S1~S5 (상권) |
+| `admin` | C1~C5 (공통) + A1~A5 (행정) + SEC1~SEC3 (보안) + RJ1~RJ3 (거절) |
+| `finance` | C1~C5 (공통) + F1~F5 (재무) + SEC1~SEC3 (보안) + RJ1~RJ3 (거절) |
+| `legal` | C1~C5 (공통) + G1~G4 (법무) + SEC1~SEC3 (보안) + RJ1~RJ3 (거절) |
+| `location` | C1~C5 (공통) + S1~S5 (상권) + SEC1~SEC3 (보안) + RJ1~RJ3 (거절) |
 | `chat` | Sign-off 없음 (즉시 반환) |
+
+등급 판정은 이슈의 severity로 결정된다: `high`/`medium` severity 이슈 → **grade C** (재처리), `low` severity 이슈만 있거나 경고만 있음 → **grade B** (경고 포함 통과), 이슈·경고 없음 → **grade A** (통과). SEC1~SEC3·RJ1~RJ3 코드는 severity 무관 항상 `high`로 강제된다.
 
 ### 하위 에이전트 상세
 
@@ -257,7 +259,7 @@
 | 마크다운 렌더링 | react-markdown 10 + remark-gfm |
 | UI 컴포넌트 | Radix UI (select, tabs, collapsible, tooltip 등) |
 | 애니메이션 | Motion 12.38 (Framer Motion) |
-| HTTP 클라이언트 | Axios 1.13 |
+| HTTP 클라이언트 | Axios 1.15 |
 | SEO | react-helmet-async, JSON-LD, sitemap |
 | 호스팅 | Azure Static Web Apps |
 
@@ -356,6 +358,7 @@ SOHOBI/
 │       ├── components/           # 공통 UI 컴포넌트
 │       │   ├── checklist/        # 체크리스트 컴포넌트
 │       │   ├── feedback/         # 피드백 컴포넌트
+│       │   ├── layout/           # 레이아웃 컴포넌트 (MyPageLayout, EmptyStateCTA)
 │       │   ├── map/              # 지도 컴포넌트 (레이어, 패널, 팝업)
 │       │   ├── report/           # 리포트 컴포넌트
 │       │   └── ui/               # Radix UI 기반 공통 UI
@@ -372,7 +375,7 @@ SOHOBI/
 │   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
 │   ├── dev-summary/              # 팀원별 일일 개발 요약 (81건)
 │   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
-│   ├── plans/                    # 설계·분석 플랜 문서 (114건)
+│   ├── plans/                    # 설계·분석 플랜 문서 (116건)
 │   ├── session-reports/          # 세션 인수인계 리포트 (48건)
 │   └── test-reports/             # 보안 테스트·성능 베이스라인 리포트
 ├── .github/workflows/            # CI/CD (프론트 배포, 백엔드 배포, 스모크 테스트)
