@@ -2,6 +2,7 @@ import { useState } from "react";
 import ChecklistItem from "./ChecklistItem";
 import ChecklistProgress from "./ChecklistProgress";
 import { CHECKLIST_ITEMS } from "../../constants/checklistItems";
+import { useDismissible } from "../../hooks/useDismissible";
 import { motion, AnimatePresence } from "motion/react";
 
 /**
@@ -15,24 +16,13 @@ import { motion, AnimatePresence } from "motion/react";
  */
 export default function StartupChecklist({ items, progress, onToggle, onAskQuestion }) {
   const [collapsed, setCollapsed] = useState(false);
-  const [expandedItemId, setExpandedItemId] = useState(() => {
-    // 첫 방문 시 첫 항목 자동 펼침
-    if (!localStorage.getItem("sohobi_checklist_intro_dismissed")) {
-      return CHECKLIST_ITEMS[0]?.id ?? null;
-    }
-    return null;
-  });
-  const [showIntro, setShowIntro] = useState(
-    () => !localStorage.getItem("sohobi_checklist_intro_dismissed"),
+  const [showIntro, dismissIntro] = useDismissible("sohobi_checklist_intro_dismissed");
+  const [expandedItemId, setExpandedItemId] = useState(() =>
+    showIntro ? (CHECKLIST_ITEMS[0]?.id ?? null) : null,
   );
 
   function handleToggleExpand(id) {
     setExpandedItemId((prev) => (prev === id ? null : id));
-  }
-
-  function dismissIntro() {
-    localStorage.setItem("sohobi_checklist_intro_dismissed", "1");
-    setShowIntro(false);
   }
 
   return (
