@@ -169,6 +169,7 @@ def _format_rejection_history(history: list[dict]) -> list[dict]:
                 "issues": [
                     {
                         "code": issue.get("code"),
+                        "severity": issue.get("severity"),
                         "reason": issue.get("reason"),
                     }
                     for issue in verdict.get("issues", [])
