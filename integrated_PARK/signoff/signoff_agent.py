@@ -35,6 +35,64 @@ _DRAFT_START = "<<<DRAFT_START>>>"
 _DRAFT_END = "<<<DRAFT_END>>>"
 
 
+# SEC1 결정론적 누출 패턴 — LLM 판정 전 선행 검사.
+# 에이전트 프롬프트의 템플릿 라벨·SK 구조·내부 마커가 실제 응답에 그대로 나타나면
+# 시스템 내부 구조가 사용자에게 노출된 것으로 간주한다.
+_SEC1_LEAK_PATTERNS: list[tuple[str, str]] = [
+    (r"\[사용자 질문\]", "템플릿 라벨 '[사용자 질문]' 노출"),
+    (r"\[에이전트 응답\]", "템플릿 라벨 '[에이전트 응답]' 노출"),
+    (r"<<<DRAFT_(?:START|END)>>>", "내부 구분자 마커 노출"),
+    (r"\{\{\$[A-Za-z_]\w*\}\}", "SK 템플릿 변수 미렌더 노출"),
+    (r"<message\s+role=", "SK 프롬프트 구조 태그 노출"),
+    (r"skprompt\.txt", "내부 프롬프트 파일명 노출"),
+]
+
+
+def detect_sec1_leakage(draft: str) -> list[str]:
+    """draft에서 시스템 프롬프트·템플릿 라벨 누출 패턴을 탐지한다.
+
+    Returns:
+        탐지된 누출 설명 문자열 목록 (중복 제거, 탐지 없으면 빈 리스트).
+    """
+    hits: list[str] = []
+    for pattern, label in _SEC1_LEAK_PATTERNS:
+        if re.search(pattern, draft):
+            hits.append(label)
+    return hits
+
+
+def _enforce_sec1_issue(verdict: dict, leaks: list[str]) -> dict:
+    """SEC1을 issues에 강제 배치하고 관련 필드를 보정한다 (LLM 판정 무시)."""
+    reason = "; ".join(leaks)
+    # 기존 passed/warnings에서 SEC1 제거
+    verdict["passed"] = [c for c in verdict.get("passed", []) if c != "SEC1"]
+    verdict["warnings"] = [
+        w
+        for w in verdict.get("warnings", [])
+        if (w.get("code") if isinstance(w, dict) else w) != "SEC1"
+    ]
+    issues = [
+        i
+        for i in verdict.get("issues", [])
+        if (i.get("code") if isinstance(i, dict) else i) != "SEC1"
+    ]
+    issues.append(
+        {
+            "code": "SEC1",
+            "reason": f"시스템 내부 구조가 응답에 노출됨: {reason}",
+        }
+    )
+    verdict["issues"] = issues
+    verdict["approved"] = False
+    verdict["grade"] = "C"
+    if not verdict.get("retry_prompt"):
+        verdict["retry_prompt"] = (
+            "응답에서 시스템 내부 템플릿 라벨·구분자·프롬프트 구조를 모두 제거하고, "
+            "사용자 질문에 대한 실제 답변 본문만 출력하십시오."
+        )
+    return verdict
+
+
 def _build_messages(domain: str, draft: str) -> list[dict]:
     prompt_file = PROMPTS_DIR / f"signoff_{domain}" / "evaluate" / "skprompt.txt"
     # draft 내 구분자 이스케이프 — 사용자 입력이 draft에 포함될 경우 signoff 판정 인젝션 방지
@@ -71,6 +129,8 @@ async def run_signoff(
     required_codes = REQUIRED_CODES[domain]
     deployment = os.getenv("AZURE_SIGNOFF_DEPLOYMENT")
     messages = _build_messages(domain, draft)
+    # SEC1 누출은 결정론적으로 선행 탐지하고, LLM 판정 후 강제 덮어쓰기 한다.
+    sec1_leaks = detect_sec1_leakage(draft)
 
     for attempt in range(max_retries + 1):
         response = await client.chat.completions.create(
@@ -112,6 +172,8 @@ async def run_signoff(
                 verdict["retry_prompt"] = (
                     "응답 품질을 개선하십시오. 관련 법령 조항, 절차, 기관명을 구체적으로 포함하세요."
                 )
+            if sec1_leaks:
+                verdict = _enforce_sec1_issue(verdict, sec1_leaks)
             return verdict
 
         if attempt < max_retries:
@@ -137,6 +199,8 @@ async def run_signoff(
         verdict["retry_prompt"] = (
             "응답 품질을 개선하십시오. 관련 법령 조항, 절차, 기관명을 구체적으로 포함하세요."
         )
+    if sec1_leaks:
+        verdict = _enforce_sec1_issue(verdict, sec1_leaks)
     return verdict
 
 
