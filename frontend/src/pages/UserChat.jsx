@@ -11,6 +11,7 @@ import StartupChecklist from "../components/checklist/StartupChecklist";
 import ChecklistProgress from "../components/checklist/ChecklistProgress";
 import ChecklistDrawer from "../components/checklist/ChecklistDrawer";
 import { useChecklistState } from "../components/checklist/useChecklistState";
+import SurveyBanner from "../components/SurveyBanner";
 import { useChatMessages } from "../hooks/chat/useChatMessages";
 import { useStreamQuery } from "../hooks/chat/useStreamQuery";
 import { useDismissible } from "../hooks/useDismissible";
@@ -673,6 +674,8 @@ export default function UserChat() {
           />
         </div>
       </footer>
+
+      <SurveyBanner />
     </div>
   );
 }
