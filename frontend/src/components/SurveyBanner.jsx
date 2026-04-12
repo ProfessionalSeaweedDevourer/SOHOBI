@@ -74,7 +74,7 @@ export default function SurveyBanner({ bottomOffset = "bottom-6" }) {
           <p className="mb-3.5 text-xs leading-relaxed text-muted-foreground">
             {done
               ? `총 ${CURRENT}명의 소상공인 분들이 의견을 주셨습니다. 소중한 피드백으로 계속 개선하겠습니다.`
-              : "3분이면 충분합니다. 실제 사용 경험을 나눠 주시면 서비스 개선에 직접 반영됩니다."}
+              : "5분이면 충분합니다. 실제 사용 경험을 나눠 주시면 서비스 개선에 직접 반영됩니다."}
           </p>
 
           <div className="mb-1.5 flex items-center justify-between">
