@@ -65,7 +65,7 @@ FAIL TC → 즉시 수정 후 동일 브랜치 커밋 → 재테스트
 
 #### 3-1. `_aggregate_events()` — `last_active` / `first_active` 추가
 
-현재 반환: `{ total, by_agent }`  
+현재 반환: `{ total, by_agent }`
 목표 반환: `{ total, by_agent, last_active, first_active }`
 
 ```python
@@ -78,7 +78,7 @@ FROM c WHERE c.session_id = @sid
 
 #### 3-2. `_aggregate_feedback()` — `top_negative_tags` 추가
 
-현재 반환: `{ positive, negative, total, positive_rate }`  
+현재 반환: `{ positive, negative, total, positive_rate }`
 목표 반환: 위 + `top_negative_tags: [{"tag": str, "count": int}, ...]`
 
 ```python

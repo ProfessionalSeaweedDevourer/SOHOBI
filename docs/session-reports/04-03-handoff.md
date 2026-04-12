@@ -66,13 +66,13 @@ Container App: `sohobi-backend` / Resource Group: `<RESOURCE_GROUP>`
 ## 현재 열려 있는 PR
 
 ### PR#112 — `feat: UserChat UX 개편` (PARK → main)
-**상태**: OPEN, 미머지  
-**내용**: `frontend/src/pages/UserChat.jsx` — 빈 화면 도메인 카드 그리드, 첫 방문 팁 배너, 랜덤 placeholder 100개  
+**상태**: OPEN, 미머지
+**내용**: `frontend/src/pages/UserChat.jsx` — 빈 화면 도메인 카드 그리드, 첫 방문 팁 배너, 랜덤 placeholder 100개
 **다음 할 일**: 머지 전 동작 확인 후 머지
 
 ### PR#106 — `feat: 행정 에이전트 RAG reranker` (NAM → main)
-**상태**: OPEN, 미머지  
-**담당**: NAM 팀원 (dannynam13)  
+**상태**: OPEN, 미머지
+**담당**: NAM 팀원 (dannynam13)
 **내용**: 정부지원사업 플러그인 RAG reranker 필터링 + 응답 형식 개선
 
 ---

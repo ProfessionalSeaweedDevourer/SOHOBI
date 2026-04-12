@@ -28,10 +28,9 @@ const SessionCard = memo(function SessionCard({ session, token, index }) {
     }
     setLoading(true);
     try {
-      const r = await fetch(
-        `${BASE_URL}/api/my/sessions/${session.session_id}/history`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const r = await fetch(`${BASE_URL}/api/my/sessions/${session.session_id}/history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setHistory(await r.json());
       setOpen(true);
@@ -105,10 +104,11 @@ const SessionCard = memo(function SessionCard({ session, token, index }) {
             transition={{ duration: 0.25 }}
             className="shrink-0"
           >
-            {loading
-              ? <LoadingSpinner size="sm" />
-              : <ChevronDown size={16} style={{ color: "var(--muted-foreground)" }} />
-            }
+            {loading ? (
+              <LoadingSpinner size="sm" />
+            ) : (
+              <ChevronDown size={16} style={{ color: "var(--muted-foreground)" }} />
+            )}
           </motion.div>
         </button>
 
@@ -128,7 +128,10 @@ const SessionCard = memo(function SessionCard({ session, token, index }) {
                 style={{ borderColor: "var(--border)" }}
               >
                 {historyError ? (
-                  <p className="text-sm text-center py-4" style={{ color: "var(--muted-foreground)" }}>
+                  <p
+                    className="text-sm text-center py-4"
+                    style={{ color: "var(--muted-foreground)" }}
+                  >
                     기록을 불러오지 못했습니다.
                   </p>
                 ) : history.length === 0 ? (
@@ -149,7 +152,8 @@ const SessionCard = memo(function SessionCard({ session, token, index }) {
                         style={
                           msg.role === "user"
                             ? {
-                                background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))",
+                                background:
+                                  "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))",
                                 color: "#fff",
                               }
                             : {
@@ -227,7 +231,6 @@ export default function MyLogs() {
       </motion.header>
 
       <main className="relative z-10 flex-1 max-w-2xl w-full mx-auto px-4 py-10 flex flex-col gap-10">
-
         {/* 히어로 */}
         <div className="flex flex-col items-center text-center gap-4">
           <motion.div
@@ -295,7 +298,9 @@ export default function MyLogs() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-lg hover-glow-blue transition-glow"
-                  style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
+                  style={{
+                    background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))",
+                  }}
                 >
                   Google로 로그인
                   <ArrowRight size={14} />
@@ -327,8 +332,12 @@ export default function MyLogs() {
         )}
 
         {/* 세션 목록 */}
-        {!authLoading && user && !fetching && !error && sessions !== null && (
-          sessions.length === 0 ? (
+        {!authLoading &&
+          user &&
+          !fetching &&
+          !error &&
+          sessions !== null &&
+          (sessions.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -348,7 +357,9 @@ export default function MyLogs() {
                   <a
                     href="/user"
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105"
-                    style={{ background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))" }}
+                    style={{
+                      background: "linear-gradient(135deg, var(--brand-blue), var(--brand-teal))",
+                    }}
                   >
                     AI 에이전트와 대화하기
                     <ArrowRight size={14} />
@@ -362,8 +373,7 @@ export default function MyLogs() {
                 <SessionCard key={s.session_id} session={s} token={user.token} index={i} />
               ))}
             </div>
-          )
-        )}
+          ))}
       </main>
     </div>
   );

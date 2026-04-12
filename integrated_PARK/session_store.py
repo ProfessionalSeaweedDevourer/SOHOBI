@@ -26,7 +26,7 @@ from typing import Any
 from semantic_kernel.contents import ChatHistory
 
 # ── Cosmos DB 연결 싱글턴 ───────────────────────────────────────
-_container = None   # azure.cosmos.aio.ContainerProxy
+_container = None  # azure.cosmos.aio.ContainerProxy
 _cosmos_client = None  # CosmosClient (종료 시 닫기 위해 보관)
 
 
@@ -42,13 +42,13 @@ async def _get_container():
     from azure.cosmos.aio import CosmosClient
     from azure.identity.aio import DefaultAzureCredential
 
-    db_name  = os.getenv("COSMOS_DATABASE", "sohobi")
+    db_name = os.getenv("COSMOS_DATABASE", "sohobi")
     con_name = os.getenv("COSMOS_CONTAINER", "sessions")
 
     # 키 인증이 비활성화된 계정이므로 AD 토큰 인증 사용
     credential = DefaultAzureCredential()
     client = CosmosClient(url=endpoint, credential=credential)
-    db     = client.get_database_client(db_name)
+    db = client.get_database_client(db_name)
     _container = db.get_container_client(con_name)
     global _cosmos_client
     _cosmos_client = client
@@ -65,6 +65,7 @@ async def close() -> None:
 
 
 # ── ChatHistory 직렬화 ──────────────────────────────────────────
+
 
 def _serialize_history(history: ChatHistory) -> list[dict]:
     result = []
@@ -86,7 +87,7 @@ def _serialize_history(history: ChatHistory) -> list[dict]:
 def _deserialize_history(data: list[dict]) -> ChatHistory:
     history = ChatHistory()
     for msg in data:
-        role    = msg.get("role", "")
+        role = msg.get("role", "")
         content = msg.get("content", "")
         if role == "user":
             history.add_user_message(content)
@@ -114,14 +115,15 @@ _EMPTY_CONTEXT = {"adm_codes": [], "business_type": "", "location_name": ""}
 
 def _empty_query_session() -> dict:
     return {
-        "profile":   "",
-        "history":   ChatHistory(),
+        "profile": "",
+        "history": ChatHistory(),
         "extracted": {},
-        "context":   dict(_EMPTY_CONTEXT),
+        "context": dict(_EMPTY_CONTEXT),
     }
 
 
 # ── 공개 API ────────────────────────────────────────────────────
+
 
 async def get_query_session(session_id: str) -> dict:
     """session_id에 해당하는 Q&A 세션을 반환.
@@ -140,13 +142,13 @@ async def get_query_session(session_id: str) -> dict:
     try:
         item = await container.read_item(item=session_id, partition_key=session_id)
         return {
-            "profile":     item.get("profile", ""),
-            "history":     _deserialize_history(item.get("history", [])),
-            "extracted":   item.get("extracted", {}),
-            "context":     item.get("context", dict(_EMPTY_CONTEXT)),
-            "user_id":     item.get("user_id", ""),
+            "profile": item.get("profile", ""),
+            "history": _deserialize_history(item.get("history", [])),
+            "extracted": item.get("extracted", {}),
+            "context": item.get("context", dict(_EMPTY_CONTEXT)),
+            "user_id": item.get("user_id", ""),
             "last_domain": item.get("last_domain", ""),
-            "messages":    item.get("messages", []),
+            "messages": item.get("messages", []),
         }
     except Exception:
         return _empty_query_session()
@@ -177,14 +179,14 @@ async def save_query_session(session_id: str, session: dict) -> None:
         return
 
     doc: dict[str, Any] = {
-        "id":          session_id,
-        "profile":     session.get("profile", ""),
-        "history":     _serialize_history(session.get("history", ChatHistory())),
-        "extracted":   session.get("extracted", {}),
-        "context":     session.get("context", dict(_EMPTY_CONTEXT)),
+        "id": session_id,
+        "profile": session.get("profile", ""),
+        "history": _serialize_history(session.get("history", ChatHistory())),
+        "extracted": session.get("extracted", {}),
+        "context": session.get("context", dict(_EMPTY_CONTEXT)),
         "last_domain": session.get("last_domain", ""),
-        "messages":    session.get("messages", []),
-        "ttl":         ttl,
+        "messages": session.get("messages", []),
+        "ttl": ttl,
     }
     # user_id가 세션에 있으면 보존 (link_session_to_user 이후 덮어쓰기 방지)
     if session.get("user_id"):
@@ -198,8 +200,12 @@ HISTORY_WINDOW = 14  # 에이전트에 주입할 최대 메시지 수 (user+assi
 def get_recent_history(history: ChatHistory, n: int = HISTORY_WINDOW) -> list[dict]:
     """히스토리에서 최근 n개 메시지(user/assistant)를 [{role, content}] 형태로 반환."""
     msgs = [
-        {"role": m.role.value.lower() if hasattr(m.role, "value") else str(m.role).split(".")[-1].lower(),
-         "content": str(m.content)}
+        {
+            "role": m.role.value.lower()
+            if hasattr(m.role, "value")
+            else str(m.role).split(".")[-1].lower(),
+            "content": str(m.content),
+        }
         for m in history.messages
         if ("user" in str(m.role).lower() or "assistant" in str(m.role).lower())
     ]
@@ -217,7 +223,9 @@ async def get_doc_history(session_id: str) -> list[dict]:
         return _memory.get(key, [])
 
     try:
-        item = await container.read_item(item=f"doc:{session_id}", partition_key=f"doc:{session_id}")
+        item = await container.read_item(
+            item=f"doc:{session_id}", partition_key=f"doc:{session_id}"
+        )
         return item.get("history", [])
     except Exception:
         return []
@@ -236,11 +244,13 @@ async def save_doc_history(session_id: str, history_raw: list[dict]) -> None:
         _memory.move_to_end(key)
         return
 
-    await container.upsert_item({
-        "id":      key,
-        "history": history_raw,
-        "ttl":     ttl,
-    })
+    await container.upsert_item(
+        {
+            "id": key,
+            "history": history_raw,
+            "ttl": ttl,
+        }
+    )
 
 
 async def link_session_to_user(session_id: str, user_id: str) -> None:
@@ -289,12 +299,16 @@ async def get_sessions_by_user(user_id: str) -> list[dict]:
         for sid, sess in _memory.items():
             if isinstance(sess, dict) and sess.get("user_id") == user_id:
                 history = sess.get("history", ChatHistory())
-                results.append({
-                    "session_id":    sid,
-                    "context":       sess.get("context", {}),
-                    "history_count": len(history.messages) if hasattr(history, "messages") else 0,
-                    "_ts":           0,
-                })
+                results.append(
+                    {
+                        "session_id": sid,
+                        "context": sess.get("context", {}),
+                        "history_count": len(history.messages)
+                        if hasattr(history, "messages")
+                        else 0,
+                        "_ts": 0,
+                    }
+                )
         return results
 
     query = (
@@ -305,12 +319,14 @@ async def get_sessions_by_user(user_id: str) -> list[dict]:
     params = [{"name": "@uid", "value": user_id}]
     results = []
     async for item in container.query_items(query=query, parameters=params):
-        results.append({
-            "session_id":    item["id"],
-            "context":       item.get("context", {}),
-            "history_count": len(item.get("history", [])),
-            "_ts":           item.get("_ts", 0),
-        })
+        results.append(
+            {
+                "session_id": item["id"],
+                "context": item.get("context", {}),
+                "history_count": len(item.get("history", [])),
+                "_ts": item.get("_ts", 0),
+            }
+        )
     return results
 
 

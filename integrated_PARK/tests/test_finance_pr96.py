@@ -137,7 +137,15 @@ class TestLoadInitialListRegion:
     def test_other_fields_none(self, plugin):
         """cost, salary 등 나머지 필드는 None"""
         result = plugin.load_initial(region=["11440660"], industry="CS100010")
-        for key in ("cost", "salary", "hours", "rent", "admin", "fee", "initial_investment"):
+        for key in (
+            "cost",
+            "salary",
+            "hours",
+            "rent",
+            "admin",
+            "fee",
+            "initial_investment",
+        ):
             assert result[key] is None
 
 
@@ -218,8 +226,15 @@ class TestFullPipelineListRegion:
         init = plugin.load_initial(region=["11440660"], industry="CS100010")
         sim = plugin.monte_carlo_simulation(revenue=init["revenue"])
         expected_keys = {
-            "average_net_profit", "loss_probability", "avg_loss_amount",
-            "p20", "actual_cost", "actual_salary", "actual_rent",
-            "actual_admin", "actual_fee", "chart",
+            "average_net_profit",
+            "loss_probability",
+            "avg_loss_amount",
+            "p20",
+            "actual_cost",
+            "actual_salary",
+            "actual_rent",
+            "actual_admin",
+            "actual_fee",
+            "chart",
         }
         assert expected_keys.issubset(sim.keys())

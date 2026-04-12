@@ -1,7 +1,7 @@
 # MapView UI 전면 개편 — 세션 인수인계
 
-**날짜**: 2026-04-09  
-**브랜치**: `PARK-stats-period-extend` (현재), 작업 시 `PARK-mapview-ui-redesign` 신규 생성 권장  
+**날짜**: 2026-04-09
+**브랜치**: `PARK-stats-period-extend` (현재), 작업 시 `PARK-mapview-ui-redesign` 신규 생성 권장
 **상태**: 플랜 완성, 구현 미착수
 
 ---

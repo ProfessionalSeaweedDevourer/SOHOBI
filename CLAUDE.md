@@ -351,6 +351,13 @@ curl -s "$BACKEND_HOST/api/v1/logs?type=queries&limit=50" | python3 -m json.tool
 - `.env` 파일에는 Azure API 키가 있음 — 절대 커밋하지 말 것
 - `integrated_PARK/.venv/`는 gitignore됨
 
+## 린트 & 포맷
+
+- 백엔드: `ruff check --fix integrated_PARK/` + `ruff format integrated_PARK/`
+- 프론트엔드: `cd frontend && npx prettier --write src/ && npx eslint --fix src/`
+- pre-commit 훅이 커밋 시 자동 실행됨. `--no-verify` 사용 금지 (WIP 커밋 제외)
+- 설정 파일: `pyproject.toml` (Ruff), `frontend/.prettierrc` (Prettier), `frontend/eslint.config.js` (ESLint)
+
 ## 반복 실수 패턴
 
 <!-- Claude가 반복적으로 틀린 사항을 여기에 기록. 주기적으로 업데이트. -->

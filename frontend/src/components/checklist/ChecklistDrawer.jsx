@@ -18,7 +18,9 @@ export default function ChecklistDrawer({ items, progress, onToggle, onAskQuesti
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, []);
 
   return (
@@ -56,10 +58,7 @@ export default function ChecklistDrawer({ items, progress, onToggle, onAskQuesti
       >
         {/* 드래그 핸들 + 닫기 */}
         <div className="flex items-center justify-center pt-3 pb-1 relative">
-          <div
-            className="w-10 h-1 rounded-full"
-            style={{ background: "var(--border)" }}
-          />
+          <div className="w-10 h-1 rounded-full" style={{ background: "var(--border)" }} />
           <button
             onClick={onClose}
             className="absolute right-3 top-2.5 w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-[var(--muted)]"
@@ -75,7 +74,10 @@ export default function ChecklistDrawer({ items, progress, onToggle, onAskQuesti
             items={items}
             progress={progress}
             onToggle={onToggle}
-            onAskQuestion={(q) => { onClose(); onAskQuestion(q); }}
+            onAskQuestion={(q) => {
+              onClose();
+              onAskQuestion(q);
+            }}
           />
         </div>
       </motion.div>

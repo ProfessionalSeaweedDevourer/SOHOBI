@@ -1,7 +1,7 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const _HEADERS = {
-  'Content-Type': 'application/json',
-  ...(import.meta.env.VITE_API_KEY ? { 'X-API-Key': import.meta.env.VITE_API_KEY } : {}),
+  "Content-Type": "application/json",
+  ...(import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {}),
 };
 
 /**
@@ -14,7 +14,7 @@ const _HEADERS = {
 export async function trackEvent(eventName, payload = {}) {
   try {
     await fetch(`${BASE_URL}/api/events`, {
-      method: 'POST',
+      method: "POST",
       headers: _HEADERS,
       body: JSON.stringify({
         event_name: eventName,

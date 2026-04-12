@@ -2,6 +2,7 @@
 # PostgreSQL (Azure) 버전
 
 import logging
+
 from .baseDAO import BaseDAO
 
 logger = logging.getLogger(__name__)
@@ -10,7 +11,6 @@ LATEST_QTR = "(SELECT MAX(base_yr_qtr_cd) FROM sangkwon_store)"
 
 
 class SangkwonStoreDAO(BaseDAO):
-
     def getStoreBySvcCd(self, adm_cd: str, quarter: str = "") -> list:
         """SVC_CD(대분류) 기준 점포수 합산"""
         qtr_cond = "= %(qtr)s" if quarter else f"= {LATEST_QTR}"
@@ -43,7 +43,9 @@ class SangkwonStoreDAO(BaseDAO):
             logger.error(f"[SangkwonStoreDAO] getStoreBySvcCd 실패: {e}")
             return []
 
-    def getStoreByInduty(self, adm_cd: str, svc_cd: str = "", quarter: str = "") -> list:
+    def getStoreByInduty(
+        self, adm_cd: str, svc_cd: str = "", quarter: str = ""
+    ) -> list:
         """소분류(svc_induty_cd) 기준 점포수"""
         qtr_cond = "= %(qtr)s" if quarter else f"= {LATEST_QTR}"
         svc_cond = "AND m.svc_cd = %(svc)s" if svc_cd else ""

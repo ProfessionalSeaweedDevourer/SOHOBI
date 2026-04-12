@@ -1,7 +1,7 @@
 # 지도 백엔드 통합 가이드
 
-> **대상**: WOO 팀원 (TerryBlackhoodWoo)  
-> **작성일**: 2026-04-03  
+> **대상**: WOO 팀원 (TerryBlackhoodWoo)
+> **작성일**: 2026-04-03
 > **목적**: `backend/` 폴더에서 개발한 지도·부동산 API를 `integrated_PARK`(라이브 서버)에 통합하는 전 과정 안내
 
 ---
@@ -23,14 +23,14 @@ SOHOBI/
     └── db/repository.py       (동일한 Azure PostgreSQL 연결)
 ```
 
-**핵심 사실**: 두 폴더 모두 **같은 Azure PostgreSQL DB**를 바라봅니다. 테이블 구조도 같습니다.  
+**핵심 사실**: 두 폴더 모두 **같은 Azure PostgreSQL DB**를 바라봅니다. 테이블 구조도 같습니다.
 따라서 통합은 "DB 이전" 없이, **코드 구조만 변경**하면 됩니다.
 
 ---
 
 ## 2. 왜 통합해야 하는가
 
-`integrated_PARK`의 `map_router.py`에는 지도 관련 엔드포인트가 이미 있지만,  
+`integrated_PARK`의 `map_router.py`에는 지도 관련 엔드포인트가 이미 있지만,
 WOO가 만든 것보다 **기능이 적거나 일부는 빈 응답(stub)** 을 반환하고 있습니다.
 
 | 엔드포인트 | integrated_PARK 현황 | backend/ 현황 |
@@ -78,7 +78,7 @@ git merge origin/main    # PR#105 포함한 최신 main 반영
 
 ### Step 1. DAO 파일 이전
 
-`backend/DAO/` 안의 파일들을 `integrated_PARK/db/dao/` 폴더에 복사합니다.  
+`backend/DAO/` 안의 파일들을 `integrated_PARK/db/dao/` 폴더에 복사합니다.
 `integrated_PARK/db/`에는 이미 `repository.py`가 있으므로, 그 옆에 `dao/` 서브폴더를 만듭니다.
 
 ```
@@ -98,7 +98,7 @@ integrated_PARK/db/
     └── landValueDAO.py
 ```
 
-**주의**: 각 DAO 파일 상단의 `sys.path.insert(...)` 구문은 제거합니다.  
+**주의**: 각 DAO 파일 상단의 `sys.path.insert(...)` 구문은 제거합니다.
 `from DAO.baseDAO import BaseDAO` → `from db.dao.baseDAO import BaseDAO` 로 import 경로 수정.
 
 **`baseDAO.py`는 그대로 사용 가능합니다.** 환경변수 이름이 `integrated_PARK`의 `repository.py`와 동일합니다:
@@ -111,7 +111,7 @@ PG_HOST, PG_PORT, PG_DB, PG_USER, PG_PASSWORD, PG_SSL_MODE
 
 ### Step 2. 컨트롤러를 APIRouter로 변환
 
-`integrated_PARK`은 **FastAPI의 `APIRouter`** 방식을 사용합니다.  
+`integrated_PARK`은 **FastAPI의 `APIRouter`** 방식을 사용합니다.
 `backend/`의 두 컨트롤러는 `FastAPI` 앱 전체로 되어 있으므로, 형식만 바꿔주면 됩니다.
 
 #### 변경 전 (backend/mapController.py 현재 형태)
@@ -185,7 +185,7 @@ async def get_stores_by_dong(...):
 @router.get("/map/stores-by-building")
 ```
 
-이 4개는 WOO의 DAO를 연결한 버전으로 **교체**하거나, `map_router.py`에서 **삭제**하고 새 router 파일에서 처리합니다.  
+이 4개는 WOO의 DAO를 연결한 버전으로 **교체**하거나, `map_router.py`에서 **삭제**하고 새 router 파일에서 처리합니다.
 (같은 경로가 두 router에 동시에 존재하면 FastAPI가 먼저 등록된 것을 우선 사용하므로, 반드시 하나만 남겨야 합니다.)
 
 ---
@@ -205,7 +205,7 @@ KAKAO_REST_KEY=064e455e...
 KTO_GW_INFO_KEY=b7906dd7...
 ```
 
-실제 키 값은 `backend/.env.example`에서 확인하세요.  
+실제 키 값은 `backend/.env.example`에서 확인하세요.
 **Azure Container Apps 환경변수 등록은 PARK 팀원에게 요청합니다.**
 
 ---
@@ -221,7 +221,7 @@ psycopg2-binary==2.9.9
 python-dotenv>=1.0.0
 ```
 
-`integrated_PARK/requirements.txt`에는 `psycopg2-binary==2.9.9`가 이미 있습니다.  
+`integrated_PARK/requirements.txt`에는 `psycopg2-binary==2.9.9`가 이미 있습니다.
 `httpx`가 있는지 확인하고 없으면 추가합니다:
 
 ```bash
@@ -254,8 +254,8 @@ grep httpx integrated_PARK/requirements.txt
 2. 동일 엔드포인트를 `integrated_PARK/map_data_router.py` (또는 `realestate_router.py`)에 추가
 3. PR
 
-> **팁**: `backend/` 폴더는 **로컬 개발·테스트용**으로 계속 유지할 수 있습니다.  
-> `python -m uvicorn mapController:app --reload` 로 독립 실행하여 빠르게 확인한 뒤,  
+> **팁**: `backend/` 폴더는 **로컬 개발·테스트용**으로 계속 유지할 수 있습니다.
+> `python -m uvicorn mapController:app --reload` 로 독립 실행하여 빠르게 확인한 뒤,
 > 검증된 코드만 `integrated_PARK`에 반영하는 워크플로우가 효율적입니다.
 
 ---

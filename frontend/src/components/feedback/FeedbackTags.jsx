@@ -15,8 +15,16 @@ export default function FeedbackTags({ selectedTags, onTagToggle, onSubmit, isSu
               className="text-xs px-3 py-1.5 rounded-full border transition-colors duration-150"
               style={
                 isSelected
-                  ? { background: "var(--brand-blue)", color: "#fff", borderColor: "var(--brand-blue)" }
-                  : { background: "var(--muted)", color: "var(--muted-foreground)", borderColor: "var(--border)" }
+                  ? {
+                      background: "var(--brand-blue)",
+                      color: "#fff",
+                      borderColor: "var(--brand-blue)",
+                    }
+                  : {
+                      background: "var(--muted)",
+                      color: "var(--muted-foreground)",
+                      borderColor: "var(--border)",
+                    }
               }
             >
               {tag.label}

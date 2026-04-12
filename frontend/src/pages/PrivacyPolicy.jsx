@@ -1,28 +1,42 @@
-import { Link } from 'react-router-dom';
-import { Button } from '../components/ui/button';
-import { AnimatedBackground } from '../components/AnimatedBackground';
-import { ThemeToggle } from '../components/ThemeToggle';
-import { MessageSquare, FileText, Shield, AlertTriangle, Globe, Users, Lock, RefreshCw, Mail, ArrowLeft } from 'lucide-react';
-import { motion } from 'motion/react';
-import { GlowCTA } from '../components/GlowCTA';
+import { Link } from "react-router-dom";
+import { Button } from "../components/ui/button";
+import { AnimatedBackground } from "../components/AnimatedBackground";
+import { ThemeToggle } from "../components/ThemeToggle";
+import {
+  MessageSquare,
+  FileText,
+  Shield,
+  AlertTriangle,
+  Globe,
+  Users,
+  Lock,
+  RefreshCw,
+  Mail,
+  ArrowLeft,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { GlowCTA } from "../components/GlowCTA";
 
 const part1Articles = [
   {
-    num: '제1조',
-    title: '개인정보의 처리 목적',
+    num: "제1조",
+    title: "개인정보의 처리 목적",
     icon: Shield,
-    color: 'var(--brand-blue)',
+    color: "var(--brand-blue)",
     content: (
       <>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-          SOHOBI(이하 '서비스')는 F&B 분야 1인 창업자 및 소규모 사업자의 운영 효율 향상을 위한 멀티 에이전트 플랫폼으로서,
-          아래의 목적을 위해 최소한의 범위 내에서 개인정보를 처리합니다.
+          SOHOBI(이하 '서비스')는 F&B 분야 1인 창업자 및 소규모 사업자의 운영 효율 향상을 위한 멀티
+          에이전트 플랫폼으로서, 아래의 목적을 위해 최소한의 범위 내에서 개인정보를 처리합니다.
         </p>
         <div className="space-y-3">
           <div>
             <p className="text-sm font-semibold mb-1">1.1 AI 에이전트 기능 제공 및 정확도 향상</p>
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>F&B 창업자 대상 상권 분석·재무 시뮬레이션·법령 안내·행정 절차 지원 등 핵심 에이전트 기능의 응답 생성</li>
+              <li>
+                F&B 창업자 대상 상권 분석·재무 시뮬레이션·법령 안내·행정 절차 지원 등 핵심 에이전트
+                기능의 응답 생성
+              </li>
               <li>생성형 AI의 환각(Hallucination) 현상 완화 및 최종 검증 에이전트의 품질 개선</li>
               <li>이용자의 업종·지역 맥락에 맞는 맞춤형 응답 최적화</li>
             </ul>
@@ -40,27 +54,31 @@ const part1Articles = [
     ),
   },
   {
-    num: '제2조',
-    title: '개인정보 처리의 적법 근거',
+    num: "제2조",
+    title: "개인정보 처리의 적법 근거",
     icon: FileText,
-    color: 'var(--brand-teal)',
+    color: "var(--brand-teal)",
     content: (
       <>
         <div className="space-y-4">
           <div>
-            <p className="text-sm font-semibold mb-2">2.1 계약 이행 (개인정보 보호법 제15조 제1항 제4호)</p>
+            <p className="text-sm font-semibold mb-2">
+              2.1 계약 이행 (개인정보 보호법 제15조 제1항 제4호)
+            </p>
             <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-              이용자가 요청한 상권 분석·재무 시뮬레이션·법령 안내 등 AI 에이전트 서비스를 제공하기 위해
-              대화 이력·세션 정보를 처리합니다. 로그인 회원의 경우 Google 계정 정보(이름·이메일·식별자)도
-              서비스 제공을 위한 계약 이행 근거로 처리됩니다.
+              이용자가 요청한 상권 분석·재무 시뮬레이션·법령 안내 등 AI 에이전트 서비스를 제공하기
+              위해 대화 이력·세션 정보를 처리합니다. 로그인 회원의 경우 Google 계정
+              정보(이름·이메일·식별자)도 서비스 제공을 위한 계약 이행 근거로 처리됩니다.
             </p>
           </div>
           <div>
-            <p className="text-sm font-semibold mb-2">2.2 정당한 이익 (개인정보 보호법 제15조 제1항 제6호)</p>
+            <p className="text-sm font-semibold mb-2">
+              2.2 정당한 이익 (개인정보 보호법 제15조 제1항 제6호)
+            </p>
             <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-              서비스 보안 및 어뷰징 탐지(IP 주소 수집·분석, 프롬프트 인젝션 모니터링)는
-              서비스 안정 운영이라는 <strong>정당한 이익</strong>을 법적 근거로 합니다.
-              이 이익은 이용자의 사생활 침해 위험보다 우선하며, 수집된 IP는 보안 목적으로만 활용됩니다.
+              서비스 보안 및 어뷰징 탐지(IP 주소 수집·분석, 프롬프트 인젝션 모니터링)는 서비스 안정
+              운영이라는 <strong>정당한 이익</strong>을 법적 근거로 합니다. 이 이익은 이용자의
+              사생활 침해 위험보다 우선하며, 수집된 IP는 보안 목적으로만 활용됩니다.
             </p>
           </div>
         </div>
@@ -68,10 +86,10 @@ const part1Articles = [
     ),
   },
   {
-    num: '제3조',
-    title: '수집하는 개인정보 항목 및 보유 기간',
+    num: "제3조",
+    title: "수집하는 개인정보 항목 및 보유 기간",
     icon: Lock,
-    color: 'var(--brand-blue)',
+    color: "var(--brand-blue)",
     content: (
       <>
         <div className="overflow-x-auto mb-4">
@@ -91,7 +109,9 @@ const part1Articles = [
               </tr>
               <tr className="border-b border-white/10">
                 <td className="py-2 pr-4">로그인 회원 서비스 이용</td>
-                <td className="py-2 pr-4">대화 이력, 에이전트 요청 내역, 세션 ID, Google 계정명·이메일·식별자</td>
+                <td className="py-2 pr-4">
+                  대화 이력, 에이전트 요청 내역, 세션 ID, Google 계정명·이메일·식별자
+                </td>
                 <td className="py-2">30일 (탈퇴 요청 시 즉시 삭제)</td>
               </tr>
               <tr className="border-b border-white/10">
@@ -101,7 +121,9 @@ const part1Articles = [
               </tr>
               <tr>
                 <td className="py-2 pr-4 text-red-400 font-semibold">수집 금지</td>
-                <td className="py-2 pr-4 text-red-400">주민등록번호, 계좌번호, 여권번호 등 고유식별정보</td>
+                <td className="py-2 pr-4 text-red-400">
+                  주민등록번호, 계좌번호, 여권번호 등 고유식별정보
+                </td>
                 <td className="py-2 text-red-400 font-semibold">수집하지 않습니다</td>
               </tr>
             </tbody>
@@ -111,8 +133,9 @@ const part1Articles = [
           <div className="flex items-start gap-2">
             <AlertTriangle size={16} className="text-yellow-400 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-muted-foreground leading-relaxed">
-              <strong className="text-yellow-400">주의</strong>: 이용자가 프롬프트에 직접 입력한 민감정보(고유식별정보 포함)는
-              당사가 의도적으로 수집하지 않으나, 입력된 경우 시스템에 일시적으로 처리될 수 있습니다.
+              <strong className="text-yellow-400">주의</strong>: 이용자가 프롬프트에 직접 입력한
+              민감정보(고유식별정보 포함)는 당사가 의도적으로 수집하지 않으나, 입력된 경우 시스템에
+              일시적으로 처리될 수 있습니다.
               <strong> 민감정보를 프롬프트에 입력하지 마십시오.</strong>
             </p>
           </div>
@@ -121,18 +144,23 @@ const part1Articles = [
     ),
   },
   {
-    num: '제4조',
-    title: '개인정보의 안전성 확보 조치',
+    num: "제4조",
+    title: "개인정보의 안전성 확보 조치",
     icon: Shield,
-    color: 'var(--brand-teal)',
+    color: "var(--brand-teal)",
     content: (
       <>
         <div className="space-y-4">
           <div>
             <p className="text-sm font-semibold mb-2">4.1 입출력 필터링 시스템</p>
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li><strong>입력 단계</strong>: 개인정보 패턴(전화번호, 이메일 등) 및 프롬프트 인젝션 공격 자동 탐지</li>
-              <li><strong>출력 단계</strong>: 생성된 응답 내 개인정보 노출 여부 검토 및 필터링</li>
+              <li>
+                <strong>입력 단계</strong>: 개인정보 패턴(전화번호, 이메일 등) 및 프롬프트 인젝션
+                공격 자동 탐지
+              </li>
+              <li>
+                <strong>출력 단계</strong>: 생성된 응답 내 개인정보 노출 여부 검토 및 필터링
+              </li>
               <li>최종 검증 에이전트를 통한 루브릭 기반 출력 품질 검사</li>
             </ul>
           </div>
@@ -140,7 +168,9 @@ const part1Articles = [
             <p className="text-sm font-semibold mb-2">4.2 인프라 보안</p>
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
               <li>Azure 환경 내 HTTPS 암호화 통신 적용</li>
-              <li>Azure Cosmos DB 및 Azure Blob Storage 접근 권한 최소화 (Role-Based Access Control)</li>
+              <li>
+                Azure Cosmos DB 및 Azure Blob Storage 접근 권한 최소화 (Role-Based Access Control)
+              </li>
               <li>API 키·시크릿 정보는 Azure Key Vault를 통해 관리하며 소스코드 하드코딩 금지</li>
             </ul>
           </div>
@@ -149,10 +179,10 @@ const part1Articles = [
     ),
   },
   {
-    num: '제5조',
-    title: '정보주체의 권리 및 행사 방법',
+    num: "제5조",
+    title: "정보주체의 권리 및 행사 방법",
     icon: Users,
-    color: 'var(--brand-blue)',
+    color: "var(--brand-blue)",
     content: (
       <>
         <div className="overflow-x-auto mb-4">
@@ -166,10 +196,22 @@ const part1Articles = [
             </thead>
             <tbody className="text-muted-foreground">
               {[
-                ['열람 요청', '본인의 개인정보 처리 현황 확인', '고객 지원 이메일 접수'],
-                ['정정·삭제 요청', '부정확한 정보 수정 또는 삭제', '고객 지원 이메일 접수 후 10일 이내 조치'],
-                ['처리 정지 요청', '개인정보 처리 중단 요청', '고객 지원 이메일 접수 후 10일 이내 조치'],
-                ['데이터 삭제 요청', '보유 중인 대화 이력·세션 데이터 즉시 삭제 요청', '고객 지원 이메일 접수 후 10일 이내 조치'],
+                ["열람 요청", "본인의 개인정보 처리 현황 확인", "고객 지원 이메일 접수"],
+                [
+                  "정정·삭제 요청",
+                  "부정확한 정보 수정 또는 삭제",
+                  "고객 지원 이메일 접수 후 10일 이내 조치",
+                ],
+                [
+                  "처리 정지 요청",
+                  "개인정보 처리 중단 요청",
+                  "고객 지원 이메일 접수 후 10일 이내 조치",
+                ],
+                [
+                  "데이터 삭제 요청",
+                  "보유 중인 대화 이력·세션 데이터 즉시 삭제 요청",
+                  "고객 지원 이메일 접수 후 10일 이내 조치",
+                ],
               ].map(([right, desc, method], i) => (
                 <tr key={i} className="border-b border-white/10">
                   <td className="py-2 pr-4 font-medium">{right}</td>
@@ -184,8 +226,8 @@ const part1Articles = [
           <div className="flex items-start gap-2">
             <Shield size={16} className="text-[var(--brand-blue)] mt-0.5 flex-shrink-0" />
             <p className="text-sm text-muted-foreground leading-relaxed">
-              삭제 요청 접수 후 10일 이내에 대화 이력 및 세션 데이터를 삭제합니다.
-              단, 법령상 보존 의무가 있는 접속 로그는 해당 의무 기간(6개월) 경과 후 삭제됩니다.
+              삭제 요청 접수 후 10일 이내에 대화 이력 및 세션 데이터를 삭제합니다. 단, 법령상 보존
+              의무가 있는 접속 로그는 해당 의무 기간(6개월) 경과 후 삭제됩니다.
             </p>
           </div>
         </div>
@@ -193,25 +235,26 @@ const part1Articles = [
     ),
   },
   {
-    num: '제6조',
-    title: '개인정보의 국외 이전 및 수탁 업체',
+    num: "제6조",
+    title: "개인정보의 국외 이전 및 수탁 업체",
     icon: Globe,
-    color: 'var(--brand-teal)',
+    color: "var(--brand-teal)",
     content: (
       <>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-          본 서비스는 글로벌 클라우드 인프라를 활용함에 따라 일부 개인정보가 해외로 이전될 수 있습니다.
+          본 서비스는 글로벌 클라우드 인프라를 활용함에 따라 일부 개인정보가 해외로 이전될 수
+          있습니다.
         </p>
         <div className="overflow-x-auto mb-4">
           <table className="w-full text-sm border-collapse">
             <tbody className="text-muted-foreground">
               {[
-                ['이전 국가', '미국 (Azure East US 2 리전)'],
-                ['국내 처리', '대한민국 (Azure Korea Central 리전) — 핵심 백엔드 서비스'],
-                ['수탁 업체', 'Microsoft Corporation'],
-                ['이전 목적', '서비스 데이터 저장·처리, 생성형 AI API 연동 (Azure AI Foundry)'],
-                ['이전 항목', '서비스 이용 로그, 대화 이력 (암호화 전송)'],
-                ['보호 조치', 'Microsoft 표준 계약 조항(SCC) 및 데이터 보호 부속 계약(DPA) 적용'],
+                ["이전 국가", "미국 (Azure East US 2 리전)"],
+                ["국내 처리", "대한민국 (Azure Korea Central 리전) — 핵심 백엔드 서비스"],
+                ["수탁 업체", "Microsoft Corporation"],
+                ["이전 목적", "서비스 데이터 저장·처리, 생성형 AI API 연동 (Azure AI Foundry)"],
+                ["이전 항목", "서비스 이용 로그, 대화 이력 (암호화 전송)"],
+                ["보호 조치", "Microsoft 표준 계약 조항(SCC) 및 데이터 보호 부속 계약(DPA) 적용"],
               ].map(([label, value], i) => (
                 <tr key={i} className="border-b border-white/10">
                   <td className="py-2 pr-4 font-semibold w-32">{label}</td>
@@ -225,8 +268,8 @@ const part1Articles = [
           <div className="flex items-start gap-2">
             <Globe size={16} className="text-[var(--brand-blue)] mt-0.5 flex-shrink-0" />
             <p className="text-sm text-muted-foreground leading-relaxed">
-              핵심 백엔드 서비스는 국내(Azure Korea Central) 리전에서 운영되며,
-              일부 보조 서비스 및 AI 추론 기능은 미국(Azure East US 2) 리전을 경유할 수 있습니다.
+              핵심 백엔드 서비스는 국내(Azure Korea Central) 리전에서 운영되며, 일부 보조 서비스 및
+              AI 추론 기능은 미국(Azure East US 2) 리전을 경유할 수 있습니다.
             </p>
           </div>
         </div>
@@ -234,10 +277,10 @@ const part1Articles = [
     ),
   },
   {
-    num: '제7조',
-    title: '개인정보 처리방침 변경',
+    num: "제7조",
+    title: "개인정보 처리방침 변경",
     icon: RefreshCw,
-    color: 'var(--brand-blue)',
+    color: "var(--brand-blue)",
     content: (
       <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside leading-relaxed">
         <li>본 처리방침은 법령 개정 또는 서비스 변경 시 업데이트될 수 있습니다.</li>
@@ -247,18 +290,18 @@ const part1Articles = [
     ),
   },
   {
-    num: '제8조',
-    title: '개인정보 보호책임자',
+    num: "제8조",
+    title: "개인정보 보호책임자",
     icon: Mail,
-    color: 'var(--brand-teal)',
+    color: "var(--brand-teal)",
     content: (
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <tbody className="text-muted-foreground">
             {[
-              ['책임자', 'SOHOBI 서비스 운영팀'],
-              ['연락처', 'support@sohobi.kr'],
-              ['문의 처리', '접수 후 영업일 기준 3일 이내 회신'],
+              ["책임자", "SOHOBI 서비스 운영팀"],
+              ["연락처", "support@sohobi.kr"],
+              ["문의 처리", "접수 후 영업일 기준 3일 이내 회신"],
             ].map(([label, value], i) => (
               <tr key={i} className="border-b border-white/10">
                 <td className="py-2 pr-4 font-semibold w-28">{label}</td>
@@ -274,18 +317,23 @@ const part1Articles = [
 
 const part2Articles = [
   {
-    num: '제1조',
-    title: 'AI 생성 콘텐츠의 기술적 한계',
+    num: "제1조",
+    title: "AI 생성 콘텐츠의 기술적 한계",
     icon: AlertTriangle,
-    color: 'var(--brand-orange)',
+    color: "var(--brand-orange)",
     content: (
       <>
         <div className="space-y-4">
           <div>
             <p className="text-sm font-semibold mb-2">1.1 정확성 미보장</p>
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>사실과 다른 정보(환각, Hallucination)를 생성할 수 있으며, 이는 생성형 AI의 본질적 특성입니다.</li>
-              <li>법령·세무·위생 기준 등 시시각각 변동하는 정보는 최신 상태를 보장하지 않습니다.</li>
+              <li>
+                사실과 다른 정보(환각, Hallucination)를 생성할 수 있으며, 이는 생성형 AI의 본질적
+                특성입니다.
+              </li>
+              <li>
+                법령·세무·위생 기준 등 시시각각 변동하는 정보는 최신 상태를 보장하지 않습니다.
+              </li>
               <li>특정 지역·업종에 국한된 세부 규정은 실제와 다를 수 있습니다.</li>
             </ul>
           </div>
@@ -295,14 +343,18 @@ const part2Articles = [
               <div className="flex items-start gap-2">
                 <AlertTriangle size={16} className="text-yellow-400 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  <strong className="text-yellow-400">중요</strong>: F&B 관련 사업자 등록, 위생 법규, 세무 신고, 임대차 계약 등 중요 의사결정 시에는
-                  반드시 공인 회계사·세무사·변호사 등 해당 분야 전문가의 별도 자문을 받으시기 바랍니다.
+                  <strong className="text-yellow-400">중요</strong>: F&B 관련 사업자 등록, 위생
+                  법규, 세무 신고, 임대차 계약 등 중요 의사결정 시에는 반드시 공인
+                  회계사·세무사·변호사 등 해당 분야 전문가의 별도 자문을 받으시기 바랍니다.
                   <strong> SOHOBI의 응답은 참고 자료로만 활용하십시오.</strong>
                 </p>
               </div>
             </div>
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>SOHOBI는 법무·세무·의료 등 전문 자격이 요구되는 분야의 공식 서비스를 대체하지 않습니다.</li>
+              <li>
+                SOHOBI는 법무·세무·의료 등 전문 자격이 요구되는 분야의 공식 서비스를 대체하지
+                않습니다.
+              </li>
               <li>서비스 내 정보를 근거로 한 최종 의사결정의 책임은 이용자 본인에게 있습니다.</li>
             </ul>
           </div>
@@ -311,14 +363,15 @@ const part2Articles = [
     ),
   },
   {
-    num: '제2조',
-    title: '허용되는 이용방침 (AUP)',
+    num: "제2조",
+    title: "허용되는 이용방침 (AUP)",
     icon: Shield,
-    color: 'var(--brand-blue)',
+    color: "var(--brand-blue)",
     content: (
       <>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-          이용자는 서비스를 합법적이고 선의의 목적으로만 사용해야 하며, 다음의 행위는 엄격히 금지됩니다.
+          이용자는 서비스를 합법적이고 선의의 목적으로만 사용해야 하며, 다음의 행위는 엄격히
+          금지됩니다.
         </p>
         <div className="overflow-x-auto mb-4">
           <table className="w-full text-sm border-collapse">
@@ -330,11 +383,20 @@ const part2Articles = [
             </thead>
             <tbody className="text-muted-foreground">
               {[
-                ['개인정보 침해', '타인의 성명·연락처·계좌번호 등을 무단 입력하거나 추출을 시도하는 행위'],
-                ['보안 우회 시도', '프롬프트 인젝션, 시스템 프롬프트 유출 시도, 모델 탈옥(Jailbreak) 시도'],
-                ['유해 콘텐츠 유도', '불법 약물·무기 제조, 범죄 행위, 혐오 콘텐츠 생성을 유도하는 행위'],
-                ['허위 정보 유포', 'AI 응답을 의도적으로 왜곡하거나 허위 정보를 확산시키는 행위'],
-                ['서비스 남용', '자동화 프로그램을 이용한 대량 요청, 서비스 인프라 과부하 유발'],
+                [
+                  "개인정보 침해",
+                  "타인의 성명·연락처·계좌번호 등을 무단 입력하거나 추출을 시도하는 행위",
+                ],
+                [
+                  "보안 우회 시도",
+                  "프롬프트 인젝션, 시스템 프롬프트 유출 시도, 모델 탈옥(Jailbreak) 시도",
+                ],
+                [
+                  "유해 콘텐츠 유도",
+                  "불법 약물·무기 제조, 범죄 행위, 혐오 콘텐츠 생성을 유도하는 행위",
+                ],
+                ["허위 정보 유포", "AI 응답을 의도적으로 왜곡하거나 허위 정보를 확산시키는 행위"],
+                ["서비스 남용", "자동화 프로그램을 이용한 대량 요청, 서비스 인프라 과부하 유발"],
               ].map(([type, example], i) => (
                 <tr key={i} className="border-b border-white/10">
                   <td className="py-2 pr-4 font-medium text-red-400">{type}</td>
@@ -345,36 +407,52 @@ const part2Articles = [
           </table>
         </div>
         <p className="text-sm text-muted-foreground">
-          위 금지 행위 발생 시 서비스는 사전 통보 없이 해당 이용을 제한하거나 법적 조치를 취할 수 있습니다.
+          위 금지 행위 발생 시 서비스는 사전 통보 없이 해당 이용을 제한하거나 법적 조치를 취할 수
+          있습니다.
         </p>
       </>
     ),
   },
   {
-    num: '제3조',
-    title: '이용자 책임 및 손해배상',
+    num: "제3조",
+    title: "이용자 책임 및 손해배상",
     icon: FileText,
-    color: 'var(--brand-teal)',
+    color: "var(--brand-teal)",
     content: (
       <div className="space-y-4">
         <div>
           <p className="text-sm font-semibold mb-2">3.1 입력 데이터에 대한 책임</p>
           <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-            <li>이용자가 프롬프트에 직접 입력한 정보의 정확성 및 적법성에 대한 책임은 이용자 본인에게 있습니다.</li>
-            <li>이용자 본인 또는 제3자의 민감정보를 프롬프트에 입력하여 발생하는 모든 손해는 이용자가 부담합니다.</li>
+            <li>
+              이용자가 프롬프트에 직접 입력한 정보의 정확성 및 적법성에 대한 책임은 이용자 본인에게
+              있습니다.
+            </li>
+            <li>
+              이용자 본인 또는 제3자의 민감정보를 프롬프트에 입력하여 발생하는 모든 손해는 이용자가
+              부담합니다.
+            </li>
           </ul>
         </div>
         <div>
           <p className="text-sm font-semibold mb-2">3.2 AI 결과물 활용에 대한 책임</p>
           <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-            <li>SOHOBI가 생성한 콘텐츠를 실제 사업 운영·투자·법적 판단 등에 적용하여 발생하는 결과에 대해, 서비스 제공자는 고의 또는 중대한 과실이 없는 한 민·형사상 책임을 지지 않습니다.</li>
-            <li>AI 응답을 기반으로 체결한 계약, 제출한 서류, 집행한 투자 등으로 인한 손실에 대해 서비스는 보상 의무를 지지 않습니다.</li>
+            <li>
+              SOHOBI가 생성한 콘텐츠를 실제 사업 운영·투자·법적 판단 등에 적용하여 발생하는 결과에
+              대해, 서비스 제공자는 고의 또는 중대한 과실이 없는 한 민·형사상 책임을 지지 않습니다.
+            </li>
+            <li>
+              AI 응답을 기반으로 체결한 계약, 제출한 서류, 집행한 투자 등으로 인한 손실에 대해
+              서비스는 보상 의무를 지지 않습니다.
+            </li>
           </ul>
         </div>
         <div>
           <p className="text-sm font-semibold mb-2">3.3 서비스 가용성</p>
           <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-            <li>서비스는 Azure 클라우드 인프라 장애, 정기 점검, 천재지변 등으로 인해 일시 중단될 수 있으며, 이로 인한 손해에 대해 책임을 지지 않습니다.</li>
+            <li>
+              서비스는 Azure 클라우드 인프라 장애, 정기 점검, 천재지변 등으로 인해 일시 중단될 수
+              있으며, 이로 인한 손해에 대해 책임을 지지 않습니다.
+            </li>
             <li>생성형 AI 모델 업데이트로 인해 응답 형식·내용이 변경될 수 있습니다.</li>
           </ul>
         </div>
@@ -382,27 +460,39 @@ const part2Articles = [
     ),
   },
   {
-    num: '제4조',
-    title: '지식재산권',
+    num: "제4조",
+    title: "지식재산권",
     icon: Lock,
-    color: 'var(--brand-blue)',
+    color: "var(--brand-blue)",
     content: (
       <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside leading-relaxed">
         <li>서비스의 UI, 에이전트 로직, 브랜드 자산(SOHOBI)은 서비스 제공자의 지식재산입니다.</li>
-        <li>이용자가 서비스를 통해 생성한 응답 결과물의 지식재산권은 이용자에게 귀속되나, 서비스 개선 목적의 비식별 활용에 동의한 것으로 봅니다.</li>
-        <li>이용자는 서비스 내 콘텐츠를 상업적 목적으로 무단 재판매하거나 경쟁 서비스 구축에 활용할 수 없습니다.</li>
+        <li>
+          이용자가 서비스를 통해 생성한 응답 결과물의 지식재산권은 이용자에게 귀속되나, 서비스 개선
+          목적의 비식별 활용에 동의한 것으로 봅니다.
+        </li>
+        <li>
+          이용자는 서비스 내 콘텐츠를 상업적 목적으로 무단 재판매하거나 경쟁 서비스 구축에 활용할 수
+          없습니다.
+        </li>
       </ul>
     ),
   },
   {
-    num: '제5조',
-    title: '분쟁 해결 및 관할',
+    num: "제5조",
+    title: "분쟁 해결 및 관할",
     icon: Globe,
-    color: 'var(--brand-teal)',
+    color: "var(--brand-teal)",
     content: (
       <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside leading-relaxed">
-        <li>본 약관에 관한 분쟁은 대한민국 법률을 준거법으로 하며, 서울중앙지방법원을 1심 관할법원으로 합니다.</li>
-        <li>분쟁 발생 시 우선 고객 지원 채널을 통한 협의를 시도하며, 협의가 불가한 경우 법원에 의뢰합니다.</li>
+        <li>
+          본 약관에 관한 분쟁은 대한민국 법률을 준거법으로 하며, 서울중앙지방법원을 1심 관할법원으로
+          합니다.
+        </li>
+        <li>
+          분쟁 발생 시 우선 고객 지원 채널을 통한 협의를 시도하며, 협의가 불가한 경우 법원에
+          의뢰합니다.
+        </li>
       </ul>
     ),
   },
@@ -435,7 +525,10 @@ function ArticleCard({ article, index }) {
             <Icon size={20} style={{ color: article.color }} className="relative z-10" />
           </div>
           <div>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full mb-1 inline-block" style={{ backgroundColor: `${article.color}15`, color: article.color }}>
+            <span
+              className="text-xs font-semibold px-2 py-0.5 rounded-full mb-1 inline-block"
+              style={{ backgroundColor: `${article.color}15`, color: article.color }}
+            >
               {article.num}
             </span>
             <h3 className="text-lg font-semibold leading-snug">{article.title}</h3>
@@ -530,7 +623,8 @@ export default function PrivacyPolicy() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="text-sm text-muted-foreground mt-3 max-w-2xl mx-auto leading-relaxed"
           >
-            본 문서는 개인정보 보호법 및 생성형 AI 서비스 관련 안내서를 준거로 작성된 SOHOBI 서비스의 공식 개인정보처리방침 및 이용방침입니다.
+            본 문서는 개인정보 보호법 및 생성형 AI 서비스 관련 안내서를 준거로 작성된 SOHOBI
+            서비스의 공식 개인정보처리방침 및 이용방침입니다.
           </motion.p>
         </div>
       </section>
@@ -581,7 +675,7 @@ export default function PrivacyPolicy() {
 
           <div className="space-y-6">
             {part2Articles.map((article, idx) => (
-              <ArticleCard key={article.num + '-p2'} article={article} index={idx} />
+              <ArticleCard key={article.num + "-p2"} article={article} index={idx} />
             ))}
           </div>
         </div>
@@ -597,13 +691,22 @@ export default function PrivacyPolicy() {
           className="max-w-2xl mx-auto"
         >
           <GlowCTA orbSize="w-48 h-48" className="p-10 text-center shadow-elevated-lg">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg relative" style={{ backgroundColor: 'var(--brand-blue)15' }}>
-              <div className="absolute inset-0 rounded-2xl blur-xl opacity-30" style={{ backgroundColor: 'var(--brand-blue)' }} />
-              <Mail size={28} style={{ color: 'var(--brand-blue)' }} className="relative z-10" />
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg relative"
+              style={{ backgroundColor: "var(--brand-blue)15" }}
+            >
+              <div
+                className="absolute inset-0 rounded-2xl blur-xl opacity-30"
+                style={{ backgroundColor: "var(--brand-blue)" }}
+              />
+              <Mail size={28} style={{ color: "var(--brand-blue)" }} className="relative z-10" />
             </div>
             <h2 className="text-2xl md:text-3xl mb-3 gradient-text">개인정보 관련 문의</h2>
             <p className="text-muted-foreground mb-2">
-              <a href="mailto:support@sohobi.kr" className="hover:text-[var(--brand-blue)] transition-colors font-medium underline underline-offset-2">
+              <a
+                href="mailto:support@sohobi.kr"
+                className="hover:text-[var(--brand-blue)] transition-colors font-medium underline underline-offset-2"
+              >
                 support@sohobi.kr
               </a>
             </p>
@@ -617,7 +720,10 @@ export default function PrivacyPolicy() {
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p className="mb-2">© 2026 SOHOBI.</p>
           <p className="mb-3">소상공인을 위한 AI 컨설팅 플랫폼</p>
-          <Link to="/privacy" className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2">
+          <Link
+            to="/privacy"
+            className="hover:text-[var(--brand-blue)] transition-colors underline underline-offset-2"
+          >
             개인정보처리방침
           </Link>
           <p className="text-xs text-muted-foreground text-center mt-4">

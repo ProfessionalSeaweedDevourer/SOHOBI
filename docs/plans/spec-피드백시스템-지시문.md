@@ -219,7 +219,7 @@ class FeedbackRequest(BaseModel):
 async def submit_feedback(feedback: FeedbackRequest):
     """
     사용자 인라인 피드백을 Cosmos DB에 저장한다.
-    
+
     기존 Cosmos DB 클라이언트를 활용하여 구현할 것.
     컨테이너명과 데이터베이스 참조 방식은 기존 코드 패턴을 따른다.
     """
@@ -234,13 +234,13 @@ async def submit_feedback(feedback: FeedbackRequest):
         "timestamp": feedback.timestamp,
         "created_at": datetime.utcnow().isoformat(),
     }
-    
+
     # Cosmos DB 컨테이너에 문서 생성
     # 파티션 키: /agent_type
     # 기존 cosmos_client 또는 database 참조를 사용하라.
     # 예: container = database.get_container_client("feedback")
     #     container.create_item(body=document)
-    
+
     return {"status": "ok", "id": document["id"]}
 ```
 
@@ -330,11 +330,11 @@ trackEvent('agent_query', {
 async def track_event(event: dict):
     """
     사용 이벤트를 저장한다.
-    
+
     저장 방식 두 가지 중 기존 코드베이스에 맞는 것을 선택:
     1. Cosmos DB 'usage_events' 컨테이너 (쿼리/집계가 필요할 때)
     2. Azure Blob Storage에 JSON Lines 형식으로 append (단순 로그 적재)
-    
+
     권장: 리포트 생성에 집계 쿼리가 필요하므로 Cosmos DB를 우선 사용.
     """
     document = {
@@ -595,16 +595,16 @@ src/
 async def get_usage_report(session_id: str):
     """
     세션의 사용 리포트 데이터를 집계하여 반환한다.
-    
+
     집계 대상:
     1. usage_events 컨테이너에서 session_id별 에이전트 사용 횟수 집계
     2. feedback 컨테이너에서 session_id별 피드백 요약 집계
     3. checklist 문서에서 진행률 조회
     4. 미완료 체크리스트 항목을 기반으로 추천 목록 생성
-    
+
     Cosmos DB 쿼리 예시:
-    SELECT c.agent_type, COUNT(1) as count 
-    FROM c 
+    SELECT c.agent_type, COUNT(1) as count
+    FROM c
     WHERE c.session_id = @session_id AND c.event_name = 'agent_query'
     GROUP BY c.agent_type
     """

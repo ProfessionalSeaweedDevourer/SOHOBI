@@ -2,7 +2,6 @@
 DBWork 단위 테스트 — Azure PostgreSQL 연결 및 매출 조회 검증
 """
 
-import pytest
 from db.finance_db import DBWork
 
 

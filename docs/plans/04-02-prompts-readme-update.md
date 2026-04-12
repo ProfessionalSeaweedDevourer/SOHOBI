@@ -1,7 +1,7 @@
 # 플랜: integrated_PARK/prompts/README.md 최신화
 
-> 작성일: 2026-04-02  
-> 담당: PARK  
+> 작성일: 2026-04-02
+> 담당: PARK
 > 대상 파일: `integrated_PARK/prompts/README.md`
 
 ## Context

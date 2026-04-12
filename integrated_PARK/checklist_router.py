@@ -4,10 +4,12 @@
 GET  /api/checklist/{session_id}  — 현재 상태 조회
 PATCH /api/checklist/{session_id} — 단일 항목 수동 토글
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+
+from datetime import UTC
 
 import checklist_store
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from session_store import session_exists
 
 router = APIRouter()
@@ -16,7 +18,7 @@ router = APIRouter()
 class ChecklistToggleRequest(BaseModel):
     item_id: str
     checked: bool
-    source:  str = "manual"   # "manual" | "auto"
+    source: str = "manual"  # "manual" | "auto"
 
 
 @router.get("/api/checklist/{session_id}")
@@ -58,17 +60,18 @@ async def toggle_checklist_item(session_id: str, body: ChecklistToggleRequest):
     doc = await checklist_store.get_checklist(session_id)
     items = doc["items"]
 
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     items[body.item_id] = {
-        "checked":    body.checked,
-        "source":     body.source,
-        "checked_at": datetime.now(timezone.utc).isoformat() if body.checked else None,
+        "checked": body.checked,
+        "source": body.source,
+        "checked_at": datetime.now(UTC).isoformat() if body.checked else None,
     }
 
     await checklist_store.upsert_checklist(session_id, items)
     return {
         "session_id": session_id,
-        "item_id":    body.item_id,
-        "checked":    body.checked,
-        "items":      items,
+        "item_id": body.item_id,
+        "checked": body.checked,
+        "items": items,
     }

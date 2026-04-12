@@ -13,17 +13,16 @@ Blob Storage 구조:
 
 import json
 import os
-import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 _LOGS_DIR = Path(os.environ.get("LOGS_DIR", Path(__file__).parent / "logs"))
-_QUERIES_LOG    = _LOGS_DIR / "queries.jsonl"
+_QUERIES_LOG = _LOGS_DIR / "queries.jsonl"
 _REJECTIONS_LOG = _LOGS_DIR / "rejections.jsonl"
-_ERRORS_LOG     = _LOGS_DIR / "errors.jsonl"
+_ERRORS_LOG = _LOGS_DIR / "errors.jsonl"
 
 # ── Blob Storage 싱글턴 ────────────────────────────────────────
-_blob_service = None   # BlobServiceClient (동기)
+_blob_service = None  # BlobServiceClient (동기)
 
 
 def _get_blob_service():
@@ -80,8 +79,9 @@ def _append(local_path: Path, record: dict) -> None:
 
 # ── 공개 API ────────────────────────────────────────────────────
 
+
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def log_query(
@@ -102,19 +102,19 @@ def log_query(
     """모든 /api/v1/query 요청을 queries.jsonl 에 기록한다."""
 
     record = {
-        "ts":               _now_iso(),
-        "session_id":       session_id,
-        "user_id":          user_id,
-        "client_ip":        client_ip,
-        "request_id":       request_id,
-        "question":         question,
-        "domain":           domain,
-        "status":           status,
-        "grade":            grade,
-        "retry_count":      retry_count,
-        "latency_ms":       round(latency_ms),
+        "ts": _now_iso(),
+        "session_id": session_id,
+        "user_id": user_id,
+        "client_ip": client_ip,
+        "request_id": request_id,
+        "question": question,
+        "domain": domain,
+        "status": status,
+        "grade": grade,
+        "retry_count": retry_count,
+        "latency_ms": round(latency_ms),
         "rejection_history": _format_rejection_history(rejection_history),
-        "final_draft":      draft,
+        "final_draft": draft,
     }
     _append(_QUERIES_LOG, record)
 
@@ -135,13 +135,13 @@ def log_error(
 ) -> None:
     """응답 생성 실패(예외) 발생 시 errors.jsonl 에 기록한다."""
     record = {
-        "ts":         _now_iso(),
+        "ts": _now_iso(),
         "session_id": session_id,
-        "client_ip":  client_ip,
+        "client_ip": client_ip,
         "request_id": request_id,
-        "question":   question,
-        "domain":     domain,
-        "error":      error,
+        "question": question,
+        "domain": domain,
+        "error": error,
         "latency_ms": round(latency_ms),
     }
     _append(_ERRORS_LOG, record)
@@ -151,27 +151,29 @@ def _format_rejection_history(history: list[dict]) -> list[dict]:
     """orchestrator rejection_history → 읽기 쉬운 형태로 변환."""
     formatted = []
     for entry in history:
-        attempt   = entry.get("attempt")
-        verdict   = entry.get("verdict", {})
-        formatted.append({
-            "attempt":      attempt,
-            "approved":     verdict.get("approved"),
-            "grade":        verdict.get("grade", ""),
-            "passed":       verdict.get("passed", []),
-            "warnings": [
-                {
-                    "code":   w.get("code"),
-                    "reason": w.get("reason"),
-                }
-                for w in verdict.get("warnings", [])
-            ],
-            "issues": [
-                {
-                    "code":   issue.get("code"),
-                    "reason": issue.get("reason"),
-                }
-                for issue in verdict.get("issues", [])
-            ],
-            "retry_prompt": verdict.get("retry_prompt", ""),
-        })
+        attempt = entry.get("attempt")
+        verdict = entry.get("verdict", {})
+        formatted.append(
+            {
+                "attempt": attempt,
+                "approved": verdict.get("approved"),
+                "grade": verdict.get("grade", ""),
+                "passed": verdict.get("passed", []),
+                "warnings": [
+                    {
+                        "code": w.get("code"),
+                        "reason": w.get("reason"),
+                    }
+                    for w in verdict.get("warnings", [])
+                ],
+                "issues": [
+                    {
+                        "code": issue.get("code"),
+                        "reason": issue.get("reason"),
+                    }
+                    for issue in verdict.get("issues", [])
+                ],
+                "retry_prompt": verdict.get("retry_prompt", ""),
+            }
+        )
     return formatted

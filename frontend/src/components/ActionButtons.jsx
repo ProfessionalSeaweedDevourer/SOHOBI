@@ -16,9 +16,9 @@ export default function ActionButtons({ actions, onAction, disabled }) {
           className="text-xs px-3 py-1.5 rounded-full border transition-all
                      hover:opacity-80 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
-            background:   "rgba(20,184,166,0.1)",
-            borderColor:  "rgba(20,184,166,0.4)",
-            color:        "var(--brand-teal, #14b8a6)",
+            background: "rgba(20,184,166,0.1)",
+            borderColor: "rgba(20,184,166,0.4)",
+            color: "var(--brand-teal, #14b8a6)",
           }}
         >
           {action.label}

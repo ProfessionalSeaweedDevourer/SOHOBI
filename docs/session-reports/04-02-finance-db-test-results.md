@@ -1,7 +1,7 @@
 # 재무 시뮬레이션 Azure DB 연결 테스트 결과 리포트
 
-**날짜**: 2026-04-02  
-**브랜치**: PARK  
+**날짜**: 2026-04-02
+**브랜치**: PARK
 **대상**: `integrated_PARK/db/finance_db.py` (DBWork), `integrated_PARK/plugins/finance_simulation_plugin.py` (FinanceSimulationPlugin)
 
 ---

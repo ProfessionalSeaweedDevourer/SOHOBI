@@ -38,7 +38,10 @@ export default function LogViewer() {
     try {
       const fbPromise = feedbackCacheRef.current
         ? Promise.resolve(feedbackCacheRef.current)
-        : fetchFeedback().then((r) => { feedbackCacheRef.current = r; return r; });
+        : fetchFeedback().then((r) => {
+            feedbackCacheRef.current = r;
+            return r;
+          });
       const [data, fb] = await Promise.allSettled([
         fetchLogs(type, 500, userFilter ?? selectedUser),
         fbPromise,
@@ -74,10 +77,7 @@ export default function LogViewer() {
     setDownloading(true);
     try {
       const data = await fetchLogs(tab, 0);
-      const blob = new Blob(
-        [JSON.stringify(data.entries, null, 2)],
-        { type: "application/json" }
-      );
+      const blob = new Blob([JSON.stringify(data.entries, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -108,8 +108,8 @@ export default function LogViewer() {
   const isRoadmapTab = tab === "roadmap";
   const isErrorTab = tab === "errors";
 
-  const displayEntries = entries.filter((e) =>
-    (!sessionFilter || e.session_id?.includes(sessionFilter))
+  const displayEntries = entries.filter(
+    (e) => !sessionFilter || e.session_id?.includes(sessionFilter),
   );
 
   const total = displayEntries.length;
@@ -117,9 +117,7 @@ export default function LogViewer() {
   const gradeB = displayEntries.filter((e) => resolveGrade(e) === "B").length;
   const gradeC = displayEntries.filter((e) => resolveGrade(e) === "C").length;
   const avgLatency =
-    total > 0
-      ? Math.round(displayEntries.reduce((s, e) => s + (e.latency_ms || 0), 0) / total)
-      : 0;
+    total > 0 ? Math.round(displayEntries.reduce((s, e) => s + (e.latency_ms || 0), 0) / total) : 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -146,7 +144,7 @@ export default function LogViewer() {
           </button>
         )}
         <button
-          onClick={() => isRoadmapTab ? loadRoadmap() : load(tab)}
+          onClick={() => (isRoadmapTab ? loadRoadmap() : load(tab))}
           disabled={loading}
           className="text-xs glass rounded-lg px-3 py-1.5 hover:shadow-elevated transition-glow disabled:opacity-40 text-foreground"
         >
@@ -157,24 +155,44 @@ export default function LogViewer() {
       {/* 통계 바 */}
       {total > 0 && !isRoadmapTab && (
         <div className="glass border-b border-[var(--border)] px-4 py-2 flex gap-6 text-xs text-muted-foreground overflow-x-auto">
-          <span>전체 <strong className="text-foreground">{total}</strong>건</span>
+          <span>
+            전체 <strong className="text-foreground">{total}</strong>건
+          </span>
           {isErrorTab ? (
-            <span style={{ color: "var(--grade-c)" }}>오류 <strong>{total}</strong>건</span>
+            <span style={{ color: "var(--grade-c)" }}>
+              오류 <strong>{total}</strong>건
+            </span>
           ) : (
             <>
               <span style={{ color: "var(--grade-a)" }}>
                 A 통과 <strong>{gradeA}</strong>
-                <span className="text-muted-foreground"> ({Math.round((gradeA / total) * 100)}%)</span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  ({Math.round((gradeA / total) * 100)}%)
+                </span>
               </span>
               <span style={{ color: "var(--grade-b)" }}>
                 B 경고 <strong>{gradeB}</strong>
-                {gradeB > 0 && <span className="text-muted-foreground"> ({Math.round((gradeB / total) * 100)}%)</span>}
+                {gradeB > 0 && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({Math.round((gradeB / total) * 100)}%)
+                  </span>
+                )}
               </span>
               <span style={{ color: "var(--grade-c)" }}>
                 C 반려 <strong>{gradeC}</strong>
-                {gradeC > 0 && <span className="text-muted-foreground"> ({Math.round((gradeC / total) * 100)}%)</span>}
+                {gradeC > 0 && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({Math.round((gradeC / total) * 100)}%)
+                  </span>
+                )}
               </span>
-              <span>평균 응답 <strong className="text-foreground">{avgLatency.toLocaleString()}ms</strong></span>
+              <span>
+                평균 응답{" "}
+                <strong className="text-foreground">{avgLatency.toLocaleString()}ms</strong>
+              </span>
             </>
           )}
         </div>
@@ -187,9 +205,10 @@ export default function LogViewer() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors"
-            style={tab === t.key
-              ? { borderColor: "var(--brand-teal)", color: "var(--brand-teal)" }
-              : { borderColor: "transparent", color: "var(--muted-foreground)" }
+            style={
+              tab === t.key
+                ? { borderColor: "var(--brand-teal)", color: "var(--brand-teal)" }
+                : { borderColor: "transparent", color: "var(--muted-foreground)" }
             }
           >
             {t.label}
@@ -251,36 +270,37 @@ export default function LogViewer() {
         ) : isRoadmapTab ? (
           <div className="flex flex-col gap-3 pt-2 max-w-2xl">
             {loading && (
-              <div className="text-sm text-center py-12 text-muted-foreground">
-                불러오는 중...
-              </div>
+              <div className="text-sm text-center py-12 text-muted-foreground">불러오는 중...</div>
             )}
-            {!loading && roadmapFeatures.map((feat) => (
-              <div
-                key={feat.feature_id}
-                className="flex items-center justify-between rounded-xl border px-4 py-3"
-                style={{ background: "var(--card)", borderColor: "var(--border)" }}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{feat.icon}</span>
-                  <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
-                    {feat.label}
+            {!loading &&
+              roadmapFeatures.map((feat) => (
+                <div
+                  key={feat.feature_id}
+                  className="flex items-center justify-between rounded-xl border px-4 py-3"
+                  style={{ background: "var(--card)", borderColor: "var(--border)" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{feat.icon}</span>
+                    <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                      {feat.label}
+                    </span>
+                  </div>
+                  <span
+                    className="text-sm font-semibold px-3 py-1 rounded-lg"
+                    style={{ background: "var(--muted)", color: "var(--foreground)" }}
+                  >
+                    ▲ {feat.vote_count}
                   </span>
                 </div>
-                <span
-                  className="text-sm font-semibold px-3 py-1 rounded-lg"
-                  style={{ background: "var(--muted)", color: "var(--foreground)" }}
-                >
-                  ▲ {feat.vote_count}
-                </span>
-              </div>
-            ))}
+              ))}
           </div>
         ) : (
           <div className="h-[calc(100vh-180px)]">
-            {isErrorTab
-              ? <ErrorTable entries={entries} loading={loading} />
-              : <LogTable entries={displayEntries} loading={loading} feedbackMap={feedbackMap} />}
+            {isErrorTab ? (
+              <ErrorTable entries={entries} loading={loading} />
+            ) : (
+              <LogTable entries={displayEntries} loading={loading} feedbackMap={feedbackMap} />
+            )}
           </div>
         )}
       </main>

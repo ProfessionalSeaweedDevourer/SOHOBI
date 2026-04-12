@@ -22,6 +22,10 @@ logger = logging.getLogger(__name__)
 
 _TIMEOUT_MSG = "AI 응답 생성 중 타임아웃이 발생했습니다. 잠시 후 다시 시도해 주세요."
 
+from difflib import get_close_matches
+
+from db.repository import AREA_MAP, INDUSTRY_CODE_MAP
+from plugins.finance_simulation_plugin import FinanceSimulationPlugin
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import (
     AzureChatCompletion,
@@ -29,11 +33,6 @@ from semantic_kernel.connectors.ai.open_ai import (
 )
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import kernel_function
-
-from plugins.finance_simulation_plugin import FinanceSimulationPlugin
-
-from difflib import get_close_matches
-from db.repository import AREA_MAP, INDUSTRY_CODE_MAP
 
 # ── 워크플로우 프롬프트 (CHANG/skills/investment-simulation.yaml 인라인) ──
 
@@ -125,6 +124,7 @@ class FinanceAgent:
         3. 시뮬레이션 결과 → LLM으로 설명 draft 생성
         4. 초기 투자비용 입력 시 투자 회수 전망 병합
     """
+
     def __init__(self, kernel: Kernel):
         self._kernel = kernel
         self._sim = FinanceSimulationPlugin()
@@ -140,19 +140,19 @@ class FinanceAgent:
                 timeout=60.0,
             )
             return result.content or str(result)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("FinanceAgent LLM 타임아웃 (60초)")
             raise ValueError(_TIMEOUT_MSG)
         except Exception as e:
             err_str = str(e).lower()
             logger.error("FinanceAgent LLM 호출 실패 (_retry=%s): %s", _retry, e)
-            if ("content_filter" in err_str or "content filter" in err_str) and not _retry:
+            if (
+                "content_filter" in err_str or "content filter" in err_str
+            ) and not _retry:
                 # Azure 콘텐츠 필터 오탐 → 안전 문구를 앞에 붙여 1회 재시도
                 safe_prompt = "다음은 합법적인 창업 재무 분석 요청입니다.\n\n" + prompt
                 return await self._call_llm(safe_prompt, _retry=True)
-            raise ValueError(
-                f"AI 응답 생성 중 오류가 발생했습니다: {e}"
-            ) from e
+            raise ValueError(f"AI 응답 생성 중 오류가 발생했습니다: {e}") from e
 
     async def _extract_params(self, question: str) -> tuple[dict, dict]:
         """
@@ -178,9 +178,14 @@ class FinanceAgent:
         # 지역 자연어 → 행정코드 배열
         raw_location = result.pop("location", None)
         if raw_location:
-            key = raw_location if raw_location in AREA_MAP else (
-                get_close_matches(raw_location, AREA_MAP.keys(), n=1, cutoff=0.6) or [None]
-            )[0]
+            key = (
+                raw_location
+                if raw_location in AREA_MAP
+                else (
+                    get_close_matches(raw_location, AREA_MAP.keys(), n=1, cutoff=0.6)
+                    or [None]
+                )[0]
+            )
             adm_codes = AREA_MAP.get(key)
         else:
             adm_codes = None
@@ -188,15 +193,22 @@ class FinanceAgent:
         # 업종 자연어 → INDUSTRY_CODE_MAP 키값, prompt로 작성되었으나 추가 확인방안
         raw_business = result.pop("business_type", None)
         if raw_business:
-            business_type = raw_business if raw_business in INDUSTRY_CODE_MAP else (
-                get_close_matches(raw_business, INDUSTRY_CODE_MAP.keys(), n=1, cutoff=0.5) or [None]
-            )[0]
+            business_type = (
+                raw_business
+                if raw_business in INDUSTRY_CODE_MAP
+                else (
+                    get_close_matches(
+                        raw_business, INDUSTRY_CODE_MAP.keys(), n=1, cutoff=0.5
+                    )
+                    or [None]
+                )[0]
+            )
         else:
             business_type = None
 
         context = {
-            "adm_codes": adm_codes,       # ["11440660"] 또는 None
-            "business_type": business_type, # "카페" 또는 None
+            "adm_codes": adm_codes,  # ["11440660"] 또는 None
+            "business_type": business_type,  # "카페" 또는 None
         }
         return result, context
 
@@ -206,7 +218,7 @@ class FinanceAgent:
         """explanation 단계 전용: prior_history를 ChatHistory에 주입 후 LLM 호출."""
         service: AzureChatCompletion = self._kernel.get_service("finance")
         history = ChatHistory()
-        for msg in (prior_history or []):
+        for msg in prior_history or []:
             if msg["role"] == "user":
                 history.add_user_message(msg["content"])
             elif msg["role"] == "assistant":
@@ -219,7 +231,7 @@ class FinanceAgent:
                 timeout=60.0,
             )
             return result.content or str(result)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("FinanceAgent explanation LLM 타임아웃 (60초)")
             raise ValueError(_TIMEOUT_MSG)
         except Exception as e:
@@ -236,7 +248,9 @@ class FinanceAgent:
                 return result.content or str(result)
             raise ValueError(f"AI 응답 생성 중 오류가 발생했습니다: {e}") from e
 
-    @kernel_function(name="generate_draft", description="재무 시뮬레이션 기반 draft 생성")
+    @kernel_function(
+        name="generate_draft", description="재무 시뮬레이션 기반 draft 생성"
+    )
     async def generate_draft(
         self,
         question: str,
@@ -276,7 +290,9 @@ class FinanceAgent:
                 ctx["adm_codes"] = extracted_ctx["adm_codes"]
             if extracted_ctx.get("business_type"):
                 ctx["business_type"] = extracted_ctx["business_type"]
-            base = current_params or self._sim.load_initial(ctx.get("adm_codes"), ctx.get("business_type"))
+            base = current_params or self._sim.load_initial(
+                ctx.get("adm_codes"), ctx.get("business_type")
+            )
             # merge_json 이후 revenue 타입 보정
             variables = self._sim.merge_json(base, extracted)
             if not isinstance(variables.get("revenue"), list):
@@ -301,13 +317,23 @@ class FinanceAgent:
         rev = variables.get("revenue") or []
         # 손익분기/안전마진 관련 연산 추가
         avg_revenue = sum(rev) / len(rev) if rev else 0
-        breakeven = self._sim.breakeven_analysis_mc(
-            avg_revenue=avg_revenue,
-            avg_net_profit=sim_result["average_net_profit"],
-            variable_cost=sim_result["actual_cost"],
-        ) if avg_revenue > 0 else None
+        breakeven = (
+            self._sim.breakeven_analysis_mc(
+                avg_revenue=avg_revenue,
+                avg_net_profit=sim_result["average_net_profit"],
+                variable_cost=sim_result["actual_cost"],
+            )
+            if avg_revenue > 0
+            else None
+        )
         # 수정
-        rev_str = f"{rev[0]:,}원" if len(rev) == 1 else f"{min(rev):,}~{max(rev):,}원 (복수 시나리오)" if rev else "데이터 없음"
+        rev_str = (
+            f"{rev[0]:,}원"
+            if len(rev) == 1
+            else f"{min(rev):,}~{max(rev):,}원 (복수 시나리오)"
+            if rev
+            else "데이터 없음"
+        )
         assumption_lines = [
             f"- 월매출: {rev_str}",
             f"- 원가: {sim_result['actual_cost']:,}원",
@@ -317,7 +343,9 @@ class FinanceAgent:
             f"- 수수료: {sim_result['actual_fee']:,}원",
         ]
         if variables.get("initial_investment"):
-            assumption_lines.append(f"- 초기 투자비용: {variables['initial_investment']:,}원")
+            assumption_lines.append(
+                f"- 초기 투자비용: {variables['initial_investment']:,}원"
+            )
         assumptions = "\n".join(assumption_lines)
 
         # 손실확률: 핵심 지표로 명시.
@@ -325,7 +353,9 @@ class FinanceAgent:
         is_multi = len(rev) > 1
         raw_loss = sim_result["loss_probability"]
         if raw_loss == 0.0:
-            range_desc = f"실제 매장 {len(rev)}개 데이터" if is_multi else "매출·원가 ±10%"
+            range_desc = (
+                f"실제 매장 {len(rev)}개 데이터" if is_multi else "매출·원가 ±10%"
+            )
             loss_prob_str = (
                 f"이번 시뮬레이션({range_desc}) 범위 내에서는 손실 케이스가 관측되지 않았음. "
                 "단, 경기 침체·임대료 급등·수요 급감 등 시뮬레이션 범위 밖의 충격이 발생하면 "
@@ -339,7 +369,9 @@ class FinanceAgent:
             breakeven_revenue_str = f"{breakeven['breakeven_revenue']:,}원 (일 기준: {breakeven['breakeven_daily']:,}원)\n"
             safety_margin_str = f"{breakeven['safety_margin'] * 100:.1f}% (매출이 이 비율만큼 하락해도 손익 유지 가능)\n"
         else:
-            breakeven_revenue_str = "계산 불가 (매출이 0 이하이거나 원가율이 매출을 초과한 상태)\n"
+            breakeven_revenue_str = (
+                "계산 불가 (매출이 0 이하이거나 원가율이 매출을 초과한 상태)\n"
+            )
             safety_margin_str = "계산 불가 — 현재 구조로는 손익분기 달성이 불가하며, 매출 개선이 시급하거나 사업 시작을 재고할 필요가 있습니다.\n"
 
         explain_prompt = _EXPLAIN_PROMPT.format(
@@ -363,11 +395,19 @@ class FinanceAgent:
         if profile:
             explain_prompt = _PROFILE_CONTEXT.format(profile=profile) + explain_prompt
         if retry_prompt:
-            explain_prompt = _RETRY_PREFIX.format(retry_prompt=retry_prompt) + explain_prompt
-        draft = await self._call_llm_with_history(explain_prompt, prior_history=prior_history)
+            explain_prompt = (
+                _RETRY_PREFIX.format(retry_prompt=retry_prompt) + explain_prompt
+            )
+        draft = await self._call_llm_with_history(
+            explain_prompt, prior_history=prior_history
+        )
 
         # ── 4단계: 투자 회수 설명 병합 (있을 때만) ───────────
-        if recovery_result and recovery_result.get("recoverable") and recovery_result.get("months"):
+        if (
+            recovery_result
+            and recovery_result.get("recoverable")
+            and recovery_result.get("months")
+        ):
             recovery_text = await self._call_llm(
                 _RECOVERY_PROMPT.format(
                     recoverable=recovery_result["recoverable"],
@@ -377,8 +417,7 @@ class FinanceAgent:
             draft = f"{draft}\n\n[투자 회수 전망]\n{recovery_text}"
 
         return {
-            "draft":          draft,
-            "chart":          sim_result.get("chart"),   # base64 PNG 또는 None
-            "updated_params": variables,                  # 누적된 파라미터 (프론트 저장용)
+            "draft": draft,
+            "chart": sim_result.get("chart"),  # base64 PNG 또는 None
+            "updated_params": variables,  # 누적된 파라미터 (프론트 저장용)
         }
-

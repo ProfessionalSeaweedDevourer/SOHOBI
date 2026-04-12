@@ -24,13 +24,13 @@ export function useFeedbackSubmit() {
         method: "POST",
         headers: _AUTH_HEADERS,
         body: JSON.stringify({
-          session_id:           sessionId,
-          agent_type:           agentType,
-          message_id:           messageId,
-          feedback_type:        feedbackType,
-          tags:                 tags,
+          session_id: sessionId,
+          agent_type: agentType,
+          message_id: messageId,
+          feedback_type: feedbackType,
+          tags: tags,
           conversation_context: conversationContext || null,
-          timestamp:            new Date().toISOString(),
+          timestamp: new Date().toISOString(),
         }),
       });
     } catch (error) {

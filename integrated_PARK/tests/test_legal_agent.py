@@ -9,13 +9,14 @@ Azure LLM 호출이 필요한 테스트(T-15)는 환경변수 미설정 시 skip
 """
 
 import os
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 # ---------------------------------------------------------------------------
 # 공통 픽스처
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def fake_kernel():
@@ -46,8 +47,11 @@ def empty_kernel():
     plugins["LegalSearch"]는 dict item assignment으로 설정 (Pydantic 검증 통과).
     """
     import semantic_kernel as sk
+
     kernel = sk.Kernel()
-    kernel.plugins["LegalSearch"] = MagicMock()  # dict item assignment은 Pydantic 검증 우회 가능
+    kernel.plugins["LegalSearch"] = (
+        MagicMock()
+    )  # dict item assignment은 Pydantic 검증 우회 가능
     return kernel
 
 
@@ -60,17 +64,21 @@ class TestT09PriorHistoryNone:
     @pytest.mark.asyncio
     async def test_none_prior_history_does_not_raise(self, fake_kernel):
         from agents.legal_agent import LegalAgent
+
         agent = LegalAgent(fake_kernel)
 
         result = await agent.generate_draft(
             question="임대차보호법이란?",
             prior_history=None,
         )
-        assert isinstance(result, str), "prior_history=None 이어도 문자열을 반환해야 합니다"
+        assert isinstance(result, str), (
+            "prior_history=None 이어도 문자열을 반환해야 합니다"
+        )
 
     @pytest.mark.asyncio
     async def test_empty_list_prior_history_does_not_raise(self, fake_kernel):
         from agents.legal_agent import LegalAgent
+
         agent = LegalAgent(fake_kernel)
 
         result = await agent.generate_draft(
@@ -90,6 +98,7 @@ class TestT10PriorHistoryKeyError:
     @pytest.mark.asyncio
     async def test_missing_content_key_raises_keyerror(self, fake_kernel):
         from agents.legal_agent import LegalAgent
+
         agent = LegalAgent(fake_kernel)
 
         bad_history = [{"role": "user"}]  # content 키 없음
@@ -110,6 +119,7 @@ class TestT10PriorHistoryKeyError:
     @pytest.mark.asyncio
     async def test_missing_role_key_raises_keyerror(self, fake_kernel):
         from agents.legal_agent import LegalAgent
+
         agent = LegalAgent(fake_kernel)
 
         bad_history = [{"content": "안녕하세요"}]  # role 키 없음
@@ -136,6 +146,7 @@ class TestT11UnknownRole:
     @pytest.mark.asyncio
     async def test_unknown_role_is_ignored(self, fake_kernel):
         from agents.legal_agent import LegalAgent
+
         agent = LegalAgent(fake_kernel)
 
         history_with_tool = [
@@ -147,7 +158,9 @@ class TestT11UnknownRole:
             question="위 내용 기반으로 설명해줘",
             prior_history=history_with_tool,
         )
-        assert isinstance(result, str), "알 수 없는 role이 포함된 이력도 처리되어야 합니다"
+        assert isinstance(result, str), (
+            "알 수 없는 role이 포함된 이력도 처리되어야 합니다"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +172,7 @@ class TestT12PromptOrder:
 
     def test_prompt_contains_retry_after_profile(self):
         """시스템 프롬프트 문자열에서 retry 지시가 profile 다음에 오는지 확인"""
-        from agents.legal_agent import SYSTEM_PROMPT, RETRY_PREFIX, PROFILE_PREFIX
+        from agents.legal_agent import PROFILE_PREFIX, RETRY_PREFIX, SYSTEM_PROMPT
 
         profile = "서울 강남구 카페 창업 준비 중"
         retry = "법령 조항 번호를 반드시 포함하시오"
@@ -175,7 +188,9 @@ class TestT12PromptOrder:
         system_pos = system.find("법무 정보 전문 에이전트")
 
         assert profile_pos < retry_pos, "profile이 retry_prompt 앞에 위치해야 합니다"
-        assert retry_pos < system_pos, "retry_prompt가 SYSTEM_PROMPT 앞에 위치해야 합니다"
+        assert retry_pos < system_pos, (
+            "retry_prompt가 SYSTEM_PROMPT 앞에 위치해야 합니다"
+        )
 
         # 품질 개선 제안: retry는 SYSTEM 뒤에 오는 것이 LLM에 더 강하게 작용합니다
         # 현재 순서는 PROFILE → RETRY → SYSTEM 이므로, RETRY 효과가 약화될 수 있습니다
@@ -207,6 +222,7 @@ class TestT13SignOffServiceMissing:
     @pytest.mark.asyncio
     async def test_missing_sign_off_service_raises(self, empty_kernel):
         from agents.legal_agent import LegalAgent
+
         agent = LegalAgent(empty_kernel)
 
         with pytest.raises(Exception) as exc_info:
@@ -233,14 +249,19 @@ class TestT14PluginDeduplication:
 
         kernel = sk.Kernel()
 
-        with patch("plugins.legal_search_plugin.LegalSearchPlugin.__init__", return_value=None):
+        with patch(
+            "plugins.legal_search_plugin.LegalSearchPlugin.__init__", return_value=None
+        ):
             from agents.legal_agent import LegalAgent
-            agent1 = LegalAgent(kernel)
+
+            agent1 = LegalAgent(kernel)  # noqa: F841
             # 첫 번째 생성 후: LegalSearch가 등록되어야 함
-            assert "LegalSearch" in kernel.plugins, "첫 번째 LegalAgent 생성 후 플러그인이 등록되어야 합니다"
+            assert "LegalSearch" in kernel.plugins, (
+                "첫 번째 LegalAgent 생성 후 플러그인이 등록되어야 합니다"
+            )
             plugins_after_first = set(kernel.plugins.keys())
 
-            agent2 = LegalAgent(kernel)
+            agent2 = LegalAgent(kernel)  # noqa: F841
             # 두 번째 생성 후: 새 플러그인이 추가되어서는 안 됨
             plugins_after_second = set(kernel.plugins.keys())
 
@@ -267,15 +288,17 @@ class TestT15ToolCallVerification:
     @pytest.mark.asyncio
     async def test_search_legal_docs_is_called(self):
         """법령 관련 질문을 하면 search_legal_docs가 최소 1회 호출되어야 합니다"""
-        from kernel_setup import get_kernel
         from agents.legal_agent import LegalAgent
+        from kernel_setup import get_kernel
 
         tool_calls = []
 
         kernel = get_kernel()
 
         # Semantic Kernel 함수 호출 필터 등록
-        from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
+        from semantic_kernel.filters.functions.function_invocation_context import (
+            FunctionInvocationContext,
+        )
 
         @kernel.filter("function_invocation")
         async def track_tool_calls(context: FunctionInvocationContext, next):
@@ -297,8 +320,8 @@ class TestT15ToolCallVerification:
     @pytest.mark.asyncio
     async def test_response_contains_law_citation(self):
         """응답에 법령명이 포함되어 있는지 확인 (RAG 결과 활용 간접 검증)"""
-        from kernel_setup import get_kernel
         from agents.legal_agent import LegalAgent
+        from kernel_setup import get_kernel
 
         kernel = get_kernel()
         agent = LegalAgent(kernel)
@@ -325,6 +348,7 @@ class TestT16GreetingInput:
     @pytest.mark.asyncio
     async def test_greeting_returns_string(self, fake_kernel):
         from agents.legal_agent import LegalAgent
+
         agent = LegalAgent(fake_kernel)
 
         result = await agent.generate_draft(question="안녕하세요")

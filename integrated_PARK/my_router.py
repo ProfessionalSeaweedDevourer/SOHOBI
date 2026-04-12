@@ -8,12 +8,11 @@
 JWT Bearer 토큰 필수 (Authorization: Bearer <token>).
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
-
-from auth_router import get_current_user
 import session_store
+from auth_router import get_current_user
+from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter(prefix="/api/my", tags=["my"])
 
@@ -26,20 +25,19 @@ async def list_my_sessions(user: dict = Depends(get_current_user)):
     result = []
     for s in sessions:
         ctx = s.get("context", {})
-        ts  = s.get("_ts", 0)
-        created_at = (
-            datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
-            if ts else None
+        ts = s.get("_ts", 0)
+        created_at = datetime.fromtimestamp(ts, tz=UTC).isoformat() if ts else None
+        result.append(
+            {
+                "session_id": s["session_id"],
+                "created_at": created_at,
+                "query_count": s.get("history_count", 0) // 2,  # user+assistant 쌍
+                "context": {
+                    "business_type": ctx.get("business_type", ""),
+                    "location_name": ctx.get("location_name", ""),
+                },
+            }
         )
-        result.append({
-            "session_id":    s["session_id"],
-            "created_at":    created_at,
-            "query_count":   s.get("history_count", 0) // 2,  # user+assistant 쌍
-            "context": {
-                "business_type": ctx.get("business_type", ""),
-                "location_name": ctx.get("location_name", ""),
-            },
-        })
     return result
 
 

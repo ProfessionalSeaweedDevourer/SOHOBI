@@ -18,7 +18,7 @@ Google OAuth 2.0 소셜 로그인 + JWT 발급 라우터.
 
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -30,16 +30,16 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 # ── 설정 ─────────────────────────────────────────────────────────
-_GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
+_GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 _GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
-_JWT_SECRET           = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
-_JWT_ALGORITHM        = os.getenv("JWT_ALGORITHM", "HS256")
-_JWT_EXPIRE_HOURS     = int(os.getenv("JWT_EXPIRE_HOURS", "720"))
-_FRONTEND_URL         = os.getenv("FRONTEND_URL", "http://localhost:5173")
-_BACKEND_URL          = os.getenv("BACKEND_HOST", "http://localhost:8000")
+_JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
+_JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+_JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "720"))
+_FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+_BACKEND_URL = os.getenv("BACKEND_HOST", "http://localhost:8000")
 
-_GOOGLE_AUTH_URL    = "https://accounts.google.com/o/oauth2/v2/auth"
-_GOOGLE_TOKEN_URL   = "https://oauth2.googleapis.com/token"
+_GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 _GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 _security = HTTPBearer(auto_error=False)
@@ -75,14 +75,15 @@ _users_memory: dict[str, dict] = {}
 
 # ── JWT 유틸 ─────────────────────────────────────────────────────
 
+
 def _create_jwt(user_id: str, email: str, name: str, picture: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(hours=_JWT_EXPIRE_HOURS)
+    expire = datetime.now(UTC) + timedelta(hours=_JWT_EXPIRE_HOURS)
     payload = {
-        "sub":     user_id,
-        "email":   email,
-        "name":    name,
+        "sub": user_id,
+        "email": email,
+        "name": name,
         "picture": picture,
-        "exp":     expire,
+        "exp": expire,
     }
     return jwt.encode(payload, _JWT_SECRET, algorithm=_JWT_ALGORITHM)
 
@@ -92,6 +93,7 @@ def _decode_jwt(token: str) -> dict:
 
 
 # ── 현재 유저 의존성 ─────────────────────────────────────────────
+
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_security),
@@ -120,14 +122,15 @@ async def get_optional_user(
 
 # ── user upsert ───────────────────────────────────────────────────
 
+
 async def _upsert_user(user_id: str, email: str, name: str, picture: str) -> dict:
     user = {
-        "id":         user_id,
-        "provider":   "google",
-        "email":      email,
-        "name":       name,
-        "picture":    picture,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "id": user_id,
+        "provider": "google",
+        "email": email,
+        "name": name,
+        "picture": picture,
+        "created_at": datetime.now(UTC).isoformat(),
     }
     container = await _get_users_container()
     if container is None:
@@ -147,6 +150,7 @@ async def _upsert_user(user_id: str, email: str, name: str, picture: str) -> dic
 
 
 # ── 엔드포인트 ───────────────────────────────────────────────────
+
 
 @router.get("/google")
 async def google_login():
@@ -176,13 +180,16 @@ async def google_callback(code: str = Query(...)):
 
     async with httpx.AsyncClient() as client:
         # code → access_token 교환
-        token_resp = await client.post(_GOOGLE_TOKEN_URL, data={
-            "client_id":     _GOOGLE_CLIENT_ID,
-            "client_secret": _GOOGLE_CLIENT_SECRET,
-            "code":          code,
-            "grant_type":    "authorization_code",
-            "redirect_uri":  redirect_uri,
-        })
+        token_resp = await client.post(
+            _GOOGLE_TOKEN_URL,
+            data={
+                "client_id": _GOOGLE_CLIENT_ID,
+                "client_secret": _GOOGLE_CLIENT_SECRET,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": redirect_uri,
+            },
+        )
         if token_resp.status_code != 200:
             raise HTTPException(status_code=400, detail="Google 토큰 교환 실패")
 
@@ -197,9 +204,9 @@ async def google_callback(code: str = Query(...)):
             raise HTTPException(status_code=400, detail="Google 유저 정보 조회 실패")
 
     info = info_resp.json()
-    sub     = info.get("sub", "")
-    email   = info.get("email", "")
-    name    = info.get("name", "")
+    sub = info.get("sub", "")
+    email = info.get("email", "")
+    name = info.get("name", "")
     picture = info.get("picture", "")
     user_id = f"google:{sub}"
 
@@ -215,8 +222,8 @@ async def get_me(user: dict = Depends(get_current_user)):
     """현재 로그인 유저 정보 반환."""
     return {
         "user_id": user["sub"],
-        "email":   user.get("email", ""),
-        "name":    user.get("name", ""),
+        "email": user.get("email", ""),
+        "name": user.get("name", ""),
         "picture": user.get("picture", ""),
     }
 
@@ -232,6 +239,7 @@ async def link_session(
 ):
     """익명 session_id를 현재 유저에 귀속하고 TTL을 무기한으로 연장."""
     import session_store
+
     await session_store.link_session_to_user(req.session_id, user["sub"])
     return {"ok": True, "session_id": req.session_id, "user_id": user["sub"]}
 

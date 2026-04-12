@@ -6,46 +6,181 @@
 import asyncio
 import json
 
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
-
 from kernel_setup import get_kernel
+from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
+from semantic_kernel.contents import ChatHistory
 
 KEYWORDS: dict[str, list[str]] = {
-    "admin":    ["신고", "허가", "인허가", "서류", "관청", "위생", "영업신고", "등록", "행정",
-                 "지원사업", "보조금", "지원금", "창업패키지", "정책자금", "창업지원",
-                 "소상공인 지원", "정부지원", "고용지원", "채용장려금", "신용보증",
-                 "사업자등록", "위생교육", "보건증", "식품위생", "세무서",
-                 "소진공", "소상공인시장진흥공단", "융자", "정책대출",
-                 "지원받", "지원 가능", "지원 신청", "지원 대상", "지원 혜택",
-                 "창업자금", "자금 지원", "혜택 받", "창업 혜택",
-                 "스타트업", "지원 추천"],
-    "finance":  ["재무", "금리", "수익", "비용", "투자", "시뮬레이션", "자본",
-                 "손익분기점", "순이익", "영업이익", "인건비", "원가", "창업비용",
-                 "초기비용", "초기투자", "투자비용", "수익률", "투자회수",
-                 "월수익", "매출액", "고정비", "변동비", "마진", "손익", "이익률"],
-    "legal":    ["법", "계약", "소송", "보증금 반환", "임대차", "조항", "권리", "의무", "판례",
-                 "분쟁", "권리금", "묵시적 갱신", "계약 해지", "위약금", "손해배상",
-                 "불법", "위반", "고소", "고발", "내용증명"],
-    "location": ["상권", "지역", "상권분석", "홍대", "강남", "잠실", "이태원", "합정", "vs", "비교",
-                 "종로", "마포", "성수", "신촌", "건대", "혜화", "인사동", "명동",
-                 "여의도",
-                 "유동인구", "입지", "점포당", "개업률", "폐업률"],
-    "chat":     ["안녕", "반가워", "뭐 할 수 있", "어떻게 써", "어떻게 사용", "도움말", "사용법", "소개해", "처음 써",
-                 "뭐가 필요", "어떤 기능", "기능 안내", "어떻게 하면 돼",
-                 "지원 업종", "어떤 업종", "지원하는 업종", "업종 목록", "가능한 업종"],
+    "admin": [
+        "신고",
+        "허가",
+        "인허가",
+        "서류",
+        "관청",
+        "위생",
+        "영업신고",
+        "등록",
+        "행정",
+        "지원사업",
+        "보조금",
+        "지원금",
+        "창업패키지",
+        "정책자금",
+        "창업지원",
+        "소상공인 지원",
+        "정부지원",
+        "고용지원",
+        "채용장려금",
+        "신용보증",
+        "사업자등록",
+        "위생교육",
+        "보건증",
+        "식품위생",
+        "세무서",
+        "소진공",
+        "소상공인시장진흥공단",
+        "융자",
+        "정책대출",
+        "지원받",
+        "지원 가능",
+        "지원 신청",
+        "지원 대상",
+        "지원 혜택",
+        "창업자금",
+        "자금 지원",
+        "혜택 받",
+        "창업 혜택",
+        "스타트업",
+        "지원 추천",
+    ],
+    "finance": [
+        "재무",
+        "금리",
+        "수익",
+        "비용",
+        "투자",
+        "시뮬레이션",
+        "자본",
+        "손익분기점",
+        "순이익",
+        "영업이익",
+        "인건비",
+        "원가",
+        "창업비용",
+        "초기비용",
+        "초기투자",
+        "투자비용",
+        "수익률",
+        "투자회수",
+        "월수익",
+        "매출액",
+        "고정비",
+        "변동비",
+        "마진",
+        "손익",
+        "이익률",
+    ],
+    "legal": [
+        "법",
+        "계약",
+        "소송",
+        "보증금 반환",
+        "임대차",
+        "조항",
+        "권리",
+        "의무",
+        "판례",
+        "분쟁",
+        "권리금",
+        "묵시적 갱신",
+        "계약 해지",
+        "위약금",
+        "손해배상",
+        "불법",
+        "위반",
+        "고소",
+        "고발",
+        "내용증명",
+    ],
+    "location": [
+        "상권",
+        "지역",
+        "상권분석",
+        "홍대",
+        "강남",
+        "잠실",
+        "이태원",
+        "합정",
+        "vs",
+        "비교",
+        "종로",
+        "마포",
+        "성수",
+        "신촌",
+        "건대",
+        "혜화",
+        "인사동",
+        "명동",
+        "여의도",
+        "유동인구",
+        "입지",
+        "점포당",
+        "개업률",
+        "폐업률",
+    ],
+    "chat": [
+        "안녕",
+        "반가워",
+        "뭐 할 수 있",
+        "어떻게 써",
+        "어떻게 사용",
+        "도움말",
+        "사용법",
+        "소개해",
+        "처음 써",
+        "뭐가 필요",
+        "어떤 기능",
+        "기능 안내",
+        "어떻게 하면 돼",
+        "지원 업종",
+        "어떤 업종",
+        "지원하는 업종",
+        "업종 목록",
+        "가능한 업종",
+    ],
 }
 
 # 사용법/기능 설명 요청 패턴 — 어떤 도메인 키워드와 함께 나오더라도 chat 우선
 _CHAT_OVERRIDE_PATTERNS = [
-    "어떤 기능", "무슨 기능", "어떤 역할", "어떻게 사용", "어떻게 써",
-    "어떻게 쓰나요", "어떻게 쓰는", "사용법", "도움말", "기능 안내", "기능 소개",
-    "어떻게 이용", "이용 방법", "쓰는 방법",
-    "지원하는 업종", "지원 업종", "어떤 업종", "업종 목록", "가능한 업종",
+    "어떤 기능",
+    "무슨 기능",
+    "어떤 역할",
+    "어떻게 사용",
+    "어떻게 써",
+    "어떻게 쓰나요",
+    "어떻게 쓰는",
+    "사용법",
+    "도움말",
+    "기능 안내",
+    "기능 소개",
+    "어떻게 이용",
+    "이용 방법",
+    "쓰는 방법",
+    "지원하는 업종",
+    "지원 업종",
+    "어떤 업종",
+    "업종 목록",
+    "가능한 업종",
     # 기능 설명 요청 — "재무 시뮬레이션 기능을 알려줘" 등이 finance로 오분류되는 문제 방지
-    "기능 알려", "기능을 알려", "기능 설명",
+    "기능 알려",
+    "기능을 알려",
+    "기능 설명",
     # 사용 방법 문의 — 서비스 입력값·활용법 질문 (도메인 독립적 표현만 유지)
-    "어떻게 활용", "어떻게 입력", "입력 방법", "뭘 입력", "무엇을 입력",
+    "어떻게 활용",
+    "어떻게 입력",
+    "입력 방법",
+    "뭘 입력",
+    "무엇을 입력",
 ]
 
 _SYSTEM_PROMPT = """You are a query classifier for a Korean small business assistant.
@@ -69,7 +204,11 @@ Classify the user query into exactly one of: admin, finance, legal, location, ch
 
 Respond ONLY in JSON: {"domain": "...", "confidence": 0.0~1.0, "reasoning": "..."}"""
 
-_FALLBACK = {"domain": "admin", "confidence": 0.3, "reasoning": "LLM 파싱 실패 — 기본값 적용"}
+_FALLBACK = {
+    "domain": "admin",
+    "confidence": 0.3,
+    "reasoning": "LLM 파싱 실패 — 기본값 적용",
+}
 
 _PRIVACY_KEYWORDS = ["개인정보"]
 
@@ -78,8 +217,11 @@ def _keyword_classify(question: str) -> dict | None:
     # chat override 먼저 — 사용법·안내 요청은 도메인 키워드와 무관하게 chat
     for pat in _CHAT_OVERRIDE_PATTERNS:
         if pat in question:
-            return {"domain": "chat", "confidence": 0.9,
-                    "reasoning": f"사용법/기능 안내 요청 감지: '{pat}'"}
+            return {
+                "domain": "chat",
+                "confidence": 0.9,
+                "reasoning": f"사용법/기능 안내 요청 감지: '{pat}'",
+            }
 
     counts = {d: sum(kw in question for kw in kws) for d, kws in KEYWORDS.items()}
     best = max(counts, key=counts.get)
@@ -88,7 +230,11 @@ def _keyword_classify(question: str) -> dict | None:
     if sum(1 for c in counts.values() if c == counts[best]) > 1:
         return None
     matched = [kw for kw in KEYWORDS[best] if kw in question]
-    return {"domain": best, "confidence": 0.85, "reasoning": f"키워드 매칭: {', '.join(matched)}"}
+    return {
+        "domain": best,
+        "confidence": 0.85,
+        "reasoning": f"키워드 매칭: {', '.join(matched)}",
+    }
 
 
 async def _llm_classify(question: str, prior_history: list[dict] | None = None) -> dict:
@@ -106,18 +252,26 @@ async def _llm_classify(question: str, prior_history: list[dict] | None = None) 
             role = "user" if msg["role"] == "user" else "assistant"
             content = msg["content"][:200]  # 토큰 절약
             context_lines.append(f"{role}: {content}")
-        context_block = "[대화 맥락 - 최근 대화]\n" + "\n".join(context_lines) + "\n\n[현재 질문]\n"
+        context_block = (
+            "[대화 맥락 - 최근 대화]\n" + "\n".join(context_lines) + "\n\n[현재 질문]\n"
+        )
         history.add_user_message(context_block + question)
     else:
         history.add_user_message(question)
 
     try:
         result = await asyncio.wait_for(
-            chat_service.get_chat_message_content(chat_history=history, settings=settings),
+            chat_service.get_chat_message_content(
+                chat_history=history, settings=settings
+            ),
             timeout=30.0,
         )
         parsed = json.loads(str(result))
-        return parsed if parsed.get("domain") in ("admin", "finance", "legal", "location", "chat") else _FALLBACK
+        return (
+            parsed
+            if parsed.get("domain") in ("admin", "finance", "legal", "location", "chat")
+            else _FALLBACK
+        )
     except Exception:
         return _FALLBACK
 
@@ -128,7 +282,11 @@ async def classify(
     last_domain: str | None = None,
 ) -> dict:
     if any(kw in question for kw in _PRIVACY_KEYWORDS):
-        return {"domain": "chat", "confidence": 1.0, "reasoning": "개인정보처리방침 질문 — 안내 에이전트로 라우팅"}
+        return {
+            "domain": "chat",
+            "confidence": 1.0,
+            "reasoning": "개인정보처리방침 질문 — 안내 에이전트로 라우팅",
+        }
     result = _keyword_classify(question)
     if result:
         return result

@@ -135,7 +135,7 @@ python -m pip install psycopg2-binary==2.9.9
 
 ## 테스트 현황
 
-**파일**: `integrated_PARK/tests/test_location_agent.py`  
+**파일**: `integrated_PARK/tests/test_location_agent.py`
 **실행 방식**: mock 기반 — Azure LLM · PostgreSQL DB 연결 불필요
 
 ```bash

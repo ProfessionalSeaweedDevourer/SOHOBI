@@ -2,14 +2,13 @@
 # PostgreSQL (Azure) 버전
 
 import logging
-from typing import Optional
+
 from .baseDAO import BaseDAO
 
 logger = logging.getLogger(__name__)
 
 
 class DongMappingDAO(BaseDAO):
-
     def __init__(self):
         self._emd: dict = {}
         self._loaded = False
@@ -31,7 +30,7 @@ class DongMappingDAO(BaseDAO):
                         "law_cd": r["law_cd"],
                         "adm_cd": r["adm_cd"],
                         "adm_nm": r["adm_nm"],
-                        "gu_nm":  r["gu_nm"],
+                        "gu_nm": r["gu_nm"],
                         "law_nm": r["law_nm"],
                     }
             self._loaded = True
@@ -39,7 +38,7 @@ class DongMappingDAO(BaseDAO):
         except Exception as e:
             logger.error(f"[DongMappingDAO] 로드 실패: {e}")
 
-    def get_adm_by_emd(self, emd_cd: str) -> Optional[dict]:
+    def get_adm_by_emd(self, emd_cd: str) -> dict | None:
         return self._emd.get(str(emd_cd).strip())
 
     def enrich_geojson(self, geojson: dict) -> dict:

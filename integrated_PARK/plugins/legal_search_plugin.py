@@ -29,11 +29,20 @@ logger = logging.getLogger(__name__)
 
 # ── 법령명 목록 (자동 필터용) ──────────────────────────────────
 _LAW_NAMES = [
-    "식품위생법", "근로기준법", "상가건물 임대차보호법",
-    "최저임금법", "부가가치세법", "소방시설",
-    "공중위생관리법", "소득세법", "중소기업창업 지원법",
-    "건축법", "소상공인 보호 및 지원에 관한 법률",
-    "국민건강증진법", "주세법", "폐기물관리법",
+    "식품위생법",
+    "근로기준법",
+    "상가건물 임대차보호법",
+    "최저임금법",
+    "부가가치세법",
+    "소방시설",
+    "공중위생관리법",
+    "소득세법",
+    "중소기업창업 지원법",
+    "건축법",
+    "소상공인 보호 및 지원에 관한 법률",
+    "국민건강증진법",
+    "주세법",
+    "폐기물관리법",
 ]
 
 
@@ -58,7 +67,9 @@ class LegalSearchPlugin:
         search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT", "")
         index_name = os.getenv("AZURE_SEARCH_INDEX", "legal-index")
 
-        self._available = bool(search_key and search_endpoint and openai_endpoint and openai_key)
+        self._available = bool(
+            search_key and search_endpoint and openai_endpoint and openai_key
+        )
         if self._available:
             try:
                 self._ai_client = AzureOpenAI(
@@ -118,9 +129,20 @@ class LegalSearchPlugin:
                 semantic_configuration_name="semantic-config",
                 top=top_k,
                 filter=filter_expr,
-                select=["id", "lawName", "mst", "articleNo",
-                        "chapterTitle", "sectionTitle", "articleTitle",
-                        "content", "fullText", "source", "docType", "category"],
+                select=[
+                    "id",
+                    "lawName",
+                    "mst",
+                    "articleNo",
+                    "chapterTitle",
+                    "sectionTitle",
+                    "articleTitle",
+                    "content",
+                    "fullText",
+                    "source",
+                    "docType",
+                    "category",
+                ],
             )
 
             docs = []
@@ -130,7 +152,9 @@ class LegalSearchPlugin:
                 if reranker_score is not None and reranker_score < 1.5:
                     logger.debug(
                         "LegalSearch 낮은 리랭커 점수 제외: %s %s (%.2f)",
-                        r.get("lawName", ""), r.get("articleNo", ""), reranker_score,
+                        r.get("lawName", ""),
+                        r.get("articleNo", ""),
+                        reranker_score,
                     )
                     continue
 
@@ -146,7 +170,11 @@ class LegalSearchPlugin:
                 header = f"[{hierarchy}] {article_title or article_no}".strip()
                 docs.append(f"{header}\n{content}")
 
-            return "\n\n---\n\n".join(docs) if docs else "관련 법령 정보를 찾을 수 없습니다."
+            return (
+                "\n\n---\n\n".join(docs)
+                if docs
+                else "관련 법령 정보를 찾을 수 없습니다."
+            )
 
         except Exception as e:
             logger.error("LegalSearch 검색 오류: %s", e)

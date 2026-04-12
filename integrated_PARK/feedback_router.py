@@ -11,13 +11,12 @@ Cosmos DB 구조:
 import logging
 import os
 import time
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
-from typing import Literal
 
 _logger = logging.getLogger("sohobi.feedback")
 
@@ -37,8 +36,8 @@ async def _get_feedback_container():
     if not endpoint:
         return None  # 로컬 개발: 폴백 모드
 
-    from azure.cosmos.aio import CosmosClient
     from azure.cosmos import PartitionKey
+    from azure.cosmos.aio import CosmosClient
     from azure.identity.aio import DefaultAzureCredential
 
     db_name = os.getenv("COSMOS_DATABASE", "sohobi")
@@ -68,13 +67,13 @@ _FEEDBACK_CACHE_TTL = 60
 
 # ── 스키마 ────────────────────────────────────────────────────────
 class FeedbackRequest(BaseModel):
-    session_id:           str = Field(..., max_length=255)
-    agent_type:           Literal["admin", "finance", "legal", "location", "chat"]
-    message_id:           str = Field(..., max_length=255)
-    feedback_type:        Literal["positive", "negative"]
-    tags:                 list[str] = Field(default=[], max_length=10)
+    session_id: str = Field(..., max_length=255)
+    agent_type: Literal["admin", "finance", "legal", "location", "chat"]
+    message_id: str = Field(..., max_length=255)
+    feedback_type: Literal["positive", "negative"]
+    tags: list[str] = Field(default=[], max_length=10)
     conversation_context: str | None = Field(None, max_length=2000)
-    timestamp:            str = Field(..., max_length=50)
+    timestamp: str = Field(..., max_length=50)
 
 
 # ── 엔드포인트 ────────────────────────────────────────────────────
@@ -106,15 +105,15 @@ async def get_feedback(limit: int = 500):
 async def submit_feedback(feedback: FeedbackRequest):
     """사용자 인라인 피드백을 Cosmos DB(또는 인메모리)에 저장한다."""
     document = {
-        "id":                   str(uuid4()),
-        "session_id":           feedback.session_id,
-        "agent_type":           feedback.agent_type,
-        "message_id":           feedback.message_id,
-        "feedback_type":        feedback.feedback_type,
-        "tags":                 feedback.tags or [],
+        "id": str(uuid4()),
+        "session_id": feedback.session_id,
+        "agent_type": feedback.agent_type,
+        "message_id": feedback.message_id,
+        "feedback_type": feedback.feedback_type,
+        "tags": feedback.tags or [],
         "conversation_context": None,  # PII 저장 비활성화
-        "timestamp":            feedback.timestamp,
-        "created_at":           datetime.now(timezone.utc).isoformat(),
+        "timestamp": feedback.timestamp,
+        "created_at": datetime.now(UTC).isoformat(),
     }
 
     container = await _get_feedback_container()

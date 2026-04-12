@@ -58,7 +58,7 @@ PR #177은 **머지 금지** 결정. 코드 신뢰도가 낮으므로 실제 버
 
 **파일:** `frontend/vite.config.js`
 
-광역 `/map` 프록시 → `/map/stores-by-dong`, `/map/stores-by-building` 세분화.  
+광역 `/map` 프록시 → `/map/stores-by-dong`, `/map/stores-by-building` 세분화.
 `App.jsx:30`에 `<Route path="/map">` 존재 → hard-refresh 시 충돌 방지.
 
 ---
@@ -102,7 +102,7 @@ const [dongLoading, setDongLoading] = useState(false)  // 동 패널 fetch
 const [loadingDetail, setLoadingDetail] = useState(false) // Kakao 상세
 ```
 
-`useDongPanel` 훅 또는 통합 로딩 컨텍스트로 정리 검토.  
+`useDongPanel` 훅 또는 통합 로딩 컨텍스트로 정리 검토.
 MapView.jsx가 ~960줄로 여전히 크므로, 로딩 로직 분리가 가독성 향상에 유효.
 
 ---

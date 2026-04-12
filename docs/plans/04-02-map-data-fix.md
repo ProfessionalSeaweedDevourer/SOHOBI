@@ -1,6 +1,6 @@
 # 지도 "데이터 없음" 수정
 
-**날짜:** 2026-04-02  
+**날짜:** 2026-04-02
 **브랜치:** PARK
 
 ## 근본 원인
@@ -16,8 +16,8 @@ TERRY DAOs는 사내 Oracle DB(`<ORACLE_HOST>:1521`)를 사용하므로 Azure에
 ## 수정 내용
 
 ### 1. `integrated_PARK/map_router.py` (신규)
-FastAPI `APIRouter`로 모든 지도 API 엔드포인트 구현.  
-기존 Azure PostgreSQL(`sangkwon_sales`, `sangkwon_store`)에서 데이터 조회.  
+FastAPI `APIRouter`로 모든 지도 API 엔드포인트 구현.
+기존 Azure PostgreSQL(`sangkwon_sales`, `sangkwon_store`)에서 데이터 조회.
 `CommercialRepository` connection pool 재사용.
 
 구현된 엔드포인트:

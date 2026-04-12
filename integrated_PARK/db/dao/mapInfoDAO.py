@@ -1,19 +1,31 @@
 # 위치: p01_backEnd/DAO/mapInfoDAO.py
 # PostgreSQL (Azure) 버전
 
-import math
 import logging
+import math
+
 from .baseDAO import BaseDAO
 
 logger = logging.getLogger(__name__)
 
 # ── 컬럼 목록 (store_seoul 소문자 기준) ─────────────────────────
 STORE_COLS = [
-    "store_id", "store_nm",
-    "cat_cd", "cat_nm", "mid_cat_nm", "sub_cat_nm",
-    "sido_nm", "sgg_nm", "adm_nm", "road_addr",
-    "floor_info", "unit_info", "lng", "lat",
+    "store_id",
+    "store_nm",
+    "cat_cd",
+    "cat_nm",
+    "mid_cat_nm",
+    "sub_cat_nm",
+    "sido_nm",
+    "sgg_nm",
+    "adm_nm",
+    "road_addr",
+    "floor_info",
+    "unit_info",
+    "lng",
+    "lat",
 ]
+
 
 def _clean_store(row: dict) -> dict:
     """None 값 제거 - CSV NULL로 적재된 경우 대비"""
@@ -39,7 +51,6 @@ SELECT_STORE = """
 
 
 class MapInfoDAO(BaseDAO):
-
     def __init__(self):
         self._ensure_search_indexes()
 
@@ -57,7 +68,9 @@ class MapInfoDAO(BaseDAO):
             logger.warning("[MapInfoDAO] 인덱스 생성 실패 (무시): %s", e)
 
     # ── 반경 조회 ─────────────────────────────────────────────────
-    def getNearbyStores(self, lat: float, lng: float, radius: float = 500, limit: int = 500) -> list:
+    def getNearbyStores(
+        self, lat: float, lng: float, radius: float = 500, limit: int = 500
+    ) -> list:
         lat_delta = radius / 111000.0
         lng_delta = radius / (111000.0 * abs(math.cos(math.radians(lat))) or 1)
         sql = f"""
@@ -68,14 +81,28 @@ class MapInfoDAO(BaseDAO):
               AND lat IS NOT NULL AND lng IS NOT NULL
             LIMIT %(limit)s
         """
-        return [_clean_store(r) for r in self._query(sql, {
-            "lat_min": lat - lat_delta, "lat_max": lat + lat_delta,
-            "lng_min": lng - lng_delta, "lng_max": lng + lng_delta,
-            "limit": limit,
-        })]
+        return [
+            _clean_store(r)
+            for r in self._query(
+                sql,
+                {
+                    "lat_min": lat - lat_delta,
+                    "lat_max": lat + lat_delta,
+                    "lng_min": lng - lng_delta,
+                    "lng_max": lng + lng_delta,
+                    "limit": limit,
+                },
+            )
+        ]
 
-    def getNearbyByCategory(self, lat: float, lng: float, category: str,
-                             radius: float = 500, limit: int = 1000) -> list:
+    def getNearbyByCategory(
+        self,
+        lat: float,
+        lng: float,
+        category: str,
+        radius: float = 500,
+        limit: int = 1000,
+    ) -> list:
         lat_delta = radius / 111000.0
         lng_delta = radius / (111000.0 * abs(math.cos(math.radians(lat))) or 1)
         sql = f"""
@@ -87,11 +114,20 @@ class MapInfoDAO(BaseDAO):
               AND lat IS NOT NULL AND lng IS NOT NULL
             LIMIT %(limit)s
         """
-        return [_clean_store(r) for r in self._query(sql, {
-            "lat_min": lat - lat_delta, "lat_max": lat + lat_delta,
-            "lng_min": lng - lng_delta, "lng_max": lng + lng_delta,
-            "cat_cd": category, "limit": limit,
-        })]
+        return [
+            _clean_store(r)
+            for r in self._query(
+                sql,
+                {
+                    "lat_min": lat - lat_delta,
+                    "lat_max": lat + lat_delta,
+                    "lng_min": lng - lng_delta,
+                    "lng_max": lng + lng_delta,
+                    "cat_cd": category,
+                    "limit": limit,
+                },
+            )
+        ]
 
     # ── 행정동코드(adm_cd) 기준 전체 스토어 ──────────────────────
     def getStoresByAdmCd(self, adm_cd: str) -> list:
@@ -108,8 +144,9 @@ class MapInfoDAO(BaseDAO):
         return result
 
     # ── 같은 건물 상가 + 같은 상호명 다른 지점 ────────────────────
-    def getStoresByBuilding(self, road_addr: str, store_nm: str = None,
-                             exclude_store_id: str = None) -> list:
+    def getStoresByBuilding(
+        self, road_addr: str, store_nm: str = None, exclude_store_id: str = None
+    ) -> list:
         if not road_addr:
             return []
 
@@ -131,7 +168,9 @@ class MapInfoDAO(BaseDAO):
                   AND lng IS NOT NULL AND lat IS NOT NULL
                 LIMIT 20
             """
-            results += self._query(sql_nm, {"store_nm": store_nm, "road_addr": road_addr})
+            results += self._query(
+                sql_nm, {"store_nm": store_nm, "road_addr": road_addr}
+            )
 
         if exclude_store_id:
             results = [r for r in results if r.get("store_id") != exclude_store_id]

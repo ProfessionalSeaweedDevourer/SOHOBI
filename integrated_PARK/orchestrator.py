@@ -10,20 +10,21 @@
 
 import time
 import uuid
-from typing import AsyncGenerator, Literal
+from collections.abc import AsyncGenerator
+from typing import Literal
 
-from kernel_setup import get_kernel, get_signoff_client
 from agents.admin_agent import AdminAgent
 from agents.finance_agent import FinanceAgent
 from agents.legal_agent import LegalAgent
 from agents.location_agent import LocationAgent
-from signoff.signoff_agent import run_signoff
 from checklist_store import auto_check_items as _auto_check
+from kernel_setup import get_kernel, get_signoff_client
+from signoff.signoff_agent import run_signoff
 
 AGENT_MAP = {
-    "admin":    AdminAgent,
-    "finance":  FinanceAgent,
-    "legal":    LegalAgent,
+    "admin": AdminAgent,
+    "finance": FinanceAgent,
+    "legal": LegalAgent,
     "location": LocationAgent,
 }
 
@@ -43,6 +44,7 @@ async def run(
     # ── chat 도메인: SignOff 없이 즉시 반환 ──────────────────
     if domain == "chat":
         from agents.chat_agent import ChatAgent
+
         t0 = time.monotonic()
         draft = await ChatAgent(kernel).generate_draft(
             question=question,
@@ -50,21 +52,21 @@ async def run(
             prior_history=prior_history,
         )
         return {
-            "status":            "approved",
-            "grade":             "A",
-            "confidence_note":   "",
-            "retry_count":       0,
-            "request_id":        str(uuid.uuid4())[:8],
-            "session_id":        session_id,
-            "agent_ms":          round((time.monotonic() - t0) * 1000),
-            "signoff_ms":        0,
-            "message":           "",
+            "status": "approved",
+            "grade": "A",
+            "confidence_note": "",
+            "retry_count": 0,
+            "request_id": str(uuid.uuid4())[:8],
+            "session_id": session_id,
+            "agent_ms": round((time.monotonic() - t0) * 1000),
+            "signoff_ms": 0,
+            "message": "",
             "rejection_history": [],
-            "draft":             draft,
-            "chart":             None,
-            "updated_params":    None,
-            "adm_codes":         [],
-            "analysis_type":     "",
+            "draft": draft,
+            "chart": None,
+            "updated_params": None,
+            "adm_codes": [],
+            "analysis_type": "",
         }
 
     signoff_client = get_signoff_client()
@@ -107,44 +109,48 @@ async def run(
                 "business_type": raw.get("business_type", ""),
             }
             return {
-                "status":            "approved",
-                "grade":             "A",
-                "confidence_note":   "",
-                "retry_count":       0,
-                "request_id":        request_id,
-                "session_id":        session_id,
-                "agent_ms":          agent_ms,
-                "signoff_ms":        0,
-                "message":           "",
+                "status": "approved",
+                "grade": "A",
+                "confidence_note": "",
+                "retry_count": 0,
+                "request_id": request_id,
+                "session_id": session_id,
+                "agent_ms": agent_ms,
+                "signoff_ms": 0,
+                "message": "",
                 "rejection_history": [],
-                "draft":             raw.get("draft", ""),
-                "chart":             None,
-                "charts":            [],
-                "updated_params":    None,
-                "adm_codes":         [],
-                "analysis_type":     raw.get("type", ""),
-                "updated_context":   partial_context,
-                "checked_items":     [],
+                "draft": raw.get("draft", ""),
+                "chart": None,
+                "charts": [],
+                "updated_params": None,
+                "adm_codes": [],
+                "analysis_type": raw.get("type", ""),
+                "updated_context": partial_context,
+                "checked_items": [],
                 "suggested_actions": raw.get("suggested_actions", []),
-                "is_partial":        True,
+                "is_partial": True,
             }
 
         # finance/location 에이전트는 dict를 반환
         if isinstance(raw, dict):
             draft = raw.get("draft", "")
-            chart = raw.get("chart")                    # finance: 단일 chart dict
-            charts = raw.get("charts", []) or []        # location: 차트 list (CHOI)
+            chart = raw.get("chart")  # finance: 단일 chart dict
+            charts = raw.get("charts", []) or []  # location: 차트 list (CHOI)
             updated_params = raw.get("updated_params")
             adm_codes = raw.get("adm_codes", [])
             analysis_type = raw.get("type", "")
             # location agent가 반환한 지역·업종으로 context 갱신 (다음 iteration에 전달)
             if domain == "location" and adm_codes:
                 updated_context = dict(context) if context else {}
-                updated_context["adm_codes"]     = adm_codes
-                updated_context["business_type"] = raw.get("business_type", updated_context.get("business_type", ""))
-                updated_context["location_name"] = raw.get("location_name", updated_context.get("location_name", ""))
-                updated_context["locations"]     = raw.get("locations", [])
-                updated_context["quarter"]       = raw.get("quarter", "")
+                updated_context["adm_codes"] = adm_codes
+                updated_context["business_type"] = raw.get(
+                    "business_type", updated_context.get("business_type", "")
+                )
+                updated_context["location_name"] = raw.get(
+                    "location_name", updated_context.get("location_name", "")
+                )
+                updated_context["locations"] = raw.get("locations", [])
+                updated_context["quarter"] = raw.get("quarter", "")
                 context = updated_context  # retry 시 다음 iteration에서 재사용
         else:
             draft = raw
@@ -175,39 +181,45 @@ async def run(
                 except Exception:
                     pass
             return {
-                "status":           "approved",
-                "grade":            grade,
-                "confidence_note":  verdict.get("confidence_note", ""),
-                "retry_count":      attempt - 1,
-                "request_id":       request_id,
-                "session_id":       session_id,
-                "agent_ms":         agent_ms,
-                "signoff_ms":       signoff_ms,
-                "message":          "",
+                "status": "approved",
+                "grade": grade,
+                "confidence_note": verdict.get("confidence_note", ""),
+                "retry_count": attempt - 1,
+                "request_id": request_id,
+                "session_id": session_id,
+                "agent_ms": agent_ms,
+                "signoff_ms": signoff_ms,
+                "message": "",
                 "rejection_history": rejection_history,
-                "draft":            draft,
-                "chart":            chart,
-                "charts":           charts,
-                "updated_params":   updated_params,
-                "adm_codes":        adm_codes,
-                "analysis_type":    analysis_type,
-                "updated_context":  updated_context,
-                "checked_items":    checked_ids,
+                "draft": draft,
+                "chart": chart,
+                "charts": charts,
+                "updated_params": updated_params,
+                "adm_codes": adm_codes,
+                "analysis_type": analysis_type,
+                "updated_context": updated_context,
+                "checked_items": checked_ids,
             }
 
-        rejection_history.append({
-            "attempt": attempt,
-            "verdict": verdict,
-            "agent_ms": agent_ms,
-            "signoff_ms": signoff_ms,
-        })
+        rejection_history.append(
+            {
+                "attempt": attempt,
+                "verdict": verdict,
+                "agent_ms": agent_ms,
+                "signoff_ms": signoff_ms,
+            }
+        )
         retry_prompt = verdict.get("retry_prompt", "")
 
         if attempt > max_retries:
             break
 
     actual_retries = len(rejection_history)
-    last_reason = rejection_history[-1]["verdict"].get("retry_prompt", "") if rejection_history else ""
+    last_reason = (
+        rejection_history[-1]["verdict"].get("retry_prompt", "")
+        if rejection_history
+        else ""
+    )
     esc_checked_ids: list[str] = []
     if session_id and draft:
         try:
@@ -215,24 +227,24 @@ async def run(
         except Exception:
             pass
     return {
-        "status":           "escalated",
-        "grade":            "C",
-        "confidence_note":  "",
-        "retry_count":      actual_retries,
-        "request_id":       request_id,
-        "session_id":       session_id,
-        "agent_ms":         0,
-        "signoff_ms":       0,
-        "message":          f"재시도 {actual_retries}회 초과. 마지막 거부 이유: {last_reason}",
+        "status": "escalated",
+        "grade": "C",
+        "confidence_note": "",
+        "retry_count": actual_retries,
+        "request_id": request_id,
+        "session_id": session_id,
+        "agent_ms": 0,
+        "signoff_ms": 0,
+        "message": f"재시도 {actual_retries}회 초과. 마지막 거부 이유: {last_reason}",
         "rejection_history": rejection_history,
-        "draft":            draft,
-        "chart":            chart,
-        "charts":           charts,
-        "updated_params":   updated_params,
-        "adm_codes":        adm_codes,
-        "analysis_type":    analysis_type,
-        "updated_context":  updated_context,
-        "checked_items":    esc_checked_ids,
+        "draft": draft,
+        "chart": chart,
+        "charts": charts,
+        "updated_params": updated_params,
+        "adm_codes": adm_codes,
+        "analysis_type": analysis_type,
+        "updated_context": updated_context,
+        "checked_items": esc_checked_ids,
     }
 
 
@@ -262,6 +274,7 @@ async def run_stream(
     # ── chat 도메인: SignOff 없이 즉시 complete yield ────────
     if domain == "chat":
         from agents.chat_agent import ChatAgent
+
         yield {"event": "agent_start", "attempt": 1, "max_attempts": 1}
         t0 = time.monotonic()
         draft = await ChatAgent(kernel).generate_draft(
@@ -273,22 +286,22 @@ async def run_stream(
         rid = str(uuid.uuid4())[:8]
         yield {"event": "agent_done", "attempt": 1, "agent_ms": agent_ms}
         yield {
-            "event":             "complete",
-            "status":            "approved",
-            "grade":             "A",
-            "confidence_note":   "",
-            "retry_count":       0,
-            "request_id":        rid,
-            "session_id":        session_id,
-            "agent_ms":          agent_ms,
-            "signoff_ms":        0,
-            "message":           "",
+            "event": "complete",
+            "status": "approved",
+            "grade": "A",
+            "confidence_note": "",
+            "retry_count": 0,
+            "request_id": rid,
+            "session_id": session_id,
+            "agent_ms": agent_ms,
+            "signoff_ms": 0,
+            "message": "",
             "rejection_history": [],
-            "draft":             draft,
-            "chart":             None,
-            "updated_params":    None,
-            "adm_codes":         [],
-            "analysis_type":     "",
+            "draft": draft,
+            "chart": None,
+            "updated_params": None,
+            "adm_codes": [],
+            "analysis_type": "",
         }
         return
 
@@ -308,7 +321,11 @@ async def run_stream(
     updated_context: dict | None = None
 
     for attempt in range(1, max_retries + 2):
-        yield {"event": "agent_start", "attempt": attempt, "max_attempts": max_retries + 1}
+        yield {
+            "event": "agent_start",
+            "attempt": attempt,
+            "max_attempts": max_retries + 1,
+        }
 
         t_agent = time.monotonic()
         extra: dict = {}
@@ -334,44 +351,48 @@ async def run_stream(
             }
             yield {"event": "agent_done", "attempt": attempt, "agent_ms": agent_ms}
             yield {
-                "event":             "complete",
-                "status":            "approved",
-                "grade":             "A",
-                "confidence_note":   "",
-                "retry_count":       0,
-                "request_id":        request_id,
-                "session_id":        session_id,
-                "agent_ms":          agent_ms,
-                "signoff_ms":        0,
-                "message":           "",
+                "event": "complete",
+                "status": "approved",
+                "grade": "A",
+                "confidence_note": "",
+                "retry_count": 0,
+                "request_id": request_id,
+                "session_id": session_id,
+                "agent_ms": agent_ms,
+                "signoff_ms": 0,
+                "message": "",
                 "rejection_history": [],
-                "draft":             raw.get("draft", ""),
-                "chart":             None,
-                "charts":            [],
-                "updated_params":    None,
-                "adm_codes":         [],
-                "analysis_type":     raw.get("type", ""),
-                "updated_context":   partial_context,
-                "checked_items":     [],
+                "draft": raw.get("draft", ""),
+                "chart": None,
+                "charts": [],
+                "updated_params": None,
+                "adm_codes": [],
+                "analysis_type": raw.get("type", ""),
+                "updated_context": partial_context,
+                "checked_items": [],
                 "suggested_actions": raw.get("suggested_actions", []),
-                "is_partial":        True,
+                "is_partial": True,
             }
             return
 
         if isinstance(raw, dict):
             draft = raw.get("draft", "")
-            chart = raw.get("chart")                    # finance: 단일 chart dict
-            charts = raw.get("charts", []) or []        # location: 차트 list (CHOI)
+            chart = raw.get("chart")  # finance: 단일 chart dict
+            charts = raw.get("charts", []) or []  # location: 차트 list (CHOI)
             updated_params = raw.get("updated_params")
             adm_codes = raw.get("adm_codes", [])
             analysis_type = raw.get("type", "")
             if domain == "location" and adm_codes:
                 updated_context = dict(context) if context else {}
-                updated_context["adm_codes"]     = adm_codes
-                updated_context["business_type"] = raw.get("business_type", updated_context.get("business_type", ""))
-                updated_context["location_name"] = raw.get("location_name", updated_context.get("location_name", ""))
-                updated_context["locations"]     = raw.get("locations", [])
-                updated_context["quarter"]       = raw.get("quarter", "")
+                updated_context["adm_codes"] = adm_codes
+                updated_context["business_type"] = raw.get(
+                    "business_type", updated_context.get("business_type", "")
+                )
+                updated_context["location_name"] = raw.get(
+                    "location_name", updated_context.get("location_name", "")
+                )
+                updated_context["locations"] = raw.get("locations", [])
+                updated_context["quarter"] = raw.get("quarter", "")
                 context = updated_context  # retry 시 다음 iteration에서 재사용
         else:
             draft = raw
@@ -396,15 +417,15 @@ async def run_stream(
         grade = verdict.get("grade", "A" if verdict.get("approved") else "C")
 
         yield {
-            "event":        "signoff_result",
-            "attempt":      attempt,
-            "approved":     verdict["approved"],
-            "grade":        grade,
-            "passed":       verdict.get("passed", []),
-            "issues":       verdict.get("issues", []),
-            "warnings":     verdict.get("warnings", []),
+            "event": "signoff_result",
+            "attempt": attempt,
+            "approved": verdict["approved"],
+            "grade": grade,
+            "passed": verdict.get("passed", []),
+            "issues": verdict.get("issues", []),
+            "warnings": verdict.get("warnings", []),
             "retry_prompt": verdict.get("retry_prompt", ""),
-            "signoff_ms":   signoff_ms,
+            "signoff_ms": signoff_ms,
         }
 
         if verdict["approved"]:
@@ -415,34 +436,36 @@ async def run_stream(
                 except Exception:
                     pass
             yield {
-                "event":            "complete",
-                "status":           "approved",
-                "grade":            grade,
-                "confidence_note":  verdict.get("confidence_note", ""),
-                "retry_count":      attempt - 1,
-                "request_id":       request_id,
-                "session_id":       session_id,
-                "agent_ms":         agent_ms,
-                "signoff_ms":       signoff_ms,
-                "message":          "",
+                "event": "complete",
+                "status": "approved",
+                "grade": grade,
+                "confidence_note": verdict.get("confidence_note", ""),
+                "retry_count": attempt - 1,
+                "request_id": request_id,
+                "session_id": session_id,
+                "agent_ms": agent_ms,
+                "signoff_ms": signoff_ms,
+                "message": "",
                 "rejection_history": rejection_history,
-                "draft":            draft,
-                "chart":            chart,
-                "charts":           charts,
-                "updated_params":   updated_params,
-                "adm_codes":        adm_codes,
-                "analysis_type":    analysis_type,
-                "updated_context":  updated_context,
-                "checked_items":    stream_checked_ids,
+                "draft": draft,
+                "chart": chart,
+                "charts": charts,
+                "updated_params": updated_params,
+                "adm_codes": adm_codes,
+                "analysis_type": analysis_type,
+                "updated_context": updated_context,
+                "checked_items": stream_checked_ids,
             }
             return
 
-        rejection_history.append({
-            "attempt":    attempt,
-            "verdict":    verdict,
-            "agent_ms":   agent_ms,
-            "signoff_ms": signoff_ms,
-        })
+        rejection_history.append(
+            {
+                "attempt": attempt,
+                "verdict": verdict,
+                "agent_ms": agent_ms,
+                "signoff_ms": signoff_ms,
+            }
+        )
         retry_prompt = verdict.get("retry_prompt", "")
 
         if attempt > max_retries:
@@ -456,23 +479,23 @@ async def run_stream(
         except Exception:
             pass
     yield {
-        "event":            "complete",
-        "status":           "escalated",
-        "grade":            "C",
-        "confidence_note":  "",
-        "retry_count":      actual_retries,
-        "request_id":       request_id,
-        "session_id":       session_id,
-        "agent_ms":         0,
-        "signoff_ms":       0,
-        "message":          f"재시도 {actual_retries}회 초과.",
+        "event": "complete",
+        "status": "escalated",
+        "grade": "C",
+        "confidence_note": "",
+        "retry_count": actual_retries,
+        "request_id": request_id,
+        "session_id": session_id,
+        "agent_ms": 0,
+        "signoff_ms": 0,
+        "message": f"재시도 {actual_retries}회 초과.",
         "rejection_history": rejection_history,
-        "draft":            draft,
-        "chart":            chart,
-        "charts":           charts,
-        "updated_params":   updated_params,
-        "adm_codes":        adm_codes,
-        "analysis_type":    analysis_type,
-        "updated_context":  updated_context,
-        "checked_items":    stream_esc_checked_ids,
+        "draft": draft,
+        "chart": chart,
+        "charts": charts,
+        "updated_params": updated_params,
+        "adm_codes": adm_codes,
+        "analysis_type": analysis_type,
+        "updated_context": updated_context,
+        "checked_items": stream_esc_checked_ids,
     }
