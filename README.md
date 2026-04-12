@@ -162,24 +162,36 @@
   - `SeoulCommercialPlugin` — 지역·업종별 상권 데이터 조회
 - **동작**: 식품위생법 기반 영업신고 절차 단계별 안내 + 창업자 상황 맞춤 정부지원사업 추천
 - **출력 기준**: 관할 기관(시·군·구청 위생과) 명시, 처리 기한(3~7영업일) 포함
-- **문서 생성**: `/api/v1/doc/chat` 엔드포인트에서 대화형으로 정보 수집 후 식품영업신고서 PDF 출력
+- **문서 생성**: `/api/v1/doc/chat` 엔드포인트에서 `FoodBusinessPlugin`(BusinessDoc)을 통해 대화형으로 정보 수집 후 식품영업신고서 PDF 출력 (Sign-off 바이패스, 별도 kernel)
 
 ---
 
 ## 프로젝트 성과
 
+### 프로젝트 기간 (2026-02-25 ~ 2026-04-10)
+
 | 지표 | 수치 |
 | ---- | ---- |
-| 총 커밋 | 566건 (non-merge) |
-| Pull Request | 264건+ |
+| 총 커밋 | 770건 (non-merge 575건) |
+| Pull Request (merged) | 255건 |
 | AI 에이전트 | 5개 (행정·재무·법률·상권·안내) |
 | Sign-off 루브릭 코드 | 4계층 33개 |
 | 정부지원사업 RAG 데이터 | 5,600건+ |
 | 몬테카를로 시뮬레이션 | 10,000회/요청 |
 | 응답 레이턴시 개선 | -63.6% (avg 32.7s → 11.9s) |
-| 일일 개발 요약 | 73건 |
-| 플랜 문서 | 113건 |
-| 세션 인수인계 | 47건 |
+| 일일 개발 요약 | 81건 |
+| 플랜 문서 | 114건 |
+| 세션 인수인계 | 48건 |
+
+> GitHub 저장소에 표시되는 총 커밋 수(현재 776)는 이후 유지보수 커밋과 merge 커밋을 포함한 누적 합계입니다. 위 표는 프로젝트 종료일 기준 스냅샷입니다.
+
+### 프로젝트 후 유지보수 (2026-04-11 ~ )
+
+| 지표 | 수치 |
+| ---- | ---- |
+| 추가 커밋 | 9건 |
+| 추가 PR (merged) | 5건 |
+| 주요 작업 | 린트 도구 도입 (Ruff·Prettier·pre-commit), axios 공급망 공격 대응·의존성 핀 |
 
 ---
 
@@ -347,13 +359,21 @@ SOHOBI/
 │       │   ├── map/              # 지도 컴포넌트 (레이어, 패널, 팝업)
 │       │   ├── report/           # 리포트 컴포넌트
 │       │   └── ui/               # Radix UI 기반 공통 UI
-│       └── contexts/             # React Context (AuthContext 등)
+│       ├── hooks/                # 커스텀 훅 (chat/, map/)
+│       ├── contexts/             # React Context (AuthContext 등)
+│       ├── config/               # 환경별 API URL·설정
+│       ├── constants/            # 도메인 키워드 등 상수
+│       ├── utils/                # 범용 유틸리티
+│       ├── lib/                  # 외부 라이브러리 래퍼
+│       ├── data/                 # 정적 데이터
+│       ├── styles/               # 전역 스타일
+│       └── assets/               # 이미지·아이콘
 ├── docs/                         # → docs/README.md 참조
 │   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
-│   ├── dev-summary/              # 팀원별 일일 개발 요약 (73건)
+│   ├── dev-summary/              # 팀원별 일일 개발 요약 (81건)
 │   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
-│   ├── plans/                    # 설계·분석 플랜 문서 (113건)
-│   ├── session-reports/          # 세션 인수인계 리포트 (47건)
+│   ├── plans/                    # 설계·분석 플랜 문서 (114건)
+│   ├── session-reports/          # 세션 인수인계 리포트 (48건)
 │   └── test-reports/             # 보안 테스트·성능 베이스라인 리포트
 ├── .github/workflows/            # CI/CD (프론트 배포, 백엔드 배포, 스모크 테스트)
 └── CLAUDE.md                     # Claude Code 영구 지시
@@ -398,6 +418,35 @@ curl -s -X POST http://localhost:8000/api/v1/query \
   -H "Content-Type: application/json" \
   -d '{"question": "서울 강남구에서 카페 창업 시 필요한 인허가는?"}'
 ```
+
+---
+
+## 개발 도구
+
+### 린트 & 포맷
+
+| 대상 | 도구 | 명령 |
+|------|------|------|
+| Python | Ruff | `ruff check --fix integrated_PARK/` |
+| Python | Ruff Format | `ruff format integrated_PARK/` |
+| JS/CSS | Prettier | `cd frontend && npx prettier --write src/` |
+| JS | ESLint | `cd frontend && npx eslint --fix src/` |
+
+### pre-commit 훅
+
+최초 1회 설치:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+이후 커밋 시 Ruff·Prettier가 자동 실행됩니다. 설정 파일:
+
+- `pyproject.toml` — Ruff 규칙 (target: Python 3.12)
+- `frontend/.prettierrc` — Prettier 포맷 규칙
+- `frontend/eslint.config.js` — ESLint 규칙
+- `.pre-commit-config.yaml` — 훅 설정
 
 ---
 
