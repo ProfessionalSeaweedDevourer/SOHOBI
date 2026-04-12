@@ -60,8 +60,8 @@ sangkwon_sales.csv
 uv.lock
 
 # 로그 파일 (구조 파일인 .gitkeep은 유지)
-integrated_PARK/logs/*.jsonl
-integrated_PARK/logs/remote/
+backend/logs/*.jsonl
+backend/logs/remote/
 logs/
 CHOI/SK학습/test/.env
 

@@ -51,9 +51,9 @@ else
 fi
 
 # .env 복사 (backend)
-if [[ -f "${REPO_ROOT}/integrated_PARK/.env" ]]; then
-  cp "${REPO_ROOT}/integrated_PARK/.env" "${WORKTREE_DIR}/integrated_PARK/.env"
-  echo "==> integrated_PARK/.env 복사 완료"
+if [[ -f "${REPO_ROOT}/backend/.env" ]]; then
+  cp "${REPO_ROOT}/backend/.env" "${WORKTREE_DIR}/backend/.env"
+  echo "==> backend/.env 복사 완료"
 fi
 
 # .env 복사 (frontend, 있는 경우)
@@ -69,10 +69,10 @@ if [[ -f "${WORKTREE_DIR}/frontend/package.json" ]]; then
 fi
 
 # 백엔드 venv 생성 + 의존성 설치
-if [[ -f "${WORKTREE_DIR}/integrated_PARK/requirements.txt" ]]; then
+if [[ -f "${WORKTREE_DIR}/backend/requirements.txt" ]]; then
   echo "==> 백엔드 venv 생성 및 의존성 설치"
-  python3 -m venv "${WORKTREE_DIR}/integrated_PARK/.venv"
-  "${WORKTREE_DIR}/integrated_PARK/.venv/bin/pip" install -q -r "${WORKTREE_DIR}/integrated_PARK/requirements.txt"
+  python3 -m venv "${WORKTREE_DIR}/backend/.venv"
+  "${WORKTREE_DIR}/backend/.venv/bin/pip" install -q -r "${WORKTREE_DIR}/backend/requirements.txt"
 fi
 
 echo ""

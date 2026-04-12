@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "integrated_PARK/**"
+      - "backend/**"
       - ".github/workflows/deploy-backend.yml"
 
 concurrency:
@@ -35,7 +35,7 @@ jobs:
       - name: Docker 이미지 빌드 및 푸시
         run: |
           IMAGE=${{ secrets.ACR_NAME }}.azurecr.io/sohobi-backend:${{ github.sha }}
-          docker build -t $IMAGE integrated_PARK/
+          docker build -t $IMAGE backend/
           docker push $IMAGE
           # latest 태그도 동시 업데이트
           docker tag $IMAGE ${{ secrets.ACR_NAME }}.azurecr.io/sohobi-backend:latest

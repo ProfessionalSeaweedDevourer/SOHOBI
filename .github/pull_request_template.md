@@ -6,10 +6,10 @@
 
 ### 공통
 
-- [ ] `integrated_PARK/.env` 내용이 커밋에 포함되지 않았음
+- [ ] `backend/.env` 내용이 커밋에 포함되지 않았음
 - [ ] `frontend/.env.local` 내용이 커밋에 포함되지 않았음
 
-### 백엔드 배포 변경 시 (`integrated_PARK/**` 수정)
+### 백엔드 배포 변경 시 (`backend/**` 수정)
 
 - [ ] `deploy-backend.yml`의 `--set-env-vars` 각 변수를 **개별 따옴표**로 분리했음
   ```yaml
@@ -24,7 +24,7 @@
 - [ ] `API_SECRET_KEY` (Azure) ↔ `VITE_API_KEY` (GitHub Secret) 동일 값 확인
 - [ ] 키 변경 후 SWA 재빌드 트리거 예정
 
-### 지도 관련 변경 시 (`frontend/src/components/map/**`, `integrated_PARK/map_data_router.py`)
+### 지도 관련 변경 시 (`frontend/src/components/map/**`, `backend/map_data_router.py`)
 
 - [ ] VWorld API 호출 시 `VITE_VWORLD_DOMAIN` 환경변수 사용 (`localhost` 하드코딩 금지)
 - [ ] 로컬에서 지적도 레이어 정상 표시 확인

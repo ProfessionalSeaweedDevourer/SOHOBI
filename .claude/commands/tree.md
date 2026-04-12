@@ -19,7 +19,7 @@
    ```
    git fetch origin
    git worktree add ../SOHOBI-<브랜치명> -b <브랜치명> origin/main
-   cp integrated_PARK/.env ../SOHOBI-<브랜치명>/integrated_PARK/.env
+   cp backend/.env ../SOHOBI-<브랜치명>/backend/.env
    cp frontend/.env ../SOHOBI-<브랜치명>/frontend/.env
    cd ../SOHOBI-<브랜치명>/frontend && npm install
    ```

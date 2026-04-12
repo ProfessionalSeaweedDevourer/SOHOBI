@@ -7,7 +7,7 @@ Google OAuth 2.0 소셜 로그인 + JWT 발급 라우터.
   GET  /auth/me                  — 현재 로그인 유저 정보 반환
   POST /auth/link-session        — 익명 session_id를 현재 유저에 귀속
 
-환경변수 (integrated_PARK/.env):
+환경변수 (backend/.env):
   GOOGLE_CLIENT_ID
   GOOGLE_CLIENT_SECRET
   JWT_SECRET

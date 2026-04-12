@@ -24,7 +24,7 @@
 
 ## 환경변수: 로컬 `.env` vs Azure 프로덕션
 
-**⚠️ 혼동 주의**: `integrated_PARK/.env`는 **로컬 개발 전용**이다. 프로덕션 환경변수는 Azure Container Apps에 별도로 설정되며, 로컬 `.env`를 수정해도 프로덕션에 반영되지 않는다.
+**⚠️ 혼동 주의**: `backend/.env`는 **로컬 개발 전용**이다. 프로덕션 환경변수는 Azure Container Apps에 별도로 설정되며, 로컬 `.env`를 수정해도 프로덕션에 반영되지 않는다.
 
 | 변수 | 로컬 `.env` | Azure Container Apps | 변경 방법 |
 |------|-------------|---------------------|-----------|
@@ -83,7 +83,7 @@ az containerapp ingress access-restriction set \
 | 대상 | 트리거 | 워크플로우 |
 |------|--------|-----------|
 | 프론트엔드 (SWA) | `main` push (frontend 변경) | `.github/workflows/azure-static-web-apps-*.yml` |
-| 백엔드 (Container Apps) | `main` push (integrated_PARK 변경) | `.github/workflows/deploy-backend.yml` |
+| 백엔드 (Container Apps) | `main` push (backend 변경) | `.github/workflows/deploy-backend.yml` |
 
 ## Azure 리소스 요약
 

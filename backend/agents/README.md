@@ -1,4 +1,4 @@
-# integrated_PARK/agents
+# backend/agents
 
 SOHOBI 다중 에이전트 시스템의 5개 도메인 전문 에이전트.
 

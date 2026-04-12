@@ -6,7 +6,7 @@ PR #96 검증 테스트 — finance_db.py list 지역코드 인터페이스 및 
 - finance_simulation_plugin.load_initial(region: list = None, ...) — 타입 변경
 - region 또는 industry가 None/빈 리스트이면 fallback [17_000_000] 반환
 
-AREA_MAP 주요 지역 코드 (integrated_PARK/db/repository.py):
+AREA_MAP 주요 지역 코드 (backend/db/repository.py):
   홍대:  ["11440660"]
   망원:  ["11440690", "11440700"]
   강남:  ["11680640", "11680650", "11680521", "11680531"]

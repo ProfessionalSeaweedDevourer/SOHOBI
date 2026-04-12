@@ -1,4 +1,4 @@
-# 위치: integrated_PARK/db/dao/landValueDAO.py
+# 위치: backend/db/dao/landValueDAO.py
 # VWorld API 대신 PostgreSQL land_value 테이블 직접 조회
 # 반환 형식: {"pnu", "count", "data": [{"year", "price", "price_str"}]}
 

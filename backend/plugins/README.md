@@ -1,4 +1,4 @@
-# integrated_PARK/plugins
+# backend/plugins
 
 Semantic Kernel 플러그인 모듈. 각 에이전트가 호출하는 도구(tool) 함수를 제공한다.
 
@@ -18,7 +18,7 @@ Semantic Kernel 플러그인 모듈. 각 에이전트가 호출하는 도구(too
 
 - 모든 플러그인은 `@kernel_function` 데코레이터로 Semantic Kernel에 등록
 - 에이전트가 LLM function calling을 통해 자동 호출
-- 환경변수는 `integrated_PARK/.env`에서 로드 (`dotenv`)
+- 환경변수는 `backend/.env`에서 로드 (`dotenv`)
 
 ## 관련 문서
 

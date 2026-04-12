@@ -4,7 +4,7 @@ PR #$ARGUMENTS 의 Test Plan에 있는 TC를 실행하라.
 
 1. `gh pr view <PR번호> --json body`로 PR body를 가져온다
 2. body에서 Test Plan 섹션의 체크박스 항목(TC)을 파싱한다
-3. `source integrated_PARK/.env`로 환경변수 로드
+3. `source backend/.env`로 환경변수 로드
 4. TC를 번호 순서대로 실행한다:
    - API E2E: `curl` + `$BACKEND_HOST`
    - 백엔드 로그: `GET $BACKEND_HOST/api/v1/logs`

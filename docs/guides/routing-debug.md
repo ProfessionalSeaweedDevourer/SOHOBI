@@ -23,7 +23,7 @@
 ## 2단계: 로그 조회
 
 ```bash
-source integrated_PARK/.env
+source backend/.env
 
 # 최근 N건 — [domain] [status/grade] 질문 형태로 파싱
 curl -s -H "X-API-Key: $API_SECRET_KEY" \
@@ -39,7 +39,7 @@ for e in data.get('entries', []):
 "
 ```
 
-> **인증 키**: `integrated_PARK/.env`의 `API_SECRET_KEY`
+> **인증 키**: `backend/.env`의 `API_SECRET_KEY`
 
 ---
 
@@ -69,7 +69,7 @@ for ts, dom, q in suspects:
 
 ## 4단계: 코드 추적
 
-`integrated_PARK/domain_router.py`의 분류 경로를 따라간다.
+`backend/domain_router.py`의 분류 경로를 따라간다.
 
 ### 4a. 키워드 분류 통과 여부 확인
 
@@ -79,7 +79,7 @@ for ts, dom, q in suspects:
 
 ```python
 # 로컬에서 직접 테스트:
-cd integrated_PARK
+cd backend
 .venv/bin/python3 -c "
 from domain_router import _keyword_classify
 q = '여기에 오분류된 질문 붙여넣기'
@@ -97,7 +97,7 @@ print(_keyword_classify(q))
 
 ```python
 # LLM 분류만 단독 실행:
-cd integrated_PARK
+cd backend
 .venv/bin/python3 -c "
 import asyncio
 from domain_router import _llm_classify
@@ -125,7 +125,7 @@ print(asyncio.run(_llm_classify(q)))
 수정 후 검증:
 
 ```bash
-source integrated_PARK/.env
+source backend/.env
 
 # 오분류됐던 질문 재테스트 (배포 후)
 curl -s -X POST "$BACKEND_HOST/api/v1/query" \

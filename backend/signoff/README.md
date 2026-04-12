@@ -1,4 +1,4 @@
-# integrated_PARK/signoff
+# backend/signoff
 
 하위 에이전트가 생성한 응답(draft)의 품질을 자동 판정하는 **Sign-off 검증 에이전트**.
 

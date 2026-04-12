@@ -228,7 +228,7 @@
 
 ## 기술 스택
 
-### 백엔드 (`integrated_PARK/`)
+### 백엔드 (`backend/`)
 
 | 분류 | 기술 |
 |------|------|
@@ -322,7 +322,7 @@
 
 ```text
 SOHOBI/
-├── integrated_PARK/              # 메인 통합 백엔드
+├── backend/              # 메인 통합 백엔드
 │   ├── api_server.py             # FastAPI 진입점
 │   ├── orchestrator.py           # Semantic Kernel 오케스트레이션
 │   ├── domain_router.py          # 질문 → 에이전트 라우팅
@@ -392,7 +392,7 @@ SOHOBI/
 ### 백엔드
 
 ```bash
-cd integrated_PARK
+cd backend
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
@@ -427,8 +427,8 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 
 | 대상 | 도구 | 명령 |
 |------|------|------|
-| Python | Ruff | `ruff check --fix integrated_PARK/` |
-| Python | Ruff Format | `ruff format integrated_PARK/` |
+| Python | Ruff | `ruff check --fix backend/` |
+| Python | Ruff Format | `ruff format backend/` |
 | JS/CSS | Prettier | `cd frontend && npx prettier --write src/` |
 | JS | ESLint | `cd frontend && npx eslint --fix src/` |
 

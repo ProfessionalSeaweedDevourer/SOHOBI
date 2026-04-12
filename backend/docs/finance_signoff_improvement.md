@@ -1,7 +1,7 @@
 # Finance Agent Sign-off 개선 보고서
 
 **작성일**: 2026-03-12
-**대상 폴더**: `integrated_PARK/`
+**대상 폴더**: `backend/`
 **관련 파일**:
 - `plugins/finance_simulation_plugin.py`
 - `agents/finance_agent.py`

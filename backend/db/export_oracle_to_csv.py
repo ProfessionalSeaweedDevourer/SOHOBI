@@ -4,13 +4,13 @@ Oracle SANGKWON_SALES / SANGKWON_STORE 테이블을 CSV로 내보내기.
 PostgreSQL 이전(Step 3) 전용 1회성 스크립트.
 
 사용법:
-    cd integrated_PARK
+    cd backend
     source .env   # ORACLE_USER, ORACLE_PASSWORD, ORACLE_HOST, ORACLE_PORT, ORACLE_SID 필요
     .venv/bin/python3 db/export_oracle_to_csv.py
 
 출력 파일:
-    integrated_PARK/db/sangkwon_sales.csv
-    integrated_PARK/db/sangkwon_store.csv
+    backend/db/sangkwon_sales.csv
+    backend/db/sangkwon_store.csv
 """
 
 import csv
