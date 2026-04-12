@@ -7,6 +7,7 @@ import ActionButtons from "../ActionButtons";
 import { motion, AnimatePresence } from "motion/react";
 import { MessageSquare, X, MapPin, Send } from "lucide-react";
 import SimulationChart from "../SimulationChart";
+import { DOMAIN_KR, DOMAIN_COLOR, GRADE_STYLE, GRADE_LABEL } from "../responseBadges";
 import "./ChatPanel.css";
 
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_API_KEY;
@@ -326,10 +327,12 @@ export default function ChatPanel({
             const charts = data.charts || [];
             const chart = data.chart || null;
             const suggestedActions = data.suggested_actions || [];
+            const domain = data.domain || null;
+            const grade = data.grade || null;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === streamMsgId
-                  ? { ...m, content: draft, charts, chart, suggestedActions }
+                  ? { ...m, content: draft, charts, chart, suggestedActions, domain, grade }
                   : m,
               ),
             );
@@ -536,6 +539,34 @@ export default function ChatPanel({
             <div key={msg.id} className={`mv-chat-msg mv-chat-msg--${msg.role}`}>
               {msg.role === "assistant" ? (
                 <>
+                  {msg.domain && msg.domain !== "chat" && (
+                    <div className="mv-chat-badges">
+                      <span
+                        className="mv-chat-badge"
+                        style={
+                          DOMAIN_COLOR[msg.domain] || {
+                            background: "var(--muted)",
+                            color: "var(--muted-foreground)",
+                          }
+                        }
+                      >
+                        {DOMAIN_KR[msg.domain] || msg.domain}
+                      </span>
+                      {msg.grade && (
+                        <span
+                          className="mv-chat-badge"
+                          style={
+                            GRADE_STYLE[msg.grade] || {
+                              background: "var(--muted)",
+                              color: "var(--muted-foreground)",
+                            }
+                          }
+                        >
+                          {GRADE_LABEL[msg.grade] || msg.grade}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {msg.content}
                   </ReactMarkdown>
