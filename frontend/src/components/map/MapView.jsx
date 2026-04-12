@@ -21,7 +21,17 @@ import LandmarkPopup from "./popup/LandmarkPopup";
 import { useLandmarkLayer } from "../../hooks/map/useLandmarkLayer";
 import { ThemeToggle } from "../ThemeToggle";
 import { Link } from "react-router-dom";
-import { Layers } from "lucide-react";
+import {
+  Layers,
+  ChevronDown,
+  MessageSquare,
+  Sparkles,
+  BarChart3,
+  Vote,
+  ScrollText,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { useAuth } from "../../contexts/AuthContext";
 
 // ── 커스텀 훅 ──────────────────────────────────────────────────
 import { useMarkers } from "../../hooks/map/useMarkers";
@@ -91,8 +101,22 @@ export default function MapView() {
   const catFetchTimerRef = useRef(null); // 카테고리 fetch debounce
   const [landValue, setLandValue] = useState(null);
   const [showPanel, setShowPanel] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const navRef = useRef(null);
+  const { user } = useAuth();
 
   const [dongMode, setDongMode] = useState("none");
+
+  useEffect(() => {
+    if (!navOpen) return;
+    function handleClickOutside(e) {
+      if (navRef.current && !navRef.current.contains(e.target)) {
+        setNavOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [navOpen]);
 
   const {
     dongLoading,
@@ -863,12 +887,53 @@ export default function MapView() {
         }}
       />
       <div className="mv-top-right-controls">
-        <Link to="/user" className="mv-nav-btn">
-          ← 상담
-        </Link>
-        <Link to="/features" className="mv-nav-btn">
-          기능
-        </Link>
+        <div className="relative" ref={navRef}>
+          <motion.button
+            onClick={() => setNavOpen((v) => !v)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            aria-expanded={navOpen}
+            aria-label="메뉴"
+            className="h-9 flex items-center gap-1 px-3 rounded-lg glass hover:bg-white/10 transition-all text-sm text-foreground"
+          >
+            <span>메뉴</span>
+            <ChevronDown
+              size={14}
+              className={`transition-transform duration-200 ${navOpen ? "rotate-180" : ""}`}
+            />
+          </motion.button>
+          {navOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-full mt-2 rounded-2xl border shadow-elevated z-50 overflow-hidden min-w-[12rem]"
+              style={{ background: "var(--card)", borderColor: "var(--border)" }}
+            >
+              {[
+                { to: "/user", Icon: MessageSquare, label: "상담" },
+                { to: "/features", Icon: Sparkles, label: "기능 안내" },
+                { to: "/my-report", Icon: BarChart3, label: "내 리포트" },
+                { to: "/roadmap", Icon: Vote, label: "로드맵" },
+                ...(user ? [{ to: "/my-logs", Icon: ScrollText, label: "내 로그" }] : []),
+              ].map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setNavOpen(false)}
+                  className="group flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-[var(--muted)]"
+                  style={{ color: "var(--foreground)", textDecoration: "none" }}
+                >
+                  <item.Icon
+                    size={16}
+                    className="text-muted-foreground group-hover:text-foreground transition-colors"
+                  />
+                  {item.label}
+                </Link>
+              ))}
+            </motion.div>
+          )}
+        </div>
         <ThemeToggle />
         <button
           className="mv-layer-btn"
