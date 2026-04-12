@@ -209,6 +209,19 @@
   line-height: 1.6;
   word-break: break-word;
 }
+.mv-chat-badges {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.mv-chat-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  line-height: 1.4;
+}
 .mv-chat-msg--user {
   align-self: flex-end;
   background: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));

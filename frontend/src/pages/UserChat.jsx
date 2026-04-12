@@ -17,7 +17,16 @@ import { useStreamQuery } from "../hooks/chat/useStreamQuery";
 import { useDismissible } from "../hooks/useDismissible";
 import { BASE_URL } from "../api";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, MessageSquare, Menu, X } from "lucide-react";
+import {
+  ArrowLeft,
+  MessageSquare,
+  ChevronDown,
+  Map,
+  Sparkles,
+  BarChart3,
+  Vote,
+  ScrollText,
+} from "lucide-react";
 
 const DOMAIN_CARDS = [
   {
@@ -328,40 +337,67 @@ export default function UserChat() {
               </motion.button>
             )}
 
-            {/* 햄버거 메뉴 */}
+            {/* 인라인 주요 링크 (데스크톱) */}
+            <a
+              href="/map"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-[var(--muted)] transition-colors"
+              style={{ textDecoration: "none" }}
+            >
+              <Map size={16} />
+              지도·상권분석
+            </a>
+            <a
+              href="/features"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-[var(--muted)] transition-colors"
+              style={{ textDecoration: "none" }}
+            >
+              <Sparkles size={16} />
+              기능 안내
+            </a>
+
+            {/* 더보기 메뉴 */}
             <div className="relative" ref={navRef}>
               <motion.button
                 onClick={() => setNavOpen((v) => !v)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-9 h-9 flex items-center justify-center rounded-lg glass hover:bg-white/10 transition-all"
-                aria-label="메뉴"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                aria-expanded={navOpen}
+                aria-label="더보기 메뉴"
+                className="h-9 flex items-center gap-1 px-3 rounded-lg glass hover:bg-white/10 transition-all text-sm text-foreground"
               >
-                {navOpen ? <X size={18} /> : <Menu size={18} />}
+                <span className="hidden sm:inline">더보기</span>
+                <span className="sm:hidden">메뉴</span>
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform duration-200 ${navOpen ? "rotate-180" : ""}`}
+                />
               </motion.button>
               {navOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -8, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 rounded-2xl border shadow-elevated z-50 overflow-hidden min-w-[11rem]"
+                  className="absolute right-0 top-full mt-2 rounded-2xl border shadow-elevated z-50 overflow-hidden min-w-[12rem]"
                   style={{ background: "var(--card)", borderColor: "var(--border)" }}
                 >
                   {[
-                    { href: "/map", icon: "🗺️", label: "지도·상권분석" },
-                    { href: "/features", icon: "✨", label: "기능 안내" },
-                    { href: "/my-report", icon: "📊", label: "내 리포트" },
-                    { href: "/roadmap", icon: "🗳️", label: "로드맵" },
-                    ...(user ? [{ href: "/my-logs", icon: "📋", label: "내 로그" }] : []),
+                    { href: "/map", Icon: Map, label: "지도·상권분석", mobileOnly: true },
+                    { href: "/features", Icon: Sparkles, label: "기능 안내", mobileOnly: true },
+                    { href: "/my-report", Icon: BarChart3, label: "내 리포트" },
+                    { href: "/roadmap", Icon: Vote, label: "로드맵" },
+                    ...(user ? [{ href: "/my-logs", Icon: ScrollText, label: "내 로그" }] : []),
                   ].map((item) => (
                     <a
                       key={item.href}
                       href={item.href}
                       onClick={() => setNavOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-[var(--muted)]"
+                      className={`group flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-[var(--muted)] ${item.mobileOnly ? "sm:hidden" : ""}`}
                       style={{ color: "var(--foreground)", textDecoration: "none" }}
                     >
-                      <span>{item.icon}</span>
+                      <item.Icon
+                        size={16}
+                        className="text-muted-foreground group-hover:text-foreground transition-colors"
+                      />
                       {item.label}
                     </a>
                   ))}
