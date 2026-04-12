@@ -13,6 +13,7 @@ import ChecklistDrawer from "../components/checklist/ChecklistDrawer";
 import { useChecklistState } from "../components/checklist/useChecklistState";
 import { useChatMessages } from "../hooks/chat/useChatMessages";
 import { useStreamQuery } from "../hooks/chat/useStreamQuery";
+import { useDismissible } from "../hooks/useDismissible";
 import { BASE_URL } from "../api";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, MessageSquare, Menu, X } from "lucide-react";
@@ -112,11 +113,10 @@ export default function UserChat() {
   const { user, login, logout } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
-  const [showBanner, setShowBanner] = useState(() => !localStorage.getItem("sohobi_tip_dismissed"));
+  const [showBanner, dismissBanner] = useDismissible("sohobi_tip_dismissed");
   const [showSamples, setShowSamples] = useState(false);
-  const [showLoginNudge, setShowLoginNudge] = useState(
-    () => !user && !localStorage.getItem("sohobi_login_nudge_dismissed"),
-  );
+  const [loginNudgeVisible, dismissLoginNudge] = useDismissible("sohobi_login_nudge_dismissed");
+  const showLoginNudge = !user && loginNudgeVisible;
   const [placeholder] = useState(
     () => PLACEHOLDER_QUESTIONS[Math.floor(Math.random() * PLACEHOLDER_QUESTIONS.length)],
   );
@@ -404,10 +404,7 @@ export default function UserChat() {
                       </button>
                     </div>
                     <button
-                      onClick={() => {
-                        localStorage.setItem("sohobi_tip_dismissed", "1");
-                        setShowBanner(false);
-                      }}
+                      onClick={dismissBanner}
                       className="shrink-0 text-muted-foreground hover:text-foreground text-lg leading-none mt-0.5 transition-colors"
                       aria-label="닫기"
                     >
@@ -519,13 +516,7 @@ export default function UserChat() {
 
                 {/* 로그인 넛지 */}
                 {i === 0 && !user && showLoginNudge && (
-                  <LoginNudgeCard
-                    onLogin={login}
-                    onDismiss={() => {
-                      localStorage.setItem("sohobi_login_nudge_dismissed", "1");
-                      setShowLoginNudge(false);
-                    }}
-                  />
+                  <LoginNudgeCard onLogin={login} onDismiss={dismissLoginNudge} />
                 )}
               </div>
             ))}
