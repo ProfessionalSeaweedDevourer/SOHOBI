@@ -675,7 +675,7 @@ export default function UserChat() {
         </div>
       </footer>
 
-      <SurveyBanner />
+      <SurveyBanner bottomOffset="bottom-[140px]" />
     </div>
   );
 }
