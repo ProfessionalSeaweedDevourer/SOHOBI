@@ -8,3 +8,4 @@
 |----------|------|--------|------|
 | `migrate-dev-summary.py` | 기존 dev-summary 파일에 근무 시간 분류(정상 근무/근무 외) 적용 | 2026-04-08 | 70개 파일 일괄 변환 완료 |
 | `migrate-dev-summary-v2.py` | 3컬럼→4컬럼 변환 (제목/내용 분리) + git body 기반 요약 삽입 | 2026-04-09 | 70개 파일 일괄 변환 완료 |
+| `migrate-dev-summary-weekend.py` | 주말(토·일) dev-summary 전체 근무 외 재분류 | 2026-04-13 | 4개 파일 변환 완료 |
