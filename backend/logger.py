@@ -98,6 +98,8 @@ def log_query(
     rejection_history: list[dict],
     draft: str,
     latency_ms: float,
+    signoff_ms: float = 0,
+    final_verdict: dict | None = None,
 ) -> None:
     """모든 /api/v1/query 요청을 queries.jsonl 에 기록한다."""
 
@@ -113,7 +115,9 @@ def log_query(
         "grade": grade,
         "retry_count": retry_count,
         "latency_ms": round(latency_ms),
+        "signoff_ms": round(signoff_ms),
         "rejection_history": _format_rejection_history(rejection_history),
+        "final_verdict": _format_verdict(final_verdict) if final_verdict else None,
         "final_draft": draft,
     }
     _append(_QUERIES_LOG, record)
@@ -178,3 +182,24 @@ def _format_rejection_history(history: list[dict]) -> list[dict]:
             }
         )
     return formatted
+
+
+def _format_verdict(verdict: dict) -> dict:
+    """approved 시 최종 verdict → queries 로그용 정규화 (rejection_history 엔트리와 동일 스키마)."""
+    return {
+        "approved": verdict.get("approved"),
+        "grade": verdict.get("grade", ""),
+        "passed": verdict.get("passed", []),
+        "warnings": [
+            {"code": w.get("code"), "reason": w.get("reason")}
+            for w in verdict.get("warnings", [])
+        ],
+        "issues": [
+            {
+                "code": issue.get("code"),
+                "severity": issue.get("severity"),
+                "reason": issue.get("reason"),
+            }
+            for issue in verdict.get("issues", [])
+        ],
+    }

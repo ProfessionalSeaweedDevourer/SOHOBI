@@ -388,6 +388,8 @@ async def query(req: QueryRequest, request: Request):
             rejection_history=result.get("rejection_history", []),
             draft=result["draft"],
             latency_ms=(time.monotonic() - t0) * 1000,
+            signoff_ms=result.get("signoff_ms", 0),
+            final_verdict=result.get("final_verdict"),
         )
 
         return {
@@ -552,6 +554,8 @@ async def stream_query(req: QueryRequest, request: Request):
                         rejection_history=ev.get("rejection_history", []),
                         draft=ev["draft"],
                         latency_ms=(time.monotonic() - t0) * 1000,
+                        signoff_ms=ev.get("signoff_ms", 0),
+                        final_verdict=ev.get("final_verdict"),
                     )
                     final_result = ev  # noqa: F841
 
