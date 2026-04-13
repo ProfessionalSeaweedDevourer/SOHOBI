@@ -535,9 +535,12 @@ async def stream_query(req: QueryRequest, request: Request):
 
                     await save_query_session(sid, session)
 
-                    # rejection_history 포맷 변환 후 complete 이벤트에 포함
+                    # SSE 페이로드는 flatten된 스키마로, log_query는 raw로 전달
+                    # (log_query 내부에서 _format_rejection_history를 다시 호출하므로
+                    # 여기서 미리 flatten 하면 이중 포맷되어 verdict 필드가 소실됨)
+                    raw_rejection_history = ev.get("rejection_history", [])
                     ev["rejection_history"] = _format_rejection_history(
-                        ev.get("rejection_history", [])
+                        raw_rejection_history
                     )
                     ev["domain"] = domain
 
@@ -551,7 +554,7 @@ async def stream_query(req: QueryRequest, request: Request):
                         status=ev["status"],
                         grade=ev.get("grade", ""),
                         retry_count=ev["retry_count"],
-                        rejection_history=ev.get("rejection_history", []),
+                        rejection_history=raw_rejection_history,
                         draft=ev["draft"],
                         latency_ms=(time.monotonic() - t0) * 1000,
                         signoff_ms=ev.get("signoff_ms", 0),
