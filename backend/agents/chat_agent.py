@@ -172,6 +172,7 @@ class ChatAgent:
         previous_draft: str = "",
         profile: str = "",
         prior_history: list[dict] | None = None,
+        context: dict | None = None,
     ) -> str:
         if any(kw in question for kw in _PRIVACY_KEYWORDS):
             return _PRIVACY_RESPONSE
