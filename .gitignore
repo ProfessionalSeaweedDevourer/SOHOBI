@@ -65,4 +65,7 @@ backend/logs/remote/
 logs/
 CHOI/SK학습/test/.env
 
+# 쿼리 로그 덤프 (client_ip PII 포함 — 로컬 전용)
+docs/session-reports/*-query-log-dump.json
+
 # 상권 DB — 2024년 4분기 단일 분기로 축소 (13 MB), Git 포함
