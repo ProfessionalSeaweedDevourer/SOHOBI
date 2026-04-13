@@ -44,6 +44,29 @@ const ITEM_LABELS = {
   S5: "정보 제공 면책",
 };
 
+const SEVERITY_STYLE = {
+  high: { bg: "rgba(239,68,68,0.15)", color: "var(--grade-c)", label: "높음" },
+  medium: { bg: "rgba(245,158,11,0.15)", color: "var(--grade-b)", label: "중간" },
+  low: {
+    bg: "rgba(148,163,184,0.15)",
+    color: "var(--muted-foreground)",
+    label: "낮음",
+  },
+};
+
+function SeverityBadge({ severity }) {
+  const s = SEVERITY_STYLE[severity];
+  if (!s) return null;
+  return (
+    <span
+      className="ml-1 px-1 rounded text-[10px] font-semibold"
+      style={{ background: s.bg, color: s.color }}
+    >
+      {s.label}
+    </span>
+  );
+}
+
 function resolveGrade(entry) {
   if (entry.grade && ["A", "B", "C"].includes(entry.grade)) return entry.grade;
   return entry.status === "approved" ? "A" : "C";
@@ -185,6 +208,96 @@ const TAG_LABELS = {
   insufficient: "정보가 부족함",
 };
 
+function FinalVerdictSection({ verdict }) {
+  const passed = verdict.passed || [];
+  const warnings = verdict.warnings || [];
+  const issues = verdict.issues || [];
+  const allClean =
+    verdict.approved && passed.length === 0 && warnings.length === 0 && issues.length === 0;
+
+  return (
+    <div>
+      <div className="font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+        <span>최종 검증</span>
+        <span
+          className="text-xs px-1.5 py-0.5 rounded"
+          style={
+            verdict.approved
+              ? { background: "rgba(16,185,129,0.15)", color: "var(--grade-a)" }
+              : { background: "rgba(239,68,68,0.15)", color: "var(--grade-c)" }
+          }
+        >
+          {verdict.approved ? "승인" : "반려"}
+        </span>
+      </div>
+
+      {allClean ? (
+        <div className="text-muted-foreground">모든 검증 통과</div>
+      ) : (
+        <div className="space-y-2">
+          {(passed.length > 0 || warnings.length > 0) && (
+            <div className="flex gap-1 flex-wrap">
+              {passed.map((c) => (
+                <span
+                  key={`p-${c}`}
+                  className="px-1 rounded font-mono text-xs"
+                  style={{ background: "rgba(16,185,129,0.15)", color: "var(--grade-a)" }}
+                >
+                  {c}
+                </span>
+              ))}
+              {warnings.map((w) => (
+                <span
+                  key={`w-${w.code}`}
+                  className="px-1 rounded font-mono text-xs"
+                  style={{ background: "rgba(245,158,11,0.15)", color: "var(--grade-b)" }}
+                >
+                  {w.code}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {warnings.map((w) => (
+            <div
+              key={`wd-${w.code}`}
+              className="rounded px-2 py-1.5"
+              style={{
+                background: "rgba(245,158,11,0.08)",
+                border: "1px solid rgba(245,158,11,0.2)",
+              }}
+            >
+              <span className="font-semibold" style={{ color: "var(--grade-b)" }}>
+                {w.code} {ITEM_LABELS[w.code] ? `— ${ITEM_LABELS[w.code]}` : ""}
+              </span>
+              <span className="ml-1 text-muted-foreground">(경고)</span>
+              <div className="text-foreground mt-0.5">{w.reason}</div>
+            </div>
+          ))}
+
+          {issues.map((iss) => (
+            <div
+              key={`id-${iss.code}`}
+              className="rounded px-2 py-1.5"
+              style={{
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.2)",
+              }}
+            >
+              <span className="font-semibold" style={{ color: "var(--grade-c)" }}>
+                {iss.code} {ITEM_LABELS[iss.code] ? `— ${ITEM_LABELS[iss.code]}` : ""}
+              </span>
+              <SeverityBadge severity={iss.severity} />
+              <span className="ml-1 text-muted-foreground">(반려)</span>
+              <div className="text-foreground mt-0.5">{iss.reason}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EntryDetail({ entry, feedback }) {
   const rejHist = entry.rejection_history || [];
   const [openIdx, setOpenIdx] = useState(null);
@@ -322,6 +435,7 @@ function EntryDetail({ entry, feedback }) {
                         <span className="font-semibold" style={{ color: "var(--grade-c)" }}>
                           {iss.code} {ITEM_LABELS[iss.code] ? `— ${ITEM_LABELS[iss.code]}` : ""}
                         </span>
+                        <SeverityBadge severity={iss.severity} />
                         <span className="ml-1 text-muted-foreground">(반려)</span>
                         <div className="text-foreground mt-0.5">{iss.reason}</div>
                       </div>
@@ -378,6 +492,9 @@ function EntryDetail({ entry, feedback }) {
           </div>
         </div>
       )}
+
+      {/* 최종 검증 (final_verdict) */}
+      {entry.final_verdict && <FinalVerdictSection verdict={entry.final_verdict} />}
 
       {/* 최종 draft */}
       <div>
