@@ -39,6 +39,30 @@ class TestRejectionHistoryFormatting:
         out = _format_rejection_history(history)
         assert out[0]["issues"][0]["severity"] is None
 
+    def test_double_format_collapses_verdict_fields(self):
+        """이미 flatten된 엔트리를 다시 포맷하면 verdict 필드가 소실됨을 보장.
+
+        api_server.py 스트림 핸들러가 raw 데이터를 log_query에 넘기도록 유지하기
+        위한 회귀 테스트. log_query 내부에서 _format_rejection_history를 호출하므로
+        호출부에서 사전 포맷한 값을 넘기면 grade/issues 등이 공값으로 기록된다.
+        """
+        raw = [
+            {
+                "attempt": 1,
+                "verdict": {
+                    "approved": False,
+                    "grade": "B",
+                    "issues": [{"code": "F2", "severity": "low", "reason": "x"}],
+                },
+            }
+        ]
+        once = _format_rejection_history(raw)
+        twice = _format_rejection_history(once)
+        assert once[0]["grade"] == "B"
+        assert once[0]["issues"][0]["severity"] == "low"
+        assert twice[0]["grade"] == ""
+        assert twice[0]["issues"] == []
+
     def test_all_severity_levels_round_trip(self):
         history = [
             {
