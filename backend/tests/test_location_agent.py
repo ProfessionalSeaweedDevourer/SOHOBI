@@ -206,7 +206,7 @@ class TestExtractParams:
         assert params["mode"] == "analyze"
         assert params["locations"] == []
         assert params["business_type"] == ""
-        assert params["quarter"] == "20244"
+        assert params["quarter"] == "20254"
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -219,7 +219,7 @@ class TestGenerateDraftGuard:
 
     @pytest.mark.asyncio
     async def test_04_empty_locations(self, fake_kernel, mock_repo):
-        """T-LA-04: locations 빈 배열 → 안내 메시지 반환 (LLM 호출 없음)"""
+        """T-LA-04: locations 빈 배열 + 업종 있음 → 인기 지역 선택 partial 반환"""
         from agents.location_agent import LocationAgent
 
         with patch(
@@ -242,7 +242,17 @@ class TestGenerateDraftGuard:
 
         result = await agent.generate_draft("...")
         assert isinstance(result, dict)
-        assert "지역명" in result["draft"] or "명시" in result["draft"]
+        assert result["is_partial"] is True
+        assert result["business_type"] == "카페"
+        assert result["locations"] == []
+        assert "카페" in result["draft"]
+        assert "어느 지역" in result["draft"]
+        assert len(result["suggested_actions"]) == 8
+        # 분석 LLM 호출 없이 즉시 반환 — _extract_params 1회만
+        assert (
+            fake_kernel.get_service.return_value.get_chat_message_content.call_count
+            == 1
+        )
 
     @pytest.mark.asyncio
     async def test_05_empty_business_type(self, fake_kernel, mock_repo):
@@ -660,13 +670,15 @@ class TestEdgeCases:
         assert call_count == 3, (
             f"retry_prompt 있을 때 LLM 호출이 3회여야 합니다. 실제: {call_count}회"
         )
-        assert result["draft"] == "재시도 분석 결과입니다."
+        # draft 는 재시도 응답 + _DISCLAIMER 가 append 된 형태
+        assert result["draft"].startswith("재시도 분석 결과입니다.")
+        assert "전문가 상담을 병행" in result["draft"]
 
     @pytest.mark.asyncio
     async def test_22_generate_draft_llm_failure_returns_guidance(
         self, fake_kernel, mock_repo
     ):
-        """T-LA-22: _run_agent LLM 실패 시 ValueError가 전파되지 않고 안내 메시지 반환
+        """T-LA-22: analyze 단계 ValueError가 전파되지 않고 안내 메시지 반환
 
         수정 전: ValueError가 generate_draft() 밖으로 전파 → FastAPI 500 오류
         수정 후: try/except로 잡아 "분석 중 오류" 안내 메시지 반환
@@ -682,23 +694,23 @@ class TestEdgeCases:
             },
             ensure_ascii=False,
         )
-        call_count = 0
-
-        async def selective_fail(history, settings=None):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:  # _extract_params 성공
-                r = MagicMock()
-                r.__str__ = lambda self: params_json
-                return r
-            raise ValueError("LLM이 빈 응답을 반환했습니다.")  # _run_agent 실패
-
-        fake_kernel.get_service.return_value.get_chat_message_content = selective_fail
+        r_params = MagicMock()
+        r_params.__str__ = lambda self: params_json
+        fake_kernel.get_service.return_value.get_chat_message_content = AsyncMock(
+            return_value=r_params
+        )
 
         with patch(
             "agents.location_agent.CommercialRepository", return_value=mock_repo
         ):
             agent = LocationAgent(fake_kernel)
+
+        # analyze() 내부의 _run_agent 실패는 asyncio.gather(return_exceptions=True) 로
+        # 흡수되므로, generate_draft 의 except 경로를 직접 검증하기 위해 analyze 를
+        # 통째로 실패시킨다.
+        agent.analyze = AsyncMock(
+            side_effect=ValueError("LLM이 빈 응답을 반환했습니다.")
+        )
 
         # ValueError가 전파되지 않고 dict 반환되어야 함
         result = await agent.generate_draft("홍대 카페 분석해줘")
@@ -706,3 +718,5 @@ class TestEdgeCases:
         assert "오류" in result["draft"] or "다시 시도" in result["draft"], (
             "LLM 실패 시 사용자 안내 메시지가 draft에 포함되어야 합니다."
         )
+        assert result["locations"] == ["홍대"]
+        assert result["business_type"] == "카페"
