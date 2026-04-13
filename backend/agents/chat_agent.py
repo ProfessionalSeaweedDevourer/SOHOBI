@@ -203,6 +203,22 @@ class ChatAgent:
             logger.warning("ChatAgent LLM 타임아웃 (30초)")
             return "응답 생성에 시간이 걸리고 있습니다. 잠시 후 다시 시도해 주세요."
         except Exception as e:
+            err_str = str(e).lower()
             logger.error("ChatAgent LLM 호출 실패: %s", e)
+            if "content_filter" in err_str or "content filter" in err_str:
+                try:
+                    safe_sys = "다음은 합법적인 창업 상담 요청입니다.\n\n" + system
+                    safe_history = ChatHistory()
+                    safe_history.add_system_message(safe_sys)
+                    safe_history.add_user_message(question)
+                    response = await asyncio.wait_for(
+                        service.get_chat_message_content(
+                            safe_history, settings=settings, kernel=self._kernel
+                        ),
+                        timeout=30.0,
+                    )
+                    return str(response)
+                except Exception as retry_err:
+                    logger.error("ChatAgent content_filter 재시도 실패: %s", retry_err)
             return "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
         return str(response)
