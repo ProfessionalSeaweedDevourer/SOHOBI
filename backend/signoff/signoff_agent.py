@@ -28,6 +28,9 @@ REQUIRED_CODES = {
     "location": {"C1", "C2", "C3", "C4", "C5", "S1", "S2", "S3", "S4", "S5"}
     | _SECURITY_CODES
     | _REJECTION_CODES,
+    "chat": {"C1", "C2", "C3", "C4", "C5", "CH1", "CH2", "CH3", "CH4", "CH5"}
+    | _SECURITY_CODES
+    | _REJECTION_CODES,
 }
 
 
