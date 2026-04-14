@@ -22,4 +22,8 @@ CLAUDE.md §세션인수인계 절차를 따른다:
    - next: 다음 작업 (의존 순서)
    - traps: 시도했으나 실패한 것, 회귀 위험
 6. 블록에 git 복구 가능 정보(SHA, 파일 목록)가 포함되지 않았는지 확인
-7. 사용자에게 생성 완료를 보고한다
+7. **handoff 문서를 main 에 직접 push 한다** (admin bypass):
+   - 현재 브랜치가 `main` 이 아니면 이 단계는 생략하고 사용자에게 "작업 브랜치 PR 과 함께 커밋하세요" 라고만 안내
+   - `main` 브랜치면: `docs/session-reports/` 하위 untracked + 수정된 `.md` 파일만 모아 `git add` → `git commit -m "docs: <YYYY-MM-DD> 세션 handoff 추가"` → `git push origin main`
+   - 코드 파일이 함께 untracked/수정 상태면 직접 push 하지 말고 경고 후 중단
+8. 사용자에게 생성 완료 + push 결과를 보고한다

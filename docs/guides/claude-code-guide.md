@@ -45,6 +45,8 @@ PR의 Test Plan에 있는 TC(테스트 케이스)를 순서대로 실행하고 P
 
 세션 인수인계 문서를 즉시 생성한다. `docs/session-reports/YYYY-MM-DD-<제목>-handoff.md` 형식. CLAUDE.md의 인수인계 절차(인간용 산문 + CLAUDE_HANDOFF 블록)를 따른다.
 
+현재 `main` 브랜치에서 호출하면 생성된 handoff 문서를 main 에 직접 push 한다 (admin bypass). 작업 브랜치에서는 push 하지 않고 PR 에 포함시키도록 안내한다.
+
 ```
 /hand
 /hand auth-refactor
