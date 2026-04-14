@@ -27,7 +27,7 @@ class TestRejectionHistoryFormatting:
         assert out[0]["issues"][0]["code"] == "F2"
         assert out[0]["issues"][0]["reason"] == "단위 누락"
 
-    def test_severity_none_when_missing(self):
+    def test_severity_defaults_to_high_when_missing(self):
         history = [
             {
                 "attempt": 1,
@@ -37,7 +37,7 @@ class TestRejectionHistoryFormatting:
             }
         ]
         out = _format_rejection_history(history)
-        assert out[0]["issues"][0]["severity"] is None
+        assert out[0]["issues"][0]["severity"] == "high"
 
     def test_double_format_collapses_verdict_fields(self):
         """이미 flatten된 엔트리를 다시 포맷하면 verdict 필드가 소실됨을 보장.
