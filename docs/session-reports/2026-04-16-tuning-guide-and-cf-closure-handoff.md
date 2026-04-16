@@ -64,7 +64,7 @@
 ---
 <!-- CLAUDE_HANDOFF_START
 branch: docs/park-tuning-guide-and-cf-closure
-pr: TBD
+pr: 305
 prev: 2026-04-16-s1-s5-invalidated-marker-handoff.md
 
 [decisions]
