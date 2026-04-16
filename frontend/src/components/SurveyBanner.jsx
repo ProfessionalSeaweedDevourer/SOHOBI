@@ -6,7 +6,7 @@ import { trackEvent } from "../utils/trackEvent";
 
 const SURVEY_URL =
   "https://forms.office.com/pages/responsepage.aspx?id=OkauYhKf306FRE9so4NFJBKV4WxfV5tMpfVaLEYVJOJUMUowVTY3SDY0QTBaRUdEMVYwNUIySlY3OC4u&route=shorturl";
-const CURRENT = 79;
+const CURRENT = 83;
 const TARGET = 100;
 
 export default function SurveyBanner({ bottomOffset = "bottom-6" }) {
