@@ -1,5 +1,7 @@
 # 플랜 — Signoff location S1~S5 warn 과다 발동 튜닝 초안
 
+> ⚠️ **INVALIDATED (2026-04-16)** — 본 플랜의 전제("warn ~55% 과다 발동")가 실측 데이터와 모순. 147건 재조사 결과 **warnings 실측 0%**, Grade C=75.5%/A=17.7%/B=4.8% 로 S1~S5 는 location 도메인의 정상 issue 코드로 작동 (Grade A 에 S-code 0건). 옵션 A(프롬프트 §4 개정) 구현 불필요. 상세: [2026-04-16 재조사](2026-04-16-s1-s5-rejection-log-investigation.md)
+
 ## Context
 
 - 2026-04-14 carry:3 closure 조사 결과: 프로덕션 rejection 로그 147건 중 S1~S5 warnings 발동률 ~55% 실증 (S1=79, S2=83, S3=82, S4=78, S5=82).
