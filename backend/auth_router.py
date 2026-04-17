@@ -17,11 +17,12 @@ Google OAuth 2.0 소셜 로그인 + JWT 발급 라우터.
 """
 
 import os
+import secrets
 import time
 from datetime import UTC, datetime, timedelta
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -41,6 +42,9 @@ _BACKEND_URL = os.getenv("BACKEND_HOST", "http://localhost:8000")
 _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 _GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
+
+_OAUTH_STATE_COOKIE = "oauth_state"
+_OAUTH_STATE_MAX_AGE = 600  # 10분
 
 _security = HTTPBearer(auto_error=False)
 
@@ -154,10 +158,11 @@ async def _upsert_user(user_id: str, email: str, name: str, picture: str) -> dic
 
 @router.get("/google")
 async def google_login():
-    """Google OAuth 인증 페이지로 redirect."""
+    """Google OAuth 인증 페이지로 redirect + CSRF state 쿠키 발급."""
     if not _GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=501, detail="Google OAuth 미설정")
 
+    state = secrets.token_urlsafe(32)
     redirect_uri = f"{_BACKEND_URL}/auth/google/callback"
     params = (
         f"client_id={_GOOGLE_CLIENT_ID}"
@@ -166,15 +171,33 @@ async def google_login():
         f"&scope=openid%20email%20profile"
         f"&access_type=offline"
         f"&prompt=select_account"
+        f"&state={state}"
     )
-    return RedirectResponse(url=f"{_GOOGLE_AUTH_URL}?{params}")
+    response = RedirectResponse(url=f"{_GOOGLE_AUTH_URL}?{params}")
+    response.set_cookie(
+        key=_OAUTH_STATE_COOKIE,
+        value=state,
+        max_age=_OAUTH_STATE_MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+    return response
 
 
 @router.get("/google/callback")
-async def google_callback(code: str = Query(...)):
+async def google_callback(
+    request: Request,
+    code: str = Query(...),
+    state: str | None = Query(None),
+):
     """Google OAuth code → 토큰 교환 → 유저 upsert → JWT 발급 → 프론트 redirect."""
     if not _GOOGLE_CLIENT_ID or not _GOOGLE_CLIENT_SECRET:
         raise HTTPException(status_code=501, detail="Google OAuth 미설정")
+
+    cookie_state = request.cookies.get(_OAUTH_STATE_COOKIE)
+    if not state or not cookie_state or not secrets.compare_digest(state, cookie_state):
+        raise HTTPException(status_code=400, detail="OAuth state mismatch")
 
     redirect_uri = f"{_BACKEND_URL}/auth/google/callback"
 
@@ -213,8 +236,10 @@ async def google_callback(code: str = Query(...)):
     await _upsert_user(user_id, email, name, picture)
     token = _create_jwt(user_id, email, name, picture)
 
-    # 프론트엔드로 redirect (token은 URL fragment로 전달)
-    return RedirectResponse(url=f"{_FRONTEND_URL}/auth/callback#token={token}")
+    # 프론트엔드로 redirect (token은 URL fragment로 전달) + state 쿠키 삭제
+    response = RedirectResponse(url=f"{_FRONTEND_URL}/auth/callback#token={token}")
+    response.delete_cookie(key=_OAUTH_STATE_COOKIE)
+    return response
 
 
 @router.get("/me")
