@@ -32,11 +32,20 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 # ── 설정 ─────────────────────────────────────────────────────────
 _GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 _GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
-_JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
 _JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 _JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "720"))
 _FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 _BACKEND_URL = os.getenv("BACKEND_HOST", "http://localhost:8000")
+
+
+def _require_jwt_secret() -> str:
+    """JWT_SECRET 환경변수를 반환. 미설정·빈 값이면 즉시 실패한다."""
+    secret = os.getenv("JWT_SECRET", "")
+    if not secret:
+        raise RuntimeError(
+            "JWT_SECRET environment variable is required for JWT operations."
+        )
+    return secret
 
 _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -85,11 +94,11 @@ def _create_jwt(user_id: str, email: str, name: str, picture: str) -> str:
         "picture": picture,
         "exp": expire,
     }
-    return jwt.encode(payload, _JWT_SECRET, algorithm=_JWT_ALGORITHM)
+    return jwt.encode(payload, _require_jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
 def _decode_jwt(token: str) -> dict:
-    return jwt.decode(token, _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
+    return jwt.decode(token, _require_jwt_secret(), algorithms=[_JWT_ALGORITHM])
 
 
 # ── 현재 유저 의존성 ─────────────────────────────────────────────

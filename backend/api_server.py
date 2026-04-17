@@ -93,6 +93,13 @@ limiter = Limiter(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # non-local 환경에서는 JWT_SECRET 미설정 시 부팅을 막는다.
+    app_env = os.getenv("APP_ENV", "local")
+    if app_env != "local" and not os.getenv("JWT_SECRET"):
+        raise RuntimeError(
+            "JWT_SECRET is required in non-local environments (APP_ENV="
+            f"{app_env})."
+        )
     yield
     await session_store.close()
     await checklist_store.close()
