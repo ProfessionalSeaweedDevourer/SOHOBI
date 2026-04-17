@@ -23,6 +23,7 @@ import os
 from collections import OrderedDict
 from typing import Any
 
+from fastapi import HTTPException
 from semantic_kernel.contents import ChatHistory
 
 # ── Cosmos DB 연결 싱글턴 ───────────────────────────────────────
@@ -270,6 +271,20 @@ async def link_session_to_user(session_id: str, user_id: str) -> None:
         await container.replace_item(item=session_id, body=item)
     except Exception:
         pass  # 세션이 이미 만료된 경우 무시
+
+
+async def assert_session_ownership(session_id: str, user: dict | None) -> None:
+    """세션에 귀속된 user_id와 요청 user의 JWT sub가 다르면 403.
+
+    정책: user_id가 붙은 세션은 소유자만 접근 가능. 익명(user_id 없음) 세션은
+    단기 호환을 위해 그대로 통과시킨다.
+    """
+    owner_id = await get_user_id_by_session(session_id)
+    if not owner_id:
+        return
+    requester_id = (user or {}).get("sub", "")
+    if requester_id != owner_id:
+        raise HTTPException(status_code=403, detail="세션 접근 권한 없음")
 
 
 async def get_user_id_by_session(session_id: str) -> str:
