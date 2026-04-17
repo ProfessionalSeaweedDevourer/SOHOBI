@@ -249,7 +249,11 @@ async def link_session(
     """익명 session_id를 현재 유저에 귀속하고 TTL을 무기한으로 연장."""
     import session_store
 
-    await session_store.link_session_to_user(req.session_id, user["sub"])
+    ok = await session_store.link_session_to_user(req.session_id, user["sub"])
+    if not ok:
+        raise HTTPException(
+            status_code=409, detail="이미 다른 사용자에게 귀속된 세션입니다."
+        )
     return {"ok": True, "session_id": req.session_id, "user_id": user["sub"]}
 
 
