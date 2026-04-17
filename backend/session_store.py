@@ -23,6 +23,7 @@ import os
 from collections import OrderedDict
 from typing import Any
 
+from fastapi import HTTPException
 from semantic_kernel.contents import ChatHistory
 
 # ── Cosmos DB 연결 싱글턴 ───────────────────────────────────────
@@ -253,23 +254,51 @@ async def save_doc_history(session_id: str, history_raw: list[dict]) -> None:
     )
 
 
-async def link_session_to_user(session_id: str, user_id: str) -> None:
-    """session_id를 user_id에 귀속하고 TTL을 30일로 연장 (Cosmos) 또는 메모리에 기록."""
+async def link_session_to_user(session_id: str, user_id: str) -> bool:
+    """session_id를 user_id에 귀속하고 TTL을 30일로 연장.
+
+    반환:
+      True  — 신규 귀속 또는 동일 user_id로의 idempotent 재링크
+      False — 이미 다른 user_id가 귀속된 세션 (호출자가 409로 응답해야 함)
+    """
     container = await _get_container()
     ttl_member = 30 * 86400  # 30일
 
     if container is None:
-        if session_id in _memory:
-            _memory[session_id]["user_id"] = user_id
-        return
+        sess = _memory.get(session_id)
+        if isinstance(sess, dict):
+            existing = sess.get("user_id", "")
+            if existing and existing != user_id:
+                return False
+            sess["user_id"] = user_id
+        return True
 
     try:
         item = await container.read_item(item=session_id, partition_key=session_id)
+        existing = item.get("user_id", "")
+        if existing and existing != user_id:
+            return False
         item["user_id"] = user_id
         item["ttl"] = ttl_member
         await container.replace_item(item=session_id, body=item)
+        return True
     except Exception:
-        pass  # 세션이 이미 만료된 경우 무시
+        # 세션이 이미 만료되었거나 존재하지 않음 — 조용히 통과
+        return True
+
+
+async def assert_session_ownership(session_id: str, user: dict | None) -> None:
+    """세션에 귀속된 user_id와 요청 user의 JWT sub가 다르면 403.
+
+    정책: user_id가 붙은 세션은 소유자만 접근 가능. 익명(user_id 없음) 세션은
+    단기 호환을 위해 그대로 통과시킨다.
+    """
+    owner_id = await get_user_id_by_session(session_id)
+    if not owner_id:
+        return
+    requester_id = (user or {}).get("sub", "")
+    if requester_id != owner_id:
+        raise HTTPException(status_code=403, detail="세션 접근 권한 없음")
 
 
 async def get_user_id_by_session(session_id: str) -> str:

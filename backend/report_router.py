@@ -15,11 +15,15 @@ import os
 from collections import Counter
 
 from auth import verify_api_key
-from auth_router import get_current_user
+from auth_router import get_current_user, get_optional_user
 from checklist_store import CHECKLIST_ITEM_IDS
 from fastapi import APIRouter, Depends, HTTPException
 from log_formatter import load_entries_json
-from session_store import get_sessions_by_user, session_exists
+from session_store import (
+    assert_session_ownership,
+    get_sessions_by_user,
+    session_exists,
+)
 
 _logger = logging.getLogger("sohobi.report")
 
@@ -264,10 +268,15 @@ async def get_my_report(user: dict = Depends(get_current_user)):
 
 
 @router.get("/api/report/{session_id}", dependencies=[Depends(verify_api_key)])
-async def get_report(session_id: str):
+async def get_report(
+    session_id: str,
+    user: dict | None = Depends(get_optional_user),
+):
     """단일 세션 리포트 (비로그인 폴백)."""
     if not await session_exists(session_id):
         raise HTTPException(status_code=403, detail="접근 권한 없음")
+
+    await assert_session_ownership(session_id, user)
 
     try:
         events_data = _aggregate_events([session_id])
