@@ -132,3 +132,63 @@ class TestOAuthState:
         set_cookie = resp.headers.get("set-cookie", "")
         assert "oauth_state=" in set_cookie
         assert "Path=/auth" in set_cookie
+
+    def test_callback_token_exchange_failure_clears_cookie(self, client):
+        """토큰 교환 실패 → 400 + state 쿠키 삭제 (성공/state-mismatch 경로와 대칭)"""
+        login_resp = client.get("/auth/google", follow_redirects=False)
+        qs = parse_qs(urlparse(login_resp.headers["location"]).query)
+        state = qs["state"][0]
+        client.cookies.set("oauth_state", state)
+
+        mock_token_resp = MagicMock(status_code=500)
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=mock_token_resp)
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        import auth_router
+
+        with patch.object(auth_router.httpx, "AsyncClient", return_value=mock_client):
+            resp = client.get(
+                "/auth/google/callback",
+                params={"code": "fake-code", "state": state},
+                follow_redirects=False,
+            )
+
+        assert resp.status_code == 400
+        assert "토큰 교환" in resp.json()["detail"]
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert "oauth_state=" in set_cookie
+        assert "Path=/auth" in set_cookie
+
+    def test_callback_userinfo_failure_clears_cookie(self, client):
+        """userinfo 조회 실패 → 400 + state 쿠키 삭제"""
+        login_resp = client.get("/auth/google", follow_redirects=False)
+        qs = parse_qs(urlparse(login_resp.headers["location"]).query)
+        state = qs["state"][0]
+        client.cookies.set("oauth_state", state)
+
+        mock_token_resp = MagicMock(status_code=200)
+        mock_token_resp.json.return_value = {"access_token": "fake-token"}
+        mock_info_resp = MagicMock(status_code=500)
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=mock_token_resp)
+        mock_client.get = AsyncMock(return_value=mock_info_resp)
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        import auth_router
+
+        with patch.object(auth_router.httpx, "AsyncClient", return_value=mock_client):
+            resp = client.get(
+                "/auth/google/callback",
+                params={"code": "fake-code", "state": state},
+                follow_redirects=False,
+            )
+
+        assert resp.status_code == 400
+        assert "유저 정보" in resp.json()["detail"]
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert "oauth_state=" in set_cookie
+        assert "Path=/auth" in set_cookie

@@ -235,7 +235,14 @@ async def google_callback(
             },
         )
         if token_resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Google 토큰 교환 실패")
+            _security_logger.warning(
+                "OAUTH_TOKEN_EXCHANGE_FAILED status=%s", token_resp.status_code
+            )
+            resp = JSONResponse(
+                status_code=400, content={"detail": "Google 토큰 교환 실패"}
+            )
+            resp.delete_cookie(key=_OAUTH_STATE_COOKIE, path="/auth")
+            return resp
 
         access_token = token_resp.json().get("access_token", "")
 
@@ -245,7 +252,14 @@ async def google_callback(
             headers={"Authorization": f"Bearer {access_token}"},
         )
         if info_resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Google 유저 정보 조회 실패")
+            _security_logger.warning(
+                "OAUTH_USERINFO_FAILED status=%s", info_resp.status_code
+            )
+            resp = JSONResponse(
+                status_code=400, content={"detail": "Google 유저 정보 조회 실패"}
+            )
+            resp.delete_cookie(key=_OAUTH_STATE_COOKIE, path="/auth")
+            return resp
 
     info = info_resp.json()
     sub = info.get("sub", "")
