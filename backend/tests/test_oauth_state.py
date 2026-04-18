@@ -10,6 +10,7 @@ state 쿠키/쿼리 검증 로직은 Google 토큰 교환 이전에 수행되므
 """
 
 import importlib
+import logging
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import parse_qs, urlparse
@@ -160,6 +161,75 @@ class TestOAuthState:
         set_cookie = resp.headers.get("set-cookie", "")
         assert "oauth_state=" in set_cookie
         assert "Path=/auth" in set_cookie
+
+    def test_delete_cookie_has_security_attrs(self, client):
+        """에러 경로 delete_cookie 는 set_cookie 와 동일하게 Secure/SameSite/HttpOnly/Path=/auth 포함."""
+        resp = client.get(
+            "/auth/google/callback",
+            params={"code": "fake-code"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 400
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert "oauth_state=" in set_cookie
+        assert "Path=/auth" in set_cookie
+        assert "Secure" in set_cookie
+        assert "SameSite=lax" in set_cookie
+        assert "HttpOnly" in set_cookie
+
+    def test_callback_501_clears_state_cookie(self, monkeypatch):
+        """_GOOGLE_CLIENT_ID 미설정 → 501 + 잔존 state 쿠키 삭제 (HTTPException 대신 JSONResponse)."""
+        os.environ["GOOGLE_CLIENT_ID"] = "test-client-id"
+        os.environ["GOOGLE_CLIENT_SECRET"] = "test-client-secret"
+        os.environ["JWT_SECRET"] = "test-jwt-secret"
+        os.environ.pop("COSMOS_ENDPOINT", None)
+
+        import auth_router
+
+        importlib.reload(auth_router)
+        monkeypatch.setattr(auth_router, "_GOOGLE_CLIENT_ID", "")
+
+        app = FastAPI()
+        app.include_router(auth_router.router)
+        tc = TestClient(app)
+        tc.cookies.set("oauth_state", "stale-value")
+
+        resp = tc.get(
+            "/auth/google/callback",
+            params={"code": "fake-code", "state": "anything"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 501
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert "oauth_state=" in set_cookie
+        assert "Path=/auth" in set_cookie
+        assert "Max-Age=0" in set_cookie
+        assert "Secure" in set_cookie
+        assert "SameSite=lax" in set_cookie
+
+    def test_state_mismatch_log_includes_client_ip(self, client, caplog):
+        """OAUTH_STATE_MISMATCH 경고에 client_ip=... 포맷 포함.
+
+        sohobi.security 로거는 propagate=False 이므로 caplog 의 root handler 만으로는
+        capture 되지 않는다. caplog.handler 를 해당 로거에 직접 attach 한다.
+        """
+        security_logger = logging.getLogger("sohobi.security")
+        security_logger.addHandler(caplog.handler)
+        try:
+            with caplog.at_level(logging.WARNING, logger="sohobi.security"):
+                resp = client.get(
+                    "/auth/google/callback",
+                    params={"code": "fake-code"},
+                    follow_redirects=False,
+                )
+        finally:
+            security_logger.removeHandler(caplog.handler)
+        assert resp.status_code == 400
+        mismatch_records = [
+            r for r in caplog.records if "OAUTH_STATE_MISMATCH" in r.getMessage()
+        ]
+        assert mismatch_records, "OAUTH_STATE_MISMATCH log expected"
+        assert "client_ip=" in mismatch_records[0].getMessage()
 
     def test_callback_userinfo_failure_clears_cookie(self, client):
         """userinfo 조회 실패 → 400 + state 쿠키 삭제"""
