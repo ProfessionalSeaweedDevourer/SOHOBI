@@ -44,6 +44,7 @@ from pydantic import BaseModel, Field
 from realestate_router import router as realestate_router
 from report_router import router as report_router
 from roadmap_router import router as roadmap_router
+from security_logging import configure_security_logger
 from session_store import (
     get_doc_history,
     get_query_session,
@@ -59,6 +60,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from variable_extractor import extract_financial_vars
 
 load_dotenv()
+configure_security_logger()
 
 
 # ── 헬퍼 함수 (Rate Limiter + 로깅 공용) ────────────────────────
@@ -96,8 +98,7 @@ def _validate_startup_env() -> None:
     app_env = os.getenv("APP_ENV", "local")
     if app_env != "local" and not os.getenv("JWT_SECRET"):
         raise RuntimeError(
-            "JWT_SECRET is required in non-local environments (APP_ENV="
-            f"{app_env})."
+            f"JWT_SECRET is required in non-local environments (APP_ENV={app_env})."
         )
 
 
