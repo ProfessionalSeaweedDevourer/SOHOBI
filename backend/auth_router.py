@@ -16,6 +16,7 @@ Google OAuth 2.0 소셜 로그인 + JWT 발급 라우터.
   FRONTEND_URL    (기본값 http://localhost:5173)
 """
 
+import logging
 import os
 import secrets
 import time
@@ -23,10 +24,12 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
+
+_security_logger = logging.getLogger("sohobi.security")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -47,6 +50,7 @@ def _require_jwt_secret() -> str:
             "JWT_SECRET environment variable is required for JWT operations."
         )
     return secret
+
 
 _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -190,6 +194,7 @@ async def google_login():
         httponly=True,
         secure=True,
         samesite="lax",
+        path="/auth",
     )
     return response
 
@@ -206,7 +211,14 @@ async def google_callback(
 
     cookie_state = request.cookies.get(_OAUTH_STATE_COOKIE)
     if not state or not cookie_state or not secrets.compare_digest(state, cookie_state):
-        raise HTTPException(status_code=400, detail="OAuth state mismatch")
+        _security_logger.warning(
+            "OAUTH_STATE_MISMATCH has_cookie=%s has_query=%s",
+            bool(cookie_state),
+            bool(state),
+        )
+        resp = JSONResponse(status_code=400, content={"detail": "OAuth state mismatch"})
+        resp.delete_cookie(key=_OAUTH_STATE_COOKIE, path="/auth")
+        return resp
 
     redirect_uri = f"{_BACKEND_URL}/auth/google/callback"
 
@@ -247,7 +259,7 @@ async def google_callback(
 
     # 프론트엔드로 redirect (token은 URL fragment로 전달) + state 쿠키 삭제
     response = RedirectResponse(url=f"{_FRONTEND_URL}/auth/callback#token={token}")
-    response.delete_cookie(key=_OAUTH_STATE_COOKIE)
+    response.delete_cookie(key=_OAUTH_STATE_COOKIE, path="/auth")
     return response
 
 
