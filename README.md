@@ -280,6 +280,8 @@
 | `GET` | `/api/v1/logs` | JSONL 로그 조회 |
 | `GET` | `/api/v1/logs/export` | 로그 내보내기 |
 | `GET` | `/api/v1/logs/users` | 사용자별 로그 조회 |
+| `GET` | `/api/v1/my-ip` | 클라이언트 IP 확인 (rate limit 면제 IP 등록용) |
+| `GET` | `/wms/{path:path}` | VWorld WMS 프록시 (프론트엔드 지도 타일용) |
 
 ### 라우터 모듈
 
@@ -331,6 +333,7 @@ SOHOBI/
 │   ├── kernel_setup.py           # Semantic Kernel 초기화
 │   ├── session_store.py          # Cosmos DB 세션 관리 (LRU 폴백)
 │   ├── auth.py / auth_router.py  # OAuth 인증
+│   ├── my_router.py              # 사용자 세션·이력 API
 │   ├── map_router.py             # 지도 타일·행정동 API
 │   ├── map_data_router.py        # 상권 상세 데이터 API
 │   ├── realestate_router.py      # 부동산·공시지가 API
@@ -339,6 +342,8 @@ SOHOBI/
 │   ├── report_router.py          # 세션 리포트
 │   ├── roadmap_router.py         # 로드맵 투표
 │   ├── event_router.py           # 이벤트 트래킹
+│   ├── variable_extractor.py     # 재무 변수 자동 추출 (백그라운드)
+│   ├── security_logging.py       # 보안 이벤트 로거
 │   ├── agents/                   # 하위 에이전트
 │   │   ├── chat_agent.py         # 안내 (Sign-off 바이패스)
 │   │   ├── legal_agent.py        # 법률·세무
