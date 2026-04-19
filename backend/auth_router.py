@@ -23,6 +23,7 @@ import time
 from datetime import UTC, datetime, timedelta
 
 import httpx
+from client_ip import get_client_ip
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -207,17 +208,32 @@ async def google_callback(
 ):
     """Google OAuth code → 토큰 교환 → 유저 upsert → JWT 발급 → 프론트 redirect."""
     if not _GOOGLE_CLIENT_ID or not _GOOGLE_CLIENT_SECRET:
-        raise HTTPException(status_code=501, detail="Google OAuth 미설정")
+        resp = JSONResponse(status_code=501, content={"detail": "Google OAuth 미설정"})
+        resp.delete_cookie(
+            key=_OAUTH_STATE_COOKIE,
+            path="/auth",
+            secure=True,
+            samesite="lax",
+            httponly=True,
+        )
+        return resp
 
     cookie_state = request.cookies.get(_OAUTH_STATE_COOKIE)
     if not state or not cookie_state or not secrets.compare_digest(state, cookie_state):
         _security_logger.warning(
-            "OAUTH_STATE_MISMATCH has_cookie=%s has_query=%s",
+            "OAUTH_STATE_MISMATCH client_ip=%s has_cookie=%s has_query=%s",
+            get_client_ip(request),
             bool(cookie_state),
             bool(state),
         )
         resp = JSONResponse(status_code=400, content={"detail": "OAuth state mismatch"})
-        resp.delete_cookie(key=_OAUTH_STATE_COOKIE, path="/auth")
+        resp.delete_cookie(
+            key=_OAUTH_STATE_COOKIE,
+            path="/auth",
+            secure=True,
+            samesite="lax",
+            httponly=True,
+        )
         return resp
 
     redirect_uri = f"{_BACKEND_URL}/auth/google/callback"
@@ -236,12 +252,20 @@ async def google_callback(
         )
         if token_resp.status_code != 200:
             _security_logger.warning(
-                "OAUTH_TOKEN_EXCHANGE_FAILED status=%s", token_resp.status_code
+                "OAUTH_TOKEN_EXCHANGE_FAILED client_ip=%s status=%s",
+                get_client_ip(request),
+                token_resp.status_code,
             )
             resp = JSONResponse(
                 status_code=400, content={"detail": "Google 토큰 교환 실패"}
             )
-            resp.delete_cookie(key=_OAUTH_STATE_COOKIE, path="/auth")
+            resp.delete_cookie(
+                key=_OAUTH_STATE_COOKIE,
+                path="/auth",
+                secure=True,
+                samesite="lax",
+                httponly=True,
+            )
             return resp
 
         access_token = token_resp.json().get("access_token", "")
@@ -253,12 +277,20 @@ async def google_callback(
         )
         if info_resp.status_code != 200:
             _security_logger.warning(
-                "OAUTH_USERINFO_FAILED status=%s", info_resp.status_code
+                "OAUTH_USERINFO_FAILED client_ip=%s status=%s",
+                get_client_ip(request),
+                info_resp.status_code,
             )
             resp = JSONResponse(
                 status_code=400, content={"detail": "Google 유저 정보 조회 실패"}
             )
-            resp.delete_cookie(key=_OAUTH_STATE_COOKIE, path="/auth")
+            resp.delete_cookie(
+                key=_OAUTH_STATE_COOKIE,
+                path="/auth",
+                secure=True,
+                samesite="lax",
+                httponly=True,
+            )
             return resp
 
     info = info_resp.json()
@@ -273,7 +305,13 @@ async def google_callback(
 
     # 프론트엔드로 redirect (token은 URL fragment로 전달) + state 쿠키 삭제
     response = RedirectResponse(url=f"{_FRONTEND_URL}/auth/callback#token={token}")
-    response.delete_cookie(key=_OAUTH_STATE_COOKIE, path="/auth")
+    response.delete_cookie(
+        key=_OAUTH_STATE_COOKIE,
+        path="/auth",
+        secure=True,
+        samesite="lax",
+        httponly=True,
+    )
     return response
 
 

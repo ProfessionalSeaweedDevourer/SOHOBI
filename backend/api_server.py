@@ -27,6 +27,7 @@ import session_store
 from auth import verify_api_key
 from auth_router import router as auth_router
 from checklist_router import router as checklist_router
+from client_ip import get_client_ip as _get_client_ip
 from dotenv import load_dotenv
 from event_router import router as event_router
 from fastapi import Depends, FastAPI, Query, Request
@@ -61,16 +62,6 @@ from variable_extractor import extract_financial_vars
 
 load_dotenv()
 configure_security_logger()
-
-
-# ── 헬퍼 함수 (Rate Limiter + 로깅 공용) ────────────────────────
-def _get_client_ip(request: Request) -> str:
-    """X-Forwarded-For 마지막 hop → 실제 클라이언트 IP (Azure Container Apps 환경)."""
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        # Azure Container Apps proxy가 append한 마지막 IP = 실제 클라이언트
-        return forwarded.split(",")[-1].strip()
-    return request.client.host if request.client else "unknown"
 
 
 # ── Rate Limiter ─────────────────────────────────────────────────
@@ -313,7 +304,9 @@ async def query(req: QueryRequest, request: Request):
             import logging
 
             logging.getLogger("sohobi.security").warning(
-                "INJECTION_SUSPECT question=%r", req.question[:200]
+                "INJECTION_SUSPECT client_ip=%s question=%r",
+                _get_client_ip(request),
+                req.question[:200],
             )
 
         # ── 세션 복원 또는 신규 생성 ──────────────────────────
@@ -341,7 +334,8 @@ async def query(req: QueryRequest, request: Request):
                 import logging
 
                 logging.getLogger("sohobi.security").warning(
-                    "DOMAIN_OVERRIDE client=%r router=%r confidence=%.2f question=%r",
+                    "DOMAIN_OVERRIDE client_ip=%s client=%r router=%r confidence=%.2f question=%r",
+                    _get_client_ip(request),
                     req.domain,
                     router_domain,
                     router_confidence,
