@@ -1,0 +1,72 @@
+{
+  "title": "Backend Load Remediation - Startup DDL Isolation",
+  "date": "2026-04-17",
+  "audience": "Claude Code",
+  "repo": "SOHOBI",
+  "id": "LOAD-005",
+  "priority": "P1",
+  "severity": "medium",
+  "scope": "DAO initialization behavior, startup latency, deployment safety",
+  "problem": "DAO constructors execute CREATE INDEX IF NOT EXISTS during runtime initialization, which couples application startup to schema-management work.",
+  "risk": "During autoscaling, cold starts, or concurrent deployments, app instances can add avoidable startup latency and potentially contend on database metadata or locks.",
+  "primary_targets": [
+    "backend/db/dao/mapInfoDAO.py",
+    "backend/db/dao/sangkwonDAO.py"
+  ],
+  "evidence": [
+    {
+      "file": "backend/db/dao/mapInfoDAO.py",
+      "lines": "53-68",
+      "note": "MapInfoDAO constructor runs index creation checks on initialization."
+    },
+    {
+      "file": "backend/db/dao/sangkwonDAO.py",
+      "lines": "43-58",
+      "note": "SangkwonDAO constructor does the same for search-related indexes."
+    }
+  ],
+  "goals": [
+    "Separate schema-management concerns from request-serving startup.",
+    "Keep required indexes documented and reproducible.",
+    "Avoid repeating DDL checks on every app boot."
+  ],
+  "implementation_plan": [
+    {
+      "step": 1,
+      "action": "Remove DDL side effects from DAO constructors.",
+      "details": [
+        "DAO instantiation should not execute CREATE INDEX statements.",
+        "Replace constructor-time checks with plain operational code paths."
+      ]
+    },
+    {
+      "step": 2,
+      "action": "Move index management to an explicit migration or ops path.",
+      "details": [
+        "If the repo already has a migration convention, add the required indexes there.",
+        "If not, create a documented one-time SQL artifact or admin script rather than silent runtime DDL."
+      ]
+    },
+    {
+      "step": 3,
+      "action": "Preserve discoverability for future operators.",
+      "details": [
+        "Document which indexes are required for searchDong and similar prefix queries.",
+        "If runtime validation is still desired, make it non-DDL and clearly fail or warn without mutating schema."
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    "Application startup no longer performs CREATE INDEX work from DAO constructors.",
+    "Required indexes are captured in an explicit migration or operational artifact.",
+    "Search-related functionality remains intact after the refactor."
+  ],
+  "verification": [
+    "Run affected DAO and router tests.",
+    "Verify application startup succeeds without schema mutation side effects.",
+    "If an explicit SQL artifact is added, review it for correctness against current query predicates."
+  ],
+  "execution_notes_for_claude_code": [
+    "This item may touch developer workflow rather than only runtime code. Keep the change small but explicit, and do not silently drop the knowledge of required indexes."
+  ]
+}

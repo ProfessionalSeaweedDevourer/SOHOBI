@@ -1,0 +1,99 @@
+{
+  "title": "Backend Load Remediation - Location Analysis Fan-out and Similar Ranking",
+  "date": "2026-04-17",
+  "audience": "Claude Code",
+  "repo": "SOHOBI",
+  "id": "LOAD-002",
+  "priority": "P0",
+  "severity": "high",
+  "scope": "location analysis request path, repository query shape, PostgreSQL pool pressure",
+  "problem": "A single location-analysis request fans out into multiple DB calls, and the similar-location recommendation path fetches a broad joined dataset before scoring and trimming in Python.",
+  "risk": "Under concurrent traffic, the location path can saturate the DB connection pool and shift heavy aggregation and ranking work into the API process.",
+  "primary_targets": [
+    "backend/agents/location_agent.py",
+    "backend/db/repository.py"
+  ],
+  "evidence": [
+    {
+      "file": "backend/agents/location_agent.py",
+      "lines": "463-516",
+      "note": "Each analyze request performs get_sales, get_store_count, and get_similar_locations, with DB work running through thread offloading."
+    },
+    {
+      "file": "backend/db/repository.py",
+      "lines": "620-732",
+      "note": "get_sales reads per-adm rows and aggregates in Python after fetchall."
+    },
+    {
+      "file": "backend/db/repository.py",
+      "lines": "734-807",
+      "note": "get_store_count follows the same fetch-all then aggregate pattern."
+    },
+    {
+      "file": "backend/db/repository.py",
+      "lines": "809-899",
+      "note": "get_similar_locations joins sales and store tables for an entire industry and performs filtering, outlier removal, normalization, and ranking in Python."
+    },
+    {
+      "file": "backend/db/repository.py",
+      "lines": "520-523",
+      "note": "Repository pool maxconn is 20, so bursty request fan-out can exhaust available connections."
+    }
+  ],
+  "goals": [
+    "Reduce DB calls and transferred rows per location analysis request.",
+    "Push ranking or pre-trimming closer to SQL where feasible.",
+    "Keep API worker CPU focused on orchestration rather than whole-industry scoring."
+  ],
+  "implementation_plan": [
+    {
+      "step": 1,
+      "action": "Profile and trim the similar-location candidate set before Python scoring.",
+      "details": [
+        "Rewrite get_similar_locations to aggregate in SQL and return only a bounded candidate pool.",
+        "Consider top-N by revenue, minimum store-count filters, or a capped candidate window before Python normalization.",
+        "Avoid fetchall over the effective full industry population if only top 3 outputs are needed."
+      ]
+    },
+    {
+      "step": 2,
+      "action": "Reduce repeated per-request DB work.",
+      "details": [
+        "Review whether get_sales and get_store_count can share a common adm_codes resolution and whether any aggregation can move into SQL summary queries.",
+        "Keep or strengthen in-memory caching, but do not depend on cache hits alone to make the path safe."
+      ]
+    },
+    {
+      "step": 3,
+      "action": "Add backpressure-friendly safeguards.",
+      "details": [
+        "Log latency and candidate row counts for get_similar_locations.",
+        "Handle pool exhaustion cleanly and surface observability when the path becomes a hotspot.",
+        "If needed, lower concurrent thread offloading or sequence non-critical recommendation work after the primary analysis response path."
+      ]
+    },
+    {
+      "step": 4,
+      "action": "Keep user-facing behavior stable while reducing work.",
+      "details": [
+        "Preserve the current response contract for analysis, charts, and similar-location output.",
+        "If recommendation data becomes optional under load, fail soft for the recommendation section rather than the main analysis."
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    "Location analysis performs fewer or cheaper DB reads per request.",
+    "Similar-location ranking no longer requires loading the broad industry dataset into Python memory.",
+    "The endpoint remains functionally compatible with existing caller expectations.",
+    "Tests cover the recommendation path and no regressions appear in location-agent behavior."
+  ],
+  "verification": [
+    "Run location-agent and repository-related test suites.",
+    "Add regression coverage for similar-location results shape and bounded candidate logic.",
+    "If possible, record before/after timings on representative analysis inputs."
+  ],
+  "execution_notes_for_claude_code": [
+    "Prefer SQL-side bounding over simply increasing cache TTL.",
+    "If a full ranking rewrite is too large for one patch, land a safe intermediate cap first and document follow-up work."
+  ]
+}
