@@ -1,0 +1,78 @@
+{
+  "title": "Backend Load Remediation - Session Query Deduplication for My Pages",
+  "date": "2026-04-17",
+  "audience": "Claude Code",
+  "repo": "SOHOBI",
+  "id": "LOAD-004",
+  "priority": "P1",
+  "severity": "medium",
+  "scope": "my sessions APIs, Cosmos session reads, ownership checks",
+  "problem": "Session detail endpoints currently fetch the full list of a user's sessions just to verify ownership before reading one specific session, which adds unnecessary read cost as account history grows.",
+  "risk": "Users with many sessions will pay for full-history reads on every detail view, increasing latency and Cosmos cost for normal My Logs usage.",
+  "primary_targets": [
+    "backend/my_router.py",
+    "backend/session_store.py"
+  ],
+  "evidence": [
+    {
+      "file": "backend/my_router.py",
+      "lines": "44-58",
+      "note": "Specific session history reads first call get_sessions_by_user and build an owned_ids set before loading the requested session."
+    },
+    {
+      "file": "backend/session_store.py",
+      "lines": "314-330",
+      "note": "get_sessions_by_user returns each session's id, context, history, and _ts ordered by time, which is heavier than a simple ownership check."
+    },
+    {
+      "file": "backend/session_store.py",
+      "lines": "333-364",
+      "note": "The actual session history/messages are then fetched in additional read_item calls."
+    }
+  ],
+  "goals": [
+    "Use O(1)-style ownership verification for single-session reads where possible.",
+    "Preserve access control while avoiding redundant full-list fetches.",
+    "Keep the sessions list endpoint functional for actual list views."
+  ],
+  "implementation_plan": [
+    {
+      "step": 1,
+      "action": "Introduce a direct ownership helper for one session.",
+      "details": [
+        "Read the target session document by partition key and compare stored user_id to the authenticated user.",
+        "Use this helper for /api/my/sessions/{session_id}/history instead of fetching the entire session list."
+      ]
+    },
+    {
+      "step": 2,
+      "action": "Trim get_sessions_by_user payload where possible.",
+      "details": [
+        "If the list view only needs id, context summary, and counts, avoid selecting the entire history field in the list query.",
+        "Derive history_count from a cheaper stored metadata field if available; otherwise consider adding one on write paths."
+      ]
+    },
+    {
+      "step": 3,
+      "action": "Keep compatibility with existing response shapes.",
+      "details": [
+        "Do not change frontend contracts for sessions list or session history unless necessary.",
+        "Any new helper should be internal to session_store or my_router."
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    "Session history access no longer requires reading the user's entire session list first.",
+    "The list endpoint avoids pulling full history blobs if they are not needed.",
+    "Ownership enforcement remains intact for private session data.",
+    "Tests cover authorized and unauthorized session detail reads."
+  ],
+  "verification": [
+    "Run my_router and session_store related tests.",
+    "Add regression tests for direct ownership checks and history access denial.",
+    "Smoke-test My Logs session listing and detail retrieval."
+  ],
+  "execution_notes_for_claude_code": [
+    "Favor a minimal internal refactor over a broad auth rewrite here. The main win is eliminating redundant list reads on detail fetches."
+  ]
+}

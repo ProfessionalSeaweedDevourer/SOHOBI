@@ -1,0 +1,92 @@
+{
+  "title": "Backend Load Remediation - Cosmos Partition Alignment for Feedback and Reports",
+  "date": "2026-04-17",
+  "audience": "Claude Code",
+  "repo": "SOHOBI",
+  "id": "LOAD-003",
+  "priority": "P0",
+  "severity": "high",
+  "scope": "feedback container access patterns, report aggregation, Cosmos RU efficiency",
+  "problem": "Current Cosmos queries read feedback and report data using predicates that do not align well with the configured partition key, which can cause unnecessary cross-partition scans and high RU usage.",
+  "risk": "User report generation and feedback listing can become disproportionately expensive as data grows, especially for multi-session users and admin-style list views.",
+  "primary_targets": [
+    "backend/feedback_router.py",
+    "backend/report_router.py"
+  ],
+  "evidence": [
+    {
+      "file": "backend/feedback_router.py",
+      "lines": "44-52",
+      "note": "Feedback container is created with partition key /agent_type."
+    },
+    {
+      "file": "backend/feedback_router.py",
+      "lines": "80-101",
+      "note": "Feedback list query orders by _ts across the container using TOP {limit}, which is expensive on a non-time partition."
+    },
+    {
+      "file": "backend/report_router.py",
+      "lines": "96-138",
+      "note": "Per-session feedback aggregation queries by session_id even though the container partitions by agent_type."
+    },
+    {
+      "file": "backend/report_router.py",
+      "lines": "243-249",
+      "note": "/api/report/me fans out feedback and checklist aggregation across all session_ids for a user."
+    }
+  ],
+  "goals": [
+    "Align read paths with partition strategy or adjust storage/query design.",
+    "Prevent report generation from scaling linearly into many expensive feedback scans.",
+    "Keep RU usage predictable as feedback volume grows."
+  ],
+  "implementation_plan": [
+    {
+      "step": 1,
+      "action": "Choose a partition-safe strategy for feedback reads.",
+      "details": [
+        "Preferred option: repartition feedback by session_id if session-based lookups are the dominant access pattern.",
+        "Alternative option: maintain a pre-aggregated per-session report document so report generation does not need to scan feedback items live.",
+        "If migration is deferred, at minimum constrain list endpoints and document the cross-partition cost."
+      ]
+    },
+    {
+      "step": 2,
+      "action": "Reduce report/me fan-out cost.",
+      "details": [
+        "Avoid one live feedback scan per session when generating a user-wide report.",
+        "Consider aggregating once per user request from a cheaper event source or reading from cached/materialized summaries."
+      ]
+    },
+    {
+      "step": 3,
+      "action": "Harden feedback list access patterns.",
+      "details": [
+        "Add a hard upper bound to limit and keep administrative list size small.",
+        "If ordering by _ts remains necessary, scope it to a partition or a small maintained summary store rather than the whole container."
+      ]
+    },
+    {
+      "step": 4,
+      "action": "Document and validate any migration path.",
+      "details": [
+        "If repartitioning is chosen, include a data backfill or dual-read strategy.",
+        "Keep local fallback behavior working unless explicitly out of scope."
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    "Feedback and report queries no longer rely on expensive cross-partition scans for common paths, or the hot paths are moved to pre-aggregated storage.",
+    "/api/report/me no longer performs unbounded per-session expensive feedback fan-out.",
+    "Administrative feedback listing has a clear and enforced ceiling.",
+    "Tests or smoke validation confirm report output remains correct."
+  ],
+  "verification": [
+    "Run report and feedback-related tests.",
+    "Add tests for any new aggregation helper or summary storage path.",
+    "If Cosmos metrics are available, compare RU usage before and after on representative report queries."
+  ],
+  "execution_notes_for_claude_code": [
+    "This item may require a pragmatic staged fix. If repartitioning is too invasive for one pass, implement a bounded stopgap plus a documented migration plan in code comments or follow-up notes."
+  ]
+}

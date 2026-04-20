@@ -1,0 +1,100 @@
+{
+  "title": "Backend Load Remediation - Map Query Guardrails",
+  "date": "2026-04-17",
+  "audience": "Claude Code",
+  "repo": "SOHOBI",
+  "id": "LOAD-001",
+  "priority": "P0",
+  "severity": "high",
+  "scope": "backend map endpoints and map DAO query shaping",
+  "problem": "Several map endpoints allow large result sets and perform broad DB reads followed by Python-side filtering, which can amplify DB latency, API memory use, and response serialization cost under concurrent traffic.",
+  "risk": "Large bbox or high-limit requests can cause expensive scans, oversized payloads, and noisy-neighbor effects on the PostgreSQL pool and FastAPI workers.",
+  "primary_targets": [
+    "backend/map_data_router.py",
+    "backend/db/dao/mapInfoDAO.py"
+  ],
+  "evidence": [
+    {
+      "file": "backend/map_data_router.py",
+      "lines": "137-169",
+      "note": "/map/nearby-bbox converts bbox to radius, fetches a broader candidate set, and then filters in Python."
+    },
+    {
+      "file": "backend/map_data_router.py",
+      "lines": "93-109",
+      "note": "/map/nearby accepts caller-provided limit without a visible upper bound."
+    },
+    {
+      "file": "backend/map_data_router.py",
+      "lines": "112-121",
+      "note": "/map/stores-by-dong returns up to 1500 rows for one click path."
+    },
+    {
+      "file": "backend/db/dao/mapInfoDAO.py",
+      "lines": "71-96",
+      "note": "Nearby store lookup uses only bounding-box predicates and LIMIT, without ordering by distance or tighter SQL-side constraints."
+    },
+    {
+      "file": "backend/db/dao/mapInfoDAO.py",
+      "lines": "132-177",
+      "note": "Dong/building queries can return large row sets and rely on generic fetch-all behavior."
+    }
+  ],
+  "goals": [
+    "Bound worst-case query cost for public or semi-public map reads.",
+    "Move as much filtering and trimming as practical into SQL.",
+    "Keep response sizes predictable enough for frontend rendering and gzip."
+  ],
+  "implementation_plan": [
+    {
+      "step": 1,
+      "action": "Add explicit FastAPI parameter validation for map read endpoints.",
+      "details": [
+        "Use Query constraints such as ge/le for radius and limit on /map/nearby and /map/nearby-bbox.",
+        "Choose conservative defaults and hard caps, for example nearby <= 200 and bbox <= 300, unless current product UX proves a higher number is required.",
+        "Reject obviously abusive bbox dimensions before hitting the DAO."
+      ]
+    },
+    {
+      "step": 2,
+      "action": "Replace Python-side bbox filtering with SQL-side bbox predicates.",
+      "details": [
+        "Add a dedicated DAO method that queries store_seoul with min/max lng/lat directly.",
+        "Keep a strict LIMIT in SQL and consider ordering by approximate distance only if needed by UX.",
+        "Return only the already-bounded SQL result rather than a larger candidate set."
+      ]
+    },
+    {
+      "step": 3,
+      "action": "Reduce default payload size for dong and building lookups.",
+      "details": [
+        "Review whether 1500 rows for /map/stores-by-dong is actually needed in one response.",
+        "If the frontend only renders markers for visible or summarized subsets, lower the hard cap and optionally return a truncation flag.",
+        "Consider splitting summary and detail endpoints if one endpoint is serving both use cases."
+      ]
+    },
+    {
+      "step": 4,
+      "action": "Add observability for expensive map reads.",
+      "details": [
+        "Log request parameters and response counts for capped queries.",
+        "Emit warnings when requests hit caps so product can detect legitimate overflow cases."
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    "Map endpoints enforce documented upper bounds on limit and spatial range.",
+    "/map/nearby-bbox no longer fetches a broad candidate set only to filter it in Python.",
+    "Worst-case map response size is materially lower and predictable.",
+    "Tests cover cap enforcement and representative bbox behavior."
+  ],
+  "verification": [
+    "Run backend tests touching map routers and DAO behavior.",
+    "Add or update unit tests for parameter cap validation.",
+    "Smoke-test representative nearby, bbox, and dong flows from the frontend contract."
+  ],
+  "execution_notes_for_claude_code": [
+    "Preserve current response schema unless a truncation indicator is added intentionally.",
+    "If exact frontend dependencies on current row counts are unclear, implement hard caps with minimal schema change first and document the chosen thresholds."
+  ]
+}
