@@ -12,6 +12,7 @@ import ChecklistProgress from "../components/checklist/ChecklistProgress";
 import ChecklistDrawer from "../components/checklist/ChecklistDrawer";
 import { useChecklistState } from "../components/checklist/useChecklistState";
 import SurveyBanner from "../components/SurveyBanner";
+import MaintenanceNotice from "../components/MaintenanceNotice";
 import { useChatMessages } from "../hooks/chat/useChatMessages";
 import { useStreamQuery } from "../hooks/chat/useStreamQuery";
 import { useDismissible } from "../hooks/useDismissible";
@@ -411,6 +412,7 @@ export default function UserChat() {
       {/* 대화 영역 + 사이드패널 */}
       <div className="flex-1 flex overflow-hidden max-w-5xl mx-auto w-full">
         <main className="flex-1 overflow-y-auto px-4 py-6 min-w-0">
+          <MaintenanceNotice />
           {/* 빈 상태: 온보딩 */}
           {messages.length === 0 && !loading && !pendingQuestion && (
             <div className="mt-6">
