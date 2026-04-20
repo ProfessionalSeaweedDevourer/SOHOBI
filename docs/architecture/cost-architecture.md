@@ -269,9 +269,10 @@ az security pricing list -o table
 
 체크리스트 — 우선순위 순. 각 항목별 **추정 절감액**은 30일 실측 기반.
 
-- [ ] **Defender for Cloud 플랜 검토** (~$20/월 절감 가능)
-  - 학습/개발 환경에서는 Free 티어로 충분. `az security pricing create -n StorageAccounts -t Free` 등으로 개별 비활성
-  - CSPM·Storage·AI Services·Cosmos 4개 플랜이 켜져 있음
+- [ ] **Defender for Cloud 플랜 선택적 비활성화** (~$15.92/월 절감 권장)
+  - 30일 실측 알림 분석 결과: AI Services는 Jailbreak 4건 차단 → 유지, Storage·CSPM은 알림 0건 → 비활성 권장
+  - 상세 분석: [defender-evaluation.md](defender-evaluation.md)
+  - 즉시 적용: `az security pricing create -n StorageAccounts -t Free && az security pricing create -n CloudPosture -t Free`
 - [ ] **PG Flex 야간 자동 stop** (~$15/월 절감)
   - 개발 시간 외 (예: 23:00-08:00) 정지 → Burstable 시간당 청구 9시간/일 제거
   - `az postgres flexible-server stop -n sohobi-db-prod -g rg-ejp-9638` (cron + GitHub Actions)
