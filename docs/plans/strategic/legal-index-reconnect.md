@@ -2,7 +2,7 @@
 
 ## 배경
 
-- 세션 인수인계: [2026-04-20-legal-rag-dead-and-gov-env-sync-handoff.md](../session-reports/2026-04-20-legal-rag-dead-and-gov-env-sync-handoff.md)
+- 세션 인수인계: [2026-04-20-legal-rag-dead-and-gov-env-sync-handoff.md](../../session-reports/2026-04-20-legal-rag-dead-and-gov-env-sync-handoff.md)
 - 현 상태 요약:
   - `choiasearchhh.search.windows.net` DNS NXDOMAIN (외부 구독 삭제 추정)
   - Container App `azure-search-endpoint` / `azure-search-key` 시크릿이 literal placeholder (`<AZURE_SEARCH_ENDPOINT>`, `<AZURE_SEARCH_KEY>`)
@@ -21,11 +21,11 @@
 
 ## 1. 전제조건 — 신규 인덱스가 갖춰야 할 계약
 
-플러그인 코드 [backend/plugins/legal_search_plugin.py](../../backend/plugins/legal_search_plugin.py) 가 런타임에 기대하는 인덱스 스펙.
+플러그인 코드 [backend/plugins/legal_search_plugin.py](../../../backend/plugins/legal_search_plugin.py) 가 런타임에 기대하는 인덱스 스펙.
 
 ### 1-1. 필드
 
-[legal_search_plugin.py:132-145](../../backend/plugins/legal_search_plugin.py#L132-L145) `select` 절 참조 필드 전원 존재 필수:
+[legal_search_plugin.py:132-145](../../../backend/plugins/legal_search_plugin.py#L132-L145) `select` 절 참조 필드 전원 존재 필수:
 
 | 필드 | 용도 | 타입 |
 |---|---|---|
@@ -40,7 +40,7 @@
 
 ### 1-2. 벡터 설정
 
-- 벡터 필드명: **`content_vector`** (코드 하드코딩, [legal_search_plugin.py:125](../../backend/plugins/legal_search_plugin.py#L125))
+- 벡터 필드명: **`content_vector`** (코드 하드코딩, [legal_search_plugin.py:125](../../../backend/plugins/legal_search_plugin.py#L125))
 - 알고리즘: HNSW (k_nearest_neighbors 사용)
 - **차원**: embedding deployment 와 정확 일치 필수
   - `text-embedding-3-small` → 1536
@@ -49,13 +49,13 @@
 
 ### 1-3. 시맨틱 리랭커
 
-- configuration 이름: **`semantic-config`** ([legal_search_plugin.py:129](../../backend/plugins/legal_search_plugin.py#L129) 하드코딩)
+- configuration 이름: **`semantic-config`** ([legal_search_plugin.py:129](../../../backend/plugins/legal_search_plugin.py#L129) 하드코딩)
 - title field, content fields 정의 (권장: `articleTitle` → title, `fullText` → content)
-- 코드가 `reranker_score < 1.5` 미만을 드롭 ([legal_search_plugin.py:152](../../backend/plugins/legal_search_plugin.py#L152)) — 신규 인덱스에서 의미 있는 점수 분포가 나오는지 스모크 확인 필요
+- 코드가 `reranker_score < 1.5` 미만을 드롭 ([legal_search_plugin.py:152](../../../backend/plugins/legal_search_plugin.py#L152)) — 신규 인덱스에서 의미 있는 점수 분포가 나오는지 스모크 확인 필요
 
 ### 1-4. 법령명 표기 정규화
 
-[legal_search_plugin.py:31-46](../../backend/plugins/legal_search_plugin.py#L31-L46) `_LAW_NAMES` 14개와 `lawName` 값이 **prefix 기준 일치**해야 OData 필터(`search.ismatch('식품위생법*', 'lawName')`)가 적중함. 인덱스 구축 시 lawName 정규화 규칙이 이 목록과 맞는지 사전 확인.
+[legal_search_plugin.py:31-46](../../../backend/plugins/legal_search_plugin.py#L31-L46) `_LAW_NAMES` 14개와 `lawName` 값이 **prefix 기준 일치**해야 OData 필터(`search.ismatch('식품위생법*', 'lawName')`)가 적중함. 인덱스 구축 시 lawName 정규화 규칙이 이 목록과 맞는지 사전 확인.
 
 ---
 
@@ -138,7 +138,7 @@ AZURE_EMBEDDING_DEPLOYMENT=text-embedding-3-large
 
 ### 3-1. `_available` placeholder 감지
 
-현재 [legal_search_plugin.py:70-72](../../backend/plugins/legal_search_plugin.py#L70-L72):
+현재 [legal_search_plugin.py:70-72](../../../backend/plugins/legal_search_plugin.py#L70-L72):
 
 ```python
 self._available = bool(
@@ -161,7 +161,7 @@ self._available = all(
 
 ### 3-2. 실패 응답 문구 강화
 
-[legal_search_plugin.py:105](../../backend/plugins/legal_search_plugin.py#L105) 의 비가용 문구가 에이전트에게 "도구가 없으니 내 지식으로 답하라" 로 해석되지 않도록:
+[legal_search_plugin.py:105](../../../backend/plugins/legal_search_plugin.py#L105) 의 비가용 문구가 에이전트에게 "도구가 없으니 내 지식으로 답하라" 로 해석되지 않도록:
 
 ```python
 return (
@@ -170,13 +170,13 @@ return (
 )
 ```
 
-[backend/agents/legal_agent.py](../../backend/agents/legal_agent.py) 지시사항에도 추가:
+[backend/agents/legal_agent.py](../../../backend/agents/legal_agent.py) 지시사항에도 추가:
 
 > 도구 응답이 `LEGAL_RAG_UNAVAILABLE` 로 시작하면 그 문구를 그대로 사용자에게 전달하고, 구체 법령·조항 번호·문구 인용 생성을 중단한다.
 
 ### 3-3. 검색 예외 시 동일 처리
 
-[legal_search_plugin.py:179-180](../../backend/plugins/legal_search_plugin.py#L179-L180) 의 except 블록도 동일 prefix (`LEGAL_RAG_UNAVAILABLE:`) 를 쓰도록 통일해 runtime DNS/권한 실패와 설정 누락을 한 채널로 처리.
+[legal_search_plugin.py:179-180](../../../backend/plugins/legal_search_plugin.py#L179-L180) 의 except 블록도 동일 prefix (`LEGAL_RAG_UNAVAILABLE:`) 를 쓰도록 통일해 runtime DNS/권한 실패와 설정 누락을 한 채널로 처리.
 
 ---
 
@@ -255,7 +255,7 @@ az containerapp ingress traffic set --name sohobi-backend -g rg-ejp-9638 \
 ## 6. 주의 (traps)
 
 - **embedding 모델 버전 동일성**: 인덱스 구축에 사용한 모델과 런타임 쿼리 임베딩이 **정확히 동일 버전** 이어야 벡터 호환. text-embedding-3-large v1 인덱스는 동일 v1 에서만 호환
-- **`AZURE_EMBEDDING_DEPLOYMENT` 기본값 함정**: [legal_search_plugin.py:62](../../backend/plugins/legal_search_plugin.py#L62) 기본값은 `text-embedding-3-small` (1536d). env 미설정 + 3072d 인덱스 조합 시 400 차원 불일치 — 신규 연결 시 env 명시 필수
+- **`AZURE_EMBEDDING_DEPLOYMENT` 기본값 함정**: [legal_search_plugin.py:62](../../../backend/plugins/legal_search_plugin.py#L62) 기본값은 `text-embedding-3-small` (1536d). env 미설정 + 3072d 인덱스 조합 시 400 차원 불일치 — 신규 연결 시 env 명시 필수
 - **`gov_*` 변수와 분리**: legal 은 `AZURE_SEARCH_*` / `AZURE_OPENAI_*`, gov 는 `GOV_SEARCH_*` / `GOV_OPENAI_*`. 같은 리소스를 공유해도 변수군은 분리
 - **lawName 표기**: `_detect_law_filter` 은 prefix 매칭 → 인덱스 구축 시 `_LAW_NAMES` 목록과 표기 동일화. 불일치 시 필터 미적용으로 무관 법령이 top-k 에 혼입 가능
 - **`semantic-config` 이름 하드코딩**: 다른 이름으로 구성 시 런타임 실패. 인덱스 빌더 스크립트에서도 동일 이름 사용 강제
