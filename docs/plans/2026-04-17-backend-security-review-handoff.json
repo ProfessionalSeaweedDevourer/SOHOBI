@@ -1,0 +1,332 @@
+{
+  "title": "Backend Security Review Handoff",
+  "date": "2026-04-17",
+  "audience": "Claude Code",
+  "repo": "SOHOBI",
+  "scope": "backend-focused security review with related frontend trust-boundary findings",
+  "summary": {
+    "overall_risk": "high",
+    "primary_theme": "authentication and authorization boundaries are weak or collapse under missing config, and several endpoints rely on exposed client-side API keys plus unowned session identifiers",
+    "recommended_execution_order": [
+      "Block forged auth and public admin/log access",
+      "Add ownership verification for session-bound resources",
+      "Fix OAuth state and session-link trust model",
+      "Reduce token exposure and harden long-term auth storage"
+    ]
+  },
+  "priorities": [
+    {
+      "id": "SEC-001",
+      "priority": "P0",
+      "severity": "critical",
+      "title": "JWT secret fallback allows token forgery if env is missing",
+      "risk": "If JWT_SECRET is omitted in any deployed environment, an attacker can mint valid tokens and impersonate arbitrary users.",
+      "evidence": [
+        {
+          "file": "backend/auth_router.py",
+          "lines": "35-38",
+          "note": "JWT secret falls back to a known static string."
+        },
+        {
+          "file": "backend/auth_router.py",
+          "lines": "79-92",
+          "note": "Same secret is used for encode/decode."
+        }
+      ],
+      "standard_remediation": [
+        "Fail fast at startup if JWT_SECRET is missing in non-local environments.",
+        "Remove insecure default secret entirely.",
+        "Optionally validate secret length/entropy at boot.",
+        "Rotate any existing signing secret after patching if there is any chance fallback was ever used."
+      ],
+      "implementation_notes": [
+        "Preferred pattern: explicit config validation during app startup, not lazy fallback.",
+        "If local developer convenience is needed, gate a dev-only fallback behind an explicit ENV such as APP_ENV=local and never as the default path."
+      ],
+      "acceptance_criteria": [
+        "Server refuses to start when JWT_SECRET is absent outside local dev.",
+        "Known fallback string no longer exists in code.",
+        "Existing tests cover missing-secret startup behavior."
+      ]
+    },
+    {
+      "id": "SEC-002",
+      "priority": "P0",
+      "severity": "critical",
+      "title": "Client-exposed API key means protected endpoints are effectively public",
+      "risk": "Endpoints guarded by X-API-Key are callable by any browser user because the key is shipped in frontend build variables.",
+      "evidence": [
+        {
+          "file": "backend/auth.py",
+          "lines": "21-43",
+          "note": "API protection depends only on API_SECRET_KEY."
+        },
+        {
+          "file": "frontend/src/api.js",
+          "lines": "3-8",
+          "note": "VITE_API_KEY is attached to requests from browser."
+        },
+        {
+          "file": "backend/api_server.py",
+          "lines": "760-910",
+          "note": "Logs/stats/export endpoints depend on verify_api_key."
+        },
+        {
+          "file": "frontend/src/components/checklist/useChecklistState.js",
+          "lines": "5-9",
+          "note": "Checklist endpoints use same exposed API key."
+        }
+      ],
+      "standard_remediation": [
+        "Do not use browser-exposed build variables as backend shared secrets.",
+        "For user-facing routes, replace shared API-key auth with user/session auth or make endpoint intentionally public with narrower response scope.",
+        "For admin/log routes, require authenticated admin authorization or move behind trusted network/gateway auth.",
+        "For machine-to-machine protection, keep secrets only on server-to-server paths."
+      ],
+      "implementation_notes": [
+        "Treat all endpoints currently relying on VITE_API_KEY as unauthenticated from a threat-model standpoint.",
+        "A good immediate containment option is to remove frontend access to admin/log APIs and gate them with role-checked JWT or infra auth."
+      ],
+      "acceptance_criteria": [
+        "No frontend bundle contains a backend-shared secret.",
+        "Log export and log listing endpoints are inaccessible to normal site visitors.",
+        "User-facing endpoints use identity-based auth or are intentionally public and sanitized."
+      ]
+    },
+    {
+      "id": "SEC-003",
+      "priority": "P0",
+      "severity": "critical",
+      "title": "Session-bound resources lack ownership enforcement",
+      "risk": "Anyone who knows or guesses a valid session_id can read or mutate another session's report/checklist data.",
+      "evidence": [
+        {
+          "file": "backend/report_router.py",
+          "lines": "266-291",
+          "note": "Only checks session existence, not ownership."
+        },
+        {
+          "file": "backend/checklist_router.py",
+          "lines": "24-77",
+          "note": "Read/write checklist is allowed when session exists."
+        },
+        {
+          "file": "backend/session_store.py",
+          "lines": "157-165",
+          "note": "session_exists only checks existence."
+        },
+        {
+          "file": "frontend/src/pages/MyReport.jsx",
+          "lines": "32-38",
+          "note": "Frontend fetches report by raw session_id for anonymous flows."
+        }
+      ],
+      "standard_remediation": [
+        "Introduce a server-side ownership model for session-bound resources.",
+        "Require authenticated user ownership for private report/history/checklist access wherever feasible.",
+        "If anonymous sessions must exist, bind them to an unguessable server-issued bearer capability or signed cookie, not just a raw session_id string.",
+        "Reject requests when caller cannot prove ownership of the session."
+      ],
+      "implementation_notes": [
+        "Short-term: disable anonymous read/write access for report/checklist endpoints unless the product explicitly requires it.",
+        "Long-term: replace plain session_id trust with signed opaque session tokens or same-site HttpOnly cookies."
+      ],
+      "acceptance_criteria": [
+        "Session existence alone is no longer sufficient to read or mutate session data.",
+        "Tests cover cross-session access denial.",
+        "Anonymous flows, if retained, use proof of possession beyond raw session_id."
+      ]
+    },
+    {
+      "id": "SEC-004",
+      "priority": "P1",
+      "severity": "high",
+      "title": "Session linking endpoint can attach arbitrary session_id to logged-in user",
+      "risk": "An attacker can associate someone else's anonymous session with their own account if they obtain the session_id.",
+      "evidence": [
+        {
+          "file": "backend/auth_router.py",
+          "lines": "231-244",
+          "note": "link-session trusts provided session_id without ownership proof."
+        },
+        {
+          "file": "backend/session_store.py",
+          "lines": "256-273",
+          "note": "Session user_id is overwritten if session exists."
+        },
+        {
+          "file": "frontend/src/contexts/AuthContext.jsx",
+          "lines": "41-51",
+          "note": "Frontend submits locally stored session_id directly."
+        }
+      ],
+      "standard_remediation": [
+        "Require proof that the caller initiated or possesses the anonymous session before linking.",
+        "Do not allow reassignment of already-owned sessions without stronger authorization logic.",
+        "Prefer server-issued session cookies or signed one-time link tokens over client-submitted bare identifiers."
+      ],
+      "implementation_notes": [
+        "Good standard pattern: anonymous session cookie is upgraded in place after login, instead of a public link endpoint taking arbitrary IDs.",
+        "At minimum, reject linking if session already has a different user_id."
+      ],
+      "acceptance_criteria": [
+        "Cross-user or arbitrary session linking is denied.",
+        "Session linking requires cryptographic/session proof, not only knowledge of the ID.",
+        "Regression tests cover re-link attempts and stolen session_id scenarios."
+      ]
+    },
+    {
+      "id": "SEC-005",
+      "priority": "P1",
+      "severity": "high",
+      "title": "Google OAuth flow lacks state parameter validation",
+      "risk": "The login flow is vulnerable to login CSRF/account confusion because authorization requests are not bound to the initiating browser state.",
+      "evidence": [
+        {
+          "file": "backend/auth_router.py",
+          "lines": "155-170",
+          "note": "OAuth initiation does not generate or include state."
+        },
+        {
+          "file": "backend/auth_router.py",
+          "lines": "173-217",
+          "note": "Callback validates code only; no state verification."
+        }
+      ],
+      "standard_remediation": [
+        "Generate a high-entropy state value at OAuth start.",
+        "Store it in a secure, same-site cookie or server-side session.",
+        "Verify exact match on callback before exchanging the code.",
+        "Optionally include PKCE as an additional defense if the OAuth client architecture benefits from it."
+      ],
+      "implementation_notes": [
+        "State is mandatory even in server-side OAuth flows.",
+        "If redirect targets differ by environment, ensure state validation is environment-agnostic and not tied to fragile host assumptions."
+      ],
+      "acceptance_criteria": [
+        "OAuth callback fails when state is missing or mismatched.",
+        "State is generated per auth attempt and cleared after use.",
+        "Automated tests cover missing and invalid state."
+      ]
+    },
+    {
+      "id": "SEC-006",
+      "priority": "P2",
+      "severity": "medium",
+      "title": "Long-lived JWT is stored in localStorage",
+      "risk": "Any XSS in the frontend can exfiltrate a 30-day bearer token and fully impersonate the user.",
+      "evidence": [
+        {
+          "file": "backend/auth_router.py",
+          "lines": "36-38",
+          "note": "Default expiry is 720 hours."
+        },
+        {
+          "file": "frontend/src/contexts/AuthContext.jsx",
+          "lines": "3-5",
+          "note": "JWT is persisted in localStorage."
+        },
+        {
+          "file": "frontend/src/contexts/AuthContext.jsx",
+          "lines": "32-39",
+          "note": "Token is stored client-side immediately after login."
+        }
+      ],
+      "standard_remediation": [
+        "Prefer HttpOnly, Secure, SameSite cookies for session/auth tokens.",
+        "Reduce token lifetime and add refresh-token rotation if needed.",
+        "If bearer tokens must stay in JS space, minimize lifetime and harden CSP/XSS posture."
+      ],
+      "implementation_notes": [
+        "This is not the first fix to land, but it should follow once the core auth boundary issues are stabilized.",
+        "Cookie-based auth will also simplify session ownership and OAuth callback handling."
+      ],
+      "acceptance_criteria": [
+        "Primary auth token is no longer readable from JavaScript, or lifetime is substantially reduced with compensating controls.",
+        "Logout and session renewal flows are updated accordingly."
+      ]
+    }
+  ],
+  "quick_wins": [
+    {
+      "order": 1,
+      "action": "Remove JWT fallback secret and make startup fail when JWT_SECRET is absent outside local dev."
+    },
+    {
+      "order": 2,
+      "action": "Disable or heavily gate /api/v1/logs, /api/v1/logs/export, /api/v1/logs/users, and any admin-style stats endpoints until real authz is in place."
+    },
+    {
+      "order": 3,
+      "action": "Stop treating VITE_API_KEY as a secret. Remove it from browser auth model."
+    },
+    {
+      "order": 4,
+      "action": "Temporarily require authenticated ownership for /api/report/* and /api/checklist/* or disable anonymous access."
+    },
+    {
+      "order": 5,
+      "action": "Block linking of sessions that already belong to another user and add ownership proof to link flow."
+    },
+    {
+      "order": 6,
+      "action": "Add OAuth state generation and callback verification."
+    }
+  ],
+  "suggested_work_breakdown": [
+    {
+      "phase": "Phase 1 containment",
+      "goals": [
+        "Eliminate forged auth by config hardening",
+        "Shut down public access to sensitive operational endpoints",
+        "Prevent cross-session data access"
+      ],
+      "likely_files": [
+        "backend/auth_router.py",
+        "backend/auth.py",
+        "backend/api_server.py",
+        "backend/report_router.py",
+        "backend/checklist_router.py",
+        "backend/session_store.py"
+      ]
+    },
+    {
+      "phase": "Phase 2 auth-flow hardening",
+      "goals": [
+        "Make OAuth flow CSRF-safe",
+        "Replace arbitrary session linking with session proof or cookie upgrade"
+      ],
+      "likely_files": [
+        "backend/auth_router.py",
+        "frontend/src/contexts/AuthContext.jsx",
+        "frontend/src/pages/AuthCallback.jsx"
+      ]
+    },
+    {
+      "phase": "Phase 3 platform hardening",
+      "goals": [
+        "Move away from localStorage bearer model",
+        "Normalize private vs public endpoint policy",
+        "Add targeted regression tests"
+      ],
+      "likely_files": [
+        "backend/tests/*",
+        "frontend auth/session consumers",
+        "deployment config and env validation"
+      ]
+    }
+  ],
+  "test_recommendations": [
+    "Add tests that startup/config validation fails when JWT_SECRET is missing in production-like mode.",
+    "Add authz tests proving one user cannot read another user's report/checklist/history.",
+    "Add tests for session linking refusal when session belongs to a different user or lacks ownership proof.",
+    "Add OAuth tests for missing, invalid, and valid state handling.",
+    "Add endpoint tests showing admin/log routes reject anonymous and non-admin callers."
+  ],
+  "notes_for_claude_code": [
+    "Prioritize real risk reduction over preserving current anonymous UX.",
+    "Treat any path depending on browser-provided X-API-Key as already exposed.",
+    "If product requires anonymous sessions, use a signed server-issued capability or secure cookie rather than trusting raw session_id.",
+    "Avoid partial fixes that leave session ownership inconsistent across report, checklist, logs, and session-link endpoints."
+  ]
+}
