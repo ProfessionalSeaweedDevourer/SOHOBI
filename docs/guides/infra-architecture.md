@@ -1,5 +1,7 @@
 # SOHOBI 라이브 인프라 아키텍처
 
+> 비용 구조·예산·절감 액션은 [docs/architecture/cost-architecture.md](../architecture/cost-architecture.md) 참조.
+
 ## 인프라 구성
 
 ```
