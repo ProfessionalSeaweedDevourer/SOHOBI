@@ -6,7 +6,7 @@
 - 현 상태 요약:
   - `choiasearchhh.search.windows.net` DNS NXDOMAIN (외부 구독 삭제 추정)
   - Container App `azure-search-endpoint` / `azure-search-key` 시크릿이 literal placeholder (`<AZURE_SEARCH_ENDPOINT>`, `<AZURE_SEARCH_KEY>`)
-  - 결과: `search_legal_docs` 호출은 실패 문자열을 반환하나 에이전트(gpt-4o)가 이를 무시하고 hallucination 으로 grade A 응답 생성. 로그 보존 전 구간 79건 중 RAG 인용 0건.
+  - 결과: `search_legal_docs` 호출은 실패 문자열을 반환하나 에이전트(gpt-5.4-mini, Container App env `AZURE_LEGAL_DEPLOYMENT` 실측)가 이를 무시하고 hallucination 으로 grade A 응답 생성. 로그 보존 전 구간 79건 중 RAG 인용 0건.
 
 ## 범위
 
