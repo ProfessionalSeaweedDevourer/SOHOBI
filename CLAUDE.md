@@ -345,6 +345,14 @@ curl -s "$BACKEND_HOST/api/v1/logs?type=queries&limit=50" | python3 -m json.tool
 - 프론트엔드 도메인: `sohobi.net` (Azure DNS zone: `.env` 참조)
 - 백엔드: Azure Container Apps (`BACKEND_HOST` in `.env`)
 - SEO canonical URL, sitemap, OG 태그 등에서 도메인은 **`sohobi.net`** 사용
+- Azure OpenAI 모델 배포명: **Container App env `AZURE_*_DEPLOYMENT` 가 유일한 source-of-truth**. 2026-04-20 기준 전 에이전트(router/chat/legal/finance/location/admin/signoff) `gpt-5.4-mini` 로 통일. 모델 관련 답변·문서 작성 전 반드시 실측:
+
+  ```bash
+  az containerapp show --name sohobi-backend -g rg-ejp-9638 \
+    --query "properties.template.containers[0].env[?contains(name, 'DEPLOYMENT')].{name:name, value:value}" -o table
+  ```
+
+  코드·rules 파일·과거 문서의 모델 기재를 그대로 인용 금지 (stale 가능성). 임베딩은 별도: `AZURE_EMBEDDING_DEPLOYMENT` (legal용, 현재 `text-embedding-3-small` 1536d), `GOV_EMBEDDING_DEPLOYMENT` (gov용, `text-embedding-3-large` 3072d).
 
 ## 주의 사항
 
