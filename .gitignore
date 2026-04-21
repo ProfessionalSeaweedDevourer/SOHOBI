@@ -72,3 +72,6 @@ docs/session-reports/*-query-log-dump.json
 docs/dev-summary/park/*blog-post-candidates*.md
 
 # 상권 DB — 2024년 4분기 단일 분기로 축소 (13 MB), Git 포함
+
+# 경력기술서 빌드 산출물 (docx·pdf 중간·최종물, 로컬 전용)
+work/
