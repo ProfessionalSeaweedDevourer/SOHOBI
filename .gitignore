@@ -75,3 +75,7 @@ docs/dev-summary/park/*blog-post-candidates*.md
 
 # 경력기술서 빌드 산출물 (docx·pdf 중간·최종물, 로컬 전용)
 work/
+
+# 개인 취업용 자료 (팀 공유 제외)
+handoff/
+assets/
