@@ -161,7 +161,6 @@
 - **플러그인**:
   - `AdminProcedurePlugin` — 법령 검증된 5대 절차 KB (영업신고·위생교육·사업자등록·보건증·소방)
   - `GovSupportPlugin` — 정부지원사업 하이브리드 검색 RAG (5,600건+, 보조금·대출·신용보증·고용지원·교육컨설팅)
-  - `SeoulCommercialPlugin` — 지역·업종별 상권 데이터 조회
 - **동작**: 식품위생법 기반 영업신고 절차 단계별 안내 + 창업자 상황 맞춤 정부지원사업 추천
 - **출력 기준**: 관할 기관(시·군·구청 위생과) 명시, 처리 기한(3~7영업일) 포함
 - **문서 생성**: `/api/v1/doc/chat` 엔드포인트에서 `FoodBusinessPlugin`(BusinessDoc)을 통해 대화형으로 정보 수집 후 식품영업신고서 PDF 출력 (Sign-off 바이패스, 별도 kernel)
@@ -316,7 +315,7 @@
 | `/privacy` | PrivacyPolicy | 개인정보처리방침 |
 | `/auth/callback` | AuthCallback | OAuth 콜백 |
 | `/dev/login` | DevLogin | 개발자 인증 |
-| `/dev` | DevChat | 개발자 디버그 채팅 (인증 필요) |
+| `/dev` | DevHub | 개발자 허브 (인증 필요) |
 | `/dev/logs` | LogViewer | 에이전트 로그 뷰어 (인증 필요) |
 | `/dev/stats` | StatsPage | 성능 모니터링 대시보드 (인증 필요) |
 
@@ -378,10 +377,10 @@ SOHOBI/
 │       └── assets/               # 이미지·아이콘
 ├── docs/                         # → docs/README.md 참조
 │   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
-│   ├── dev-summary/              # 팀원별 일일 개발 요약 (81건)
+│   ├── dev-summary/              # 팀원별 일일 개발 요약 (91건)
 │   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
-│   ├── plans/                    # 설계·분석 플랜 문서 (116건)
-│   ├── session-reports/          # 세션 인수인계 리포트 (48건)
+│   ├── plans/                    # 설계·분석 플랜 문서 (125건)
+│   ├── session-reports/          # 세션 인수인계 리포트 (83건)
 │   └── test-reports/             # 보안 테스트·성능 베이스라인 리포트
 ├── .github/workflows/            # CI/CD (프론트 배포, 백엔드 배포, 스모크 테스트)
 └── CLAUDE.md                     # Claude Code 영구 지시
