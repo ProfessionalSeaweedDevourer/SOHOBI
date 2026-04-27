@@ -1,0 +1,83 @@
+name: Azure Bicep Deploy
+
+on:
+  pull_request:
+    paths:
+      - 'infra/bicep/**'
+      - '.github/workflows/azure-bicep-deploy.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/bicep/**'
+      - '.github/workflows/azure-bicep-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+env:
+  AZURE_RESOURCE_GROUP: rg-sohobi-prod
+
+jobs:
+  what-if:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID_B }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID_B }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID_B }}
+
+      - name: Bicep what-if
+        id: whatif
+        run: |
+          az deployment group what-if \
+            -g $AZURE_RESOURCE_GROUP \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters/prod.bicepparam \
+            --no-pretty-print > whatif.txt 2>&1 || true
+          {
+            echo "result<<EOF"
+            cat whatif.txt
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment what-if on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const result = `${{ steps.whatif.outputs.result }}`;
+            const body = `## Bicep what-if\n\n\`\`\`\n${result.slice(0, 60000)}\n\`\`\``;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+
+  deploy:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID_B }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID_B }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID_B }}
+
+      - name: Bicep deploy
+        run: |
+          az deployment group create \
+            -g $AZURE_RESOURCE_GROUP \
+            --name foundation-${{ github.run_id }} \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters/prod.bicepparam
