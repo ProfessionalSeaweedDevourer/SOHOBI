@@ -36,6 +36,8 @@ jobs:
 
       - name: Bicep what-if
         id: whatif
+        env:
+          PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
         run: |
           az deployment group what-if \
             -g $AZURE_RESOURCE_GROUP \
@@ -75,6 +77,8 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID_B }}
 
       - name: Bicep deploy
+        env:
+          PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
         run: |
           az deployment group create \
             -g $AZURE_RESOURCE_GROUP \
