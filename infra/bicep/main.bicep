@@ -25,6 +25,10 @@ param tags object = {
   'managed-by': 'bicep'
 }
 
+@description('PostgreSQL Flexible Server 관리자 비밀번호. workflow에서 secret(PG_ADMIN_PASSWORD)으로 주입')
+@secure()
+param pgAdministratorLoginPassword string
+
 // ================================================================
 // Foundation 자원
 // ================================================================
@@ -110,6 +114,18 @@ module cosmos 'modules/cosmos.bicep' = {
   }
 }
 
+module postgres 'modules/postgres.bicep' = {
+  name: 'postgres'
+  params: {
+    // global unique. 3-63자, 소문자/숫자/하이픈
+    name: '${namePrefix}-${env}-pg'
+    location: location
+    tags: tags
+    databaseName: 'sohobi'
+    administratorLoginPassword: pgAdministratorLoginPassword
+  }
+}
+
 // ================================================================
 // Outputs (후속 모듈에서 참조)
 // ================================================================
@@ -125,3 +141,6 @@ output backendAppFqdn string = backendApp.outputs.fqdn
 output backendAppPrincipalId string = backendApp.outputs.principalId
 output cosmosEndpoint string = cosmos.outputs.endpoint
 output cosmosDatabaseName string = cosmos.outputs.databaseName
+output postgresFqdn string = postgres.outputs.fqdn
+output postgresDatabaseName string = postgres.outputs.databaseName
+output postgresAdministratorLogin string = postgres.outputs.administratorLogin
