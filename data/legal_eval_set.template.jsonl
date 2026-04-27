@@ -1,0 +1,10 @@
+{"id": "Q001", "question": "음식점 영업허가는 어떻게 받나요?", "gold_article_ids": ["law_277149_37"], "category": "식품위생", "notes": "식품위생법 제37조"}
+{"id": "Q002", "question": "최저임금을 위반한 사업주는 어떤 처벌을 받나요?", "gold_article_ids": [], "category": "노동", "notes": "TODO: 최저임금법 벌칙 조항 라벨링"}
+{"id": "Q003", "question": "개인정보를 동의 없이 제3자에게 제공할 수 있나요?", "gold_article_ids": [], "category": "개인정보", "notes": "TODO: 개인정보 보호법 제17조 등"}
+{"id": "Q004", "question": "일반음식점 영업장 면적 제한이 있나요?", "gold_article_ids": [], "category": "식품위생", "notes": "TODO: 식품위생법 시행규칙 별표"}
+{"id": "Q005", "question": "소상공인 정책자금 신청 자격은 무엇인가요?", "gold_article_ids": [], "category": "소상공인", "notes": "TODO: 소상공인 보호 및 지원에 관한 법률"}
+# 위 5개는 형식 예시 — 100문항으로 확장하려면:
+# 1) backend/logs/queries.jsonl 에서 legal 라우팅된 질문 추출
+# 2) 카테고리 균형 (식품위생/세무/노동/개인정보/건축/소방 등) 맞춰서 100개 샘플
+# 3) 각 질문에 대해 정답 articleId (mst_articleNo) 라벨링 — 2인 검토
+# 4) 라벨 완료본을 data/legal_eval_set.jsonl 로 저장 (gitignore 처리, 외부 보관)
