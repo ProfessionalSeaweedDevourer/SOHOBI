@@ -93,6 +93,24 @@ module backendApp 'modules/container-app.bicep' = {
 }
 
 // ================================================================
+// 데이터 자원
+// ================================================================
+
+module cosmos 'modules/cosmos.bicep' = {
+  name: 'cosmos'
+  params: {
+    // global unique. 3-44자, 소문자/숫자/하이픈
+    name: '${namePrefix}-${env}-cosmos'
+    location: location
+    tags: tags
+    databaseName: 'sohobi'
+    dataContributorPrincipalIds: [
+      backendApp.outputs.principalId
+    ]
+  }
+}
+
+// ================================================================
 // Outputs (후속 모듈에서 참조)
 // ================================================================
 
@@ -105,3 +123,5 @@ output acrLoginServer string = acr.outputs.loginServer
 output containerAppsEnvId string = containerAppsEnv.outputs.id
 output backendAppFqdn string = backendApp.outputs.fqdn
 output backendAppPrincipalId string = backendApp.outputs.principalId
+output cosmosEndpoint string = cosmos.outputs.endpoint
+output cosmosDatabaseName string = cosmos.outputs.databaseName
