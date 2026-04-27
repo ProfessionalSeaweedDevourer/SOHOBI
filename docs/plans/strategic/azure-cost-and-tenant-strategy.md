@@ -128,6 +128,19 @@
 | PG 야간 정지 시 OAuth refresh 토큰 만료 영향 | 미확인 | 정지 cron 작성 시 검증 |
 | Defender 비활성화 후 보안 회귀 모니터링 | 미수립 | 알림 0건이지만 통상 점검 routine 필요 |
 
+## 6-A. Bicep IaC 권고사항·LOW 유의사항 (PR #328 리뷰 산출)
+
+PR #328(Foundation: Log Analytics + Storage + ACR) 리뷰에서 도출. 모두 blocker 아닌 **후속 PR 백로그**.
+
+| # | 권고 | 우선순위 | 처리 시점 |
+| --- | ---- | :------: | --------- |
+| 1 | Storage `allowSharedKeyAccess: false` 전환 + Container Apps managed identity → `Storage Blob Data Contributor` 부여. 백엔드 logger.py도 AAD 인증 경로로 마이그레이션 | LOW | 다음 PR(Container App 추가)과 동시 |
+| 2 | `.gitignore`의 `infra/bicep/main.json` 라인 제거 (`infra/bicep/**/*.json` 글롭에 흡수됨). 화이트리스트 `!infra/bicep/parameters/*.json` 의도 주석 추가 | LOW | ✅ PR #328 머지 시 동시 처리 (main 머지 충돌 해소 커밋) |
+| 3 | `acr.bicep`의 `zoneRedundancy: 'Disabled'` 필드 — Basic SKU에선 무의미. Premium 승격 시점에 의식적으로 추가하는 편이 명확 | LOW | Premium 승격 검토 시 |
+| 4 | 자원 이름 길이 가드 — 현재 `sohobiprodlogs`(15자)·`sohobiprodacr`(13자)는 한도 내. 향후 긴 `namePrefix` 사용 가능성 대비 `uniqueString(resourceGroup().id)` 짧은 해시 suffix 패턴 도입 검토 | LOW (보류) | 멀티 환경/팀 확장 시 |
+
+권고 1번은 **다음 PR(Container Apps env + Container App 모듈)과 함께 처리**가 자연스러움 — managed identity 설정과 Storage 권한 부여가 같은 변경 세트에서 묶임.
+
 ## 7. 비포함 (의도적 제외)
 
 - **운영 등급 SLA로 회귀**: portfolio 정체성 유지 전제. 향후 실 트래픽 발생 시 본 전략 재검토
@@ -143,3 +156,4 @@
 | 일자 | 변경 | 출처 |
 |------|------|------|
 | 2026-04-27 | 최초 작성 — 본 세션의 테넌트 이전·인덱스 재구축·비용 분석 통합 | 이 세션 |
+| 2026-04-27 | §6-A Bicep IaC 권고사항·LOW 유의사항 4건 추가 (PR #328 리뷰 산출, LOW#2는 머지 시 동시 처리) | PR #328 리뷰 |
