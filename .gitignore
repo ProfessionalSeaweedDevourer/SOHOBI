@@ -79,3 +79,8 @@ work/
 # 개인 취업용 자료 (팀 공유 제외)
 handoff/
 assets/
+
+# Bicep build 산출물 (ARM JSON — 소스는 .bicep)
+infra/bicep/main.json
+infra/bicep/**/*.json
+!infra/bicep/parameters/*.json
