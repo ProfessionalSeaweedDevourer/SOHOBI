@@ -114,6 +114,30 @@ module cosmos 'modules/cosmos.bicep' = {
   }
 }
 
+@description('OpenAI 모델 배포 활성화. false면 account만 생성. 신규 구독 quota 승인 후 true로 전환')
+param openaiDeployModels bool = false
+
+module openai 'modules/openai.bicep' = {
+  name: 'openai'
+  params: {
+    // global unique. custom subdomain 호환을 위해 2-40자
+    name: '${namePrefix}-${env}-openai'
+    location: location
+    tags: tags
+    deployModels: openaiDeployModels
+  }
+}
+
+module aiSearch 'modules/ai-search.bicep' = {
+  name: 'aiSearch'
+  params: {
+    // global unique. 2-60자, 소문자/숫자/하이픈
+    name: '${namePrefix}-${env}-search'
+    location: location
+    tags: tags
+  }
+}
+
 module postgres 'modules/postgres.bicep' = {
   name: 'postgres'
   params: {
@@ -144,3 +168,9 @@ output cosmosDatabaseName string = cosmos.outputs.databaseName
 output postgresFqdn string = postgres.outputs.fqdn
 output postgresDatabaseName string = postgres.outputs.databaseName
 output postgresAdministratorLogin string = postgres.outputs.administratorLogin
+output openaiEndpoint string = openai.outputs.endpoint
+output openaiChatDeployment string = openai.outputs.chatDeploymentName
+output openaiEmbeddingSmallDeployment string = openai.outputs.embeddingSmallDeploymentName
+output openaiEmbeddingLargeDeployment string = openai.outputs.embeddingLargeDeploymentName
+output aiSearchEndpoint string = aiSearch.outputs.endpoint
+output aiSearchName string = aiSearch.outputs.name
