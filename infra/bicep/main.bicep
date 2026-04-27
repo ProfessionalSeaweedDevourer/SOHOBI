@@ -59,6 +59,40 @@ module acr 'modules/acr.bicep' = {
 }
 
 // ================================================================
+// Compute 자원
+// ================================================================
+
+// Log Analytics shared key — Container Apps Environment 진단 destination 인증용.
+// listKeys()로 deploy time에 fetch (코드/state에 평문 저장 없음).
+resource logAnalyticsRef 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+  name: '${namePrefix}-logs'
+  dependsOn: [logAnalytics]
+}
+
+module containerAppsEnv 'modules/container-apps-env.bicep' = {
+  name: 'containerAppsEnv'
+  params: {
+    name: '${namePrefix}-${env}-env'
+    location: location
+    tags: tags
+    logAnalyticsCustomerId: logAnalytics.outputs.customerId
+    logAnalyticsSharedKey: logAnalyticsRef.listKeys().primarySharedKey
+  }
+}
+
+module backendApp 'modules/container-app.bicep' = {
+  name: 'backendApp'
+  params: {
+    name: '${namePrefix}-backend'
+    location: location
+    tags: tags
+    environmentId: containerAppsEnv.outputs.id
+    acrName: acr.outputs.name
+    // 첫 배포는 quickstart 이미지로 (실제 backend 이미지는 GitHub Actions deploy 후 교체)
+  }
+}
+
+// ================================================================
 // Outputs (후속 모듈에서 참조)
 // ================================================================
 
@@ -68,3 +102,6 @@ output storageId string = storage.outputs.id
 output storageName string = storage.outputs.name
 output acrId string = acr.outputs.id
 output acrLoginServer string = acr.outputs.loginServer
+output containerAppsEnvId string = containerAppsEnv.outputs.id
+output backendAppFqdn string = backendApp.outputs.fqdn
+output backendAppPrincipalId string = backendApp.outputs.principalId
