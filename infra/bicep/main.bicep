@@ -128,7 +128,10 @@ module openai 'modules/openai.bicep' = {
   }
 }
 
-module aiSearch 'modules/ai-search.bicep' = {
+@description('Azure AI Search 활성화. Basic SKU = $73/월 정액, 사용량 무관. 자체 RAG(FAISS/SQLite-VSS/pgvector) 대안 검토 중이라 default=false')
+param enableAiSearch bool = false
+
+module aiSearch 'modules/ai-search.bicep' = if (enableAiSearch) {
   name: 'aiSearch'
   params: {
     // global unique. 2-60자, 소문자/숫자/하이픈
@@ -172,5 +175,5 @@ output openaiEndpoint string = openai.outputs.endpoint
 output openaiChatDeployment string = openai.outputs.chatDeploymentName
 output openaiEmbeddingSmallDeployment string = openai.outputs.embeddingSmallDeploymentName
 output openaiEmbeddingLargeDeployment string = openai.outputs.embeddingLargeDeploymentName
-output aiSearchEndpoint string = aiSearch.outputs.endpoint
-output aiSearchName string = aiSearch.outputs.name
+output aiSearchEndpoint string = enableAiSearch ? aiSearch!.outputs.endpoint : ''
+output aiSearchName string = enableAiSearch ? aiSearch!.outputs.name : ''
