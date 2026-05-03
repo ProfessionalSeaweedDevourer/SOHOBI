@@ -190,9 +190,9 @@
 
 | 지표 | 수치 |
 | ---- | ---- |
-| 추가 커밋 | 9건 |
-| 추가 PR (merged) | 5건 |
-| 주요 작업 | 린트 도구 도입 (Ruff·Prettier·pre-commit), axios 공급망 공격 대응·의존성 핀 |
+| 추가 커밋 | 50건 |
+| 추가 PR (merged) | 34건 |
+| 주요 작업 | Bicep IaC 기반 구축 (신규 Azure 테넌트), Legal AI Search 인덱스 재구축 파이프라인, Azure 이전 사전준비 스크립트·런북, PostgreSQL 야간 정지 CI, pgvector 자체 RAG 전환 검토 |
 
 ---
 
@@ -377,12 +377,23 @@ SOHOBI/
 │       └── assets/               # 이미지·아이콘
 ├── docs/                         # → docs/README.md 참조
 │   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
-│   ├── dev-summary/              # 팀원별 일일 개발 요약 (91건)
+│   ├── dev-summary/              # 팀원별 일일 개발 요약 (96건)
 │   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
-│   ├── plans/                    # 설계·분석 플랜 문서 (125건)
-│   ├── session-reports/          # 세션 인수인계 리포트 (83건)
+│   ├── plans/                    # 설계·분석 플랜 문서 (131건)
+│   ├── runbooks/                 # 운영 런북 (Azure 이전 등)
+│   ├── session-reports/          # 세션 인수인계 리포트 (84건)
 │   └── test-reports/             # 보안 테스트·성능 베이스라인 리포트
-├── .github/workflows/            # CI/CD (프론트 배포, 백엔드 배포, 스모크 테스트)
+├── data/                         # 정적 데이터 (법령 평가셋 템플릿 등)
+├── infra/                        # 인프라 코드 (IaC)
+│   └── bicep/                    # Azure Bicep 모듈 (Log Analytics, Storage, ACR, CosmosDB, PostgreSQL, OpenAI, AI Search, Container App)
+│       ├── main.bicep
+│       ├── modules/              # 9개 리소스 모듈
+│       └── parameters/           # 환경별 파라미터
+├── scripts/                      # 유틸리티 스크립트
+│   ├── legal_index/              # Legal AI Search 인덱스 재구축 파이프라인 (6단계 + eval)
+│   ├── migrate/                  # Azure 이전 사전준비·백업 스크립트 (6개)
+│   └── worktree-setup.sh         # 워크트리 초기화 스크립트
+├── .github/workflows/            # CI/CD (프론트·백엔드 배포, 스모크 테스트, Bicep IaC 배포, PG 야간 정지)
 └── CLAUDE.md                     # Claude Code 영구 지시
 ```
 
