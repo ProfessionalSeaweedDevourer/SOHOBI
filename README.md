@@ -377,7 +377,7 @@ SOHOBI/
 │       └── assets/               # 이미지·아이콘
 ├── docs/                         # → docs/README.md 참조
 │   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
-│   ├── dev-summary/              # 팀원별 일일 개발 요약 (96건)
+│   ├── dev-summary/              # 팀원별 일일 개발 요약 (97건)
 │   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
 │   ├── plans/                    # 설계·분석 플랜 문서 (131건)
 │   ├── runbooks/                 # 운영 런북 (Azure 이전 등)
@@ -392,6 +392,7 @@ SOHOBI/
 ├── scripts/                      # 유틸리티 스크립트
 │   ├── legal_index/              # Legal AI Search 인덱스 재구축 파이프라인 (6단계 + eval)
 │   ├── migrate/                  # Azure 이전 사전준비·백업 스크립트 (6개)
+│   ├── outdated/                 # 구버전 스크립트 보관
 │   └── worktree-setup.sh         # 워크트리 초기화 스크립트
 ├── .github/workflows/            # CI/CD (프론트·백엔드 배포, 스모크 테스트, Bicep IaC 배포, PG 야간 정지)
 └── CLAUDE.md                     # Claude Code 영구 지시
@@ -484,7 +485,7 @@ pre-commit install
 ### 품질 등급 (최적화 후 100건)
 
 | 에이전트 | 승인률 | Grade A |
-|----------|--------|---------|
+|----------|--------|----------|
 | 행정 (admin) | 100% | 84% |
 | 대화 (chat) | 100% | 100% |
 | 재무 (finance) | 100% | 100% |
