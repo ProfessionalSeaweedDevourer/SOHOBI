@@ -83,6 +83,9 @@ assets/
 # 블로그 작업 거점 (포스팅 진행 기간 동안 로컬 전용)
 blog/
 
+# 블로그 게시물 스크린샷 (repo 루트 임시 자산)
+/post*.png
+
 # Bicep build 산출물 (ARM JSON — 소스는 .bicep)
 infra/bicep/**/*.json
 !infra/bicep/parameters/*.json
