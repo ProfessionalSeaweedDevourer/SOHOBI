@@ -104,5 +104,6 @@ git worktree를 생성한다. 브랜치명을 생략하면 현재 작업 맥락�
 ## 관련 문서
 
 - [CLAUDE.md](../../CLAUDE.md) — 영구 규칙 전체
+- [claude-code-cli-vs-ide.md](claude-code-cli-vs-ide.md) — CLI vs VSCode 익스텐션 하이브리드 운용 가이드
 - [backend-logs.md](backend-logs.md) — 백엔드 로그 상세 필터링
 - [code-review.md](code-review.md) — PR 리뷰 체크리스트
