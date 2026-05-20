@@ -11,6 +11,8 @@ GitHub Actions CI/CD 파이프라인.
 | `azure-static-web-apps-*.yml` | Azure Static Web Apps CI/CD | `main` push, PR open/sync/close, 매일 자정(UTC) cron | 프론트엔드 (`frontend/`) → Azure Static Web Apps |
 | `deploy-backend.yml` | Deploy Backend to Azure Container Apps | `main` push (`backend/**` 변경 시) | 백엔드 → Azure Container Apps (OIDC 인증) |
 | `smoke-test.yml` | Backend Smoke Test | `main` push, PR | 배포 후 헬스 체크 + API 키 인증 검증 |
+| `azure-bicep-deploy.yml` | Bicep What-if / Deploy | PR(`infra/**` what-if), `main` push(deploy) | Azure 인프라 (Bicep IaC, 신규 테넌트 OIDC) |
+| `pg-nightly-stop.yml` | PostgreSQL Nightly Stop | 야간 cron | PostgreSQL Flexible Server 정지 (비용 절감) |
 
 ## 필요 GitHub Secrets
 

@@ -16,7 +16,19 @@ cd frontend && npm install
 
 ## 테스트
 
-공식 테스트 스위트 없음. API 동작 확인:
+`backend/tests/` 에 pytest 스위트가 있다 (도메인별 agent·plugin·signoff·auth 단위 테스트).
+`conftest.py` 가 `backend/` 를 `sys.path` 에 추가하고 `.env` 를 로드하므로 **반드시 `backend/` 에서 실행**한다.
+
+```bash
+# 전체
+cd backend && .venv/bin/python3 -m pytest tests/
+# 단일 파일 / 단일 케이스
+cd backend && .venv/bin/python3 -m pytest tests/test_legal_agent.py
+cd backend && .venv/bin/python3 -m pytest tests/test_legal_agent.py::test_name -q
+```
+
+`.env` 의 Azure 키 유무에 따라 일부 테스트는 `skipif` 로 건너뛴다 (네트워크 의존 케이스).
+API E2E 동작 확인:
 
 ```bash
 curl -s -X POST http://localhost:8000/api/v1/query \
@@ -37,6 +49,41 @@ curl -s -X POST http://localhost:8000/api/v1/query \
 | `frontend/` | React + Vite + Tailwind 프론트엔드 |
 | `docs/plans/` | 플랜 문서 (`YYYY-MM-DD-이름.md`) |
 | `docs/session-reports/` | 세션 리포트 및 인수인계 문서 |
+
+## 아키텍처 — 요청 처리 흐름
+
+질문 1건이 답변이 되기까지 `api_server.py` → `domain_router.py` → `orchestrator.py` → `agents/` → `signoff/` 를 순서대로 거친다. 이 파이프라인을 모르면 에이전트 한 개만 봐도 전체가 안 보인다.
+
+```text
+POST /api/v1/query (또는 /stream)
+  └ domain_router: ① 키워드 2개+ 매칭 → 즉시 분류  ② 실패 시 LLM JSON 분류 (fallback: admin)
+      → admin | finance | legal | location | chat
+  └ orchestrator.run() / run_stream(): 재시도 루프 (최대 3회)
+      ├ AGENT_MAP[domain](kernel) 인스턴스화
+      ├ agent.generate_draft(question, retry_prompt, previous_draft, profile, prior_history, **extra)
+      ├ run_signoff(client, domain, draft) → grade A/B/C  (chat 포함 전 도메인 실행)
+      │   · A: 통과   · B: 경고 포함 통과   · C: retry_prompt 생성 → 에이전트 재호출
+      └ draft 가 직전 attempt 와 동일하면 조기 종료 (재시도 무의미)
+```
+
+핵심 규칙:
+
+- **모든 도메인이 Sign-off 를 거친다.** `orchestrator` 의 재시도 루프는 `run_signoff()` 를 무조건 호출한다. 도메인별 루브릭 코드만 다르다 (`signoff_agent.py` 의 `REQUIRED_CODES`: 전 도메인 공통 `C1~C5` + 도메인 코드 + `SEC1~3`·`RJ1~3`, chat 의 도메인 코드는 `CH1~CH5`). Sign-off 를 건너뛰는 유일한 경로는 아래 `is_partial` 응답뿐이다.
+- **에이전트 반환 타입이 도메인마다 다르다.** legal·admin·chat 은 `str`, **finance·location 은 `dict`** (`draft` + `chart`/`charts` + `updated_params` + `adm_codes` + `type`). orchestrator 가 `isinstance(raw, dict)` 로 분기하므로, `AGENT_MAP` 에 에이전트를 추가·변경할 때는 `generate_draft` 시그니처와 반환 형태 호환성을 반드시 확인한다 (PR #290 회귀 교훈).
+- `dict` 반환에 `is_partial=True` 가 있으면 Sign-off 없이 즉시 반환 (대화형 정보 수집 중간 단계).
+- **location 에이전트는 `context`(adm_codes·business_type·location_name 등)를 갱신**하여 재시도·후속 질문에 재사용한다.
+- Sign-off 의 grade 는 이슈 severity 로 결정: `high`/`medium` → C(재처리), `low`만 → B, 무이슈 → A. `SEC1~SEC3`·`RJ1~RJ3`(보안·거절) 코드는 severity 무관 항상 `high`.
+
+레이어:
+
+| 레이어 | 위치 | 역할 |
+| ------ | ---- | ---- |
+| 라우터 | `*_router.py` (auth/map/feedback/checklist/report/roadmap 등) | FastAPI 엔드포인트. `verify_api_key` 의존성으로 보호 |
+| 오케스트레이션 | `orchestrator.py` + `kernel_setup.py` | Semantic Kernel 커널·signoff client 생성, 재시도 루프 |
+| 에이전트 | `backend/agents/` | 도메인별 draft 생성. 수정은 **여기서만** |
+| 플러그인 | `backend/plugins/` | 에이전트가 호출하는 SK 함수 — `LegalSearchPlugin`(Azure AI Search 벡터검색), `GovSupportPlugin`, `FinanceSimulationPlugin`(Monte Carlo), `FoodBusinessPlugin`, `AdminProcedurePlugin` |
+| 검증 | `backend/signoff/` + `backend/prompts/signoff_*/` | 도메인별 루브릭 코드로 draft 채점 |
+| 데이터 | `backend/db/dao/` | DAO 모듈. 실제 DB 는 Azure (SQLite 로컬 파일 없음) |
 
 ## 프로젝트 규칙
 

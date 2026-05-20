@@ -14,4 +14,5 @@
 | [code-review.md](code-review.md) | PR별 코드 리뷰 절차 및 판단 기준 |
 | [infra-architecture.md](infra-architecture.md) | 라이브 인프라 구성도 (Azure Static Web Apps + Container Apps + PostgreSQL) |
 | [routing-debug.md](routing-debug.md) | 도메인 라우터 오분류 디버깅 워크플로우 (로그 기반 분석) |
+| [tuning-hypothesis-template.md](tuning-hypothesis-template.md) | 성능·품질 튜닝 가설 기록 템플릿 |
 | [2026-04-08-workflow-revision-instructions-for-future.md](2026-04-08-workflow-revision-instructions-for-future.md) | Git 워크플로우 개정 지시서 (프로젝트 종료 후 적용 예정) |

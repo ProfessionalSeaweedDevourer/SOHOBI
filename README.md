@@ -71,7 +71,7 @@
 │  세션 컨텍스트(profile) 전달          │
 │  에이전트 호출 + 타이밍 측정          │
 │  SSE 스트리밍 지원 (run_stream)      │
-│  chat 도메인은 Sign-off 바이패스     │
+│  부분 응답(is_partial)만 즉시 반환    │
 └──┬──────────┬──────────┬──────┬───┬─┘
    │          │          │      │   │
    ▼          ▼          ▼      ▼   ▼
@@ -98,7 +98,7 @@
 `domain_router.py`는 2단계로 질문을 분류합니다.
 
 1. **키워드 매칭** — 미리 정의된 키워드 목록에서 2개 이상 일치하면 즉시 반환 (confidence 0.85)
-2. **LLM 분류** — 키워드 매칭 실패 시 GPT-4o에 JSON 분류 요청 (fallback: `admin`)
+2. **LLM 분류** — 키워드 매칭 실패 시 LLM(`router` 서비스)에 JSON 분류 요청 (fallback: `admin`)
 
 | 도메인 | 분류 기준 키워드 예시 |
 | ------ | -------------------- |
@@ -106,7 +106,7 @@
 | `finance` | 재무, 대출, 수익, 비용, 투자, 시뮬레이션 |
 | `legal` | 법, 계약, 소송, 보증금, 임대차, 판례 |
 | `location` | 상권, 지역, 홍대, 강남, 잠실, 비교 |
-| `chat` | 안녕, 사용법, 어떻게 사용, 기능 설명 (Sign-off 바이패스) |
+| `chat` | 안녕, 사용법, 어떻게 사용, 기능 설명 |
 
 ### Sign-off 루브릭
 
@@ -118,7 +118,7 @@
 | `finance` | C1~C5 (공통) + F1~F5 (재무) + SEC1~SEC3 (보안) + RJ1~RJ3 (거절) |
 | `legal` | C1~C5 (공통) + G1~G4 (법무) + SEC1~SEC3 (보안) + RJ1~RJ3 (거절) |
 | `location` | C1~C5 (공통) + S1~S5 (상권) + SEC1~SEC3 (보안) + RJ1~RJ3 (거절) |
-| `chat` | Sign-off 없음 (즉시 반환) |
+| `chat` | C1~C5 (공통) + CH1~CH5 (대화) + SEC1~SEC3 (보안) + RJ1~RJ3 (거절) |
 
 등급 판정은 이슈의 severity로 결정된다: `high`/`medium` severity 이슈 → **grade C** (재처리), `low` severity 이슈만 있거나 경고만 있음 → **grade B** (경고 포함 통과), 이슈·경고 없음 → **grade A** (통과). SEC1~SEC3·RJ1~RJ3 코드는 severity 무관 항상 `high`로 강제된다.
 
@@ -126,7 +126,7 @@
 
 #### 안내 에이전트 (`agents/chat_agent.py`)
 
-- **플러그인**: 없음 (Sign-off 바이패스, 즉시 반환)
+- **플러그인**: 없음 (응답은 다른 에이전트와 동일하게 Sign-off 검증을 거침)
 - **동작**: 서비스 안내, 에이전트 사용법 설명, 일상 대화 처리
 - **출력 기준**: 4가지 전문 에이전트의 기능·입력값·예시 질문을 친절하게 안내
 
@@ -234,7 +234,7 @@
 | 분류 | 기술 |
 |------|------|
 | AI 오케스트레이션 | Semantic Kernel 1.41.1 |
-| AI 모델 플랫폼 | Azure AI Foundry (GPT-4o) |
+| AI 모델 플랫폼 | Azure AI Foundry (Azure OpenAI) |
 | API 서버 | FastAPI 0.135 + Uvicorn 0.42 |
 | RAG 파이프라인 | Azure AI Search 11.6 |
 | 세션 저장소 | Azure Cosmos DB |
@@ -344,7 +344,7 @@ SOHOBI/
 │   ├── variable_extractor.py     # 재무 변수 자동 추출 (백그라운드)
 │   ├── security_logging.py       # 보안 이벤트 로거
 │   ├── agents/                   # 하위 에이전트
-│   │   ├── chat_agent.py         # 안내 (Sign-off 바이패스)
+│   │   ├── chat_agent.py         # 안내·일상 대화
 │   │   ├── legal_agent.py        # 법률·세무
 │   │   ├── location_agent.py     # 상권 분석
 │   │   ├── finance_agent.py      # 재무 시뮬레이션
@@ -377,9 +377,9 @@ SOHOBI/
 │       └── assets/               # 이미지·아이콘
 ├── docs/                         # → docs/README.md 참조
 │   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
-│   ├── dev-summary/              # 팀원별 일일 개발 요약 (111건)
+│   ├── dev-summary/              # 팀원별 일일 개발 요약 (113건)
 │   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
-│   ├── plans/                    # 설계·분석 플랜 문서 (131건)
+│   ├── plans/                    # 설계·분석 플랜 문서 (130건)
 │   ├── runbooks/                 # 운영 런북 (Azure 이전 등)
 │   ├── session-reports/          # 세션 인수인계 리포트 (84건)
 │   └── test-reports/             # 보안 테스트·성능 베이스라인 리포트
