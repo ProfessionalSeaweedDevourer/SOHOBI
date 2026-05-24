@@ -377,7 +377,7 @@ SOHOBI/
 │       └── assets/               # 이미지·아이콘
 ├── docs/                         # → docs/README.md 참조
 │   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
-│   ├── dev-summary/              # 팀원별 일일 개발 요약 (97건)
+│   ├── dev-summary/              # 팀원별 일일 개발 요약 (111건)
 │   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
 │   ├── plans/                    # 설계·분석 플랜 문서 (131건)
 │   ├── runbooks/                 # 운영 런북 (Azure 이전 등)
