@@ -9,6 +9,8 @@
 | 파일 | 설명 |
 |------|------|
 | [backend-logs.md](backend-logs.md) | Azure Container Apps 백엔드 로그 조회 방법 (쿼리, 거부, 에러 필터링) |
+| [claude-code-cli-vs-ide.md](claude-code-cli-vs-ide.md) | CLI vs VSCode 익스텐션 하이브리드 운용 가이드 |
+| [claude-code-guide.md](claude-code-guide.md) | Claude Code 프로젝트 전용 슬래시 명령 카탈로그 |
 | [code-review.md](code-review.md) | PR별 코드 리뷰 절차 및 판단 기준 |
 | [infra-architecture.md](infra-architecture.md) | 라이브 인프라 구성도 (Azure Static Web Apps + Container Apps + PostgreSQL) |
 | [routing-debug.md](routing-debug.md) | 도메인 라우터 오분류 디버깅 워크플로우 (로그 기반 분석) |
