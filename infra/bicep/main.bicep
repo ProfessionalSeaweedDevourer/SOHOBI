@@ -84,6 +84,12 @@ module containerAppsEnv 'modules/container-apps-env.bicep' = {
   }
 }
 
+@description('실 backend 이미지를 ACR에서 가져올지. true 전환 전 ACR에 이미지 사전 적재 필수 (build-backend-new.yml workflow_dispatch)')
+param useBackendAcrImage bool = false
+
+@description('Backend Container 이미지 (ACR 사용 시 sohobi-backend:latest 등). useBackendAcrImage=false면 무시되고 quickstart 사용')
+param backendImage string = 'sohobi-backend:latest'
+
 module backendApp 'modules/container-app.bicep' = {
   name: 'backendApp'
   params: {
@@ -92,7 +98,34 @@ module backendApp 'modules/container-app.bicep' = {
     tags: tags
     environmentId: containerAppsEnv.outputs.id
     acrName: acr.outputs.name
-    // 첫 배포는 quickstart 이미지로 (실제 backend 이미지는 GitHub Actions deploy 후 교체)
+    image: useBackendAcrImage ? '${acr.outputs.loginServer}/${backendImage}' : 'mcr.microsoft.com/k8se/quickstart:latest'
+    useAcrImage: useBackendAcrImage
+    targetPort: useBackendAcrImage ? 8000 : 80
+    livenessProbePath: useBackendAcrImage ? '/health' : ''
+    envVars: useBackendAcrImage ? [
+      // 비-민감 endpoint·식별자. 민감 값(API key·password)은 az containerapp secret set + secretRef로 별도 주입
+      { name: 'APP_ENV', value: 'production' }
+      { name: 'AZURE_OPENAI_ENDPOINT', value: openai.outputs.endpoint }
+      { name: 'AZURE_OPENAI_API_VERSION', value: '2024-08-01-preview' }
+      { name: 'AZURE_DEPLOYMENT_NAME', value: openai.outputs.chatDeploymentName }
+      { name: 'AZURE_OPENAI_CHAT_DEPLOYMENT', value: openai.outputs.chatDeploymentName }
+      { name: 'AZURE_EMBEDDING_DEPLOYMENT', value: openai.outputs.embeddingLargeDeploymentName }
+      { name: 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT', value: openai.outputs.embeddingLargeDeploymentName }
+      { name: 'AZURE_OPENAI_EMBEDDING_DIMS', value: '3072' }
+      // cosmos.outputs.* 참조는 backendApp ↔ cosmos 순환 의존 발생 (cosmos가 backendApp.principalId 의존)
+      // → 결정적 naming convention 기반 static 구성으로 우회
+      { name: 'COSMOS_ENDPOINT', value: 'https://${namePrefix}-${env}-cosmos.documents.azure.com:443/' }
+      { name: 'COSMOS_DATABASE_NAME', value: 'sohobi' }
+      { name: 'PG_HOST', value: postgres.outputs.fqdn }
+      { name: 'PG_PORT', value: '5432' }
+      { name: 'PG_DB', value: postgres.outputs.databaseName }
+      { name: 'PG_USER', value: postgres.outputs.administratorLogin }
+      { name: 'PG_SSLMODE', value: 'require' }
+      { name: 'VWORLD_DOMAIN', value: 'https://sohobi.net' }
+      { name: 'AZURE_STORAGE_CONTAINER', value: 'sohobi-logs' }
+      // RAG는 cutover 후 pgvector 백필 전까지 비활성 — backend에 fallback 로직 있음
+      { name: 'RAG_BACKEND', value: 'disabled' }
+    ] : []
   }
 }
 
