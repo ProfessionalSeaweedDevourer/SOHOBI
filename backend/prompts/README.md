@@ -26,6 +26,9 @@ prompts/
 │   └── evaluate/
 │       ├── skprompt.txt             ← 행정 도메인 루브릭 (L1~L4: C1~C5, A1~A5, SEC1~SEC3, RJ1~RJ3)
 │       └── config.json              ← 모델 설정 (temperature, max_tokens)
+├── signoff_chat/
+│   └── evaluate/
+│       └── skprompt.txt             ← 대화 도메인 루브릭 (C1~C5, CH1~CH5, SEC1~SEC3, RJ1~RJ3 / config.json 없음 — 기본 설정 사용)
 ├── signoff_finance/
 │   └── evaluate/
 │       ├── skprompt.txt             ← 재무 도메인 루브릭 (L1~L4: C1~C5, F1~F5, SEC1~SEC3, RJ1~RJ3)
@@ -48,13 +51,14 @@ prompts/
 | CHANG | `signoff_finance/` | F1~F5 (수치, 가정 조건, 리스크 등) |
 | NAM | `signoff_admin/` | A1~A5 (법령, 서식, 절차, 기관, 기한) |
 | CHOI | `signoff_location/` | S1~S5 (수치·기준·기회리스크·지역업종·면책) |
+| PARK | `signoff_chat/` | CH1~CH5 (안내 도메인 평가 항목) |
 | PARK | 공통(C1~C5) + 보안(SEC1~SEC3) + 거부(RJ1~RJ3) 전체 관리 | 전 도메인 공통 레이어 |
 
 ---
 
 ## 2. 루브릭이란 무엇인가
 
-Sign-off Agent는 하위 에이전트(AdminAgent, FinanceAgent, LegalAgent, LocationAgent)가 생성한 **응답 초안(draft)** 을 읽고, 아래 질문에 JSON으로 답합니다.
+Sign-off Agent는 하위 에이전트(AdminAgent, FinanceAgent, LegalAgent, LocationAgent, ChatAgent)가 생성한 **응답 초안(draft)** 을 읽고, 아래 질문에 JSON으로 답합니다.
 
 ```
 "이 응답이 우리 서비스의 품질 기준을 통과하는가?"

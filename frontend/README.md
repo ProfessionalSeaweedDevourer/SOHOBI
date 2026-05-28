@@ -15,7 +15,7 @@ SOHOBI 통합 에이전트(`backend/`)와 연동하는 React 기반 웹 UI입니
 | 아이콘 | lucide-react | ^0.487 |
 | 토스트 | sonner | ^2.x |
 | 지도 | OpenLayers | ^10.x |
-| React Router | react-router-dom | v6 |
+| React Router | react-router-dom | v7 |
 | 마크다운 | react-markdown | - |
 
 ---
@@ -54,6 +54,7 @@ NeoFrontend_Mar30 기반으로 마이그레이션된 디자인 시스템:
 | `/stats` | `StatsPage.jsx` | 서비스 통계 |
 | `/roadmap` | `Roadmap.jsx` | 제품 로드맵 |
 | `/privacy` | `PrivacyPolicy.jsx` | 개인정보처리방침 |
+| `/auth/callback` | `AuthCallback.jsx` | Google OAuth 인증 콜백 |
 | `/dev/login` | `DevLogin.jsx` | 개발자 로그인 |
 | `/dev` | `DevHub.jsx` | 개발자 모드 — Sign-off 판정 내역 및 루브릭 |
 | `/dev/logs` | `LogViewer.jsx` | 로그 뷰어 — 요청/거부 이력 확인 |

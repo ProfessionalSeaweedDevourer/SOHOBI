@@ -30,8 +30,9 @@
 | finance | C1~C5 | F1~F5 | SEC1~3, RJ1~3 |
 | legal | C1~C5 | G1~G4 | SEC1~3, RJ1~3 |
 | location | C1~C5 | S1~S5 | SEC1~3, RJ1~3 |
+| chat | C1~C5 | CH1~CH5 | SEC1~3, RJ1~3 |
 
-> `chat` 도메인은 Sign-off를 바이패스한다 (즉시 반환).
+> 모든 도메인이 Sign-off 검증을 거친다. `chat`은 초기엔 바이패스했으나 보안 강화를 위해 검증 대상에 편입되었다.
 
 ## 파일
 

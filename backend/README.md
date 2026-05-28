@@ -467,11 +467,11 @@ backend/
 ├── variable_extractor.py         # 이전 응답에서 재무 변수 추출 (Path B)
 ├── auth.py                       # API Key 인증 의존성
 ├── agents/
-│   ├── admin_agent.py            # 행정 에이전트 (프로필 주입 + 행정절차·상권·정부지원)
+│   ├── admin_agent.py            # 행정 에이전트 (프로필 주입 + 행정절차·정부지원)
 │   ├── finance_agent.py          # 재무 에이전트 (프로필 주입 + 4단계 시뮬레이션)
 │   ├── legal_agent.py            # 법무 에이전트 (프로필 주입 + 법령 RAG)
 │   ├── location_agent.py         # 상권분석 에이전트 (Azure PostgreSQL 조회 + LLM 분析)
-│   └── chat_agent.py             # 안내 에이전트 (Sign-off 바이패스, 서비스 안내 전담)
+│   └── chat_agent.py             # 안내 에이전트 (서비스 안내·일상 대화 전담)
 ├── db/                           # → db/README.md 참조
 │   ├── repository.py             # CommercialRepository — Azure PostgreSQL 연결 풀
 │   ├── finance_db.py             # 재무 시뮬레이션용 DB 조회
@@ -488,6 +488,7 @@ backend/
 ├── prompts/                      # 도메인별 Sign-off 평가 루브릭
 │   ├── README.md                 # 루브릭 수정 가이드
 │   ├── signoff_admin/evaluate/skprompt.txt      # A1~A5
+│   ├── signoff_chat/evaluate/skprompt.txt       # CH1~CH5 (config.json 없음)
 │   ├── signoff_finance/evaluate/skprompt.txt    # F1~F5, warnings + grade
 │   ├── signoff_legal/evaluate/skprompt.txt      # G1~G4, warnings + grade
 │   └── signoff_location/evaluate/skprompt.txt  # S1~S5

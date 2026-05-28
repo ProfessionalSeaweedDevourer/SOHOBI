@@ -12,4 +12,5 @@
 | [sohobi_security_test_results_v1_20260326.md](sohobi_security_test_results_v1_20260326.md) | 보안 테스트 결과 v1 |
 | [sohobi_security_test_results_v2_20260327.md](sohobi_security_test_results_v2_20260327.md) | 보안 테스트 결과 v2 — v1 이후 패치 검증 |
 | [2026-04-08-perf-baseline.md](2026-04-08-perf-baseline.md) | 프론트엔드 성능 베이스라인 (Lighthouse 기준) |
+| [chat_agent_content_filter_retry_20260413.md](chat_agent_content_filter_retry_20260413.md) | chat 에이전트 콘텐츠 필터 재시도 검증 결과 |
 | [screenshots/](screenshots/) | 테스트 실행 스크린샷 |
