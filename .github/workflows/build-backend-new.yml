@@ -31,6 +31,11 @@ permissions:
   id-token: write
   contents: read
 
+# 동시 dispatch 차단 — cutover D-day 중복 실행 또는 형제 워크플로(Bicep deploy)와 시간 겹침 시 revision race 방지
+concurrency:
+  group: deploy-backend-new
+  cancel-in-progress: false
+
 env:
   AZURE_RESOURCE_GROUP: rg-sohobi-prod
   ACR_NAME: sohobiprodacr
@@ -39,6 +44,8 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # prod ACR push 는 main 브랜치에서만 허용. dispatch 권한자가 feature 브랜치에서 실수로 검증되지 않은 코드를 push 하는 사고 방지
+    if: ${{ github.ref == 'refs/heads/main' }}
     outputs:
       image: ${{ steps.image.outputs.image }}
     steps:
@@ -52,11 +59,14 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID_B }}
 
       - name: ACR 로그인
-        run: az acr login --name "$ACR_NAME"
+        run: |
+          set -euo pipefail
+          az acr login --name "$ACR_NAME"
 
       - name: 이미지 태그 계산
         id: image
         run: |
+          set -euo pipefail
           IMAGE_BASE="${ACR_NAME}.azurecr.io/sohobi-backend"
           SHA_TAG="${IMAGE_BASE}:${GITHUB_SHA}"
           echo "image=$SHA_TAG" >> "$GITHUB_OUTPUT"
@@ -65,8 +75,9 @@ jobs:
       - name: Docker 이미지 빌드 + ACR push
         env:
           EXTRA_TAG: ${{ inputs.image_tag }}
+          IMAGE: ${{ steps.image.outputs.image }}
         run: |
-          IMAGE="${{ steps.image.outputs.image }}"
+          set -euo pipefail
           docker build -t "$IMAGE" backend/
           docker push "$IMAGE"
           # latest 태그도 동시 갱신
@@ -74,9 +85,13 @@ jobs:
           docker push "${ACR_NAME}.azurecr.io/sohobi-backend:latest"
           # 사용자 지정 태그 (선택). env 경유로 명령어 주입 방지
           if [ -n "$EXTRA_TAG" ]; then
-            # 허용 문자만 통과 (영문/숫자/하이픈/점/언더바)
+            # 허용 문자만 통과 (영문/숫자/하이픈/점/언더바) + 길이 제한 (ACR repository tag 한도 128자)
             if ! printf '%s' "$EXTRA_TAG" | grep -Eq '^[A-Za-z0-9._-]+$'; then
               echo "ERROR: image_tag에 허용되지 않는 문자가 포함됨: $EXTRA_TAG" >&2
+              exit 1
+            fi
+            if [ "${#EXTRA_TAG}" -gt 128 ]; then
+              echo "ERROR: image_tag 길이 초과 (${#EXTRA_TAG} > 128)" >&2
               exit 1
             fi
             EXTRA="${ACR_NAME}.azurecr.io/sohobi-backend:${EXTRA_TAG}"
@@ -85,9 +100,24 @@ jobs:
             echo "Extra tag pushed: $EXTRA"
           fi
 
+      - name: ACR push 후 tag 실제 존재 확인
+        run: |
+          set -euo pipefail
+          # docker push exit 0 만으로는 OIDC 토큰 만료·retry stale 등 엣지 케이스 silent 통과 가능 — ACR 실측 검증
+          if ! az acr repository show-tags \
+            --name "$ACR_NAME" \
+            --repository sohobi-backend \
+            --query "[?@=='$GITHUB_SHA']" -o tsv | grep -q .; then
+            echo "FAIL — ACR 에 $GITHUB_SHA 태그 미존재 (push 실패 가능성)" >&2
+            exit 1
+          fi
+          echo "✓ ACR 에 $GITHUB_SHA 태그 확인"
+          echo ""
+          echo "deploy input: ${{ inputs.deploy }}"
+
   deploy:
     needs: build-and-push
-    if: ${{ inputs.deploy == 'true' }}
+    if: ${{ inputs.deploy == 'true' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Azure 로그인 (OIDC, 신규 테넌트 B)
@@ -99,32 +129,66 @@ jobs:
 
       - name: 진행 중 프로비저닝 완료 대기 (최대 6분)
         run: |
+          set -euo pipefail
+          FINAL_STATE=""
           for i in $(seq 1 12); do
             STATE=$(az containerapp show \
               --name "$CONTAINER_APP_NAME" \
               --resource-group "$AZURE_RESOURCE_GROUP" \
-              --query "properties.provisioningState" -o tsv)
+              --query "properties.provisioningState" -o tsv 2>/dev/null || echo "")
+            if [ -z "$STATE" ]; then
+              echo "WARN: provisioningState 조회 실패 (네트워크/권한) — 30초 후 재시도 ($i/12)" >&2
+              sleep 30
+              continue
+            fi
             if [ "$STATE" = "Succeeded" ] || [ "$STATE" = "Failed" ] || [ "$STATE" = "Canceled" ]; then
-              echo "provisioningState: $STATE — 배포 진행"
+              FINAL_STATE="$STATE"
+              echo "provisioningState: $STATE — 다음 단계 진행"
               break
             fi
             echo "progress: $STATE — 30초 대기 ($i/12)"
             sleep 30
           done
+          # 루프 종료 후 Failed/Canceled 면 update 자체를 시도하지 말고 즉시 중단
+          if [ "$FINAL_STATE" = "Failed" ] || [ "$FINAL_STATE" = "Canceled" ]; then
+            echo "FAIL — 진행 중 프로비저닝이 $FINAL_STATE 상태로 종료. 수동 조사 필요" >&2
+            exit 1
+          fi
+          if [ -z "$FINAL_STATE" ]; then
+            echo "FAIL — 6분 내 안정 상태(Succeeded/Failed/Canceled) 미도달. 수동 조사 필요" >&2
+            exit 1
+          fi
 
       - name: Container App revision 업데이트
         env:
           IMAGE: ${{ needs.build-and-push.outputs.image }}
         run: |
+          set -euo pipefail
           az containerapp update \
             --name "$CONTAINER_APP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --image "$IMAGE"
 
-      - name: 배포 후 상태 확인
+      - name: 배포 후 상태 검증 (provisioningState=Succeeded 게이트)
         run: |
+          set -euo pipefail
+          # az containerapp update 가 non-zero 로 exit 하지 않더라도 revision 자체가 Failed 일 수 있음 → 명시 게이트
+          STATE=$(az containerapp show \
+            --name "$CONTAINER_APP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query "properties.provisioningState" -o tsv)
+          if [ "$STATE" != "Succeeded" ]; then
+            echo "FAIL — 배포 후 provisioningState=$STATE (Succeeded 기대)" >&2
+            az containerapp show \
+              --name "$CONTAINER_APP_NAME" \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --query "{name:name, latestRevision:properties.latestRevisionName, state:properties.provisioningState}" \
+              -o table >&2
+            exit 1
+          fi
           az containerapp show \
             --name "$CONTAINER_APP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --query "{name:name, fqdn:properties.configuration.ingress.fqdn, latestRevision:properties.latestRevisionName, state:properties.provisioningState}" \
             -o table
+          echo "✓ 배포 완료 (provisioningState=Succeeded)"
