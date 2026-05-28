@@ -6,18 +6,40 @@ on:
     - cron: "0 15 * * 0"
   workflow_dispatch:
 
+# 기본 permissions 는 minimum (contents: read).
+# write 권한은 PR 생성 step 에만 필요 — peter-evans/create-pull-request 가 GITHUB_TOKEN 으로 동작하므로 job 레벨에서 한정 부여.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   update-readme:
     runs-on: ubuntu-latest
+    # 이 job 에만 write 권한 부여 (peter-evans/create-pull-request 가 commit + PR 생성)
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
+      # egress 제한: Claude CLI 가 의도 외 외부 host 에 접근하지 못하도록 차단
+      # prompt injection 으로 secret exfiltration 시도 시 네트워크 자체가 차단됨
+      - name: Harden runner egress
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.anthropic.com:443
+            api.github.com:443
+            github.com:443
+            objects.githubusercontent.com:443
+            codeload.github.com:443
+            registry.npmjs.org:443
+            nodejs.org:443
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # 작업 종료 후 git credential 잔존 방지 (PR 생성 step 은 peter-evans/create-pull-request 가 자체 token 사용)
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -31,7 +53,9 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          claude --dangerously-skip-permissions --print \
+          # --dangerously-skip-permissions 대신 --allowedTools 로 파일 편집 도구만 허용.
+          # Bash, WebFetch 등 임의 명령 실행 도구를 제외해 prompt injection 으로 secret exfiltration 또는 외부 repo push 차단.
+          claude --allowedTools "Read,Edit,Glob,Grep" --print \
             "README.md의 내용을 현재 코드베이스 상태와 맞게 최신화해주세요.
 
           규칙:
