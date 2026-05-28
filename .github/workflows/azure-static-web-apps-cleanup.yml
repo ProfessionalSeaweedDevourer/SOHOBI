@@ -1,0 +1,85 @@
+name: Azure Static Web Apps Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: azure-static-web-apps-cleanup
+  cancel-in-progress: false
+
+jobs:
+  close_pull_request_job:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+    steps:
+      - name: Close Pull Request
+        id: closepullrequest
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_ROCK_0DE6C000F }}
+          action: "close"
+
+  cleanup_stale_environments:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: Cleanup Stale Staging Environments
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Delete environments for closed PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SWA_NAME: ${{ secrets.AZURE_SWA_NAME }}
+          RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t ENV_NAMES < <(az staticwebapp environment list \
+            --name "$SWA_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?name!='default'].name" -o tsv)
+
+          if [ "${#ENV_NAMES[@]}" -eq 0 ]; then
+            echo "No staging environments to clean up."
+            exit 0
+          fi
+
+          for ENV_NAME in "${ENV_NAMES[@]}"; do
+            [ -z "$ENV_NAME" ] && continue
+            PR_NUM=""
+            if [[ "$ENV_NAME" =~ ^pr-([0-9]+)(-|$) ]]; then
+              PR_NUM="${BASH_REMATCH[1]}"
+            elif [[ "$ENV_NAME" =~ ^([0-9]+)$ ]]; then
+              PR_NUM="${BASH_REMATCH[1]}"
+            fi
+            if [ -z "$PR_NUM" ]; then
+              echo "Environment $ENV_NAME has no PR number; skipping."
+              continue
+            fi
+
+            PR_STATE=$(gh pr view "$PR_NUM" --repo "${{ github.repository }}" --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
+            echo "Environment $ENV_NAME maps to PR #$PR_NUM ($PR_STATE)."
+
+            if [ "$PR_STATE" = "CLOSED" ] || [ "$PR_STATE" = "MERGED" ]; then
+              echo "Deleting stale environment $ENV_NAME for PR #$PR_NUM."
+              az staticwebapp environment delete \
+                --name "$SWA_NAME" \
+                --resource-group "$RESOURCE_GROUP" \
+                --environment-name "$ENV_NAME" \
+                --yes
+            fi
+          done
