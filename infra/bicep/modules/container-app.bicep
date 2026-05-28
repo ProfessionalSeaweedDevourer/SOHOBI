@@ -93,7 +93,22 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             memory: memory
           }
           env: envVars
+          // probe 전략: Startup + Liveness 2종.
+          // - Startup: cold start 보호 (AZURE_OPENAI client init, DB pool warmup). 통과 전까지 Liveness 평가 보류.
+          //   periodSeconds=5 * failureThreshold=30 = 최대 150초 부팅 허용.
+          // - Liveness: 부팅 후 health degrade 감지. 실패 시 컨테이너 재시작 (single revision mode 에서는 traffic 유지)
+          // Readiness 는 single revision mode 에서 의미 제한적이므로 생략 (revision shift 없음).
           probes: empty(livenessProbePath) ? [] : [
+            {
+              type: 'Startup'
+              httpGet: {
+                path: livenessProbePath
+                port: targetPort
+              }
+              initialDelaySeconds: 5
+              periodSeconds: 5
+              failureThreshold: 30
+            }
             {
               type: 'Liveness'
               httpGet: {

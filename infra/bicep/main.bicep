@@ -115,7 +115,8 @@ module backendApp 'modules/container-app.bicep' = {
       // cosmos.outputs.* 참조는 backendApp ↔ cosmos 순환 의존 발생 (cosmos가 backendApp.principalId 의존)
       // → 결정적 naming convention 기반 static 구성으로 우회
       { name: 'COSMOS_ENDPOINT', value: 'https://${namePrefix}-${env}-cosmos.documents.azure.com:443/' }
-      { name: 'COSMOS_DATABASE_NAME', value: 'sohobi' }
+      // 백엔드 코드는 COSMOS_DATABASE (suffix 없음) 만 읽음 (backend/session_store.py:46, backend/roadmap_router.py:225 등). NAME suffix 표기는 stale 컨벤션이므로 source-of-truth 키로 통일
+      { name: 'COSMOS_DATABASE', value: 'sohobi' }
       { name: 'PG_HOST', value: postgres.outputs.fqdn }
       { name: 'PG_PORT', value: '5432' }
       { name: 'PG_DB', value: postgres.outputs.databaseName }
