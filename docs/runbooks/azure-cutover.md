@@ -8,14 +8,16 @@
 
 ## 전제 조건 (D-day 24h 전 점검)
 
-- [ ] PR #335 (PG B1ms) / #336 (OpenAI account) / #337 (PG nightly cron) / #339 (AI Search 차단) / #340 (RAG plan) / **#349 (cutover 기획)** / **#350 (import 스크립트)** / **#351 (build workflow)** / **#352 (Container App config)** 모두 머지 완료
+- [ ] PR #335 (PG B1ms) / #336 (OpenAI account) / #337 (PG nightly cron) / #339 (AI Search 차단) / #340 (RAG plan) / **#349 (cutover 기획)** / **#350 (import 스크립트)** / **#351 (build workflow)** / **#352 (Container App config)** 모두 머지 완료. **본 runbook (P4 / 본 PR) 머지 전 #349-#352 가 먼저 머지되어 main 에 import 스크립트와 Bicep param 이 존재해야 함**
 - [ ] OpenAI `gpt-5.4-mini` GlobalStandard quota 승인 완료 (60K TPM). 미승인 시 cutover 연기
 - [ ] OpenAI 모델 배포 완료 — `openaiDeployModels=true` Bicep 재배포 + `az cognitiveservices account deployment list` 확인
 - [ ] 구 환경 OpenAI API key + Search key + Cosmos key + Blob connection string 모두 보유 (구 sub `az` 컨텍스트에서 추출)
 - [ ] 신규 환경 OpenAI API key 발급 + 별도 보관 (`az cognitiveservices account keys list -g rg-sohobi-prod -n sohobi-prod-openai`)
-- [ ] **사전 dump+import dry-run 1회 완료** — PG/Cosmos/Blob 전량 데이터 사전 적재 + row count 일치 확인
-- [ ] `build-backend-new.yml` workflow_dispatch로 신규 backend 이미지 ACR에 push 완료 (deploy=false로 build만)
+- [ ] **사전 dump+import dry-run 1회 완료** — PG/Cosmos/Blob 전량 데이터 사전 적재 + row count 일치 확인. 07_pg_restore.sh `--dry-run` 으로 dump 내용 사전 확인 권장
+- [ ] `build-backend-new.yml` workflow_dispatch로 신규 backend 이미지 ACR에 push 완료 (deploy=false로 build만). 본 워크플로는 `main` 브랜치에서만 실행 가능 (branch 가드)
 - [ ] P3 `useBackendAcrImage=true` Bicep 사전 deploy 완료 → Container App revision 첫 부트스트랩 검증 (handoff §traps — 22분 timeout 우회 확인)
+- [ ] **신규 Container App 의 Oracle 도달성 사전 검증** — `10.1.92.119:1521` 사설 IP 가 신규 환경 VNet 에서 접근 가능한지 (VNet peering, NSG, route table). 미검증 시 location 에이전트 503
+- [ ] **D-day 사용용 신규 `.env.new` 사전 작성 + 검증** — PG_HOST / COSMOS_ENDPOINT / 신규 키들을 사전 채워 두고 dry-run 환경에서 backend 가 정상 기동하는지 확인. D-day 에는 `cp backend/.env.new backend/.env` 한 줄만 수행
 - [ ] 점검 공지 게시: KST 점검 시각 1일 전 sohobi.net 공지 + Slack/이메일
 - [ ] 롤백 트리거 + 절차 숙지 (§롤백)
 
@@ -50,9 +52,12 @@ ls -la backups/
 # 신규 sub 컨텍스트
 az account set --subscription eba83124-c3b9-4a07-be43-e0c9acdc3425
 
-# 신규 환경 PG/Cosmos credentials로 backend/.env 임시 갱신 (cutover 종료 후 정식 변경)
+# 신규 환경 PG/Cosmos credentials로 backend/.env 임시 갱신 (사전 작성한 .env.new 사용)
 cp backend/.env backend/.env.cutover-backup
-# PG_HOST=sohobi-prod-pg.postgres.database.azure.com, PG_USER=sohobiadmin, COSMOS_ENDPOINT=신규 등으로 수정
+cp backend/.env.new backend/.env
+# 사전 작성 .env.new 가 없는 비상 시: PG_HOST=sohobi-prod-pg.postgres.database.azure.com,
+# PG_USER=sohobiadmin, COSMOS_ENDPOINT=https://sohobi-prod-cosmos.documents.azure.com:443/,
+# COSMOS_DATABASE=sohobi (NAME suffix 없음 — 코드 source-of-truth) 등으로 수정
 
 # 1) PG restore (병렬 1, 첫 실행은 시간 측정)
 bash scripts/migrate/07_pg_restore.sh backups/pg/<ts>/sohobi.dump --jobs 1
@@ -85,8 +90,7 @@ az containerapp revision deactivate \
   -g rg-ejp-9638 -n <구-backend-name> \
   --revision $(az containerapp show -g rg-ejp-9638 -n <구-backend-name> --query "properties.latestRevisionName" -o tsv)
 
-# 또는 Container App 자체를 stop (가능 시):
-# az containerapp stop -g rg-ejp-9638 -n <구-backend-name>
+# 주의: `az containerapp stop` 명령은 az CLI 에 존재하지 않음. revision deactivate 로 충분
 ```
 
 성공 조건: 구 backend에 `curl` 시 5xx 또는 connection refused.
@@ -97,9 +101,10 @@ az containerapp revision deactivate \
 # 구 sub 컨텍스트로 마지막 export
 az account set --subscription <구-sub-id>
 
-# Cosmos: --since 마지막 export 시각 (T-2:00의 ts 사용)
+# Cosmos: --since 마지막 export 시각. T-2:00 에 만든 산출물 디렉토리명에서 ts 추출 후 ISO 8601 로 변환.
+# 예: backups/cosmos/20260430-000000/ → --since 2026-04-30T00:00:00Z (KST 가 아니라 UTC 임에 주의)
 backend/.venv/bin/python3 scripts/migrate/02_cosmos_export.py \
-  --since 2026-MM-DDTHH:MM:SSZ  # T-2:00 시각 (UTC)
+  --since 2026-MM-DDTHH:MM:SSZ
 
 # PG: 위치 데이터 정적이라 사전 dump로 사실상 충분. 안전을 위해 재dump
 bash scripts/migrate/04_pg_dump.sh
@@ -122,9 +127,12 @@ bash scripts/migrate/07_pg_restore.sh backups/pg/<신규-ts>/sohobi.dump --clean
 az account set --subscription eba83124-c3b9-4a07-be43-e0c9acdc3425
 
 # 1) Container App secrets 일괄 주입 (민감 env)
+# 운영자 안내: 아래 <...> 플레이스홀더는 직접 손으로 치환하지 말고, 사전에 secrets-cutover.sh
+# (구 환경 backend/.env 와 신규 발급분에서 추출하는 helper script) 를 만들어 사용 권장.
+# 그대로 복붙하면 `<...>` 리터럴이 secret 값으로 들어감.
 az containerapp secret set -g rg-sohobi-prod -n sohobi-backend --secrets \
   azure-openai-api-key=<신규 OpenAI key> \
-  pg-password=<PG_ADMIN_PASSWORD 값 — Bicep 배포 시 사용한 값> \
+  pg-password=<Bicep param pgAdministratorLoginPassword 값. Bicep 배포 시 PG_ADMIN_PASSWORD secret 으로 주입했던 값> \
   jwt-secret=<기존 JWT_SECRET 또는 신규 발급> \
   api-secret-key=<기존 API_SECRET_KEY 또는 신규 발급> \
   export-secret=<기존 EXPORT_SECRET 또는 신규 발급> \
@@ -157,6 +165,7 @@ az containerapp update -g rg-sohobi-prod -n sohobi-backend --set-env-vars \
   "ORACLE_USER=shobi" "ORACLE_HOST=10.1.92.119" "ORACLE_PORT=1521" "ORACLE_SID=xe"
 
 # 3) revision 생성 (latest 이미지로)
+# image_tag 는 정규식 ^[A-Za-z0-9._-]+$ 만 통과, 길이 128 자 이하. 슬래시 포함 태그 금지
 gh workflow run build-backend-new.yml -f deploy=true -f image_tag=cutover
 
 # 또는 az containerapp update --image 직접
@@ -164,7 +173,7 @@ gh workflow run build-backend-new.yml -f deploy=true -f image_tag=cutover
 
 성공 조건: `az containerapp revision list` 새 revision Provisioning → Healthy.
 
-### T+0:55 — E2E smoke test (5 시나리오)
+### T+0:55 — E2E smoke test (6 시나리오)
 
 신규 backend FQDN: `az containerapp show -g rg-sohobi-prod -n sohobi-backend --query properties.configuration.ingress.fqdn -o tsv`
 
@@ -233,8 +242,13 @@ watch -n 30 "curl -sf -w 'HTTP %{http_code} / %{time_total}s\n' -o /dev/null htt
 # Container App replica count 추이
 watch -n 30 "az containerapp replica list -g rg-sohobi-prod -n sohobi-backend --query '[].name' -o tsv | wc -l"
 
-# 로그 확인 (신규 backend `/api/v1/logs` 경로 — EXPORT_SECRET 필요)
-curl -s "https://sohobi.net/api/v1/logs?type=queries&limit=20" -H "X-Export-Secret: <EXPORT_SECRET>"
+# 로그 확인 (신규 backend `/api/v1/logs` 경로 — X-API-Key 헤더 또는 Authorization Bearer 필요)
+# 코드 실측 (backend/auth.py:25): verify_api_key 는 X-API-Key 헤더 또는 Bearer 만 인식.
+# EXPORT_SECRET 은 별도 엔드포인트 `/api/v1/logs/export` 가 쿼리 파라미터(`?key=<EXPORT_SECRET>`)로 사용.
+curl -s "https://sohobi.net/api/v1/logs?type=queries&limit=20" -H "X-API-Key: <API_SECRET_KEY>"
+
+# export 엔드포인트는 헤더 대신 쿼리 파라미터 사용:
+# curl -s "https://sohobi.net/api/v1/logs/export?type=queries&key=<EXPORT_SECRET>"
 ```
 
 성공 조건: 15분 동안 5xx rate < 1%, 응답시간 P95 < 3s.
