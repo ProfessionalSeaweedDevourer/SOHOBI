@@ -2,15 +2,21 @@ name: PG Nightly Stop/Start
 
 # B1ms 24/7 → 야간 정지로 컴퓨트 비용 ~33% 절감 (전략 §3-A)
 # 정지: 매일 KST 24:00 (= UTC 15:00)
-# 기동: 매일 KST 08:00 (= UTC 23:00 전날)
+# 기동: 매일 KST 08:00 (= UTC 23:00 전날). GitHub Actions schedule cron 은
+#       SLA 가 없어 5-15분 지연 또는 가끔 skip 이 발생 — start 누락 시 다음
+#       Bicep deploy 가 Stopped state 의 PG 를 update 시도하면 InternalServerError.
+#       이를 방지하기 위해 start cron 을 30분 간격 3중 보장 (어느 하나가 skip 돼도
+#       다음 cron 에서 idempotent 하게 시작). state=Stopped 가드로 중복 호출 안전.
 # Azure Flexible Server는 7일 무활동 시 자동 기동 정책 — 8시간 정지는 안전 범위
 #
 # 수동 실행: workflow_dispatch action 입력 (start | stop)
 
 on:
   schedule:
-    - cron: '0 15 * * *'  # KST 24:00 stop
-    - cron: '0 23 * * *'  # KST 08:00 start (UTC 23:00 전날)
+    - cron: '0 15 * * *'   # KST 24:00 stop
+    - cron: '0 23 * * *'   # KST 08:00 start (primary)
+    - cron: '30 23 * * *'  # KST 08:30 start (backup 1, primary skip 대비)
+    - cron: '0 0 * * *'    # KST 09:00 start (backup 2, 두 cron 모두 skip 대비)
   workflow_dispatch:
     inputs:
       action:
@@ -53,7 +59,12 @@ jobs:
           fi
 
   start:
-    if: github.event.schedule == '0 23 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'start')
+    # 3중 보장 cron: primary 가 skip 돼도 backup 1·2 가 잡음. state=Stopped 가드로 중복 호출은 silent skip.
+    if: |
+      github.event.schedule == '0 23 * * *' ||
+      github.event.schedule == '30 23 * * *' ||
+      github.event.schedule == '0 0 * * *' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'start')
     runs-on: ubuntu-latest
     steps:
       - name: Azure login (OIDC)
@@ -71,5 +82,5 @@ jobs:
             az postgres flexible-server start -g $AZURE_RESOURCE_GROUP -n $PG_SERVER_NAME
             echo "Start initiated."
           else
-            echo "Server not in Stopped state — skip."
+            echo "Server not in Stopped state — skip (already Ready or transitioning)."
           fi

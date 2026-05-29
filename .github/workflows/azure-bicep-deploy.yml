@@ -66,6 +66,8 @@ jobs:
   deploy:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    env:
+      PG_SERVER_NAME: sohobi-prod-pg
     steps:
       - uses: actions/checkout@v4
 
@@ -75,6 +77,36 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID_B }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID_B }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID_B }}
+
+      # pg-nightly-stop.yml 의 start cron 이 GitHub Actions schedule 지연/skip 으로 안 돌면
+      # PG 가 Stopped 상태로 남아 Bicep deploy 가 InternalServerError 로 실패.
+      # deploy 전 PG state 확인 후 Stopped 면 즉시 start + Ready 까지 대기.
+      - name: PG state guard (start if Stopped)
+        run: |
+          set -euo pipefail
+          state=$(az postgres flexible-server show \
+            -g "$AZURE_RESOURCE_GROUP" -n "$PG_SERVER_NAME" \
+            --query state -o tsv 2>/dev/null || echo "Unknown")
+          echo "Current PG state: $state"
+          if [ "$state" = "Stopped" ]; then
+            echo "PG is Stopped — starting before Bicep deploy."
+            az postgres flexible-server start -g "$AZURE_RESOURCE_GROUP" -n "$PG_SERVER_NAME"
+            for i in $(seq 1 30); do
+              state=$(az postgres flexible-server show -g "$AZURE_RESOURCE_GROUP" -n "$PG_SERVER_NAME" --query state -o tsv)
+              echo "  poll $i: state=$state"
+              if [ "$state" = "Ready" ]; then
+                echo "PG Ready — proceed."
+                exit 0
+              fi
+              sleep 10
+            done
+            echo "FAIL — PG did not reach Ready state within 5 minutes." >&2
+            exit 1
+          elif [ "$state" = "Ready" ]; then
+            echo "PG already Ready — proceed."
+          else
+            echo "PG state=$state (not Stopped/Ready) — Bicep deploy may fail. Proceeding anyway."
+          fi
 
       - name: Bicep deploy
         env:
