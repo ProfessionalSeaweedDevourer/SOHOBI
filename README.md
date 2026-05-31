@@ -235,14 +235,14 @@
 |------|------|
 | AI 오케스트레이션 | Semantic Kernel 1.41.1 |
 | AI 모델 플랫폼 | Azure AI Foundry (Azure OpenAI) |
-| API 서버 | FastAPI 0.135 + Uvicorn 0.42 |
-| RAG 파이프라인 | Azure AI Search 11.6 |
+| API 서버 | FastAPI 0.135.3 + Uvicorn 0.42.0 |
+| RAG 파이프라인 | Azure AI Search 11.6.0 |
 | 세션 저장소 | Azure Cosmos DB |
 | 로그 저장소 | Azure Blob Storage |
 | 상권 DB | Azure PostgreSQL Flexible Server |
-| PDF 생성 | ReportLab 4.4 + pdfkit + Jinja2 3.1 |
-| 재무 시각화 | Matplotlib 3.10 + NumPy 2.4 |
-| 인증 | Authlib 1.3 + python-jose (JWT) |
+| PDF 생성 | ReportLab 4.4.10 + pdfkit + Jinja2 3.1.6 |
+| 재무 시각화 | Matplotlib 3.10.8 + NumPy 2.4.4 |
+| 인증 | Authlib 1.3.2 + python-jose (JWT) |
 | Rate Limiting | slowapi 0.1.9 |
 | 배포 | Azure Container Apps + GitHub Actions CI/CD |
 
@@ -250,12 +250,12 @@
 
 | 분류 | 기술 |
 |------|------|
-| UI 프레임워크 | React 19 + Vite 7 |
-| 스타일링 | Tailwind CSS 4 |
-| 라우팅 | React Router DOM 7 |
-| 지도 | OpenLayers 10.8 + Turf.js 7.3 |
-| 차트 | Chart.js 4.5 |
-| 마크다운 렌더링 | react-markdown 10 + remark-gfm |
+| UI 프레임워크 | React 19.2.5 + Vite 7.3.2 |
+| 스타일링 | Tailwind CSS 4.2.2 |
+| 라우팅 | React Router DOM 7.14.0 |
+| 지도 | OpenLayers 10.8.0 + Turf.js 7.3.4 |
+| 차트 | Chart.js 4.5.1 |
+| 마크다운 렌더링 | react-markdown 10.1.0 + remark-gfm |
 | UI 컴포넌트 | Radix UI (select, tabs, collapsible, tooltip 등) |
 | 애니메이션 | Motion 12.38 (Framer Motion) |
 | HTTP 클라이언트 | Axios 1.15 |
@@ -377,9 +377,9 @@ SOHOBI/
 │       └── assets/               # 이미지·아이콘
 ├── docs/                         # → docs/README.md 참조
 │   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
-│   ├── dev-summary/              # 팀원별 일일 개발 요약 (113건)
+│   ├── dev-summary/              # 팀원별 일일 개발 요약 (118건)
 │   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
-│   ├── plans/                    # 설계·분석 플랜 문서 (130건)
+│   ├── plans/                    # 설계·분석 플랜 문서 (132건)
 │   ├── runbooks/                 # 운영 런북 (Azure 이전 등)
 │   ├── session-reports/          # 세션 인수인계 리포트 (84건)
 │   └── test-reports/             # 보안 테스트·성능 베이스라인 리포트
