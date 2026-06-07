@@ -377,7 +377,7 @@ SOHOBI/
 │       └── assets/               # 이미지·아이콘
 ├── docs/                         # → docs/README.md 참조
 │   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
-│   ├── dev-summary/              # 팀원별 일일 개발 요약 (118건)
+│   ├── dev-summary/              # 팀원별 일일 개발 요약 (130건)
 │   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
 │   ├── plans/                    # 설계·분석 플랜 문서 (132건)
 │   ├── runbooks/                 # 운영 런북 (Azure 이전 등)
@@ -394,7 +394,7 @@ SOHOBI/
 │   ├── migrate/                  # Azure 이전 사전준비·백업 스크립트 (6개)
 │   ├── outdated/                 # 구버전 스크립트 보관
 │   └── worktree-setup.sh         # 워크트리 초기화 스크립트
-├── .github/workflows/            # CI/CD (프론트·백엔드 배포, 스모크 테스트, Bicep IaC 배포, PG 야간 정지)
+├── .github/workflows/            # CI/CD (프론트·백엔드 배포, 스모크 테스트, Bicep IaC 배포, PG 야간 정지, README 자동 갱신)
 └── CLAUDE.md                     # Claude Code 영구 지시
 ```
 
