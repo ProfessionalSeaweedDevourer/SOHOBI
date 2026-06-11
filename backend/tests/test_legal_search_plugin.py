@@ -28,6 +28,8 @@ class TestT01EnvNotSet:
             for k in [
                 "AZURE_OPENAI_ENDPOINT",
                 "AZURE_OPENAI_API_KEY",
+                "LEGAL_OPENAI_ENDPOINT",
+                "LEGAL_OPENAI_API_KEY",
                 "AZURE_SEARCH_ENDPOINT",
                 "AZURE_SEARCH_KEY",
             ]
@@ -178,18 +180,30 @@ class TestT05HappyPath:
         mock_ai = MagicMock()
         mock_ai.embeddings.create.return_value = mock_embedding_resp
 
-        # mock 검색 결과 2건
+        # mock 검색 결과 2건 (legal-index 스키마: lawName/articleNo/articleTitle/...)
         doc1 = {
             "id": "1",
-            "title": "식품위생법 제36조",
+            "lawName": "식품위생법",
+            "articleNo": "제37조",
+            "articleTitle": "제37조(영업허가 등)",
+            "chapterTitle": "제7장 영업",
+            "sectionTitle": "",
             "content": "영업신고 절차...",
-            "category": "위생법",
+            "fullText": "",
+            "source": "law",
+            "docType": "law",
         }
         doc2 = {
             "id": "2",
-            "title": "식품위생법 시행규칙",
+            "lawName": "식품위생법 시행규칙",
+            "articleNo": "제42조",
+            "articleTitle": "제42조(영업의 신고 등)",
+            "chapterTitle": "",
+            "sectionTitle": "",
             "content": "영업신고 서류...",
-            "category": "시행규칙",
+            "fullText": "",
+            "source": "law",
+            "docType": "law",
         }
         mock_search = MagicMock()
         mock_search.search.return_value = iter([doc1, doc2])
@@ -202,8 +216,8 @@ class TestT05HappyPath:
 
         result = plugin.search_legal_docs(query="음식점 영업신고 절차")
 
-        assert "[위생법]" in result, "카테고리가 포함되어야 합니다"
-        assert "식품위생법 제36조" in result, "제목이 포함되어야 합니다"
+        assert "[식품위생법 > 제7장 영업]" in result, "법령명 계층이 포함되어야 합니다"
+        assert "제37조(영업허가 등)" in result, "조문 제목이 포함되어야 합니다"
         assert "영업신고 절차" in result, "내용이 포함되어야 합니다"
         assert "---" in result, "구분자가 포함되어야 합니다"
 
@@ -233,9 +247,11 @@ class TestT05HappyPath:
             "vector_queries"
         )
         assert vector_queries is not None, "vector_queries 인자가 전달되어야 합니다"
-        assert vector_queries[0].k_nearest_neighbors == 5, (
-            "k_nearest_neighbors가 top_k 값과 일치해야 합니다"
+        # 시맨틱 리랭킹 여유분으로 top_k * 2 를 전달 (CHOI p03)
+        assert vector_queries[0].k_nearest_neighbors == 10, (
+            "k_nearest_neighbors가 top_k * 2 값과 일치해야 합니다"
         )
+        assert call_kwargs.kwargs.get("top") == 5, "top이 top_k 값과 일치해야 합니다"
 
 
 # ---------------------------------------------------------------------------
@@ -315,7 +331,7 @@ class TestT07InitFailure:
 # T-08: SearchDocument 필드 누락 시 안전 처리
 # ---------------------------------------------------------------------------
 class TestT08MissingFields:
-    """검색 결과에서 title, content, category 중 일부 필드가 없을 때 .get() 으로 안전하게 처리되는지 확인"""
+    """검색 결과에서 lawName, content 등 일부 필드가 없을 때 .get() 으로 안전하게 처리되는지 확인"""
 
     @pytest.fixture(autouse=True)
     def mock_env(self, monkeypatch):
@@ -324,8 +340,8 @@ class TestT08MissingFields:
         monkeypatch.setenv("AZURE_SEARCH_ENDPOINT", "https://fake.search.windows.net")
         monkeypatch.setenv("AZURE_SEARCH_KEY", "fakesearchkey")
 
-    def test_missing_category_field_handled_safely(self):
-        """category 필드 없는 문서도 안전하게 포맷팅되어야 합니다"""
+    def test_missing_law_name_field_handled_safely(self):
+        """lawName 필드 없는 문서도 안전하게 포맷팅되어야 합니다"""
         from plugins.legal_search_plugin import LegalSearchPlugin
 
         mock_embedding_resp = MagicMock()
@@ -334,9 +350,13 @@ class TestT08MissingFields:
         mock_ai = MagicMock()
         mock_ai.embeddings.create.return_value = mock_embedding_resp
 
-        doc_no_category = {"id": "1", "title": "식품위생법", "content": "내용입니다"}
+        doc_no_law_name = {
+            "id": "1",
+            "articleTitle": "제1조(목적)",
+            "content": "내용입니다",
+        }
         mock_search = MagicMock()
-        mock_search.search.return_value = iter([doc_no_category])
+        mock_search.search.return_value = iter([doc_no_law_name])
 
         with (
             patch("plugins.legal_search_plugin.AzureOpenAI", return_value=mock_ai),
@@ -345,15 +365,15 @@ class TestT08MissingFields:
             plugin = LegalSearchPlugin()
 
         result = plugin.search_legal_docs(query="테스트")
-        assert "식품위생법" in result, "title은 포함되어야 합니다"
+        assert "제1조(목적)" in result, "조문 제목은 포함되어야 합니다"
         assert "내용입니다" in result, "content는 포함되어야 합니다"
-        # category 없음 → "[빈문자열] 제목\n내용" 형식
+        # lawName 없음 → "[] 제목\n내용" 형식
         assert result.startswith("[]") or "[] " in result, (
-            f"category 없을 때 빈 대괄호로 처리해야 합니다. 실제: {result!r}"
+            f"lawName 없을 때 빈 대괄호로 처리해야 합니다. 실제: {result!r}"
         )
 
     def test_missing_title_and_content_handled_safely(self):
-        """title, content 모두 없어도 KeyError 없이 처리되어야 합니다"""
+        """lawName, content 모두 없어도 KeyError 없이 처리되어야 합니다"""
         from plugins.legal_search_plugin import LegalSearchPlugin
 
         mock_embedding_resp = MagicMock()

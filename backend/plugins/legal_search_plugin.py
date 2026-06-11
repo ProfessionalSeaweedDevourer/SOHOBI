@@ -58,11 +58,18 @@ class LegalSearchPlugin:
     """Azure AI Search 기반 법령·세무 정보 벡터 검색 플러그인"""
 
     def __init__(self):
+        # LEGAL_* 전용 자격증명 우선 — 메인 LLM의 AZURE_OPENAI_* 변수와 충돌 방지
+        # (gov_support_plugin의 GOV_* 패턴과 동일. legal-index는 임시 외부 계정의
+        #  text-embedding-3-large 3072d 임베딩으로 재구축됨)
         self._embedding_deployment = os.getenv(
-            "AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-small"
+            "AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-large"
         )
-        openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-        openai_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+        openai_endpoint = os.getenv("LEGAL_OPENAI_ENDPOINT") or os.getenv(
+            "AZURE_OPENAI_ENDPOINT", ""
+        )
+        openai_key = os.getenv("LEGAL_OPENAI_API_KEY") or os.getenv(
+            "AZURE_OPENAI_API_KEY", ""
+        )
         search_key = os.getenv("AZURE_SEARCH_KEY", "")
         search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT", "")
         index_name = os.getenv("AZURE_SEARCH_INDEX", "legal-index")
@@ -141,7 +148,6 @@ class LegalSearchPlugin:
                     "fullText",
                     "source",
                     "docType",
-                    "category",
                 ],
             )
 
@@ -159,7 +165,7 @@ class LegalSearchPlugin:
                     continue
 
                 # 계층 정보 포함 포매팅 (CHOI p04)
-                law_name = r.get("lawName") or r.get("category", "")
+                law_name = r.get("lawName", "")
                 article_no = r.get("articleNo", "")
                 article_title = r.get("articleTitle", "")
                 chapter = r.get("chapterTitle", "")
