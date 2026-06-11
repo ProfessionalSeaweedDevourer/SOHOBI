@@ -188,6 +188,28 @@ module postgres 'modules/postgres.bicep' = {
 }
 
 // ================================================================
+// 비용 가드
+// ================================================================
+
+@description('월 예산 (KRW). 모델 사용량 과금 활성화에 따른 알림 가드')
+param budgetAmountKrw int = 60000
+
+@description('예산 알림 수신 이메일')
+param budgetContactEmails array = ['erik.j.park@gmail.com']
+
+@description('예산 시작일 (월 1일 고정 형식 YYYY-MM-01)')
+param budgetStartDate string = '2026-06-01'
+
+module budget 'modules/budget.bicep' = {
+  name: 'budget'
+  params: {
+    amount: budgetAmountKrw
+    contactEmails: budgetContactEmails
+    startDate: budgetStartDate
+  }
+}
+
+// ================================================================
 // Outputs (후속 모듈에서 참조)
 // ================================================================
 

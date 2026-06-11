@@ -19,3 +19,7 @@ param pgAdministratorLoginPassword = readEnvironmentVariable('PG_ADMIN_PASSWORD'
 // build-backend-new.yml 으로 sohobi-backend:latest 가 ACR 에 push 된 상태 전제.
 // 이 토글 활성화 시 Container App 이 quickstart placeholder → 실 backend (port 8000, /health probe) 로 전환됨.
 param useBackendAcrImage = true
+
+// OpenAI 모델 배포 활성화 (2026-06-11 quota 승인 확인: gpt-5.4-mini·embedding small/large GlobalStandard 모두 limit 1000).
+// 배포 3종: gpt-5.4-mini(chat) + text-embedding-3-small(legal 1536d) + text-embedding-3-large(gov 3072d)
+param openaiDeployModels = true
