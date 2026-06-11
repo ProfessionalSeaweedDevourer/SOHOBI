@@ -44,6 +44,7 @@ __pycache__/
 
 # 환경 변수
 .env
+.env_*
 *.env.bak
 *.env.local.bak
 
