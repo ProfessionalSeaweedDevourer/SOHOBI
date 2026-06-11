@@ -3,8 +3,8 @@
 // 기획안: docs/plans/2026-04-26-azure-tenant-migration.md
 // 전략: docs/plans/strategic/azure-cost-and-tenant-strategy.md
 //
-// 본 파일은 Foundation 단계 — 의존 없는 기반 자원만 (Log Analytics, Storage, ACR).
-// 후속 PR에서 Container App, Cosmos, PG, OpenAI, AI Search, Static Web App 추가 예정.
+// 본 파일은 RG 전체 인프라 entrypoint — Log Analytics, Storage, ACR, Container App,
+// Cosmos, PostgreSQL, OpenAI, 비용 가드(budget)를 모듈로 배선한다.
 
 targetScope = 'resourceGroup'
 
@@ -195,10 +195,15 @@ module postgres 'modules/postgres.bicep' = {
 param budgetAmountKrw int = 60000
 
 @description('예산 알림 수신 이메일')
-param budgetContactEmails array = ['erik.j.park@gmail.com']
+param budgetContactEmails array = [
+  'erik.j.park@gmail.com'
+  'guga.kr@gmail.com'
+  'leftdeadman@gmail.com'
+  'delta115zx@naver.com'
+]
 
-@description('예산 시작일 (월 1일 고정 형식 YYYY-MM-01)')
-param budgetStartDate string = '2026-06-01'
+@description('예산 시작일 (월 1일 고정, YYYY-MM-01). 과거 시작일은 생성 시점 기준 약 3개월까지만 허용되므로 배포 당월로 자동 계산 — 기존 budget 업데이트 시 원래 startDate가 유지됨')
+param budgetStartDate string = utcNow('yyyy-MM-01')
 
 module budget 'modules/budget.bicep' = {
   name: 'budget'
