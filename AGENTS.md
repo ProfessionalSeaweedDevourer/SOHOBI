@@ -1,0 +1,418 @@
+# SOHOBI 프로젝트 — Codex 영구 지시
+
+## 빌드 & 실행
+
+```bash
+# 백엔드
+cd backend && .venv/bin/python3 api_server.py
+
+# 프론트엔드
+cd frontend && npm run dev
+
+# 의존성 설치
+cd backend && .venv/bin/pip install -r requirements.txt
+cd frontend && npm install
+```
+
+## 테스트
+
+`backend/tests/` 에 pytest 스위트가 있다 (도메인별 agent·plugin·signoff·auth 단위 테스트).
+`conftest.py` 가 `backend/` 를 `sys.path` 에 추가하고 `.env` 를 로드하므로 **반드시 `backend/` 에서 실행**한다.
+
+```bash
+# 전체
+cd backend && .venv/bin/python3 -m pytest tests/
+# 단일 파일 / 단일 케이스
+cd backend && .venv/bin/python3 -m pytest tests/test_legal_agent.py
+cd backend && .venv/bin/python3 -m pytest tests/test_legal_agent.py::test_name -q
+```
+
+`.env` 의 Azure 키 유무에 따라 일부 테스트는 `skipif` 로 건너뛴다 (네트워크 의존 케이스).
+API E2E 동작 확인:
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "테스트 질문"}'
+```
+
+## 핵심 디렉토리
+
+| 경로 | 설명 |
+|------|------|
+| `backend/` | 메인 통합 버전 — 실제 작동 코드 |
+| `backend/agents/` | 하위 에이전트 (법률·세무, 상권, 재무 등) |
+| `backend/api_server.py` | FastAPI 진입점 |
+| `backend/orchestrator.py` | Semantic Kernel 오케스트레이션 |
+| `backend/signoff/` | 최종 검증 에이전트 |
+| `backend/db/` | DB DAO 모듈 — 실제 DB는 Azure 백엔드에 위치 (SQLite 로컬 파일 없음) |
+| `frontend/` | React + Vite + Tailwind 프론트엔드 |
+| `docs/plans/` | 플랜 문서 (`YYYY-MM-DD-이름.md`) |
+| `docs/session-reports/` | 세션 리포트 및 인수인계 문서 |
+
+## 아키텍처 — 요청 처리 흐름
+
+질문 1건이 답변이 되기까지 `api_server.py` → `domain_router.py` → `orchestrator.py` → `agents/` → `signoff/` 를 순서대로 거친다. 이 파이프라인을 모르면 에이전트 한 개만 봐도 전체가 안 보인다.
+
+```text
+POST /api/v1/query (또는 /stream)
+  └ domain_router: ① 키워드 2개+ 매칭 → 즉시 분류  ② 실패 시 LLM JSON 분류 (fallback: admin)
+      → admin | finance | legal | location | chat
+  └ orchestrator.run() / run_stream(): 재시도 루프 (최대 3회)
+      ├ AGENT_MAP[domain](kernel) 인스턴스화
+      ├ agent.generate_draft(question, retry_prompt, previous_draft, profile, prior_history, **extra)
+      ├ run_signoff(client, domain, draft) → grade A/B/C  (chat 포함 전 도메인 실행)
+      │   · A: 통과   · B: 경고 포함 통과   · C: retry_prompt 생성 → 에이전트 재호출
+      └ draft 가 직전 attempt 와 동일하면 조기 종료 (재시도 무의미)
+```
+
+핵심 규칙:
+
+- **모든 도메인이 Sign-off 를 거친다.** `orchestrator` 의 재시도 루프는 `run_signoff()` 를 무조건 호출한다. 도메인별 루브릭 코드만 다르다 (`signoff_agent.py` 의 `REQUIRED_CODES`: 전 도메인 공통 `C1~C5` + 도메인 코드 + `SEC1~3`·`RJ1~3`, chat 의 도메인 코드는 `CH1~CH5`). Sign-off 를 건너뛰는 유일한 경로는 아래 `is_partial` 응답뿐이다.
+- **에이전트 반환 타입이 도메인마다 다르다.** legal·admin·chat 은 `str`, **finance·location 은 `dict`** (`draft` + `chart`/`charts` + `updated_params` + `adm_codes` + `type`). orchestrator 가 `isinstance(raw, dict)` 로 분기하므로, `AGENT_MAP` 에 에이전트를 추가·변경할 때는 `generate_draft` 시그니처와 반환 형태 호환성을 반드시 확인한다 (PR #290 회귀 교훈).
+- `dict` 반환에 `is_partial=True` 가 있으면 Sign-off 없이 즉시 반환 (대화형 정보 수집 중간 단계).
+- **location 에이전트는 `context`(adm_codes·business_type·location_name 등)를 갱신**하여 재시도·후속 질문에 재사용한다.
+- Sign-off 의 grade 는 이슈 severity 로 결정: `high`/`medium` → C(재처리), `low`만 → B, 무이슈 → A. `SEC1~SEC3`·`RJ1~RJ3`(보안·거절) 코드는 severity 무관 항상 `high`.
+
+레이어:
+
+| 레이어 | 위치 | 역할 |
+| ------ | ---- | ---- |
+| 라우터 | `*_router.py` (auth/map/feedback/checklist/report/roadmap 등) | FastAPI 엔드포인트. `verify_api_key` 의존성으로 보호 |
+| 오케스트레이션 | `orchestrator.py` + `kernel_setup.py` | Semantic Kernel 커널·signoff client 생성, 재시도 루프 |
+| 에이전트 | `backend/agents/` | 도메인별 draft 생성. 수정은 **여기서만** |
+| 플러그인 | `backend/plugins/` | 에이전트가 호출하는 SK 함수 — `LegalSearchPlugin`(Azure AI Search 벡터검색), `GovSupportPlugin`, `FinanceSimulationPlugin`(Monte Carlo), `FoodBusinessPlugin`, `AdminProcedurePlugin` |
+| 검증 | `backend/signoff/` + `backend/prompts/signoff_*/` | 도메인별 루브릭 코드로 draft 채점 |
+| 데이터 | `backend/db/dao/` | DAO 모듈. 실제 DB 는 Azure (SQLite 로컬 파일 없음) |
+
+## 프로젝트 규칙
+
+- 에이전트 코드는 `backend/agents/`에서만 수정
+- 의존성: `requirements.txt`에 `==` 버전 고정
+- 플랜 문서: **반드시 `docs/plans/YYYY-MM-DD-이름.md`** 형식으로 저장 (Codex 내부 플랜과 동시에)
+
+## PR / 커밋 규칙
+
+- 커밋 메시지: `type: 한국어 설명` (예: `fix: location 에이전트 버그 수정`)
+- 커밋 메시지와 PR 본문에 "Generated with Codex" 또는 "Co-Authored-By: Codex" attribution 포함 금지
+- 모든 작업 브랜치는 **`origin/main` 기반 단명 브랜치**로 생성한다. 팀원 고정 브랜치는 존재하지 않는다.
+- 브랜치 명명: `<type>/<author>-<작업명>`
+
+  | type | 용도 |
+  | ---- | ---- |
+  | `feat` | 새 기능 |
+  | `fix` | 버그 수정 |
+  | `refactor` | 리팩토링 |
+  | `chore` | 빌드·설정·잡무 |
+  | `docs` | 문서 |
+  | `security` | 보안 수정 |
+  | `debug` | 디버그 |
+  | `test` / `perf` / `build` / `ci` | 기타 |
+
+  | GitHub 계정 | author |
+  | ----------- | ------ |
+  | ProfessionalSeaweedDevourer | `park` |
+  | zSob2048 | `chang` |
+  | delta115zx | `choi` |
+  | dannynam13 | `nam` |
+  | TerryBlackhoodWoo | `woo` |
+
+  예시: `feat/park-signoff-agent`, `fix/nam-gov-api-timeout`, `refactor/woo-map-loader`
+
+- 코드 수정·테스트 완료 후 정상 동작이 확인되면 Codex가 **스스로 커밋하고 main 머지용 PR**을 연다
+- PR 머지 지시는 검증 완료 후에만. 검증 전 추가 수정은 같은 브랜치에 커밋을 추가
+- 머지 방식은 **Squash and merge만** 허용 (GitHub 설정으로 강제). 머지 후 브랜치는 자동 삭제됨
+- main branch protection(PR 필수 + 1인 리뷰)은 GitHub 미숙한 팀원의 무검토 main 직접 반영을 방지하기 위한 것. **ProfessionalSeaweedDevourer(PARK)** 계정은 `gh pr merge --admin`으로 리뷰 없이 머지 가능
+- **PR 생성 직후** Test Plan의 각 TC를 직접 실행하고 결과를 보고한다 (아래 테스트 실행 루틴 참조)
+- **push 후 반드시** `gh pr list --head <브랜치> --state open` 으로 열린 PR을 확인한다:
+  - 열린 PR이 있으면 해당 PR 번호를 사용자에게 알린다
+  - 없으면 (머지·닫힘·미생성) 즉시 새 PR을 열고 번호를 알린다
+  - "PR에 반영되었습니다"는 확인 없이 절대 말하지 않는다
+
+## 브랜치 워크플로우
+
+이 프로젝트는 **squash merge**를 사용한다 (GitHub 설정으로 강제). 모든 작업은 `origin/main` 기반 단명 브랜치에서 진행하며, 머지 후 브랜치는 자동 삭제된다.
+
+### PR 시작 절차
+
+```bash
+git fetch origin
+git checkout -b feat/park-<작업명> origin/main
+# 작업 및 커밋
+```
+
+### PR 생성 전 절차
+
+```bash
+git push origin feat/park-<작업명>
+# PR 커밋 범위 확인
+git log --oneline origin/main..HEAD
+```
+
+main이 앞서갔을 경우:
+
+- 충돌 없으면: GitHub PR 화면의 "Update branch" 사용
+- 충돌 있으면: `git rebase origin/main` 후 `git push --force-with-lease`
+
+### 머지 후 정리
+
+```bash
+git checkout main
+git pull origin main
+git branch -d feat/park-<작업명>
+```
+
+### 미커밋 변경 보호
+
+긴 작업 중간 저장은 stash 대신 WIP 커밋을 사용한다.
+
+```bash
+git add -A && git commit -m "WIP: <작업명>" --no-verify
+```
+
+PR 생성 전 `git reset --soft HEAD~1`로 정리한다.
+
+## 워크트리 병렬 운용
+
+여러 브랜치를 동시에 작업해야 할 때 **git worktree**를 사용한다. 각 워크트리는 물리적으로 별도 디렉토리이므로 독립된 Codex 세션(또는 VS Code 창)에서 병렬 작업이 가능하다.
+
+### 언제 사용하는가
+
+- PR 리뷰 중 다른 브랜치에서 신규 작업을 병행할 때
+- 라이브 서버 장애 시 현재 작업을 중단하지 않고 핫픽스할 때
+- 여러 PR의 코드를 동시에 비교·수정할 때
+
+### 워크트리 생성
+
+```bash
+# 자동 스크립트 (환경 초기화 포함)
+./scripts/worktree-setup.sh feat/park-fix-login           # origin/main 기반 새 브랜치
+./scripts/worktree-setup.sh feat/park-review-231 pr-branch # 기존 브랜치 체크아웃
+```
+
+스크립트가 수행하는 것:
+
+1. `git worktree add` — 워크트리 생성
+2. `.env` 파일 복사 (backend / frontend)
+3. `npm install` (frontend)
+4. `python3 -m venv` + `pip install` (backend)
+
+생성 위치: `../SOHOBI-<브랜치명>/`
+
+### 수동 생성 (스크립트 없이)
+
+```bash
+git fetch origin
+git worktree add ../SOHOBI-<브랜치명> -b <브랜치명> origin/main
+cp backend/.env ../SOHOBI-<브랜치명>/backend/.env
+cd ../SOHOBI-<브랜치명>/frontend && npm install
+```
+
+### 제약 사항
+
+| 항목 | 설명 |
+| ------ | ------ |
+| 같은 브랜치 불가 | 두 워크트리가 동일 브랜치를 체크아웃할 수 없음 (git 제약) |
+| `.env` 별도 복사 | `.gitignore`된 파일은 워크트리 간 공유되지 않음 |
+| `node_modules` 별도 설치 | 각 워크트리에서 `npm install` 필요 |
+| `.git`은 공유 | reflog, stash, 브랜치 목록은 모든 워크트리가 동일한 `.git` 참조 |
+| 동시 rebase 주의 | 두 세션이 동시에 같은 원격 브랜치를 rebase하면 lock 충돌 가능 |
+
+### 정리
+
+```bash
+# 워크트리 제거
+git worktree remove ../SOHOBI-<브랜치명>
+
+# 현황 확인
+git worktree list
+```
+
+워크트리 디렉토리는 PR 머지 후 정리한다.
+
+## PR 생성 후 테스트 실행 루틴
+
+PR을 연 직후 Test Plan의 각 TC를 직접 실행하고 결과를 사용자에게 보고한다.
+
+### 테스트 유형별 도구
+
+| 테스트 유형 | 도구 | 실행 조건 |
+| ----------- | ---- | --------- |
+| API E2E | `curl` + `$BACKEND_HOST` (`.env` 로드) | 항상 실행 |
+| 백엔드 로그 확인 | `GET $BACKEND_HOST/api/v1/logs` | API 테스트 후 |
+| DB / 플러그인 단위 | `pytest` (`.venv`) | 관련 파일 수정 시 |
+| 프론트엔드 UI | playwright MCP (`browser_navigate` → `browser_snapshot`) | UI 변경 시 |
+
+### 실행 절차
+
+1. `source backend/.env` 로 환경변수 로드
+2. TC 번호 순서대로 각 테스트 실행
+3. 각 TC마다 `✅ PASS` / `❌ FAIL` 결과 출력
+4. FAIL 발생 시 — 즉시 수정 후 동일 브랜치에 커밋 → 재테스트
+5. 전체 PASS 확인 후 "테스트 완료 — PR #번호 머지 가능" 보고
+
+### 실행 불가 예외
+
+- 로컬 서버 미기동 상태의 localhost 테스트 → 사용자에게 기동 요청
+- Azure Container Apps cold start → 30초 대기 후 1회 재시도
+
+## PR 라이프사이클 자동화
+
+아래는 PR 과정에서 반복되는 작업이다. Codex는 해당 시점에 자동으로 수행한다.
+
+### 머지 후 TC 실행
+
+PR이 머지되면 즉시:
+
+1. main을 pull하고 TC를 재실행한다 (위 테스트 실행 루틴과 동일)
+2. 결과를 해당 PR에 코멘트로 남긴다: `gh pr comment <번호> --body "..."`
+3. FAIL 시 핫픽스 브랜치를 즉시 생성하여 수정 PR을 연다
+
+### PR 결과 업데이트
+
+TC 실행 결과가 나오면 PR body의 Test plan 체크박스를 업데이트한다:
+
+```bash
+# 체크박스 상태 반영
+gh pr edit <번호> --body "..."
+```
+
+### PR 리뷰 시 행동 규칙
+
+Codex가 PR 리뷰를 수행하거나 리뷰를 받았을 때:
+
+1. **리뷰 결과 코멘트**: 리뷰 완료 후 발견사항·제안을 PR 코멘트로 남긴다
+2. **전달 사항 코멘트**: 다른 팀원에게 전달할 내용(주의점, 의존성, 사이드이펙트)을 별도 코멘트로 작성한다
+3. **수정 반영 후 리뷰 응답**: 리뷰 지적에 따라 코드를 수정했으면, 수정 내용을 해당 리뷰 스레드에 답글로 남긴다
+
+```bash
+# 리뷰 코멘트 작성
+gh pr comment <번호> --body "## 리뷰 결과\n\n- ..."
+
+# 리뷰 스레드 답글 (수정 완료 보고)
+gh api repos/{owner}/{repo}/pulls/<번호>/comments/<comment_id>/replies \
+  -f body="수정 완료: <커밋 SHA> 에서 반영"
+```
+
+### 자동화 타이밍 요약
+
+| 시점 | 행동 |
+| ---- | ---- |
+| PR 생성 직후 | TC 실행 → 결과 보고 |
+| PR 리뷰 완료 | 리뷰 결과 + 전달 사항 코멘트 |
+| 리뷰 지적 수정 후 | 수정 커밋 push → 리뷰 스레드 답글 |
+| PR 머지 직후 | main에서 TC 재실행 → PR에 결과 코멘트 |
+| TC FAIL 시 | 핫픽스 브랜치 생성 → 수정 → 새 PR |
+
+## 세션 인수인계
+
+다음 중 하나라도 해당되면 즉시 인수인계 문서를 생성한다:
+
+- 대화 턴이 20회를 초과한 경우
+- 에러 해결 없이 동일 문제를 3회 이상 반복한 경우
+- 작업 범위가 최초 요청에서 3개 이상의 파일로 확장된 경우
+
+### 인수인계 문서 구조
+
+인수인계 문서는 **인간용 산문**과 **Codex용 압축 블록** 두 부분으로 구성한다.
+
+파일 경로: `docs/session-reports/YYYY-MM-DD-<이름>-handoff.md`
+
+```markdown
+# 세션 인수인계 제목
+
+(인간용 산문: 브랜치, 커밋 목록, 수정 파일 테이블, 상세 설명 등 자유 형식)
+
+---
+<!-- CLAUDE_HANDOFF_START
+branch: <작업 브랜치명>
+pr: <PR 번호 또는 none>
+prev: <이전 인수인계 파일명 또는 none>
+
+[unresolved]
+- <HIGH|MED|LOW> <파일:라인> <문제 1줄> <해결 방향 1줄>
+
+[decisions]
+- <코드에서 추론 비용 높은 설계 판단. 1줄>
+
+[next]
+<번호 → 작업. 의존 순서대로>
+
+[traps]
+- <시도했으나 실패한 것, 회귀 위험 등>
+CLAUDE_HANDOFF_END -->
+```
+
+#### 블록 작성 규칙
+
+- **git에서 복구 가능한 정보를 블록에 쓰지 않는다**: 커밋 목록/SHA, 수정 파일 테이블, PR 상태 — 이것들은 인간용 산문에만 기재
+- 4섹션(unresolved/decisions/next/traps) 중 해당 없는 섹션은 생략 가능
+- 각 항목은 1-2줄 이내. 맥락 압축 우선
+
+### 인수인계 문서 생성 절차
+
+1. 사용자에게 알린다: `"⚠️ 인수인계 트리거 발동 — 인수인계 문서를 생성합니다."`
+2. `docs/session-reports/YYYY-MM-DD-<이름>-handoff.md`를 생성한다
+3. 인간용 산문 작성 (브랜치명, 수정 파일 목록, 에러·미완료 작업, 다음 세션 인수 요약 3-5줄)
+4. 문서 끝에 `CLAUDE_HANDOFF_START/END` 블록 필수 추가
+5. 블록에 git 복구 가능 정보가 포함되지 않았는지 확인
+
+### 다음 세션 부트스트랩 절차
+
+새 세션이 인수인계를 받을 때 다음 순서로 컨텍스트를 복원한다:
+
+1. `docs/session-reports/`에서 최신 handoff 파일 특정 (`ls -t`)
+2. **`CLAUDE_HANDOFF_START` 블록만 읽는다** — 인간용 산문 부분은 컨텍스트 복원 목적으로 전체 읽기 금지
+3. `branch`/`pr` 필드로 `git log`, `gh pr view` 실행하여 현재 상태 확인
+4. `prev` 필드가 있으면 필요 시 이전 문서의 블록도 참조 (lazy loading)
+
+## Memory 저장 기준
+
+| 저장 위치 | 저장 대상 |
+| --------- | -------- |
+| `AGENTS.md` | 팀 전체 영구 규칙, 빌드·실행 명령, 아키텍처 결정 |
+| `~/.Codex/.../memory/` | AGENTS.md에 없는 개인 피드백, 프로젝트 일시 상태 |
+
+- AGENTS.md에 이미 있는 규칙은 Memory에 중복 저장하지 않는다
+- 새 패턴을 Memory에 먼저 저장 → 세션 3회 이상 반복 시 AGENTS.md로 이전
+
+## 백엔드 로그
+
+배포: Azure Container Apps. `backend/.env`의 `BACKEND_HOST` 참조.
+
+```bash
+source backend/.env
+curl -s "$BACKEND_HOST/api/v1/logs?type=queries&limit=50" | python3 -m json.tool
+```
+
+상세 명령 및 필터링: [`docs/guides/backend-logs.md`](docs/guides/backend-logs.md)
+
+## 도메인 & 인프라
+
+- 프론트엔드 도메인: `sohobi.net` (Azure DNS zone: `.env` 참조)
+- 백엔드: Azure Container Apps (`BACKEND_HOST` in `.env`)
+- SEO canonical URL, sitemap, OG 태그 등에서 도메인은 **`sohobi.net`** 사용
+- Azure OpenAI 모델 배포명: **Container App env `AZURE_*_DEPLOYMENT` 가 유일한 source-of-truth**. 2026-04-20 기준 전 에이전트(router/chat/legal/finance/location/admin/signoff) `gpt-5.4-mini` 로 통일. 모델 관련 답변·문서 작성 전 반드시 실측:
+
+  ```bash
+  az containerapp show --name sohobi-backend -g rg-ejp-9638 \
+    --query "properties.template.containers[0].env[?contains(name, 'DEPLOYMENT')].{name:name, value:value}" -o table
+  ```
+
+  코드·rules 파일·과거 문서의 모델 기재를 그대로 인용 금지 (stale 가능성). 임베딩은 별도: `AZURE_EMBEDDING_DEPLOYMENT` (legal용, 현재 `text-embedding-3-small` 1536d), `GOV_EMBEDDING_DEPLOYMENT` (gov용, `text-embedding-3-large` 3072d).
+
+## 주의 사항
+
+- `.env` 파일에는 Azure API 키가 있음 — 절대 커밋하지 말 것
+- `backend/.venv/`는 gitignore됨
+
+## 린트 & 포맷
+
+- 백엔드: `ruff check --fix backend/` + `ruff format backend/`
+- 프론트엔드: `cd frontend && npx prettier --write src/ && npx eslint --fix src/`
+- pre-commit 훅이 커밋 시 자동 실행됨. `--no-verify` 사용 금지 (WIP 커밋 제외)
+- 설정 파일: `pyproject.toml` (Ruff), `frontend/.prettierrc` (Prettier), `frontend/eslint.config.js` (ESLint)
+
+## 반복 실수 패턴
+
+<!-- Codex가 반복적으로 틀린 사항을 여기에 기록. 주기적으로 업데이트. -->

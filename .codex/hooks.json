@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__playwright__browser_take_screenshot",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "find . -maxdepth 1 -name 'tc*.png' -delete"
+          }
+        ]
+      }
+    ]
+  }
+}
