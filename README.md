@@ -377,24 +377,26 @@ SOHOBI/
 │       └── assets/               # 이미지·아이콘
 ├── docs/                         # → docs/README.md 참조
 │   ├── architecture/             # Mermaid 아키텍처 다이어그램 (HTML 7개)
-│   ├── dev-summary/              # 팀원별 일일 개발 요약 (130건)
+│   ├── dev-summary/              # 팀원별 일일 개발 요약 (132건)
 │   ├── guides/                   # 운영 가이드 (로그 조회, 인프라 등)
 │   ├── plans/                    # 설계·분석 플랜 문서 (132건)
 │   ├── runbooks/                 # 운영 런북 (Azure 이전 등)
-│   ├── session-reports/          # 세션 인수인계 리포트 (84건)
+│   ├── session-reports/          # 세션 인수인계 리포트 (86건)
 │   └── test-reports/             # 보안 테스트·성능 베이스라인 리포트
 ├── data/                         # 정적 데이터 (법령 평가셋 템플릿 등)
 ├── infra/                        # 인프라 코드 (IaC)
-│   └── bicep/                    # Azure Bicep 모듈 (Log Analytics, Storage, ACR, CosmosDB, PostgreSQL, OpenAI, AI Search, Container App)
+│   └── bicep/                    # Azure Bicep 모듈 (Log Analytics, Storage, ACR, CosmosDB, PostgreSQL, OpenAI, AI Search, Container App, 예산 알림)
 │       ├── main.bicep
-│       ├── modules/              # 9개 리소스 모듈
+│       ├── modules/              # 10개 리소스 모듈
 │       └── parameters/           # 환경별 파라미터
 ├── scripts/                      # 유틸리티 스크립트
 │   ├── legal_index/              # Legal AI Search 인덱스 재구축 파이프라인 (6단계 + eval)
 │   ├── migrate/                  # Azure 이전 사전준비·백업 스크립트 (6개)
 │   ├── outdated/                 # 구버전 스크립트 보관
 │   └── worktree-setup.sh         # 워크트리 초기화 스크립트
+├── .codex/                       # Codex AI 에이전트 설정 (config.toml, hooks.json)
 ├── .github/workflows/            # CI/CD (프론트·백엔드 배포, 스모크 테스트, Bicep IaC 배포, PG 야간 정지, README 자동 갱신)
+├── AGENTS.md                     # AI 에이전트 운영 지침 (Codex 등 자동화 에이전트용)
 └── CLAUDE.md                     # Claude Code 영구 지시
 ```
 
@@ -476,7 +478,7 @@ pre-commit install
 ### 응답 시간 (Before → After)
 
 | 지표 | Before (n=532) | After (n=416) | 개선율 |
-|------|----------------|---------------|--------|
+|------|----------------|---------------|---------|
 | 전체 avg | 32.7s | 11.9s | **-63.6%** |
 | p90 | 68.2s | 21.2s | **-68.9%** |
 | max | 612.0s | 64.2s | **-89.5%** |
