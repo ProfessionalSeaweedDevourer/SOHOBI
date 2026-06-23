@@ -68,6 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PG_SERVER_NAME: sohobi-prod-pg
+      CONTAINER_APP_NAME: sohobi-backend
     steps:
       - uses: actions/checkout@v4
 
@@ -117,3 +118,31 @@ jobs:
             --name foundation-${{ github.run_id }} \
             --template-file infra/bicep/main.bicep \
             --parameters infra/bicep/parameters/prod.bicepparam
+
+      # Single revision 모드에서 'az deployment group create' 가 비활성화했던 구 리비전을 다시
+      # active 로 되살리는 현상 방지 (2026-06-23 실측: budget 배포가 트래픽 0 좀비 리비전 0000008
+      # 을 재활성 → 유휴 컴퓨트 재과금). 배포 직후 'active 인데 트래픽 0' 이고 latest 가 아닌
+      # 리비전(=실서비스 아님)을 자동 deactivate 한다. ingress 가 latestRevision=true·weight=100
+      # 이라 실서비스 리비전은 항상 traffic=100 → 오탐 없음. latest 는 어떤 경우에도 보존(안전장치).
+      - name: Deactivate orphaned (0-traffic) revisions
+        run: |
+          set -euo pipefail
+          latest=$(az containerapp revision list \
+            -n "$CONTAINER_APP_NAME" -g "$AZURE_RESOURCE_GROUP" \
+            --query "reverse(sort_by([], &properties.createdTime))[0].name" -o tsv)
+          echo "Latest revision (always kept): $latest"
+          az containerapp revision list \
+            -n "$CONTAINER_APP_NAME" -g "$AZURE_RESOURCE_GROUP" \
+            --query '[?properties.active && properties.trafficWeight==`0`].name' -o tsv \
+          | while read -r rev; do
+              [ -z "$rev" ] && continue
+              if [ "$rev" = "$latest" ]; then
+                echo "Skip latest: $rev"
+                continue
+              fi
+              echo "Deactivating orphaned revision: $rev"
+              az containerapp revision deactivate \
+                -n "$CONTAINER_APP_NAME" -g "$AZURE_RESOURCE_GROUP" --revision "$rev" \
+                || echo "::warning::deactivate failed for $rev"
+            done
+          echo "Orphan revision cleanup done."
