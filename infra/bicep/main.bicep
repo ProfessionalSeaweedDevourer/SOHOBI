@@ -191,8 +191,8 @@ module postgres 'modules/postgres.bicep' = {
 // 비용 가드
 // ================================================================
 
-@description('월 예산 (KRW). 모델 사용량 과금 활성화에 따른 알림 가드')
-param budgetAmountKrw int = 60000
+@description('월 예산 (KRW). 프로젝트 정식 종료 후 최소 비용 유지보수 기준 — baseline ~₩6~7K(ACR Basic이 대부분)의 약 3배로 설정해 정상 달엔 조용하고, 비정상 비용(예: stuck 리비전)은 며칠 내 50/80% 알람으로 조기 포착. 2026-06-23 ₩60,000 → ₩20,000 하향 (구 한도는 stuck 리비전을 13일+ 지나서야 100%에 닿아 조기탐지 실패).')
+param budgetAmountKrw int = 20000
 
 @description('예산 알림 수신 이메일')
 param budgetContactEmails array = [
