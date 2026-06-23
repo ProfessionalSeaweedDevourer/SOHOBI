@@ -6,8 +6,8 @@
 @description('예산 이름')
 param name string = 'sohobi-prod-monthly'
 
-@description('월 예산 금액 (구독 청구 통화 = KRW)')
-param amount int = 60000
+@description('월 예산 금액 (구독 청구 통화 = KRW). 유지보수 모드 기준값 ₩20,000 (실제 값은 main.bicep budgetAmountKrw가 주입)')
+param amount int = 20000
 
 @description('알림 수신 이메일')
 param contactEmails array
