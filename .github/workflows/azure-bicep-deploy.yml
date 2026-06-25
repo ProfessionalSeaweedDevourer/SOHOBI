@@ -38,6 +38,7 @@ jobs:
         id: whatif
         env:
           PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           az deployment group what-if \
             -g $AZURE_RESOURCE_GROUP \
@@ -112,6 +113,7 @@ jobs:
       - name: Bicep deploy
         env:
           PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           az deployment group create \
             -g $AZURE_RESOURCE_GROUP \
