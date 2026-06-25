@@ -48,6 +48,10 @@ param envVars array = []
 @description('Liveness probe HTTP path. 빈 문자열이면 probe 미설정 (quickstart placeholder 호환). 실제 backend 배포 시 /api/v1/health 등으로 override')
 param livenessProbePath string = ''
 
+@description('JWT 서명 시크릿. 빈 문자열이면 secret 미생성. non-local 환경의 backend 는 부팅에 필수 (api_server.py 가드). secretRef=jwt-secret 로 env 주입')
+@secure()
+param jwtSecret string = ''
+
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: acrName
 }
@@ -82,6 +86,14 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           identity: 'system'
         }
       ] : []
+      // 민감 값은 Container App secret 으로 저장하고 env 는 secretRef 로 참조한다.
+      // out-of-band 'az containerapp secret set' 은 다음 Bicep 배포가 덮어쓰므로(좀비 버그 발생 경로) Bicep 을 source-of-truth 로 둔다.
+      secrets: empty(jwtSecret) ? [] : [
+        {
+          name: 'jwt-secret'
+          value: jwtSecret
+        }
+      ]
     }
     template: {
       containers: [

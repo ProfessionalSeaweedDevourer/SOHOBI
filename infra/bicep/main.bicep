@@ -29,6 +29,10 @@ param tags object = {
 @secure()
 param pgAdministratorLoginPassword string
 
+@description('JWT 서명 시크릿. workflow에서 secret(JWT_SECRET)으로 주입. non-local backend 부팅 필수값. 빈 값이면 미주입(quickstart placeholder 호환)')
+@secure()
+param jwtSecret string = ''
+
 // ================================================================
 // Foundation 자원
 // ================================================================
@@ -102,9 +106,12 @@ module backendApp 'modules/container-app.bicep' = {
     useAcrImage: useBackendAcrImage
     targetPort: useBackendAcrImage ? 8000 : 80
     livenessProbePath: useBackendAcrImage ? '/health' : ''
+    jwtSecret: useBackendAcrImage ? jwtSecret : ''
     envVars: useBackendAcrImage ? [
-      // 비-민감 endpoint·식별자. 민감 값(API key·password)은 az containerapp secret set + secretRef로 별도 주입
+      // 비-민감 endpoint·식별자. 민감 값(API key·password)은 Container App secret + secretRef로 주입
       { name: 'APP_ENV', value: 'production' }
+      // 부팅 필수: non-local 환경에서 JWT_SECRET 미설정 시 api_server.py 가 RuntimeError 로 부팅 차단
+      { name: 'JWT_SECRET', secretRef: 'jwt-secret' }
       { name: 'AZURE_OPENAI_ENDPOINT', value: openai.outputs.endpoint }
       { name: 'AZURE_OPENAI_API_VERSION', value: '2024-08-01-preview' }
       { name: 'AZURE_DEPLOYMENT_NAME', value: openai.outputs.chatDeploymentName }
