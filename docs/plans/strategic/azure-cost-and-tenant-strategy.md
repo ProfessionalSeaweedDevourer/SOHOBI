@@ -1,6 +1,9 @@
 # Azure 인프라 전략 — 테넌트 이전 + Right-sizing 통합
 
 > 본 문서는 2026-04-26~27 세션 논의의 종합. 단일 시점의 결론이 아닌 **장기 방향성**.
+>
+> **후속 문서**: [azure-freetier-cliff-2027.md](azure-freetier-cliff-2027.md) — 2026-06 테넌트 이전 완료 후의 요금 구조와 2027-05-27 무료 티어 만료 대응. 아래 §2 빌링 실측치는 이전 전(구독 `rg-ejp-9638`) 기준이므로 현행 수치는 후속 문서를 본다.
+>
 > 관련 산출물:
 > - 기획안: [docs/plans/2026-04-26-azure-tenant-migration.md](../2026-04-26-azure-tenant-migration.md)
 > - 기획안: [docs/plans/2026-04-26-legal-index-rebuild.md](../2026-04-26-legal-index-rebuild.md)
