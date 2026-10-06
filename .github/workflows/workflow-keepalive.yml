@@ -34,10 +34,27 @@ jobs:
       - name: Re-enable scheduled workflows
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        # 사람이 수동으로 끈 워크플로(disabled_manually)는 의도된 정지이므로 건드리지 않는다.
+        # 한 워크플로가 실패해도 나머지를 처리한 뒤 마지막에 실패로 끝낸다.
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          failed=0
           for wf in $WORKFLOWS; do
-            gh api -X PUT "repos/${{ github.repository }}/actions/workflows/$wf/enable"
-            state=$(gh api "repos/${{ github.repository }}/actions/workflows/$wf" --jq .state)
-            echo "$wf: $state"
+            if ! state=$(gh api "repos/$REPO/actions/workflows/$wf" --jq .state); then
+              echo "::error::$wf: 상태 조회 실패"; failed=1; continue
+            fi
+            case "$state" in
+              active|disabled_inactivity)
+                if gh api -X PUT "repos/$REPO/actions/workflows/$wf/enable" --silent; then
+                  echo "$wf: $state -> enable 호출 완료"
+                else
+                  echo "::error::$wf: enable 실패"; failed=1
+                fi
+                ;;
+              *)
+                echo "::warning::$wf: state=$state, 수동 정지로 보고 건너뜀"
+                ;;
+            esac
           done
+          exit $failed
