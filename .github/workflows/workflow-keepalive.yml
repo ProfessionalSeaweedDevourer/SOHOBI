@@ -52,8 +52,11 @@ jobs:
                   echo "::error::$wf: enable 실패"; failed=1
                 fi
                 ;;
+              disabled_manually)
+                echo "::warning::$wf: 수동 정지 상태라 건너뜀"
+                ;;
               *)
-                echo "::warning::$wf: state=$state, 수동 정지로 보고 건너뜀"
+                echo "::error::$wf: 예상 밖 state=$state"; failed=1
                 ;;
             esac
           done
