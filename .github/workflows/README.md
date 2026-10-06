@@ -14,6 +14,7 @@ GitHub Actions CI/CD 파이프라인.
 | `smoke-test.yml` | Backend Smoke Test | `main` push, PR | 배포 후 헬스 체크 + API 키 인증 검증 |
 | `azure-bicep-deploy.yml` | Bicep What-if / Deploy | PR(`infra/**` what-if), `main` push(deploy) | Azure 인프라 (Bicep IaC, 신규 테넌트 OIDC) |
 | `pg-nightly-stop.yml` | PostgreSQL Nightly Stop | 야간 cron | PostgreSQL Flexible Server 정지 (비용 절감) |
+| `workflow-keepalive.yml` | Workflow Keepalive | 매월 1일 cron, 수동 실행 | schedule 워크플로의 60일 무활동 자동 비활성화 방지 |
 
 ## 필요 GitHub Secrets
 
@@ -32,4 +33,5 @@ GitHub Actions CI/CD 파이프라인.
 - SWA Free tier staging 환경 한도(3개)에 도달하면 preview deploy를 건너뛰고 PR 코멘트만 남긴다. 이 경우 CI는 실패시키지 않는다
 - PR 닫힘 즉시 정리와 매일 stale cleanup은 `azure-static-web-apps-cleanup.yml`에서 전담한다
 - SWA production 배포는 `concurrency` 설정으로 동시 배포를 큐잉하고, PR preview 배포는 같은 PR의 이전 실행을 취소한다
+- 공개 리포는 60일 무활동 시 schedule 워크플로가 자동 비활성화된다(`disabled_inactivity`). schedule 워크플로를 추가하면 `workflow-keepalive.yml`의 `WORKFLOWS` 목록에도 추가한다
 - 백엔드 배포는 `concurrency` 설정으로 동시 배포를 방지한다 (`cancel-in-progress: false`)
