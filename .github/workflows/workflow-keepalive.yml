@@ -1,0 +1,63 @@
+name: Workflow Keepalive
+
+# 공개 리포는 60일간 활동이 없으면 schedule 워크플로가 자동 비활성화된다
+# (state = disabled_inactivity). 2026-10-06 PG Nightly Stop/Start 와
+# Azure Static Web Apps Cleanup 이 이 사유로 꺼졌다.
+#
+# PG 야간 정지는 무료 티어 만료(2027-05-27) 이후 월 ₩9,895 가치를 갖는 유지 결정
+# 자산이고(docs/plans/strategic/azure-freetier-cliff-2027.md §3), SWA Cleanup 은
+# PR close 시 staging 환경 정리(Free 플랜 환경 수 한도)를 맡는다. 조용히 꺼진 채
+# 남으면 둘 다 필요한 시점에 동작하지 않는다.
+#
+# 매월 1회 enable API 를 호출해 60일 타이머를 리셋한다. 이미 active 인 워크플로에
+# 호출해도 204 로 무해하다. 이 워크플로 자신도 schedule 이므로 목록에 포함한다.
+# schedule 워크플로를 추가하면 WORKFLOWS 에도 추가한다.
+
+on:
+  schedule:
+    - cron: '0 1 1 * *'   # 매월 1일 KST 10:00
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+env:
+  WORKFLOWS: >-
+    pg-nightly-stop.yml
+    azure-static-web-apps-cleanup.yml
+    workflow-keepalive.yml
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-enable scheduled workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        # 사람이 수동으로 끈 워크플로(disabled_manually)는 의도된 정지이므로 건드리지 않는다.
+        # 한 워크플로가 실패해도 나머지를 처리한 뒤 마지막에 실패로 끝낸다.
+        run: |
+          set -uo pipefail
+          failed=0
+          for wf in $WORKFLOWS; do
+            if ! state=$(gh api "repos/$REPO/actions/workflows/$wf" --jq .state); then
+              echo "::error::$wf: 상태 조회 실패"; failed=1; continue
+            fi
+            case "$state" in
+              active|disabled_inactivity)
+                if gh api -X PUT "repos/$REPO/actions/workflows/$wf/enable" --silent; then
+                  echo "$wf: $state -> enable 호출 완료"
+                else
+                  echo "::error::$wf: enable 실패"; failed=1
+                fi
+                ;;
+              disabled_manually)
+                echo "::warning::$wf: 수동 정지 상태라 건너뜀"
+                ;;
+              *)
+                echo "::error::$wf: 예상 밖 state=$state"; failed=1
+                ;;
+            esac
+          done
+          exit $failed
