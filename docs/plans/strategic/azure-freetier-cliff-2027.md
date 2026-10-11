@@ -2,6 +2,7 @@
 
 > 본 문서는 2026-08-07 세션의 요금 구조 실측 조사에서 도출된 **장기 방향성**. 단일 시점의 조치가 아니다.
 > 선행 문서: [azure-cost-and-tenant-strategy.md](azure-cost-and-tenant-strategy.md) — 서비스 정체성(portfolio-grade, SLA 없음) 정의는 그 문서 §1이 정본이며 본 문서의 전제다.
+> **2026-10-11 갱신**: 이후 실측으로 바뀐 사실(PG 연결 결함, cron 지연, 도메인 만료, 새 선택지 SQLite안)과 실행 계획은 [maintenance-mode-low-cost-ops.md](maintenance-mode-low-cost-ops.md)에 모았다. 두 문서가 어긋나면 그 문서를 따른다.
 > 관련 워크플로: [.github/workflows/pg-nightly-stop.yml](../../../.github/workflows/pg-nightly-stop.yml), [.github/workflows/azure-bicep-deploy.yml](../../../.github/workflows/azure-bicep-deploy.yml), [.github/workflows/build-backend-new.yml](../../../.github/workflows/build-backend-new.yml)
 
 ---
