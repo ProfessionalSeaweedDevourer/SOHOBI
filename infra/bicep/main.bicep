@@ -33,6 +33,34 @@ param pgAdministratorLoginPassword string
 @secure()
 param jwtSecret string = ''
 
+// backend 운영 비밀값. 모두 workflow 가 같은 이름의 GitHub secret 을 env 로 넘기고 prod.bicepparam 이 읽는다.
+// PG 비밀번호는 별도 파라미터 없이 pgAdministratorLoginPassword 를 재사용한다(같은 배포가 서버 비밀번호도 적용하므로 항상 일치).
+// 필수: apiSecretKey. 선택: 나머지 5개 (비어 있으면 해당 secret 과 env 를 만들지 않는다).
+
+@description('필수. API 키 인증 키 (GitHub secret API_SECRET_KEY). 프론트엔드가 보내는 키(VITE_API_KEY)와 같은 값이어야 한다')
+@secure()
+param apiSecretKey string = ''
+
+@description('선택. VWorld API 키 (GitHub secret VWORLD_API_KEY)')
+@secure()
+param vworldApiKey string = ''
+
+@description('선택. Kakao REST 키 (GitHub secret KAKAO_REST_KEY)')
+@secure()
+param kakaoRestKey string = ''
+
+@description('선택. 한국관광공사 API 키 (GitHub secret KTO_GW_INFO_KEY)')
+@secure()
+param ktoGwInfoKey string = ''
+
+@description('선택. Google OAuth client ID (GitHub secret GOOGLE_CLIENT_ID)')
+@secure()
+param googleClientId string = ''
+
+@description('선택. Google OAuth client secret (GitHub secret GOOGLE_CLIENT_SECRET)')
+@secure()
+param googleClientSecret string = ''
+
 // ================================================================
 // Foundation 자원
 // ================================================================
@@ -94,10 +122,12 @@ param useBackendAcrImage bool = false
 @description('Backend Container 이미지 (ACR 사용 시 sohobi-backend:latest 등). useBackendAcrImage=false면 무시되고 quickstart 사용')
 param backendImage string = 'sohobi-backend:latest'
 
+var backendAppName = '${namePrefix}-backend'
+
 module backendApp 'modules/container-app.bicep' = {
   name: 'backendApp'
   params: {
-    name: '${namePrefix}-backend'
+    name: backendAppName
     location: location
     tags: tags
     environmentId: containerAppsEnv.outputs.id
@@ -107,11 +137,27 @@ module backendApp 'modules/container-app.bicep' = {
     targetPort: useBackendAcrImage ? 8000 : 80
     livenessProbePath: useBackendAcrImage ? '/health' : ''
     jwtSecret: useBackendAcrImage ? jwtSecret : ''
+    pgPassword: useBackendAcrImage ? pgAdministratorLoginPassword : ''
+    apiSecretKey: useBackendAcrImage ? apiSecretKey : ''
+    vworldApiKey: useBackendAcrImage ? vworldApiKey : ''
+    kakaoRestKey: useBackendAcrImage ? kakaoRestKey : ''
+    ktoGwInfoKey: useBackendAcrImage ? ktoGwInfoKey : ''
+    googleClientId: useBackendAcrImage ? googleClientId : ''
+    googleClientSecret: useBackendAcrImage ? googleClientSecret : ''
     envVars: useBackendAcrImage ? [
       // 비-민감 endpoint·식별자. 민감 값(API key·password)은 Container App secret + secretRef로 주입
       { name: 'APP_ENV', value: 'production' }
       // 부팅 필수: non-local 환경에서 JWT_SECRET 미설정 시 api_server.py 가 RuntimeError 로 부팅 차단
       { name: 'JWT_SECRET', secretRef: 'jwt-secret' }
+      // 필수 비밀값. JWT_SECRET 처럼 무조건 넣으므로 값이 빠지면 배포가 성공하지 않는다
+      // (azure-bicep-deploy.yml 이 그 전에 미등록 이름을 밝히고 멈춘다). 선택 비밀값 5개의 env 는 모듈이 붙인다.
+      { name: 'PG_PASSWORD', secretRef: 'pg-password' }
+      // 비면 backend/auth.py 가 인증을 건너뛴다(fail-open). 2026-10-11 실측: 이 env 가 없어 키 없는 호출이 200 이었다
+      { name: 'API_SECRET_KEY', secretRef: 'api-secret-key' }
+      // Google 로그인 주소 (backend/auth_router.py). 기본값이 localhost 라 비우면 로그인 후 localhost 로 돌아간다.
+      // BACKEND_HOST 는 OAuth redirect_uri 의 앞부분이므로 Google 콘솔의 승인된 redirect URI 와 같아야 한다
+      { name: 'FRONTEND_URL', value: 'https://sohobi.net' }
+      { name: 'BACKEND_HOST', value: 'https://${backendAppName}.${containerAppsEnv.outputs.defaultDomain}' }
       { name: 'AZURE_OPENAI_ENDPOINT', value: openai.outputs.endpoint }
       { name: 'AZURE_OPENAI_API_VERSION', value: '2024-08-01-preview' }
       { name: 'AZURE_DEPLOYMENT_NAME', value: openai.outputs.chatDeploymentName }

@@ -19,6 +19,20 @@ permissions:
 
 env:
   AZURE_RESOURCE_GROUP: rg-sohobi-prod
+  # prod.bicepparam 이 readEnvironmentVariable 로 읽는 GitHub secret 이름. 값이 아니라 이름만 둔다.
+  # secret 을 추가하면 이 목록, 아래 두 job 의 env, prod.bicepparam, main.bicep 을 함께 고친다.
+  # 필수: 하나라도 비면 배포하지 않는다. API_SECRET_KEY 가 빈 리비전은 인증이 꺼진 채 뜬다(backend/auth.py).
+  REQUIRED_SECRETS: >-
+    PG_ADMIN_PASSWORD
+    JWT_SECRET
+    API_SECRET_KEY
+  # 선택: 비어 있으면 해당 기능의 secret 과 env 없이 배포한다(지도 부가 기능, Google 로그인).
+  OPTIONAL_SECRETS: >-
+    VWORLD_API_KEY
+    KAKAO_REST_KEY
+    KTO_GW_INFO_KEY
+    GOOGLE_CLIENT_ID
+    GOOGLE_CLIENT_SECRET
 
 jobs:
   what-if:
@@ -39,12 +53,30 @@ jobs:
         env:
           PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+          VWORLD_API_KEY: ${{ secrets.VWORLD_API_KEY }}
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+          KTO_GW_INFO_KEY: ${{ secrets.KTO_GW_INFO_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
+          # 미등록 secret 은 PR 코멘트 맨 앞에 이름만 적는다. 필수가 비면 머지 후 deploy job 이 같은 검사로 멈춘다.
+          missing=""; skipped=""
+          for k in $REQUIRED_SECRETS; do [ -n "${!k:-}" ] || missing="$missing $k"; done
+          for k in $OPTIONAL_SECRETS; do [ -n "${!k:-}" ] || skipped="$skipped $k"; done
+          : > whatif.txt
+          if [ -n "$missing" ]; then
+            echo "::warning::미등록 필수 GitHub secret:$missing"
+            echo "경고: 미등록 필수 GitHub secret:$missing (이대로 머지하면 deploy job 이 배포 전에 멈춘다)" >> whatif.txt
+          fi
+          if [ -n "$skipped" ]; then
+            echo "참고: 미등록 선택 GitHub secret:$skipped (해당 env 없이 배포된다)" >> whatif.txt
+          fi
           az deployment group what-if \
             -g $AZURE_RESOURCE_GROUP \
             --template-file infra/bicep/main.bicep \
             --parameters infra/bicep/parameters/prod.bicepparam \
-            --no-pretty-print > whatif.txt 2>&1 || true
+            --no-pretty-print >> whatif.txt 2>&1 || true
           {
             echo "result<<EOF"
             cat whatif.txt
@@ -114,7 +146,26 @@ jobs:
         env:
           PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+          VWORLD_API_KEY: ${{ secrets.VWORLD_API_KEY }}
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+          KTO_GW_INFO_KEY: ${{ secrets.KTO_GW_INFO_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
+          set -euo pipefail
+          # 필수 secret 이 비면 secretRef 가 없는 secret 을 가리켜 배포가 거부되고, API_SECRET_KEY 가 빈 리비전은
+          # 인증이 꺼진 채 뜬다(backend/auth.py). 어느 쪽이든 배포 전에 이름을 밝히고 멈춘다.
+          missing=""; skipped=""
+          for k in $REQUIRED_SECRETS; do [ -n "${!k:-}" ] || missing="$missing $k"; done
+          for k in $OPTIONAL_SECRETS; do [ -n "${!k:-}" ] || skipped="$skipped $k"; done
+          if [ -n "$missing" ]; then
+            echo "::error::미등록 필수 GitHub secret:$missing (절차: docs/plans/2026-10-11-bicep-secrets-manual-actions.md)"
+            exit 1
+          fi
+          if [ -n "$skipped" ]; then
+            echo "::warning::미등록 선택 GitHub secret:$skipped (해당 env 없이 배포한다)"
+          fi
           az deployment group create \
             -g $AZURE_RESOURCE_GROUP \
             --name foundation-${{ github.run_id }} \
