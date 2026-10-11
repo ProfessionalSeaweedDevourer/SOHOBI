@@ -255,7 +255,7 @@ param budgetContactEmails array = [
   'delta115zx@naver.com'
 ]
 
-@description('예산 시작일 (월 1일 고정, YYYY-MM-01). 과거 시작일은 생성 시점 기준 약 3개월까지만 허용되므로 배포 당월로 자동 계산 — 기존 budget 업데이트 시 원래 startDate가 유지됨')
+@description('예산 시작일 (월 1일 고정, YYYY-MM-01). 기본값은 배포 당월로, 예산을 처음 만들 때만 맞다. 기존 예산의 시작일은 바꿀 수 없어(400 "Start date of budgets cannot be updated") 다른 달에 배포하면 실패하므로, 운영은 prod.bicepparam 에서 기존 값으로 고정한다')
 param budgetStartDate string = utcNow('yyyy-MM-01')
 
 module budget 'modules/budget.bicep' = {

@@ -38,3 +38,7 @@ param useBackendAcrImage = true
 // GlobalStandard limit 1000, text-embedding-3-large 는 Standard SKU 로 배포 — 라이브 실측 일치).
 // 배포 3종: gpt-5.4-mini(chat) + text-embedding-3-small(legal 1536d) + text-embedding-3-large(gov 3072d)
 param openaiDeployModels = true
+
+// 예산 sohobi-prod-monthly 의 실제 시작일. Azure 는 기존 예산의 시작일 변경을 거부하므로 main.bicep 기본값(배포 당월)을
+// 쓰면 생성 달이 아닌 달의 배포가 모두 실패한다(2026-10-11 실측). 예산을 지우고 다시 만들 때만 바꾼다.
+param budgetStartDate = '2026-06-01'
