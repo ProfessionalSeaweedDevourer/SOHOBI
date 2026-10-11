@@ -19,6 +19,16 @@ param pgAdministratorLoginPassword = readEnvironmentVariable('PG_ADMIN_PASSWORD'
 // GitHub Actions workflow 가 secret(JWT_SECRET)을 env 로 주입. non-local backend 부팅 필수값.
 param jwtSecret = readEnvironmentVariable('JWT_SECRET', '')
 
+// backend 운영 비밀값: 같은 이름의 GitHub secret 을 workflow 가 env 로 주입한다.
+// PG_PASSWORD 는 pgAdministratorLoginPassword 를 재사용하므로 여기에 없다.
+// 등록 절차: docs/plans/2026-10-11-bicep-secrets-manual-actions.md
+param apiSecretKey = readEnvironmentVariable('API_SECRET_KEY', '')
+param vworldApiKey = readEnvironmentVariable('VWORLD_API_KEY', '')
+param kakaoRestKey = readEnvironmentVariable('KAKAO_REST_KEY', '')
+param ktoGwInfoKey = readEnvironmentVariable('KTO_GW_INFO_KEY', '')
+param googleClientId = readEnvironmentVariable('GOOGLE_CLIENT_ID', '')
+param googleClientSecret = readEnvironmentVariable('GOOGLE_CLIENT_SECRET', '')
+
 // Backend Container 이미지를 ACR 빌드 이미지로 전환 (cutover 사전 deploy 검증 + D-day 영구 유지).
 // build-backend-new.yml 으로 sohobi-backend:latest 가 ACR 에 push 된 상태 전제.
 // 이 토글 활성화 시 Container App 이 quickstart placeholder → 실 backend (port 8000, /health probe) 로 전환됨.

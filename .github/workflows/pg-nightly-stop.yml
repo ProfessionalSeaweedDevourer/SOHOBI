@@ -9,6 +9,14 @@ name: PG Nightly Stop/Start
 #   따라서 이 워크플로의 실패는 요금에 영향이 없으므로 긴급 대응 대상이 아니다.
 #   근거·수치·만료 대응: docs/plans/strategic/azure-freetier-cliff-2027.md
 #
+# [2026-10-11 일정 정지 중지] 일정 실행의 stop job 은 저장소 변수 PG_NIGHTLY_ENABLED 가 'true' 일 때만 돈다.
+#   변수가 없는 기본 상태가 꺼짐이다. 실측상 정지 cron 은 KST 04~05시, 기동 cron 의 첫 실행은
+#   10:31~11:42 에 돌아 PG 가 매일 오전 11시 반 무렵까지 Stopped 였다. 비밀값 주입으로 PG 연결이 살아나면
+#   그 시간대 PG 기능이 멈추는데, 무료 기간 절감액은 ₩0 이라 손해만 남는다.
+#   되살릴 때는 이 변수로 켜지 말고 Azure Automation 일정으로 옮긴다(cron 지연이 그대로이므로).
+#   변수는 수동 점검이나 긴급 시 임시로 켜는 용도다. start job 은 Stopped 일 때만 동작하므로 그대로 둔다.
+#   근거: docs/plans/strategic/maintenance-mode-low-cost-ops.md 결함 (B), 권고 R2
+#
 # 정지: 매일 KST 24:00 (= UTC 15:00)
 # 기동: 매일 KST 08:00 (= UTC 23:00 전날). GitHub Actions schedule cron 은
 #       SLA 가 없어 5-15분 지연 또는 가끔 skip 이 발생 — start 누락 시 다음
@@ -45,7 +53,8 @@ env:
 
 jobs:
   stop:
-    if: github.event.schedule == '0 15 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'stop')
+    # 무료 기간(~2027-05-27)에는 절감액 ₩0 이고 cron 지연으로 아침 장애만 생기므로 일정 정지를 끈다(상단 주석).
+    if: (github.event.schedule == '0 15 * * *' && vars.PG_NIGHTLY_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'stop')
     runs-on: ubuntu-latest
     steps:
       - name: Azure login (OIDC)

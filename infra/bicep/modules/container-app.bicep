@@ -52,6 +52,42 @@ param livenessProbePath string = ''
 @secure()
 param jwtSecret string = ''
 
+// 운영 비밀값. 2026-06-25 Bicep 배포가 CLI 로 넣었던 secret 을 덮어써, 이 앱은 그 뒤로 PG 연결과 API 키 인증이
+// 꺼진 채 떠 있었다. 근거: docs/plans/strategic/maintenance-mode-low-cost-ops.md 결함 (A)
+//
+// 필수(pgPassword, apiSecretKey): jwtSecret 과 같은 규칙. 값이 비면 secret 을 만들지 않고, env 는 main.bicep 이
+// 무조건 넣는다. 그래서 값이 빠진 채로는 배포가 성공하지 않는다.
+// 선택(나머지 5개): 값이 있을 때만 secret 과 env 를 한 쌍으로 만든다(아래 secrets, env). 나중에 GitHub secret 을
+// 등록하고 Bicep 배포를 다시 돌리면 붙는다.
+
+@description('필수. PG 접속 비밀번호. secretRef=pg-password, env PG_PASSWORD 는 main.bicep 이 넣는다')
+@secure()
+param pgPassword string = ''
+
+@description('필수. API 키 인증 키. secretRef=api-secret-key, env API_SECRET_KEY 는 main.bicep 이 넣는다. 비면 backend/auth.py 가 검증을 건너뛴다(fail-open)')
+@secure()
+param apiSecretKey string = ''
+
+@description('선택. VWorld API 키 → env VWORLD_API_KEY (필지, 토지이용 조회)')
+@secure()
+param vworldApiKey string = ''
+
+@description('선택. Kakao REST 키 → env KAKAO_REST_KEY (행정동 중심점 조회)')
+@secure()
+param kakaoRestKey string = ''
+
+@description('선택. 한국관광공사 API 키 → env KTO_GW_INFO_KEY (축제 조회)')
+@secure()
+param ktoGwInfoKey string = ''
+
+@description('선택. Google OAuth client ID → env GOOGLE_CLIENT_ID. 비면 /auth/google 이 501')
+@secure()
+param googleClientId string = ''
+
+@description('선택. Google OAuth client secret → env GOOGLE_CLIENT_SECRET')
+@secure()
+param googleClientSecret string = ''
+
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: acrName
 }
@@ -88,12 +124,17 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
       ] : []
       // 민감 값은 Container App secret 으로 저장하고 env 는 secretRef 로 참조한다.
       // out-of-band 'az containerapp secret set' 은 다음 Bicep 배포가 덮어쓰므로(좀비 버그 발생 경로) Bicep 을 source-of-truth 로 둔다.
-      secrets: empty(jwtSecret) ? [] : [
-        {
-          name: 'jwt-secret'
-          value: jwtSecret
-        }
-      ]
+      // 값마다 따로 걸러 concat 으로 잇는다. 한 조건 안에 묶으면 다른 secret 이 jwtSecret 유무에 따라 함께 사라진다.
+      secrets: concat(
+        empty(jwtSecret) ? [] : [ { name: 'jwt-secret', value: jwtSecret } ],
+        empty(pgPassword) ? [] : [ { name: 'pg-password', value: pgPassword } ],
+        empty(apiSecretKey) ? [] : [ { name: 'api-secret-key', value: apiSecretKey } ],
+        empty(vworldApiKey) ? [] : [ { name: 'vworld-api-key', value: vworldApiKey } ],
+        empty(kakaoRestKey) ? [] : [ { name: 'kakao-rest-key', value: kakaoRestKey } ],
+        empty(ktoGwInfoKey) ? [] : [ { name: 'kto-gw-info-key', value: ktoGwInfoKey } ],
+        empty(googleClientId) ? [] : [ { name: 'google-client-id', value: googleClientId } ],
+        empty(googleClientSecret) ? [] : [ { name: 'google-client-secret', value: googleClientSecret } ]
+      )
     }
     template: {
       containers: [
@@ -104,7 +145,15 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             cpu: json(cpu)
             memory: memory
           }
-          env: envVars
+          // 선택 비밀값의 env 는 secrets 와 같은 조건으로 붙인다. 없는 secret 을 secretRef 로 가리키면 배포가 거부된다.
+          env: concat(
+            envVars,
+            empty(vworldApiKey) ? [] : [ { name: 'VWORLD_API_KEY', secretRef: 'vworld-api-key' } ],
+            empty(kakaoRestKey) ? [] : [ { name: 'KAKAO_REST_KEY', secretRef: 'kakao-rest-key' } ],
+            empty(ktoGwInfoKey) ? [] : [ { name: 'KTO_GW_INFO_KEY', secretRef: 'kto-gw-info-key' } ],
+            empty(googleClientId) ? [] : [ { name: 'GOOGLE_CLIENT_ID', secretRef: 'google-client-id' } ],
+            empty(googleClientSecret) ? [] : [ { name: 'GOOGLE_CLIENT_SECRET', secretRef: 'google-client-secret' } ]
+          )
           // probe 전략: Startup + Liveness 2종.
           // - Startup: cold start 보호 (AZURE_OPENAI client init, DB pool warmup). 통과 전까지 Liveness 평가 보류.
           //   periodSeconds=5 * failureThreshold=30 = 최대 150초 부팅 허용.
