@@ -5,10 +5,13 @@
 
 import asyncio
 import json
+import logging
 
 from kernel_setup import get_kernel
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
 from semantic_kernel.contents import ChatHistory
+
+_logger = logging.getLogger("sohobi.router")
 
 KEYWORDS: dict[str, list[str]] = {
     "admin": [
@@ -267,13 +270,33 @@ async def _llm_classify(question: str, prior_history: list[dict] | None = None) 
             timeout=30.0,
         )
         parsed = json.loads(str(result))
-        return (
-            parsed
-            if parsed.get("domain") in ("admin", "finance", "legal", "location", "chat")
-            else _FALLBACK
-        )
-    except Exception:
+        if parsed.get("domain") in ("admin", "finance", "legal", "location", "chat"):
+            return parsed
+        _logger.warning("router LLM 응답에 유효한 domain 없음: %s", str(result)[:200])
         return _FALLBACK
+    except Exception as e:
+        _logger.warning("router LLM 분류 실패: %s: %s", type(e).__name__, e)
+        return _FALLBACK
+
+
+def _keyword_hint(question: str) -> dict | None:
+    """LLM 실패 시 키워드 1개라도 단독 1위인 도메인을 쓴다. admin 기본값보다 낫다.
+
+    2026-11-02 '삼성동 샐러드 상권은 어때?'(키워드 '상권' 1개)가 admin 으로 답해졌다.
+    """
+    counts = {
+        d: sum(kw in question for kw in kws)
+        for d, kws in KEYWORDS.items()
+        if d != "chat"
+    }
+    best = max(counts, key=counts.get)
+    if counts[best] < 1 or list(counts.values()).count(counts[best]) > 1:
+        return None
+    return {
+        "domain": best,
+        "confidence": 0.4,
+        "reasoning": "LLM 분류 실패 — 키워드 단서로 대체",
+    }
 
 
 async def classify(
@@ -291,6 +314,8 @@ async def classify(
     if result:
         return result
     llm_result = await _llm_classify(question, prior_history)
+    if llm_result is _FALLBACK:
+        return _keyword_hint(question) or _FALLBACK
     # last_domain 방어선: LLM이 chat으로 분류했지만 확신이 낮고 이전 도메인이 실무 도메인이면 유지
     # 단, 현재 질문에 다른 실무 도메인 키워드가 1개 이상 있으면 방어선 해제 (진짜 도메인 전환)
     if (
