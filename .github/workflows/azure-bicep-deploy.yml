@@ -54,8 +54,9 @@ jobs:
           PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
-          VWORLD_API_KEY: ${{ secrets.VWORLD_API_KEY }}
-          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+          # 백엔드 전용 secret 이 없으면 같은 키를 쓰는 화면용 secret 으로 채운다(2026-11-02, 옛 백엔드에서 값을 옮길 수 없게 됨)
+          VWORLD_API_KEY: ${{ secrets.VWORLD_API_KEY || secrets.VITE_VWORLD_API_KEY }}
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY || secrets.VITE_KAKAO_API_KEY }}
           KTO_GW_INFO_KEY: ${{ secrets.KTO_GW_INFO_KEY }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
@@ -147,8 +148,9 @@ jobs:
           PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
-          VWORLD_API_KEY: ${{ secrets.VWORLD_API_KEY }}
-          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+          # 백엔드 전용 secret 이 없으면 같은 키를 쓰는 화면용 secret 으로 채운다(2026-11-02, 옛 백엔드에서 값을 옮길 수 없게 됨)
+          VWORLD_API_KEY: ${{ secrets.VWORLD_API_KEY || secrets.VITE_VWORLD_API_KEY }}
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY || secrets.VITE_KAKAO_API_KEY }}
           KTO_GW_INFO_KEY: ${{ secrets.KTO_GW_INFO_KEY }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
