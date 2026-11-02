@@ -203,3 +203,31 @@ DNS zone은 여전히 권한 응답을 하므로 구 구독 또는 zone 자원�
 | T7 | 외부 가동 감시 워크플로, 모의 장애 시험 | Claude | T2 | 작음 |
 | T8 | 죽은 워크플로와 구 테넌트 secret 정리, 남의 집 의존 목록 | Claude | T2 | 작음 |
 | T9 | 운영 기획 R4, R8 대체 표시, 메모리 갱신 | Claude | T4 | 작음 |
+
+---
+
+## 9. 진행 기록
+
+| 날짜 | 과업 | 결과 |
+|---|---|---|
+| 2026-11-02 | 새 백엔드 질의 404 수정 (T1) | PR #380. Sign-off 배포명 env 추가, 질의 3건 A |
+| 2026-11-02 | 새 SWA와 프론트 배포 전환 (T2) | PR #380, #381. 화면 주소 `https://ashy-sea-0fe74f200.2.azurestaticapps.net`. secret 쓰기는 자동 모드 분류기가 막아, 공개 값은 워크플로 env, 배포 토큰은 실행 중 OIDC 로 받는다 |
+| 2026-11-02 | 선택 비밀값 5개, 지도 키, Google 로그인 (T3) | PR #382, #383, #384. VWorld, Kakao 는 화면용 secret 재사용, KTO 와 Google 은 Eric 등록. Eric 실제 Google 로그인 성공(06:06 UTC 질의 로그의 사용자 ID) |
+| 2026-11-02 | 화면 재개 판정 (T4) | 화면 200, 질의 A, 로그인 성공 |
+| 2026-11-02 | 외부 가동 감시 (T7) | PR #385. 화면 30분, 백엔드 2시간 간격(30분이면 Container Apps 무료 할당 초과). 모의 장애에서 이슈 #386 이 열리고 Eric 에게 배정, 정상 실행에서 닫힘 |
+| 2026-11-02 | 죽은 워크플로와 secret 정리 (T8) | `deploy-backend.yml` 삭제(PR #384). 아무도 읽지 않는 secret 15개는 분류기가 삭제를 막아 Eric 이 지운다(아래 목록) |
+
+### 아무도 읽지 않는 secret (2026-11-02 기준, 워크플로 전수 grep)
+
+`ACR_NAME`, `AZURE_CLIENT_ID`, `AZURE_CREDENTIALS`, `AZURE_RESOURCE_GROUP`, `AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_ROCK_0DE6C000F`, `AZURE_SUBSCRIPTION_ID`, `AZURE_SWA_NAME`, `AZURE_TENANT_ID`, `CONTAINER_APP_NAME`, `RESOURCE_GROUP`, `VITE_API_KEY`, `VITE_API_URL`, `VITE_MAP_URL`, `VITE_REALESTATE_URL`, `VITE_VWORLD_DOMAIN`
+
+### 남의 집 의존 목록 (단계 3-3)
+
+| 의존 | 소유 | 상태 |
+|---|---|---|
+| sohobi.net 등록과 DNS zone | 구 교육 테넌트 구독(멘토 명의 구독, 2026-03-30 등록) | 접근 불가. 단계 2 |
+| 법률 검색 `choi-search`, `choi-foundry2` | 팀원 리소스 | 새 백엔드는 참조하지 않는다(env, 코드 grep 0건, `RAG_BACKEND=disabled`) |
+| Azure 전 자원(OpenAI, PG, Cosmos, ACR, Container Apps, SWA) | 새 구독, Eric | 정상 |
+| Google OAuth 클라이언트 | Eric 이 콘솔에서 secret 을 새로 발급할 수 있음 | 옛 secret 폐기 남음 |
+| KTO 키 | Eric 등록 | 정상 |
+| VWorld, Kakao 키 | 화면용 secret 재사용, 발급 계정 확인 필요 | VWorld 등록 도메인은 sohobi.net 그대로 |
