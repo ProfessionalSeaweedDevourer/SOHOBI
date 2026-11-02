@@ -39,6 +39,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 VWORLD_KEY = os.getenv("VWORLD_API_KEY", "")
+# VWorld 키는 등록 도메인에 묶여 있어 domain 을 빼면 INCORRECT_KEY 로 거부된다(2026-11-02 실측)
+VWORLD_DOMAIN = os.getenv("VWORLD_DOMAIN", "")
 KAKAO_REST_KEY = os.getenv("KAKAO_REST_KEY", "")
 
 # 동 중심좌표 캐시 — 좌표는 변하지 않으므로 24시간 TTL
@@ -459,7 +461,7 @@ async def getPnuByCoord(lng: float, lat: float):
     url = (
         "https://api.vworld.kr/req/data"
         "?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN"
-        f"&key={VWORLD_KEY}&format=json&size=1"
+        f"&key={VWORLD_KEY}&domain={VWORLD_DOMAIN}&format=json&size=1"
         f"&geomFilter=point({lng} {lat})&geometry=false&attribute=true"
         "&columns=pnu,pblntfPclnd,stdrYear"
     )
@@ -489,7 +491,7 @@ async def getLandUse(pnu: str):
         "?service=data&request=GetFeature&data=LT_C_UQ111"
         f"&attrFilter=pnu:=:{pnu}"
         "&columns=pnu,jibun,prpos_area_dstrc_nm,prpos_area_dstrc_cd,prpos_zone_nm,prpos_regn_nm"
-        f"&key={VWORLD_KEY}&format=json&size=1"
+        f"&key={VWORLD_KEY}&domain={VWORLD_DOMAIN}&format=json&size=1"
     )
     try:
         async with httpx.AsyncClient(timeout=10) as client:
