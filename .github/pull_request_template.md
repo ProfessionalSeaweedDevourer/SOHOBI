@@ -11,22 +11,16 @@
 
 ### 백엔드 배포 변경 시 (`backend/**` 수정)
 
-- [ ] `deploy-backend.yml`의 `--set-env-vars` 각 변수를 **개별 따옴표**로 분리했음
-  ```yaml
-  # 올바른 방법
-  --set-env-vars "VAR1=value1" "VAR2=value2"
-  # 잘못된 방법 (API 키 오염 사고 원인)
-  --set-env-vars "VAR1=value1 VAR2=value2"
-  ```
+- [ ] 머지 후 `build-backend-new.yml` 을 `deploy=true` 로 수동 실행 예정 (`backend/**` push 는 자동 배포되지 않는다)
+- [ ] 새 env 는 `az containerapp update` 가 아니라 `infra/bicep/main.bicep` 에 넣었음 (Bicep 배포가 수동 env 를 지운다)
 
 ### Azure 환경변수 또는 API 키 변경 시
 
-- [ ] `API_SECRET_KEY` (Azure) ↔ `VITE_API_KEY` (GitHub Secret) 동일 값 확인
-- [ ] 키 변경 후 SWA 재빌드 트리거 예정
+- [ ] `API_SECRET_KEY` GitHub secret 을 바꿨다면 Bicep 배포와 SWA 재빌드를 둘 다 돌릴 예정 (화면 `VITE_API_KEY` 가 같은 secret 을 쓴다)
 
 ### 지도 관련 변경 시 (`frontend/src/components/map/**`, `backend/map_data_router.py`)
 
-- [ ] VWorld API 호출 시 `VITE_VWORLD_DOMAIN` 환경변수 사용 (`localhost` 하드코딩 금지)
+- [ ] VWorld API 호출 시 domain 을 보냄 (화면 `VITE_VWORLD_DOMAIN`, 백엔드 `VWORLD_DOMAIN`. 빠지면 INCORRECT_KEY)
 - [ ] 로컬에서 지적도 레이어 정상 표시 확인
 
 ## 테스트

@@ -85,7 +85,7 @@ az containerapp ingress access-restriction set \
 | 대상 | 트리거 | 워크플로우 |
 |------|--------|-----------|
 | 프론트엔드 (SWA) | `main` push (frontend 변경) | `.github/workflows/azure-static-web-apps-*.yml` |
-| 백엔드 (Container Apps) | `main` push (backend 변경) | `.github/workflows/deploy-backend.yml` |
+| 백엔드 (Container Apps) | 수동 실행 (`deploy=true`) | `.github/workflows/build-backend-new.yml` |
 
 ## Azure 리소스 요약
 
