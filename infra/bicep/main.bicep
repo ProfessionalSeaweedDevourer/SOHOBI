@@ -124,6 +124,22 @@ param backendImage string = 'sohobi-backend:latest'
 
 var backendAppName = '${namePrefix}-backend'
 
+// ================================================================
+// 프론트엔드 (Static Web App)
+// ================================================================
+
+module staticWebApp 'modules/static-web-app.bicep' = {
+  name: 'staticWebApp'
+  params: {
+    name: '${namePrefix}-${env}-swa'
+    tags: tags
+  }
+}
+
+// 화면 주소. sohobi.net 은 구 구독에 갇혀 DNS 가 비어 있다(2026-11-02). 도메인을 되찾아 새 SWA 에 붙이면
+// 이 값을 'https://sohobi.net' 으로 되돌린다. CORS 는 sohobi.net 을 코드에 고정해 두었으므로 SWA 주소만 더한다.
+var frontendUrl = 'https://${staticWebApp.outputs.defaultHostname}'
+
 module backendApp 'modules/container-app.bicep' = {
   name: 'backendApp'
   params: {
@@ -156,12 +172,16 @@ module backendApp 'modules/container-app.bicep' = {
       { name: 'API_SECRET_KEY', secretRef: 'api-secret-key' }
       // Google 로그인 주소 (backend/auth_router.py). 기본값이 localhost 라 비우면 로그인 후 localhost 로 돌아간다.
       // BACKEND_HOST 는 OAuth redirect_uri 의 앞부분이므로 Google 콘솔의 승인된 redirect URI 와 같아야 한다
-      { name: 'FRONTEND_URL', value: 'https://sohobi.net' }
+      { name: 'FRONTEND_URL', value: frontendUrl }
+      { name: 'CORS_EXTRA_ORIGINS', value: frontendUrl }
       { name: 'BACKEND_HOST', value: 'https://${backendAppName}.${containerAppsEnv.outputs.defaultDomain}' }
       { name: 'AZURE_OPENAI_ENDPOINT', value: openai.outputs.endpoint }
       { name: 'AZURE_OPENAI_API_VERSION', value: '2024-08-01-preview' }
       { name: 'AZURE_DEPLOYMENT_NAME', value: openai.outputs.chatDeploymentName }
       { name: 'AZURE_OPENAI_CHAT_DEPLOYMENT', value: openai.outputs.chatDeploymentName }
+      // backend/signoff/signoff_agent.py 는 이 이름만 읽고 대체값이 없다. 빠지면 deployment=None 으로
+      // 배포명 없는 URL 을 불러 모든 질의가 OpenAI 404 로 실패한다(2026-11-02 실측)
+      { name: 'AZURE_SIGNOFF_DEPLOYMENT', value: openai.outputs.chatDeploymentName }
       { name: 'AZURE_EMBEDDING_DEPLOYMENT', value: openai.outputs.embeddingLargeDeploymentName }
       { name: 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT', value: openai.outputs.embeddingLargeDeploymentName }
       { name: 'AZURE_OPENAI_EMBEDDING_DIMS', value: '3072' }
@@ -278,6 +298,8 @@ output storageName string = storage.outputs.name
 output acrId string = acr.outputs.id
 output acrLoginServer string = acr.outputs.loginServer
 output containerAppsEnvId string = containerAppsEnv.outputs.id
+output staticWebAppName string = staticWebApp.outputs.name
+output staticWebAppHostname string = staticWebApp.outputs.defaultHostname
 output backendAppFqdn string = backendApp.outputs.fqdn
 output backendAppPrincipalId string = backendApp.outputs.principalId
 output cosmosEndpoint string = cosmos.outputs.endpoint
