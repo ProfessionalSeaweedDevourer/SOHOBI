@@ -12,8 +12,9 @@ name: Uptime Monitor
 
 on:
   schedule:
-    - cron: '*/30 * * * *'   # 화면
-    - cron: '15 */2 * * *'   # 화면 + 백엔드
+    # 정각과 30분은 GitHub 일정 실행이 몰려 늦거나 빠진다(2026-11-02 머지 뒤 65분간 실행 0건). 붐비지 않는 분을 쓴다.
+    - cron: '7,37 * * * *'   # 화면
+    - cron: '23 */2 * * *'   # 화면 + 백엔드
   workflow_dispatch:
     inputs:
       frontend_url:
@@ -36,7 +37,7 @@ concurrency:
 env:
   FRONTEND_URL: https://ashy-sea-0fe74f200.2.azurestaticapps.net
   BACKEND_URL: https://sohobi-backend.politefield-1cd9d809.koreacentral.azurecontainerapps.io
-  BACKEND_SCHEDULE: '15 */2 * * *'
+  BACKEND_SCHEDULE: '23 */2 * * *'
   ISSUE_LABEL: uptime
   ISSUE_ASSIGNEE: ProfessionalSeaweedDevourer
 
