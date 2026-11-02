@@ -8,6 +8,11 @@ on:
     branches:
       - main
 
+# 새 구독 백엔드. 주소는 화면 번들에도 들어가는 공개 값이라 secret 이 아니라 여기 둔다.
+# 옛 VITE_API_URL secret 은 2026-10-22~23 구 테넌트 정리로 사라진 옛 백엔드를 가리킨다(2026-11-02).
+env:
+  BACKEND_URL: https://sohobi-backend.politefield-1cd9d809.koreacentral.azurecontainerapps.io
+
 jobs:
   smoke-test:
     runs-on: ubuntu-latest
@@ -16,8 +21,9 @@ jobs:
     steps:
       - name: 헬스 체크 (인증 불필요)
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            ${{ secrets.VITE_API_URL }}/health)
+          # 야간 0 스케일에서 깨어나는 데 1분 가까이 걸린다(2026-11-02 실측 55초)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 150 \
+            "$BACKEND_URL/health")
           echo "Health check: HTTP $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "❌ FAIL: 백엔드 헬스 체크 실패 (HTTP $STATUS)"
@@ -27,17 +33,18 @@ jobs:
 
       - name: API 키 인증 확인 (보호 엔드포인트)
         env:
-          SMOKE_API_KEY: ${{ secrets.VITE_API_KEY }}
+          # 백엔드 API_SECRET_KEY 와 같은 secret (azure-bicep-deploy.yml 이 백엔드에 주입)
+          SMOKE_API_KEY: ${{ secrets.API_SECRET_KEY }}
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "X-API-Key: $SMOKE_API_KEY" \
-            "${{ secrets.VITE_API_URL }}/api/v1/logs?type=queries&limit=1")
+            "$BACKEND_URL/api/v1/logs?type=queries&limit=1")
           echo "Auth check: HTTP $STATUS"
           if [ "$STATUS" = "401" ]; then
             echo "❌ FAIL: API 키 인증 실패 (HTTP 401)"
             echo "원인 후보:"
-            echo "  1. GitHub Secret VITE_API_KEY ↔ Azure API_SECRET_KEY 불일치"
-            echo "  2. deploy-backend.yml의 --set-env-vars 따옴표 오기입"
+            echo "  1. GitHub Secret API_SECRET_KEY ↔ Container App secret api-secret-key 불일치"
+            echo "  2. API_SECRET_KEY 를 바꾼 뒤 Bicep 배포를 다시 돌리지 않음"
             exit 1
           fi
           if [ "$STATUS" != "200" ]; then
