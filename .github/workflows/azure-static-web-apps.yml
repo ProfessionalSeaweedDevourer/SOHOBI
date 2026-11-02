@@ -6,19 +6,29 @@ on:
       - main
     paths:
       - "frontend/**"
-      - ".github/workflows/azure-static-web-apps-delightful-rock-0de6c000f.yml"
+      - ".github/workflows/azure-static-web-apps.yml"
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
       - main
     paths:
       - "frontend/**"
-      - ".github/workflows/azure-static-web-apps-delightful-rock-0de6c000f.yml"
+      - ".github/workflows/azure-static-web-apps.yml"
 
 permissions:
   contents: read
+  id-token: write
   issues: write
   pull-requests: write
+
+# 2026-10-22~23 구 테넌트 정리로 옛 SWA(delightful-rock-0de6c000f)와 그 자격증명이 사라져 새 구독 SWA 로 옮겼다.
+# SWA 는 infra/bicep/modules/static-web-app.bicep 이 만든다. 경위: docs/plans/2026-11-02-sohobi-net-outage-recovery.md
+# 배포 토큰은 secret 에 두지 않고 새 테넌트 OIDC(*_B)로 로그인해 실행마다 SWA 에서 받는다.
+# 백엔드 주소는 화면 번들에 들어가는 공개 값이라 여기 둔다.
+env:
+  SWA_NAME: sohobi-prod-swa
+  RESOURCE_GROUP: rg-sohobi-prod
+  BACKEND_URL: https://sohobi-backend.politefield-1cd9d809.koreacentral.azurecontainerapps.io
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
@@ -35,19 +45,18 @@ jobs:
           submodules: true
           lfs: false
 
-      - name: Azure Login for preview guard
-        if: github.event_name == 'pull_request'
+      - name: Azure Login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID_B }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID_B }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID_B }}
 
       - name: Check preview environment capacity
         id: preview_guard
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SWA_NAME: ${{ secrets.AZURE_SWA_NAME }}
-          RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
           MAX_PREVIEW_ENVIRONMENTS: "3"
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
@@ -124,22 +133,33 @@ jobs:
             gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$BODY" >/dev/null || true
           fi
 
+      - name: Fetch SWA deployment token
+        id: swa_token
+        run: |
+          set -euo pipefail
+          TOKEN=$(az staticwebapp secrets list --name "$SWA_NAME" --resource-group "$RESOURCE_GROUP" \
+            --query properties.apiKey -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
       - name: Build And Deploy
         id: builddeploy
         if: github.event_name == 'push' || steps.preview_guard.outputs.should_deploy != 'false'
         uses: Azure/static-web-apps-deploy@v1
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
-          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+          VITE_API_URL: ${{ env.BACKEND_URL }}
+          # 백엔드 API_SECRET_KEY 와 같은 값이어야 한다(azure-bicep-deploy.yml 이 같은 secret 을 백엔드에 주입)
+          VITE_API_KEY: ${{ secrets.API_SECRET_KEY }}
           VITE_DEV_PASSWORD_HASH: ${{ secrets.VITE_DEV_PASSWORD_HASH }}
           VITE_KAKAO_JS_KEY: ${{ secrets.VITE_KAKAO_JS_KEY }}
           VITE_KAKAO_API_KEY: ${{ secrets.VITE_KAKAO_API_KEY }}
           VITE_VWORLD_API_KEY: ${{ secrets.VITE_VWORLD_API_KEY }}
+          # VWorld 키에 등록된 도메인. 화면 주소와 별개로 백엔드 WMS 프록시가 이 값을 보낸다
           VITE_VWORLD_DOMAIN: sohobi.net
-          VITE_MAP_URL: ${{ secrets.VITE_MAP_URL }}
-          VITE_REALESTATE_URL: ${{ secrets.VITE_REALESTATE_URL }}
+          VITE_MAP_URL: ${{ env.BACKEND_URL }}
+          VITE_REALESTATE_URL: ${{ env.BACKEND_URL }}
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_ROCK_0DE6C000F }}
+          azure_static_web_apps_api_token: ${{ steps.swa_token.outputs.token }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######

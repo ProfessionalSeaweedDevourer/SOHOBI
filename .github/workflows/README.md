@@ -8,7 +8,7 @@ GitHub Actions CI/CD 파이프라인.
 
 | 파일 | 이름 | 트리거 | 대상 |
 |------|------|--------|------|
-| `azure-static-web-apps-delightful-rock-0de6c000f.yml` | Azure Static Web Apps CI/CD | `frontend/**` 변경이 있는 `main` push, PR open/sync/reopen | 프론트엔드 (`frontend/`) → Azure Static Web Apps |
+| `azure-static-web-apps.yml` | Azure Static Web Apps CI/CD | `frontend/**` 변경이 있는 `main` push, PR open/sync/reopen | 프론트엔드 (`frontend/`) → 새 구독 SWA `sohobi-prod-swa` |
 | `azure-static-web-apps-cleanup.yml` | Azure Static Web Apps Cleanup | PR close, 매일 자정(UTC) cron, 수동 실행 | SWA PR preview 환경 정리 |
 | `deploy-backend.yml` | Deploy Backend to Azure Container Apps | `main` push (`backend/**` 변경 시) | 백엔드 → Azure Container Apps (OIDC 인증) |
 | `smoke-test.yml` | Backend Smoke Test | `main` push, PR | 배포 후 헬스 체크 + API 키 인증 검증 |

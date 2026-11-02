@@ -11,7 +11,12 @@ on:
 
 permissions:
   contents: read
+  id-token: write
   pull-requests: read
+
+env:
+  SWA_NAME: sohobi-prod-swa
+  RESOURCE_GROUP: rg-sohobi-prod
 
 concurrency:
   group: azure-static-web-apps-cleanup
@@ -23,11 +28,27 @@ jobs:
     runs-on: ubuntu-latest
     name: Close Pull Request Job
     steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID_B }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID_B }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID_B }}
+
+      - name: Fetch SWA deployment token
+        id: swa_token
+        run: |
+          set -euo pipefail
+          TOKEN=$(az staticwebapp secrets list --name "$SWA_NAME" --resource-group "$RESOURCE_GROUP" \
+            --query properties.apiKey -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
       - name: Close Pull Request
         id: closepullrequest
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_ROCK_0DE6C000F }}
+          azure_static_web_apps_api_token: ${{ steps.swa_token.outputs.token }}
           action: "close"
 
   cleanup_stale_environments:
@@ -38,13 +59,13 @@ jobs:
       - name: Azure Login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID_B }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID_B }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID_B }}
 
       - name: Delete environments for closed PRs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SWA_NAME: ${{ secrets.AZURE_SWA_NAME }}
-          RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
         run: |
           set -euo pipefail
 
