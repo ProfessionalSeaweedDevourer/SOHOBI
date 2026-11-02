@@ -26,6 +26,7 @@ env:
     pg-nightly-stop.yml
     azure-static-web-apps-cleanup.yml
     workflow-keepalive.yml
+    uptime-monitor.yml
 
 jobs:
   keepalive:

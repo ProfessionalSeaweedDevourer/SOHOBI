@@ -1,0 +1,121 @@
+name: Uptime Monitor
+
+# 2026-10-22~23 구 테넌트 정리로 화면이 11일 동안 죽어 있었는데 아무 장치도 알리지 않았다
+# (docs/plans/2026-11-02-sohobi-net-outage-recovery.md 단계 3). 이 워크플로가 그 감시다.
+#
+# 화면은 30분마다, 백엔드는 2시간마다 확인한다. 백엔드는 0 으로 줄었다가 요청이 오면 깨어나
+# cooldown 5분 동안 더 떠 있으므로, 30분마다 깨우면 0.5 vCPU x 약 5.5분 x 48회 x 30일 =
+# 약 238,000 vCPU 초로 Container Apps 월 무료 할당(180,000)을 넘는다. 2시간 간격이면 약 60,000.
+#
+# 실패하면 uptime 라벨 이슈를 열어 Eric 에게 배정하고(메일, 모바일 알림), 이미 열려 있으면 댓글을 단다.
+# 정상으로 돌아오면 이슈를 닫는다. 화면 주소가 바뀌면 FRONTEND_URL 을 함께 고친다.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # 화면
+    - cron: '15 */2 * * *'   # 화면 + 백엔드
+  workflow_dispatch:
+    inputs:
+      frontend_url:
+        description: '화면 주소 대체 (모의 장애 시험용, 비우면 기본값)'
+        required: false
+        default: ''
+      check_backend:
+        description: '백엔드도 확인'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: uptime-monitor
+  cancel-in-progress: false
+
+env:
+  FRONTEND_URL: https://ashy-sea-0fe74f200.2.azurestaticapps.net
+  BACKEND_URL: https://sohobi-backend.politefield-1cd9d809.koreacentral.azurecontainerapps.io
+  BACKEND_SCHEDULE: '15 */2 * * *'
+  ISSUE_LABEL: uptime
+  ISSUE_ASSIGNEE: ProfessionalSeaweedDevourer
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Probe
+        id: probe
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          INPUT_FRONTEND_URL: ${{ inputs.frontend_url }}
+          INPUT_CHECK_BACKEND: ${{ inputs.check_backend }}
+          API_KEY: ${{ secrets.API_SECRET_KEY }}
+        run: |
+          set -uo pipefail
+          front="${INPUT_FRONTEND_URL:-$FRONTEND_URL}"
+          backend=false
+          if [ "$EVENT_SCHEDULE" = "$BACKEND_SCHEDULE" ]; then backend=true; fi
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$INPUT_CHECK_BACKEND" = "true" ]; then backend=true; fi
+          : > failures.txt
+
+          # 이름, 주소, 응답 본문에 있어야 할 문자열(빈 값이면 생략), 제한 시간, 추가 curl 인자.
+          # 일시 오류로 이슈가 열리지 않도록 30초 간격으로 한 번 더 시도한다.
+          check() {
+            local name="$1" url="$2" expect="$3" max="$4"; shift 4
+            local code=""
+            for attempt in 1 2; do
+              code=$(curl -s -o body.txt -w '%{http_code}' --max-time "$max" "$@" "$url") || code="${code:-000}"
+              if [ "$code" = "200" ] && { [ -z "$expect" ] || grep -q "$expect" body.txt; }; then
+                echo "PASS $name (HTTP $code, 시도 $attempt)"
+                return 0
+              fi
+              echo "시도 $attempt 실패: $name HTTP $code"
+              [ "$attempt" = 1 ] && sleep 30
+            done
+            echo "- $name: HTTP $code ($url)" >> failures.txt
+          }
+
+          check "화면" "$front" 'id="root"' 30
+          if [ "$backend" = true ]; then
+            # 0 에서 깨어나는 데 1분 가까이 걸린다(2026-11-02 실측 55초)
+            check "백엔드 /health" "$BACKEND_URL/health" '"status"' 150
+            check "백엔드 인증 API" "$BACKEND_URL/api/v1/logs?type=queries&limit=1" '' 60 -H "X-API-Key: $API_KEY"
+          fi
+
+          if [ -s failures.txt ]; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+            cat failures.txt
+          else
+            echo "failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          FAILED: ${{ steps.probe.outputs.failed }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          now=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M KST')
+          open=$(gh issue list --label "$ISSUE_LABEL" --state open --json number --jq '.[0].number // empty')
+          if [ "$FAILED" = "true" ]; then
+            body=$(printf '%s 가동 감시 실패\n\n%s\n\n실행 기록: %s' "$now" "$(cat failures.txt)" "$RUN_URL")
+            if [ -n "$open" ]; then
+              gh issue comment "$open" --body "$body"
+              echo "이슈 #$open 에 댓글"
+            else
+              gh label create "$ISSUE_LABEL" --color d73a4a --description '가동 감시 자동 이슈' --force
+              gh issue create --title "가동 감시: 서비스 응답 실패 ($now)" --label "$ISSUE_LABEL" \
+                --assignee "$ISSUE_ASSIGNEE" \
+                --body "$(printf '%s\n\n정상으로 돌아오면 이 워크플로가 이슈를 닫는다. 복구 기획: docs/plans/2026-11-02-sohobi-net-outage-recovery.md' "$body")"
+            fi
+            exit 1
+          elif [ -n "$open" ]; then
+            gh issue comment "$open" --body "$now 정상 응답 확인, 이슈를 닫는다. 실행 기록: $RUN_URL"
+            gh issue close "$open"
+            echo "이슈 #$open 닫음"
+          fi

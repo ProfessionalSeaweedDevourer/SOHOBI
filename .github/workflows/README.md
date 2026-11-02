@@ -15,17 +15,20 @@ GitHub Actions CI/CD 파이프라인.
 | `azure-bicep-deploy.yml` | Bicep What-if / Deploy | PR(`infra/**` what-if), `main` push(deploy) | Azure 인프라 (Bicep IaC, 신규 테넌트 OIDC) |
 | `pg-nightly-stop.yml` | PostgreSQL Nightly Stop | 야간 cron | PostgreSQL Flexible Server 정지 (비용 절감) |
 | `workflow-keepalive.yml` | Workflow Keepalive | 매월 1일 cron, 수동 실행 | schedule 워크플로의 60일 무활동 자동 비활성화 방지 |
+| `uptime-monitor.yml` | Uptime Monitor | 30분 cron(화면), 2시간 cron(백엔드), 수동 실행 | 실패 시 `uptime` 라벨 이슈를 열어 Eric 에게 배정, 회복 시 닫음 |
 
 ## 필요 GitHub Secrets
 
 | Secret | 용도 |
 |--------|------|
 | `AZURE_CLIENT_ID_B`, `AZURE_TENANT_ID_B`, `AZURE_SUBSCRIPTION_ID_B` | 신규 테넌트 OIDC 로그인 (SWA 배포 토큰도 실행 중 이 로그인으로 받는다) |
-| `PG_ADMIN_PASSWORD`, `JWT_SECRET`, `API_SECRET_KEY` | Bicep 필수 비밀값. `API_SECRET_KEY` 는 화면 빌드의 `VITE_API_KEY` 와 스모크 테스트에도 쓴다 |
+| `PG_ADMIN_PASSWORD`, `JWT_SECRET`, `API_SECRET_KEY` | Bicep 필수 비밀값. `API_SECRET_KEY` 는 화면 빌드의 `VITE_API_KEY`, 스모크 테스트, 가동 감시에도 쓴다 |
 | `KTO_GW_INFO_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `VWORLD_API_KEY`, `KAKAO_REST_KEY` | Bicep 선택 비밀값. VWorld, Kakao 는 비면 화면용 `VITE_VWORLD_API_KEY`, `VITE_KAKAO_API_KEY` 로 채운다 |
 | `VITE_KAKAO_JS_KEY`, `VITE_KAKAO_API_KEY`, `VITE_VWORLD_API_KEY`, `VITE_DEV_PASSWORD_HASH` | 화면 빌드 |
 
-백엔드 주소는 공개 값이라 secret 이 아니라 `azure-static-web-apps.yml`, `smoke-test.yml` 의 `env` 에 둔다.
+백엔드 주소는 공개 값이라 secret 이 아니라 `azure-static-web-apps.yml`, `smoke-test.yml`, `uptime-monitor.yml` 의 `env` 에 둔다. 주소가 바뀌면 셋을 함께 고친다.
+
+2026-11-02 기준 위 표 밖의 secret(`AZURE_CREDENTIALS`, 접미사 없는 `AZURE_CLIENT_ID` 등 구 테넌트용, 옛 `VITE_*_URL`, `VITE_API_KEY`)은 어느 워크플로도 읽지 않는 잔재다.
 
 ## 특이사항
 
