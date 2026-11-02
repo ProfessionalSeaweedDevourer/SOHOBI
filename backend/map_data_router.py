@@ -484,13 +484,16 @@ async def getPnuByCoord(lng: float, lat: float):
 
 
 @router.get("/map/land-use")
-async def getLandUse(pnu: str):
-    """PNU로 용도지역 조회 (VWorld LURIS)"""
+async def getLandUse(lng: float, lat: float):
+    """좌표로 용도지역 조회 (VWorld LT_C_UQ111)
+
+    이 레이어는 pnu attrFilter 를 INVALID_RANGE 로 거부하고, 용도지역명은 uname 열에 있다(2026-11-02 실측).
+    """
     url = (
         "https://api.vworld.kr/req/data"
         "?service=data&request=GetFeature&data=LT_C_UQ111"
-        f"&attrFilter=pnu:=:{pnu}"
-        "&columns=pnu,jibun,prpos_area_dstrc_nm,prpos_area_dstrc_cd,prpos_zone_nm,prpos_regn_nm"
+        f"&geomFilter=point({lng} {lat})&geometry=false&attribute=true"
+        "&columns=uname"
         f"&key={VWORLD_KEY}&domain={VWORLD_DOMAIN}&format=json&size=1"
     )
     try:
@@ -511,13 +514,10 @@ async def getLandUse(pnu: str):
                 "color_text": "#aaa",
             }
         props = features[0].get("properties", {})
-        name = props.get("prpos_area_dstrc_nm", "") or "정보 없음"
+        name = props.get("uname", "") or "정보 없음"
         style = LAND_USE_COLORS.get(name, {"bg": "#f5f5f5", "text": "#666", "level": 1})
         return {
             "용도지역명": name,
-            "용도지역코드": props.get("prpos_area_dstrc_cd", ""),
-            "용도지구명": props.get("prpos_zone_nm", "") or None,
-            "용도구역명": props.get("prpos_regn_nm", "") or None,
             "level": style["level"],
             "color_bg": style["bg"],
             "color_text": style["text"],
